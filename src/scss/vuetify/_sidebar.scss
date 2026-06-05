@@ -1,0 +1,59 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Sidebar – estilos visuales (sin forzar posicionamiento)
+// ─────────────────────────────────────────────────────────────────────────────
+
+#main-sidebar {
+  box-shadow: 2px 0 8px rgba(0, 0, 0, .04);
+
+  .v-navigation-drawer__border {
+    display: none;
+  }
+
+  .v-list {
+    padding: 8px 12px;
+  }
+
+  .v-list-item {
+    border-radius: 8px !important;
+    margin-bottom: 4px;
+    min-height: 48px !important;
+    transition: all 0.2s ease-in-out;
+
+    .v-list-item__prepend {
+      margin-inline-end: 0px;   // ← separación ícono-texto (~10 px)
+    }
+    
+  }
+
+  .v-list-item::before,
+  .v-list-item:hover::before,
+  .v-list-item--active::before {
+    border-radius: 8px !important;
+  }
+
+  .v-list-item-title {
+    font-size: 0.95rem;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
+  // Subgrupos (si los usas)
+  .v-list-group {
+    margin-bottom: 2px;
+
+    .v-list-group__items .v-list-item .v-icon,
+    .sicon {
+      visibility: visible;
+      margin-left: 16px;
+    }
+  }
+
+  // Rail / mini-variant
+  &.v-navigation-drawer--rail {
+    .v-list-group--no-action .v-list-group__items,
+    .v-list-group {
+      display: block;
+    }
+  }
+}

@@ -189,6 +189,7 @@
         return-object
         :loading="loading_list"
         @click:row="handleRowClick"
+        @contextmenu:row="handleRightClick"
         :items-length="total_certificates"
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
@@ -267,248 +268,120 @@
           </span>
         </template>
 
-        <!-- ── Columna XLS ── -->
         <template v-slot:item.uploaded_xls="{ item }">
-          <v-tooltip location="bottom" v-if="hovered_row_id === item.id">
+          <v-tooltip location="bottom">
             <template v-slot:activator="{ props }">
               <v-btn
-                  icon
-                  variant="text"
-                  density="comfortable"
-                  v-bind="props"
-                  :color="item.status === 5
-                    ? 'grey-lighten-2'
-                    : ((item.uploaded_xls && item.uploaded_xls !== '0' && item.uploaded_xls !== 'False')
-                      ? 'primary' : 'grey')"
-                  :disabled="item.status === 5"
-                  @click="openUploadDialog(item)"
-                >
-                  <v-icon>mdi-file-pdf-box</v-icon>
-                </v-btn>
-              </template>
-              <span>{{ item.uploaded_xls ? 'Actualizar Excel' : 'Subir Excel' }}</span>
-            </v-tooltip>
-
-            <v-btn
-              v-else
-              icon
-              variant="text"
-              density="comfortable"
-              :color="item.status === 5
-                ? 'grey-lighten-2'
-                : ((item.uploaded_xls && item.uploaded_xls !== '0' && item.uploaded_xls !== 'False')
-                  ? 'primary' : 'grey')"
-              :disabled="item.status === 5"
-              :title="item.uploaded_xls ? 'Actualizar Excel' : 'Subir Excel'"
-              @click="openUploadDialog(item)"
-            >
-              <v-icon>mdi-file-pdf-box</v-icon>
-            </v-btn>
+                v-if="item.uploaded_xls && item.uploaded_xls !== '0' && item.uploaded_xls !== 'False'"
+                v-bind="props" icon variant="text" density="comfortable" color="primary"
+                :href="`/media/${item.uploaded_xls}`" target="_blank"
+                :disabled="item.status === 5" @click.stop
+              >
+                <v-icon>mdi-file-pdf-box</v-icon>
+              </v-btn>
+              <v-btn
+                v-else
+                v-bind="props" icon variant="text" density="comfortable" color="grey"
+                :disabled="item.status === 5" @click.stop="openUploadDialog(item)"
+              >
+                <v-icon>mdi-file-pdf-box</v-icon>
+              </v-btn>
+            </template>
+            <span>{{ (item.uploaded_xls && item.uploaded_xls !== '0' && item.uploaded_xls !== 'False') ? 'Ver PDF Base Local' : 'Subir Excel' }}</span>
+          </v-tooltip>
         </template>
 
-        <!-- ── Columna QR / Nube ── -->
         <template v-slot:item.uploaded="{ item }">
           <div class="d-flex align-center justify-center">
-
-            <v-progress-circular
-              v-if="isCertUploading(item.id)"
-              indeterminate
-              color="primary"
-              size="24"
-              width="3"
-            ></v-progress-circular>
-
+            <v-progress-circular v-if="isCertUploading(item.id)" indeterminate color="primary" size="24" width="3"></v-progress-circular>
             <template v-else>
               <v-tooltip location="bottom" v-if="item.uploaded">
                 <template v-slot:activator="{ props }">
                   <v-btn
-                    icon
-                    variant="text"
-                    density="comfortable"
-                    v-bind="props"
-                    :color="item.status === 5 ? 'grey-lighten-2' : 'primary'"
-                    :href="`https://daicomperu.com/${item.uuid}`"
-                    target="_blank"
-                    :disabled="item.status === 5"
-                    @click="checkAsDelivered(item)"
+                    v-bind="props" icon variant="text" density="comfortable" color="primary"
+                    :href="`https://daicomperu.com/${item.uuid}`" target="_blank"
+                    :disabled="item.status === 5" @click.stop="checkAsDelivered(item)"
                   >
                     <v-icon>mdi-cloud-check</v-icon>
                   </v-btn>
                 </template>
-                <span>Ver PDF Subido</span>
+                <span>Ver PDF en Nube Pública</span>
               </v-tooltip>
-
-              <v-tooltip location="bottom" v-if="!item.uploaded || permiso_qr">
+              
+              <v-tooltip location="bottom" v-else>
                 <template v-slot:activator="{ props }">
                   <v-btn
-                    icon
-                    variant="text"
-                    density="comfortable"
-                    v-bind="props"
-                    :color="item.status === 5
-                      ? 'grey-lighten-2'
-                      : (item.uploaded ? '' : 'grey')"
-                    :disabled="
-                      !(item.uploaded_xls && item.uploaded_xls !== '0' && item.uploaded_xls !== 'False')
-                      || item.status === 5
-                      || !permiso_qr
-                    "
-                    @click="openQRDialog(item)"
+                    v-bind="props" icon variant="text" density="comfortable" color="grey"
+                    :disabled="!(item.uploaded_xls && item.uploaded_xls !== '0' && item.uploaded_xls !== 'False') || item.status === 5 || !permiso_qr"
+                    @click.stop="openQRDialog(item)"
                   >
-                    <v-badge
-                      :model-value="item.signature_requested === true"
-                      color="warning"
-                      dot
-                      offset-x="2"
-                      offset-y="2"
-                    >
-                      <v-icon>{{ item.uploaded ? 'mdi-refresh' : 'mdi-qrcode-plus' }}</v-icon>
+                    <v-badge :model-value="item.signature_requested === true" color="warning" dot offset-x="2" offset-y="2">
+                      <v-icon>mdi-qrcode-plus</v-icon>
                     </v-badge>
                   </v-btn>
                 </template>
-                <span>{{ item.uploaded ? 'Regenerar y Reemplazar Nube' : 'Generar QR y Firmar' }}</span>
+                <span>Generar QR y Firmar</span>
               </v-tooltip>
             </template>
-
           </div>
         </template>
 
-        <!-- ── Acciones ── -->
         <template v-slot:item.actions="{ item }">
-          <!-- Editar -->
-          <v-btn
-            v-if="item.status !== 5"
-            icon
-            variant="text"
-            density="comfortable"
-            class="d-inline"
-            title="Editar Certificado"
-            @click="certificateModal?.open(item)"
+          <v-btn 
+            icon 
+            variant="text" 
+            density="comfortable" 
+            color="grey-darken-1" 
+            @click.stop="handleRightClick($event, { item })"
           >
-            <v-icon>mdi-pencil</v-icon>
+            <v-icon>mdi-dots-vertical</v-icon>
           </v-btn>
-
-          <!-- Con hover: mostrar tooltip -->
-          <template v-if="hovered_row_id === item.id">
-            <v-tooltip location="bottom" color="error" v-if="item.status !== 5 && permiso_anular">
-              <template v-slot:activator="{ props }">
-                <v-btn v-bind="props" icon variant="text" density="comfortable" color="red-darken-2" @click="anularCertConfirm(item)">
-                  <v-icon>mdi-delete-outline</v-icon>
-                </v-btn>
-              </template>
-              <span>Anular Certificado</span>
-            </v-tooltip>
-
-            <v-tooltip location="bottom" color="success" v-if="item.status === 5 && permiso_anular">
-              <template v-slot:activator="{ props }">
-                <v-btn v-bind="props" icon variant="text" density="comfortable" color="green-darken-2" @click="revivirCertConfirm(item)">
-                  <v-icon>mdi-backup-restore</v-icon>
-                </v-btn>
-              </template>
-              <span>Restaurar Certificado</span>
-            </v-tooltip>
-          </template>
-
-          <!-- Sin hover: título nativo -->
-          <template v-else>
-            <v-btn
-              v-if="item.status !== 5 && permiso_anular"
-              icon variant="text" density="comfortable" color="red-darken-2"
-              title="Anular Certificado"
-              @click="anularCertConfirm(item)"
-            >
-              <v-icon>mdi-delete-outline</v-icon>
-            </v-btn>
-            <v-btn
-              v-if="item.status === 5 && permiso_anular"
-              icon variant="text" density="comfortable" color="green-darken-2"
-              title="Restaurar Certificado"
-              @click="revivirCertConfirm(item)"
-            >
-              <v-icon>mdi-backup-restore</v-icon>
-            </v-btn>
-          </template>
         </template>
 
         <!-- ── Número de orden ── -->
-        
         <template v-slot:item.order_number="{ item }">
           <span v-if="item.order_number">
-            <template v-if="hovered_row_id === item.id || menu_abierto_id === item.id">
-
-              <v-menu
-                v-if="permiso_resumen"
-                :model-value="menu_abierto_id === item.id"
-                location="right"
-                :close-on-content-click="false"
-                transition="slide-x-transition"
-                @update:model-value="(val) => {
-                  menu_abierto_id = val ? item.id : null;
-                  orden_resonancia = val ? item.order_number : null;
-                }"
-              >
-                <template v-slot:activator="{ props: menuProps }">
-                  <v-badge
-                    :color="item.order_status === 4
-                      ? 'red'
-                      : (item.order_sent
-                        ? 'success'
-                        : (item.order_billed ? 'warning' : 'primary'))"
-                    dot
-                  >
-                    <v-btn icon variant="text" density="comfortable" color="primary" v-bind="menuProps">
-                      <v-icon>mdi-file-document-arrow-right-outline</v-icon>
-                    </v-btn>
-                  </v-badge>
-                </template>
-
-                <order-summary-card
-                  v-if="menu_abierto_id === item.id"
-                  :orderNumber="item.order_number"
-                  :certCodes="getCertCodesByOrder(item.order_number)"
-                  @cerrar-tarjeta="menu_abierto_id = null; orden_resonancia = null;"
-                  @seleccionar-orden="seleccionarTodaLaOrden(item.order_number)"
-                />
-              </v-menu>
-
-              <v-tooltip location="bottom" color="black" v-else>
-                <template v-slot:activator="{ props }">
-                  <v-icon size="small" color="grey-lighten-1" v-bind="props">mdi-paperclip</v-icon>
-                </template>
-                <span>Vinculado a una Orden</span>
-              </v-tooltip>
-
-            </template>
-            <template v-else>
-              <v-badge
-                v-if="permiso_resumen"
-                :color="item.order_status === 4
-                  ? 'red'
-                  : (item.order_sent
-                    ? 'success'
-                    : (item.order_billed ? 'warning' : 'primary'))"
-                dot
-              >
-                <v-btn
-                  icon
-                  variant="text"
-                  density="comfortable"
-                  color="primary"
-                  title="Ver Resumen de Orden"
-                  @click="abrirMenuOrden(item)"
+            <v-menu
+              v-if="permiso_resumen"
+              :model-value="menu_abierto_id === item.id"
+              location="right"
+              :close-on-content-click="false"
+              transition="slide-x-transition"
+              @update:model-value="(val) => {
+                menu_abierto_id = val ? item.id : null;
+                orden_resonancia = val ? item.order_number : null;
+              }"
+            >
+              <template v-slot:activator="{ props: menuProps }">
+                <v-badge
+                  :color="item.order_status === 4
+                    ? 'red'
+                    : (item.order_sent
+                      ? 'success'
+                      : (item.order_billed ? 'warning' : 'primary'))"
+                  dot
                 >
-                  <v-icon>mdi-file-document-arrow-right-outline</v-icon>
-                </v-btn>
-              </v-badge>
-              <v-icon
-                v-else
-                size="small"
-                color="grey-lighten-1"
-                title="Vinculado a una Orden"
-              >
-                mdi-paperclip
-              </v-icon>
-            </template>
+                  <v-btn icon variant="text" density="comfortable" color="primary" v-bind="menuProps" @click.stop>
+                    <v-icon>mdi-file-document-arrow-right-outline</v-icon>
+                  </v-btn>
+                </v-badge>
+              </template>
+
+              <order-summary-card
+                v-if="menu_abierto_id === item.id"
+                :orderNumber="item.order_number"
+                :certCodes="getCertCodesByOrder(item.order_number)"
+                @cerrar-tarjeta="menu_abierto_id = null; orden_resonancia = null;"
+                @seleccionar-orden="seleccionarTodaLaOrden(item.order_number)"
+              />
+            </v-menu>
+
+            <v-tooltip location="bottom" color="black" v-else>
+              <template v-slot:activator="{ props }">
+                <v-icon size="small" color="grey-lighten-1" v-bind="props">mdi-paperclip</v-icon>
+              </template>
+              <span>Vinculado a una Orden</span>
+            </v-tooltip>
           </span>
           <span v-else class="text-grey-lighten-1">---</span>
         </template>
@@ -564,6 +437,61 @@
       @reloadListComponent="retrieveAllCertificates"
     />
 
+    <div
+      id="context-menu-activator"
+      :style="`position: fixed; top: ${contextMenu.y}px; left: ${contextMenu.x}px; width: 0; height: 0; pointer-events: none; z-index: -1;`"
+    ></div>
+
+    <v-menu
+      v-model="contextMenu.show"
+      activator="#context-menu-activator"
+      :location="contextMenu.location"
+      transition="scale-transition"
+    >
+      <v-list v-if="contextMenu.item" density="compact" class="elevation-4 border rounded-lg bg-surface">
+        <v-list-item v-if="contextMenu.item.status !== 5" @click="certificateModal?.open(contextMenu.item)">
+          <template v-slot:prepend><v-icon size="small">mdi-pencil</v-icon></template>
+          <v-list-item-title class="font-weight-medium text-body-2">Editar Datos</v-list-item-title>
+        </v-list-item>
+
+        <v-list-item v-if="contextMenu.item.status !== 5" @click="openUploadDialog(contextMenu.item)">
+          <template v-slot:prepend><v-icon size="small">mdi-file-excel</v-icon></template>
+          <v-list-item-title class="font-weight-medium text-body-2">
+            {{ (contextMenu.item.uploaded_xls && contextMenu.item.uploaded_xls !== '0' && contextMenu.item.uploaded_xls !== 'False') ? 'Reemplazar Excel' : 'Subir Excel' }}
+          </v-list-item-title>
+        </v-list-item>
+
+        <v-list-item v-if="permiso_solicitar_firma && contextMenu.item.status !== 5 && !contextMenu.item.signature_requested && !contextMenu.item.uploaded" @click="solicitarFirmaIndividual(contextMenu.item)">
+          <template v-slot:prepend><v-icon size="small">mdi-bell-ring</v-icon></template>
+          <v-list-item-title class="font-weight-medium text-body-2">Solicitar Firma</v-list-item-title>
+        </v-list-item>
+
+        <v-list-item v-if="permiso_qr && contextMenu.item.status !== 5 && (contextMenu.item.uploaded_xls && contextMenu.item.uploaded_xls !== '0' && contextMenu.item.uploaded_xls !== 'False')" @click="openQRDialog(contextMenu.item)">
+          <template v-slot:prepend><v-icon size="small">{{ contextMenu.item.uploaded ? 'mdi-refresh' : 'mdi-qrcode-scan' }}</v-icon></template>
+          <v-list-item-title class="font-weight-medium text-body-2">
+            {{ contextMenu.item.uploaded ? 'Regenerar QR y Reemplazar' : 'Generar QR y Firmar' }}
+          </v-list-item-title>
+        </v-list-item>
+
+        <v-divider v-if="contextMenu.item.status !== 5 && permiso_anular" class="my-1 border-opacity-25"></v-divider>
+
+        <v-list-item v-if="permiso_anular && contextMenu.item.uploaded && contextMenu.item.status !== 5" @click="eliminarDeLaNubeConfirm(contextMenu.item)">
+          <template v-slot:prepend><v-icon size="small">mdi-cloud-remove-outline</v-icon></template>
+          <v-list-item-title class="font-weight-medium text-body-2">Eliminar de la Nube</v-list-item-title>
+        </v-list-item>
+
+        <v-list-item v-if="contextMenu.item.status !== 5 && permiso_anular" @click="anularCertConfirm(contextMenu.item)">
+          <template v-slot:prepend><v-icon size="small">mdi-delete-outline</v-icon></template>
+          <v-list-item-title class="font-weight-medium text-body-2">Anular Certificado</v-list-item-title>
+        </v-list-item>
+        
+        <v-list-item v-if="contextMenu.item.status === 5 && permiso_anular" @click="revivirCertConfirm(contextMenu.item)">
+          <template v-slot:prepend><v-icon size="small">mdi-backup-restore</v-icon></template>
+          <v-list-item-title class="font-weight-medium text-body-2">Restaurar Certificado</v-list-item-title>
+        </v-list-item>
+      </v-list>
+    </v-menu>
+
   </v-container>
 </template>
 
@@ -582,7 +510,6 @@ import ClientMappers       from '@/mappers/clientMappers'
 import LabDataService      from '@/services/labs/labDataService'
 import LabMappers          from '@/mappers/labMappers'
 import AttachQR            from './AttachQR.vue'
-import certificateDataService from '../../../services/certificates/certificateDataService'
 import OrderSummaryCard    from './OrderSummaryCard.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 
@@ -608,7 +535,6 @@ const uploadSheetModalRef  = ref(null)
 const attachQrModalRef     = ref(null)
 
 // ─── Estado de la tabla ───────────────────────────────────────────────────────
-const hovered_row_id           = ref(null)
 const certificados_seleccionados = ref([])
 const certificates             = ref([])
 const total_certificates       = ref(0)
@@ -693,10 +619,11 @@ const headers = [
 
 // ─── Row props (reemplaza item-class de Vuetify 2) ───────────────────────────
 function getRowProps ({ item }) {
+  const esResonancia = orden_resonancia.value && item.order_number === orden_resonancia.value;
+  const esOpcionesAbiertas = contextMenu.value.show && contextMenu.value.item?.id === item.id;
+
   return {
-    class: (orden_resonancia.value && item.order_number === orden_resonancia.value)
-      ? 'resonancia-activa'
-      : ''
+    class: (esResonancia || esOpcionesAbiertas) ? 'resonancia-activa' : ''
   }
 }
 //funcio qr
@@ -802,14 +729,38 @@ function getTipoAbreviado (tipoOriginal) {
   return tipoOriginal
 }
 
-function abrirMenuOrden (item) {
-  hovered_row_id.value = item.id
-  nextTick(() => {
-    window.setTimeout(() => {
-      menu_abierto_id.value  = item.id
-      orden_resonancia.value = item.order_number
-    }, 50)
-  })
+// Estado del menú contextual global
+const contextMenu = ref({
+  show: false,
+  x: 0,
+  y: 0,
+  location: 'bottom start', // Dirección de apertura por defecto
+  item: null
+})
+
+function handleRightClick (event, { item }) {
+  event.preventDefault()
+  const cert = item.raw || item 
+  
+  // 1. Extraemos las coordenadas INMEDIATAMENTE para no perderlas en el asincronismo
+  const x = event.clientX;
+  const y = event.clientY;
+  
+  // 2. Apagamos el menú si estaba abierto
+  contextMenu.value.show = false 
+  
+  // 3. Usamos setTimeout en lugar de nextTick para evitar la condición de carrera con el "click-outside" nativo de Vuetify
+  setTimeout(() => {
+    // Lógica Senior de Pivote (Estilo Google Drive):
+    const vertical = y > window.innerHeight / 2 ? 'top' : 'bottom';
+    const horizontal = x > window.innerWidth / 2 ? 'end' : 'start';
+
+    contextMenu.value.item = cert
+    contextMenu.value.x = x
+    contextMenu.value.y = y
+    contextMenu.value.location = `${vertical} ${horizontal}`
+    contextMenu.value.show = true
+  }, 50) // 50ms son suficientes para que Vuetify limpie el estado anterior sin que el usuario note lag
 }
 
 function handleRowClick (event, { item }) {
@@ -946,7 +897,7 @@ function fetchAndInjectOrderUpdate (event) {
 
 function checkAsDelivered (certificate) {
   if (certificate.sent !== true) {
-    certificateDataService.checkAsDelivered(certificate.id, { sent: true })
+    CertificateDataService.checkAsDelivered(certificate.id, { sent: true })
       .then(() => { if (window.notificarActualizacionFila) window.notificarActualizacionFila(certificate.id, null); })
       .catch(e => console.error('Error al marcar como enviado', e))
   }
@@ -999,6 +950,39 @@ function revivirCertConfirm (cert) {
   })
 }
 
+function solicitarFirmaIndividual(cert) {
+  CertificateDataService.requestBatchSignatures([cert.id]).then(() => {
+    $swal.fire({
+      toast: true, position: 'top-end', showConfirmButton: false, timer: 3000,
+      icon: 'success', title: `Firma solicitada para ${cert.registry_code}`
+    })
+    cert.signature_requested = true
+  }).catch(() => {
+    $swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo notificar a gerencia.' })
+  })
+}
+
+function eliminarDeLaNubeConfirm(cert) {
+  $swal.fire({
+    title: '¿Eliminar de la Nube Pública?',
+    text: `El QR físico dejará de funcionar y el PDF ya no será visible en daicomperu.com, pero el equipo NO será anulado en el sistema interno.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      CertificateDataService.removeFromCloud(cert.id).then(() => {
+        $swal.fire('Eliminado', 'El documento ha sido bajado de la red.', 'success')
+        cert.uploaded = false
+        cert.status = 3 // Lo retrocedemos a Firmado localmente
+      }).catch(() => {
+        $swal.fire('Error', 'No se pudo contactar con el FTP.', 'error')
+      })
+    }
+  })
+}
+
 function openUploadDialog (item) {
   uploadSheetModalRef.value?.open(item)
 }
@@ -1023,13 +1007,15 @@ function openQRDialog (item) {
 
 
 /* =========================================================
-   EFECTO RESONANCIA (fila de la orden activa)
+   EFECTO RESONANCIA (Fila activa por orden o por opciones)
    ========================================================= */
-.resonancia-activa {
+.tabla-certificados-interactiva tbody tr.resonancia-activa,
+.tabla-certificados-interactiva tbody tr.resonancia-activa td {
   background-color: #E3F2FD !important;
   transition: background-color 0.2s ease-in-out;
 }
-.v-theme--dark .resonancia-activa {
+.v-theme--dark .tabla-certificados-interactiva tbody tr.resonancia-activa,
+.v-theme--dark .tabla-certificados-interactiva tbody tr.resonancia-activa td {
   background-color: #0f1d31 !important;
 }
 
@@ -1080,11 +1066,13 @@ function openQRDialog (item) {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
-/* Hover EN RESONANCIA (Intensifica el azul ligeramente al pasar el mouse por la orden activa) */
-.tabla-certificados-interactiva tbody tr.resonancia-activa:hover {
+/* Hover EN RESONANCIA (Intensifica el azul ligeramente al pasar el mouse por la fila activa) */
+.tabla-certificados-interactiva tbody tr.resonancia-activa:hover,
+.tabla-certificados-interactiva tbody tr.resonancia-activa:hover td {
   background-color: #BBDEFB !important; /* Azul claro más intenso (Modo Claro) */
 }
-.v-theme--dark .tabla-certificados-interactiva tbody tr.resonancia-activa:hover {
+.v-theme--dark .tabla-certificados-interactiva tbody tr.resonancia-activa:hover,
+.v-theme--dark .tabla-certificados-interactiva tbody tr.resonancia-activa:hover td {
   background-color: #152945 !important; /* Azul noche más intenso (Modo Oscuro) */
 }
 

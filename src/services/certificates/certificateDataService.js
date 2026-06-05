@@ -104,6 +104,11 @@ export default {
     return axios.post('certificates/scan-excels', { cert_ids: certIds }, { headers: headers });
   },
 
+  removeFromCloud(id) {
+    let headers = authHeader();
+    return axios.delete(`certificates/${id}/cloud`, { headers: headers });
+  },
+
   requestBatchSignatures(certIds) {
     let headers = authHeader();
     return axios.post('certificates/request-signatures', { cert_ids: certIds }, { headers: headers });

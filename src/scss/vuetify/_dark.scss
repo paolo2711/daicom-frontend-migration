@@ -1,0 +1,33 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Dark mode — traducción V2 → V3
+// V2: .v-application.theme--dark  →  V3: .v-theme--dark
+// Selectores de inputs eliminados (Vuetify 3 rediseñó inputs completamente)
+// ─────────────────────────────────────────────────────────────────────────────
+
+.v-theme--dark {
+  .border-left  { border-left:  1px solid rgba(255, 255, 255, 0.12); }
+  .border-right { border-right: 1px solid rgba(255, 255, 255, 0.12); }
+  .border       { border:       1px solid rgba(255, 255, 255, 0.12); }
+
+  .todo-cards .v-card     { background: #255c63; }
+  .progress-cards .v-card { background: #1e374e; }
+
+  // V3: inputs filled usan v-field__overlay para el fondo
+  .v-field--variant-filled .v-field__overlay {
+    background-color: rgba(255, 255, 255, 0.04);
+  }
+
+  // Modales
+  &.dialog-premium .v-overlay__content > .v-card,
+  .dialog-premium .v-overlay__content > .v-card.v-theme--dark {
+    border: none !important;
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.18) !important;
+    background-color: #1e1e1e !important;
+  }
+
+  // Tablas y tarjetas
+  .v-card.outlined,
+  .tabla-mejorada {
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+}

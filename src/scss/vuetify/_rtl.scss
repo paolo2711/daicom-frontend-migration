@@ -1,0 +1,41 @@
+;@use "../variables.scss" as *;
+
+.v-locale--is-rtl {
+    #main-sidebar {
+        position: fixed!important;
+    }
+    .border-left {
+        border-left: 0px;
+        border-right: 1px solid rgba(0,0,0,.1);
+    }
+    .border-right {
+        border-right: 0px;
+        border-left: 1px solid rgba(0,0,0,.1);
+    }
+    .float-right { float: left !important; }
+    .float-left { float: right !important; }
+    .month-table tr.month-item {
+        td:first-child {
+            border-left: 0 solid transparent;
+            border-right: 2px solid transparent;
+        }
+        &:hover, &.active {
+            background: transparent !important;
+            td:first-child {
+                border-left: 0 solid $info;
+                border-right: 2px solid $info;
+            }
+        }
+    }
+}
+
+.v-theme--dark.v-locale--is-rtl {
+    .border-left {
+        border-left: 0;
+        border-right: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .border-right {
+        border-right: 0;
+        border-left: 1px solid rgba(255, 255, 255, 0.12);
+    }
+}

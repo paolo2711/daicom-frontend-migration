@@ -1,0 +1,118 @@
+@use "../variables.scss" as *;
+
+.v-application,
+.v-application .text-body-1,
+.v-application .text-body-2,
+.v-application .text-subtitle-1,
+.v-list-item-title {
+  font-family: "Poppins", sans-serif !important;
+}
+
+.mini-sidebar {
+  .logo-text {
+    display: none;
+  }
+}
+
+h1, h2, h3, h4, h5 {
+  font-weight: 600;
+}
+
+.border-top    { border-top:    1px solid rgba(0, 0, 0, 0.1); }
+.border-bottom { border-bottom: 1px solid rgba(0, 0, 0, 0.1); }
+.border-left   { border-left:   1px solid rgba(0, 0, 0, 0.1); }
+.border-right  { border-right:  1px solid rgba(0, 0, 0, 0.1); }
+.border        { border:        1px solid rgba(0, 0, 0, 0.1); }
+
+.position-relative { position: relative; }
+
+.v-theme--light {
+  .headline,
+  .v-card .title {
+    color: rgba(0, 0, 0, 0.8);
+  }
+}
+
+.v-sheet.v-app-bar.v-toolbar:not(.v-sheet--outlined),
+.v-sheet.v-card:not(.v-sheet--outlined) {
+  box-shadow: $box-shadow;
+}
+
+/* NOTA DE MIGRACIÓN: Se eliminaron los media queries manuales que alteraban el translateX */
+/* de .v-navigation-drawer, ya que causaban conflictos graves con el motor de Vuetify 3. */
+
+.logo-width { min-width: 235px; }
+
+.custom-shadow {
+  box-shadow: 1px 0 5px rgba(0, 0, 0, 0.1);
+}
+.img-fluid { max-width: 100%; height: auto; }
+.rounded { border-radius: 4px; }
+.rounded-circle { border-radius: 50%; }
+a { text-decoration: none; }
+.w-100 { width: 100%; }
+
+.v-application a.link {
+  color: #455a64;
+  &:hover { color: #009efb; }
+}
+
+.op-5 { opacity: 0.5; }
+.text-decoration-line { text-decoration: line-through; }
+.lh-22 { line-height: 22px; }
+
+.down-top-padding > .row:not(:first-child) > [class*="col-"] {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.apexcharts-toolbar { z-index: 1 !important; }
+.fill-color { fill: currentColor !important; }
+.color-code code { display: flex; }
+
+.v-theme--light .v-main { background-color: #dfe5ef; }
+.v-theme--dark .v-main { background-color: #1b2028; }
+
+.subtitle-2 { color: $subtitle-color; }
+
+::-webkit-scrollbar { width: 10px; }
+.v-theme--dark ::-webkit-scrollbar-track { background: #1b2028; }
+.v-theme--light ::-webkit-scrollbar-track { background: #dfe5ef; }
+::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* Fondo acrílico exclusivo para modales con la clase dialog-premium */
+.dialog-premium .v-overlay__scrim {
+  backdrop-filter: blur(12px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+  background-color: rgba(0, 0, 0, 0.45) !important;
+}
+
+.dialog-premium .v-overlay__content {
+  box-shadow: none !important;
+}
+
+/* Bordes y estilos exclusivos para la tarjeta dentro de dialog-premium */
+.dialog-premium .v-overlay__content > .v-card {
+  border-radius: 21px !important;
+  overflow: hidden !important;
+}
+
+.v-theme--light.dialog-premium .v-overlay__content > .v-card,
+.dialog-premium .v-overlay__content > .v-card.v-theme--light {
+  border: none !important;
+  box-shadow: none !important;
+  background-color: #ffffff !important;
+}
+.dialog-premium .v-card-title {
+  padding-top: 20px !important;
+  padding-bottom: 16px !important;
+}
+.v-theme--light .v-dialog > .v-card {
+  border: none !important;
+  box-shadow: 0px 15px 40px rgba(0, 0, 0, 0.15) !important;
+}
+.v-theme--dark .v-dialog > .v-card {
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0px 15px 40px rgba(0, 0, 0, 0.3) !important;
+}

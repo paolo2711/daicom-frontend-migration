@@ -1,0 +1,348 @@
+Listado de rutas de carpetas para el volumen WINDOWS 10 PRO
+El n£mero de serie del volumen es 0000002B C4CE:E577
+C:\USERS\PAOLOTI\DOWNLOADS\DAICOM-BACKEND-MIGRATION\SRC
+|   App.vue
+|   main.js
+|   router.js
+|   
++---assets
+|   |   base.css
+|   |   logo.png
+|   |   logo.svg
+|   |   main.css
+|   |   
+|   \---images
+|       |   logo-icon.png
+|       |   logo-light-icon.png
+|       |   
+|       \---background
+|               error-bg.jpg
+|               
++---components
+|   \---commonComponents
+|           BaseBreadcrumb.vue
+|           BaseCard.vue
+|           BaseItem.vue
+|           BaseItemGroup.vue
+|           BaseItemSubGroup.vue
+|           BaseModalHeader.vue
+|           DatePicker.vue
+|           FluentPagination.vue
+|           TableLoadingOverlay.vue
+|           Uploadmanager.vue
+|           Uploadqr.vue
+|           Uploadsheets.vue
+|           
++---composables
+|       useSwal.js
+|       
++---layouts
+|   +---blank-layout
+|   |       Blanklayout.vue
+|   |       
+|   \---full-layout
+|       |   Layout.vue
+|       |   
+|       +---footer
+|       |       Footer.vue
+|       |       
+|       \---sidebar
+|               Sidebar.vue
+|               SidebarItems.js
+|               
++---mappers
+|       certificateMappers.js
+|       clientMappers.js
+|       companyMappers.js
+|       labMappers.js
+|       logMappers.js
+|       profileMappers.js
+|       roleMappers.js
+|       userMappers.js
+|       
++---plugins
+|       alerts.js
+|       base.js
+|       vuetify.js
+|       
++---router
+|       index.js
+|       
++---scss
+|   |   sweetalert2.scss
+|   |   variables.scss
+|   |   
+|   +---icons
+|   |   +---font-awesome
+|   |   |   +---css
+|   |   |   |       fa-brands.css
+|   |   |   |       fa-brands.min.css
+|   |   |   |       fa-regular.css
+|   |   |   |       fa-regular.min.css
+|   |   |   |       fa-solid.css
+|   |   |   |       fa-solid.min.css
+|   |   |   |       fontawesome-all.css
+|   |   |   |       fontawesome-all.min.css
+|   |   |   |       fontawesome.css
+|   |   |   |       fontawesome.min.css
+|   |   |   |       
+|   |   |   +---less
+|   |   |   |       fa-brands.less
+|   |   |   |       fa-regular.less
+|   |   |   |       fa-solid.less
+|   |   |   |       fontawesome.less
+|   |   |   |       _animated.less
+|   |   |   |       _bordered-pulled.less
+|   |   |   |       _core.less
+|   |   |   |       _fixed-width.less
+|   |   |   |       _icons.less
+|   |   |   |       _larger.less
+|   |   |   |       _list.less
+|   |   |   |       _mixins.less
+|   |   |   |       _rotated-flipped.less
+|   |   |   |       _screen-reader.less
+|   |   |   |       _stacked.less
+|   |   |   |       _variables.less
+|   |   |   |       
+|   |   |   +---scss
+|   |   |   |       fa-brands.scss
+|   |   |   |       fa-regular.scss
+|   |   |   |       fa-solid.scss
+|   |   |   |       fontawesome.scss
+|   |   |   |       _animated.scss
+|   |   |   |       _bordered-pulled.scss
+|   |   |   |       _core.scss
+|   |   |   |       _fixed-width.scss
+|   |   |   |       _icons.scss
+|   |   |   |       _larger.scss
+|   |   |   |       _list.scss
+|   |   |   |       _mixins.scss
+|   |   |   |       _rotated-flipped.scss
+|   |   |   |       _screen-reader.scss
+|   |   |   |       _stacked.scss
+|   |   |   |       _variables.scss
+|   |   |   |       
+|   |   |   \---webfonts
+|   |   |           fa-brands-400.eot
+|   |   |           fa-brands-400.svg
+|   |   |           fa-brands-400.ttf
+|   |   |           fa-brands-400.woff
+|   |   |           fa-brands-400.woff2
+|   |   |           fa-regular-400.eot
+|   |   |           fa-regular-400.svg
+|   |   |           fa-regular-400.ttf
+|   |   |           fa-regular-400.woff
+|   |   |           fa-regular-400.woff2
+|   |   |           fa-solid-900.eot
+|   |   |           fa-solid-900.svg
+|   |   |           fa-solid-900.ttf
+|   |   |           fa-solid-900.woff
+|   |   |           fa-solid-900.woff2
+|   |   |           
+|   |   +---simple-line-icons
+|   |   |   +---css
+|   |   |   |       simple-line-icons.css
+|   |   |   |       
+|   |   |   +---fonts
+|   |   |   |       Simple-Line-Icons.eot
+|   |   |   |       Simple-Line-Icons.svg
+|   |   |   |       Simple-Line-Icons.ttf
+|   |   |   |       Simple-Line-Icons.woff
+|   |   |   |       Simple-Line-Icons.woff2
+|   |   |   |       
+|   |   |   +---less
+|   |   |   |       simple-line-icons.less
+|   |   |   |       
+|   |   |   \---scss
+|   |   |           simple-line-icons.scss
+|   |   |           
+|   |   \---themify-icons
+|   |       |   themify-icons.css
+|   |       |   themify-icons.less
+|   |       |   
+|   |       +---fonts
+|   |       |       themify.eot
+|   |       |       themify.svg
+|   |       |       themify.ttf
+|   |       |       themify.woff
+|   |       |       
+|   |       \---ie7
+|   |               ie7.css
+|   |               ie7.js
+|   |               
+|   \---vuetify
+|           overrides.scss
+|           _card.scss
+|           _dark.scss
+|           _layout.scss
+|           _loader.scss
+|           _rtl.scss
+|           _sidebar.scss
+|           _v-bar.scss
+|           
++---services
+|   |   auth-header.js
+|   |   auth.service.js
+|   |   
+|   +---certificates
+|   |       certificateDataService.js
+|   |       orderDataService.js
+|   |       
+|   +---clients
+|   |       clientDataService.js
+|   |       
+|   +---company
+|   |       companyDataService.js
+|   |       
+|   +---correlative
+|   |       correlativeDataService.js
+|   |       
+|   +---equipments
+|   |       equipmentDataService.js
+|   |       unitDataService.js
+|   |       
+|   +---external
+|   |       apiPeruService.js
+|   |       
+|   +---inventory
+|   |       inventoryDataService.js
+|   |       
+|   +---labs
+|   |       labDataService.js
+|   |       
+|   +---logs
+|   |       logDataService.js
+|   |       
+|   +---permissions
+|   |       permissionDataService.js
+|   |       
+|   +---profile
+|   |       profileDataService.js
+|   |       
+|   +---roles
+|   |       roleDataService.js
+|   |       
+|   +---users
+|   |       userDataService.js
+|   |       
+|   \---websockets
+|           wsNotificationService.js
+|           
++---stores
+|       appStore.js
+|       authStore.js
+|       counter.js
+|       
++---validators
+|   +---commonValidators
+|   |       characters.js
+|   |       
+|   \---rules
+|           certificatesRules.js
+|           clientRules.js
+|           companyRules.js
+|           labRules.js
+|           usersRules.js
+|           
+\---views
+    |   AboutView.vue
+    |   HomeView.vue
+    |   
+    +---access
+    |   +---company
+    |   |   |   company.vue
+    |   |   |   
+    |   |   \---components
+    |   |           ViewEditCompany.vue
+    |   |           
+    |   +---permissions
+    |   |   |   Permissions.vue
+    |   |   |   
+    |   |   \---components
+    |   |           ListPermissions.vue
+    |   |           
+    |   +---profile
+    |   |   |   profile.vue
+    |   |   |   
+    |   |   \---components
+    |   |           ViewEditProfile.vue
+    |   |           
+    |   +---roles
+    |   |   \---components
+    |   |           ListRoles.vue
+    |   |           RoleFormDialog.vue
+    |   |           
+    |   \---users
+    |       |   Users.vue
+    |       |   
+    |       \---components
+    |               ListUsers.vue
+    |               UserFormDialog.vue
+    |               
+    +---authentication
+    |       Error.vue
+    |       Login.vue
+    |       
+    +---certificates
+    |   |   Certificates.vue
+    |   |   
+    |   \---components
+    |           AttachQR.vue
+    |           CertificateModal.vue
+    |           ListCertificates.vue
+    |           LoadSheet.vue
+    |           OrderSummaryCard.vue
+    |           
+    +---clients
+    |   |   Clients.vue
+    |   |   
+    |   \---components
+    |           ClientFormDialog.vue
+    |           ListClients.vue
+    |           
+    +---equipments
+    |   |   Equipments.vue
+    |   |   
+    |   \---components
+    |           EquipmentModal.vue
+    |           ListEquipments.vue
+    |           UnitModal.vue
+    |           
+    +---home
+    |   |   home.vue
+    |   |   
+    |   \---components
+    |           ListLogs.vue
+    |           
+    +---inventory
+    |   |   Inventory.vue
+    |   |   
+    |   \---components
+    |           AddEquipment.vue
+    |           EquipmentHistory.vue
+    |           ListInventory.vue
+    |           
+    +---labs
+    |   |   Labs.vue
+    |   |   
+    |   \---components
+    |           LabFormDialog.vue
+    |           ListLabs.vue
+    |           
+    \---orders
+        |   Orders.vue
+        |   
+        \---components
+                AddExtraEquipment.vue
+                AddOrder.vue
+                DialogFactura.vue
+                DialogLiquidacion.vue
+                EditOrder.vue
+                FormOrderRental.vue
+                FormOrderService.vue
+                ListOrders.vue
+                TableRentalDetails.vue
+                TableServiceDetails.vue
+                TabOrdersRental.vue
+                TabOrdersService.vue
+                

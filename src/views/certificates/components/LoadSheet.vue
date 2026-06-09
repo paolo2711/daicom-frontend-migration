@@ -2,7 +2,7 @@
   <v-dialog v-model="dialog" class="dialog-premium" max-width="500" width="90%" persistent>
     <v-card v-if="certificate">
       <base-modal-header 
-        title="Generar PDF (Subir Excel)" 
+        title="Adjuntar Excel" 
         icon="mdi-file-excel" 
         @close="close"
       >
@@ -32,8 +32,7 @@
         <v-spacer/>
         <v-btn variant="flat" class="font-weight-bold mr-3 px-4" @click="close">Cancelar</v-btn>
         <v-btn color="primary" @click="generatePreview"
-               :loading="is_on_sending_process"
-               :disabled="!workbook.file">Generar Vista Previa</v-btn>
+               :disabled="!workbook.file">Guardar</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -47,8 +46,8 @@ const certificate = ref(null)
 
 const show = ref(false)
 const workbook = ref({ file: null, password: '', related_certificate: '' })
-const is_on_sending_process = ref(false)
 const uploadForm = ref(null)
+const emit = defineEmits(['file-attached'])
 
 const open = (item) => {
   certificate.value = item
@@ -63,20 +62,12 @@ const close = () => {
 }
 
 const generatePreview = () => {
-  if (is_on_sending_process.value) return
-  is_on_sending_process.value = true
-
-  window.dispatchEvent(new CustomEvent('wss-sheet-start', { 
-    detail: { 
-      id: certificate.value.id, 
-      code: certificate.value.registry_code,
-      file: workbook.value.file,
-      password: workbook.value.password,
-    } 
-  }))
-
+  emit('file-attached', {
+    id: certificate.value.id,
+    file: workbook.value.file,
+    password: workbook.value.password
+  })
   close()
-  is_on_sending_process.value = false
 }
 
 defineExpose({ open, close })

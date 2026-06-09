@@ -151,9 +151,9 @@ onMounted(() => {
 async function fetchInitialInventory() {
   loading_items.value = true
   try {
-    const response = await InventoryDataService.getAll()
+    const response = await InventoryDataService.getAll({ status: 1 })
     const all_items = response.data.results ? response.data.results : response.data
-    all_inventory_items.value = all_items.filter(item => item.status === 1)
+    all_inventory_items.value = all_items
   } catch (error) {
     console.error('Error cargando inventario', error)
   } finally {

@@ -76,8 +76,8 @@
                 </div>
 
                 <div class="d-flex justify-center" style="gap: 10px;">
-                  <v-btn color="primary" variant="outlined" :href="equipment.latest_certificate.signed_pdf" target="_blank" :disabled="!equipment.latest_certificate.signed_pdf">
-                    <v-icon start>mdi-file-pdf-box</v-icon> Ver PDF Firmado
+                  <v-btn color="primary" variant="outlined" :href="`https://daicomperu.com/${equipment.latest_certificate.uuid}`" target="_blank" :disabled="!equipment.latest_certificate.uuid">
+                    <v-icon start>mdi-qrcode-scan</v-icon> Ver Certificado Público
                   </v-btn>
                   <v-btn color="error" variant="text" @click="unlinkCertificate" :loading="linkingCert">
                     <v-icon start>mdi-link-off</v-icon> Desvincular

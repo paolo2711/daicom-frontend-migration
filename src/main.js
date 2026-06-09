@@ -18,6 +18,9 @@ import 'animate.css'
 //axios.defaults.withCredentials = true
 //
 //axios.defaults.baseURL = "http://192.168.15.16/api/"
+//axios.defaults.baseURL = "http://127.0.0.1:8000/api/" //ruta local
+//axios.defaults.baseURL = "http://192.168.15.16:8000/api/" //ruta local del server
+
 //axios.defaults.baseURL = "http://100.127.45.59/api/";//del server app// pc casa
 axios.defaults.baseURL = window.location.origin + "/api/";// funcional de app + conexion pagina
 

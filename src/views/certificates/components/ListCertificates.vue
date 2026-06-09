@@ -420,7 +420,7 @@
     <!-- ═══════════════════════════════════════════════════
          MODALES Y COMPONENTES EXTERNOS
     ════════════════════════════════════════════════════ -->
-    <upload-sheet ref="uploadSheetModalRef" />
+    
     
     <attach-q-r ref="attachQrModalRef" />
     
@@ -461,15 +461,21 @@
           </v-list-item-title>
         </v-list-item>
 
-        <v-list-item v-if="permiso_solicitar_firma && contextMenu.item.status !== 5 && !contextMenu.item.signature_requested && !contextMenu.item.uploaded" @click="solicitarFirmaIndividual(contextMenu.item)">
-          <template v-slot:prepend><v-icon size="small">mdi-bell-ring</v-icon></template>
-          <v-list-item-title class="font-weight-medium text-body-2">Solicitar Firma</v-list-item-title>
+        <v-list-item v-if="permiso_solicitar_firma && contextMenu.item.status !== 5" @click="contextMenu.item.signature_requested ? cancelarSolicitudFirma(contextMenu.item) : solicitarFirmaIndividual(contextMenu.item)">
+          <template v-slot:prepend>
+            <v-icon size="small">
+              {{ contextMenu.item.signature_requested ? 'mdi-bell-cancel-outline' : 'mdi-bell-ring' }}
+            </v-icon>
+          </template>
+          <v-list-item-title class="font-weight-medium text-body-2">
+            {{ contextMenu.item.signature_requested ? 'Cancelar Solicitud' : 'Solicitar Firma' }}
+          </v-list-item-title>
         </v-list-item>
 
         <v-list-item v-if="permiso_qr && contextMenu.item.status !== 5 && (contextMenu.item.uploaded_xls && contextMenu.item.uploaded_xls !== '0' && contextMenu.item.uploaded_xls !== 'False')" @click="openQRDialog(contextMenu.item)">
           <template v-slot:prepend><v-icon size="small">{{ contextMenu.item.uploaded ? 'mdi-refresh' : 'mdi-qrcode-scan' }}</v-icon></template>
           <v-list-item-title class="font-weight-medium text-body-2">
-            {{ contextMenu.item.uploaded ? 'Regenerar QR y Reemplazar' : 'Generar QR y Firmar' }}
+            {{ contextMenu.item.uploaded ? 'Regenerar QR' : 'Generar QR y Firmar' }}
           </v-list-item-title>
         </v-list-item>
 
@@ -515,7 +521,7 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 
 // Componentes async (lazy-loading igual que en Vue 2)
 const DatePicker  = defineAsyncComponent(() => import('@/components/commonComponents/DatePicker.vue'))
-const UploadSheet = defineAsyncComponent(() => import('@/views/certificates/components/LoadSheet.vue'))
+// carga diferida de LoadSheet movida a BatchActionModal
 const BatchActionModal = defineAsyncComponent(() => import('./BatchActionModal.vue'))
 
 // ─── Composables ──────────────────────────────────────────────────────────────
@@ -531,7 +537,7 @@ const $swal = appContext.config.globalProperties.$swal
 // ─── Template refs ────────────────────────────────────────────────────────────
 const certificateModal     = ref(null)
 const batchActionModalRef  = ref(null)
-const uploadSheetModalRef  = ref(null)
+// uploadSheetModalRef eliminado, ahora se maneja desde batch
 const attachQrModalRef     = ref(null)
 
 // ─── Estado de la tabla ───────────────────────────────────────────────────────
@@ -956,11 +962,22 @@ function solicitarFirmaIndividual(cert) {
       toast: true, position: 'top-end', showConfirmButton: false, timer: 3000,
       icon: 'success', title: `Firma solicitada para ${cert.registry_code}`
     })
-    cert.signature_requested = true
   }).catch(() => {
     $swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo notificar a gerencia.' })
   })
 }
+
+function cancelarSolicitudFirma(cert) {
+  CertificateDataService.cancelSignatureRequest(cert.id).then(() => {
+    $swal.fire({
+      toast: true, position: 'top-end', showConfirmButton: false, timer: 3000,
+      icon: 'info', title: `Solicitud cancelada para ${cert.registry_code}`
+    })
+  }).catch(() => {
+    $swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cancelar la solicitud.' })
+  })
+}
+
 
 function eliminarDeLaNubeConfirm(cert) {
   $swal.fire({
@@ -984,7 +1001,9 @@ function eliminarDeLaNubeConfirm(cert) {
 }
 
 function openUploadDialog (item) {
-  uploadSheetModalRef.value?.open(item)
+  if (batchActionModalRef.value) {
+    batchActionModalRef.value.open('excel', [item])
+  }
 }
 
 function openQRDialog (item) {

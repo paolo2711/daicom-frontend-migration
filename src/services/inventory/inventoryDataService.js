@@ -2,8 +2,8 @@ import axios from "axios";
 import authHeader from "@/services/auth-header";
 
 class InventoryDataService {
-    getAll() {
-        return axios.get("inventory/items/", { headers: authHeader() });
+    getAll(params = {}) {
+        return axios.get("inventory/items/", { headers: authHeader(), params: params });
     }
     get(id) {
         return axios.get(`inventory/items/${id}/`, { headers: authHeader() });

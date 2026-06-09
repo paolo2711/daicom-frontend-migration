@@ -109,6 +109,11 @@ export default {
     return axios.delete(`certificates/${id}/cloud`, { headers: headers });
   },
 
+  cancelSignatureRequest(id) {
+    let headers = authHeader();
+    return axios.patch(`certificates/${id}/cancel-signature`, {}, { headers: headers });
+  },
+
   requestBatchSignatures(certIds) {
     let headers = authHeader();
     return axios.post('certificates/request-signatures', { cert_ids: certIds }, { headers: headers });

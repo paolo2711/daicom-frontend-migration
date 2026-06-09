@@ -34,13 +34,13 @@ export default [
         id: 7,
         name: 'Clientes',
     },
-    {
+    /*{
         icon: 'mdi-file-document-multiple', 
         title: 'Plantillas',
         to: '/plantillas', 
         id: 8, 
         name: 'Plantillas',
-    },
+    },*/
     {
         icon: 'mdi-clipboard-list-outline', 
         title: 'Inventario',

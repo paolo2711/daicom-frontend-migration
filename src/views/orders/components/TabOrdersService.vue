@@ -40,7 +40,7 @@
               :loading="loading_clients"
               prepend-inner-icon="mdi-account-group"
               :items="clients"
-              @update:search="onSearchClient"
+              v-model:search="search_client"
               @update:model-value="applyFilters"
               item-title="name"
               item-value="id"
@@ -271,6 +271,7 @@ import OrderDataService from '@/services/certificates/orderDataService'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import ClientDataService from '@/services/clients/clientDataService'
 import ClientMappers from '@/mappers/clientMappers'
+import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import DialogFactura from './DialogFactura.vue'
@@ -346,9 +347,16 @@ const order_statuses = [
 ]
 
 // Clientes
-const clients = ref([])
-const loading_clients = ref(false)
-const search_client = ref('')
+const { 
+  items: clients, 
+  loading: loading_clients, 
+  searchQuery: search_client, 
+  retrieveData: retrieveClientes 
+} = usePaginatedSearch(
+  (page, size, query) => ClientDataService.getFiltered(page, size, query),
+  ClientMappers.getMap,
+  () => filter_client_id.value
+)
 
 // Usuario y permisos
 const user = JSON.parse(localStorage.getItem('user')) || {}
@@ -365,10 +373,6 @@ const applyFilters = () => {
   retrieveOrders()
 }
 
-const onSearchClient = (val) => {
-  search_client.value = val
-  retrieveClientes(val)
-}
 
 const onDateGtChange = (value) => {
   filter_date_gt.value = value
@@ -380,17 +384,7 @@ const onDateLtChange = (value) => {
   applyFilters()
 }
 
-// Carga de clientes
-const retrieveClientes = (client) => {
-  loading_clients.value = true
-  ClientDataService.getFiltered(1, 10, client || '')
-    .then((res) => {
-      clients.value = res.data.results.map(ClientMappers.getMap)
-    })
-    .finally(() => {
-      loading_clients.value = false
-    })
-}
+
 
 // Obtener órdenes
 const retrieveOrders = () => {

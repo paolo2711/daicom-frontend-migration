@@ -300,7 +300,7 @@
                   <v-btn
                     v-bind="props" icon variant="text" density="comfortable" color="primary"
                     :href="`https://daicomperu.com/${item.uuid}`" target="_blank"
-                    :disabled="item.status === 5" @click.stop="checkAsDelivered(item)"
+                    :disabled="item.status === 5" @click.stop
                   >
                     <v-icon>mdi-cloud-check</v-icon>
                   </v-btn>
@@ -461,7 +461,7 @@
           </v-list-item-title>
         </v-list-item>
 
-        <v-list-item v-if="permiso_solicitar_firma && contextMenu.item.status !== 5" @click="contextMenu.item.signature_requested ? cancelarSolicitudFirma(contextMenu.item) : solicitarFirmaIndividual(contextMenu.item)">
+        <v-list-item v-if="permiso_solicitar_firma && contextMenu.item.status !== 5 && (contextMenu.item.uploaded_xls && contextMenu.item.uploaded_xls !== '0' && contextMenu.item.uploaded_xls !== 'False')" @click="contextMenu.item.signature_requested ? cancelarSolicitudFirma(contextMenu.item) : solicitarFirmaIndividual(contextMenu.item)">
           <template v-slot:prepend>
             <v-icon size="small">
               {{ contextMenu.item.signature_requested ? 'mdi-bell-cancel-outline' : 'mdi-bell-ring' }}
@@ -508,6 +508,7 @@ import { useAppStore } from '@/stores/appStore'
 
 import FluentPagination    from '@/components/commonComponents/FluentPagination.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
+import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import OrderDataService    from '@/services/certificates/orderDataService.js'
 import CertificateMappers  from '@/mappers/certificateMappers'
 import CertificateModal    from '@/views/certificates/components/CertificateModal.vue'
@@ -570,16 +571,32 @@ const textoRangoFechas = computed(() => {
 })
 
 // ─── Laboratorios ─────────────────────────────────────────────────────────────
-const labs          = ref([])
-const loading_labs  = ref(false)
-const lab_id        = ref(null)
-const search_lab    = ref(null)
+const lab_id = ref(null)
+
+const { 
+  items: labs, 
+  loading: loading_labs, 
+  searchQuery: search_lab, 
+  retrieveData: retrieveLabs 
+} = usePaginatedSearch(
+  (page, size, query) => LabDataService.getFiltered(page, size, query),
+  LabMappers.getMap,
+  () => lab_id.value
+)
 
 // ─── Clientes ─────────────────────────────────────────────────────────────────
-const clients          = ref([])
-const loading_clients  = ref(false)
-const client_id        = ref(null)
-const search_client    = ref(null)
+const client_id = ref(null)
+
+const { 
+  items: clients, 
+  loading: loading_clients, 
+  searchQuery: search_client, 
+  retrieveData: retrieveClientes 
+} = usePaginatedSearch(
+  (page, size, query) => ClientDataService.getFiltered(page, size, query),
+  ClientMappers.getMap,
+  () => client_id.value
+)
 
 // ─── Tipo de certificado ──────────────────────────────────────────────────────
 const certificate_type  = ref(null)
@@ -645,9 +662,6 @@ watch(correlative,       () => { options.value.page = 1; retrieveAllCertificates
 watch(certificate_type,  () => { options.value.page = 1; retrieveAllCertificates() })
 watch(client_id,         () => { options.value.page = 1; retrieveAllCertificates() })
 watch(lab_id,            () => { options.value.page = 1; retrieveAllCertificates() })
-
-watch(search_client, (val) => retrieveClientes(val))
-watch(search_lab,    (val) => retrieveLabs(val))
 
 function abrirModalLote (accion) {
   if (batchActionModalRef.value) {
@@ -794,21 +808,6 @@ function getCertCodesByOrder (orderNum) {
     .map(c => c.registry_code)
 }
 
-function retrieveClientes (client) {
-  loading_clients.value = true
-  ClientDataService.getFiltered(1, 10, client ?? '').then((response) => {
-    loading_clients.value = false
-    clients.value = response.data.results.map(ClientMappers.getMap)
-  })
-}
-
-function retrieveLabs (lab) {
-  loading_labs.value = true
-  LabDataService.getFiltered(1, 10, lab ?? '').then((response) => {
-    loading_labs.value = false
-    labs.value = response.data.results.map(LabMappers.getMap)
-  })
-}
 
 function retrieveAllCertificates () {
   // AL RECARGAR DATOS: Reiniciamos las selecciones para evitar filas fantasma (filtros o paginación)
@@ -989,8 +988,16 @@ function eliminarDeLaNubeConfirm(cert) {
     cancelButtonText: 'Cancelar'
   }).then((result) => {
     if (result.isConfirmed) {
-      CertificateDataService.removeFromCloud(cert.id).then(() => {
-        $swal.fire('Eliminado', 'El documento ha sido bajado de la red.', 'success')
+      CertificateDataService.removeFromCloud(cert.id).then((response) => {
+        // Leemos la data de forma agnóstica como lo hicimos en Uploadqr.vue
+        const data = response.data || response;
+        
+        if (data.warning) {
+          $swal.fire('Nube Limpia', data.success, 'warning')
+        } else {
+          $swal.fire('Eliminado', data.success || 'El documento ha sido bajado de la red.', 'success')
+        }
+        
         cert.uploaded = false
         cert.status = 3 // Lo retrocedemos a Firmado localmente
       }).catch(() => {

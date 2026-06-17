@@ -10,10 +10,8 @@ class CompanyDataService {
     }
 
     update(data) {
-        let headers = authHeader();
-        headers['Content-Type'] = "multipart/form-data";
         return axios.put('company', data, {
-            headers: headers
+            headers: authHeader()
         })
     }
 }

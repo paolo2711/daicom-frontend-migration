@@ -183,8 +183,9 @@ const document_rules = CompanyRules.document_rules()
 const correlative_rules = CompanyRules.correlative_rules()
 
 const logoPreview = computed(() => {
-  if (uploadFiles.image && uploadFiles.image.length > 0) {
-    return URL.createObjectURL(uploadFiles.image[0])
+  const f = Array.isArray(uploadFiles.image) ? uploadFiles.image[0] : uploadFiles.image
+  if (f instanceof File) {
+    return URL.createObjectURL(f)
   }
   return company.image || null
 })
@@ -224,11 +225,17 @@ const saveCompany = async () => {
 
   let data = new FormData()
 
-  if (uploadFiles.image.length > 0) data.append('image', uploadFiles.image[0])
-  if (uploadFiles.accFirst.length > 0) data.append('accredited_correlative_pdf_first_page', uploadFiles.accFirst[0])
-  if (uploadFiles.accOther.length > 0) data.append('accredited_correlative_pdf_other_pages', uploadFiles.accOther[0])
-  if (uploadFiles.nonAccFirst.length > 0) data.append('non_accredited_correlative_pdf_first_page', uploadFiles.nonAccFirst[0])
-  if (uploadFiles.nonAccOther.length > 0) data.append('non_accredited_correlative_pdf_other_pages', uploadFiles.nonAccOther[0])
+  const appendFile = (key, file) => {
+    if (!file) return
+    const f = Array.isArray(file) ? file[0] : file
+    if (f instanceof File) data.append(key, f)
+  }
+
+  appendFile('image', uploadFiles.image)
+  appendFile('accredited_correlative_pdf_first_page', uploadFiles.accFirst)
+  appendFile('accredited_correlative_pdf_other_pages', uploadFiles.accOther)
+  appendFile('non_accredited_correlative_pdf_first_page', uploadFiles.nonAccFirst)
+  appendFile('non_accredited_correlative_pdf_other_pages', uploadFiles.nonAccOther)
 
   let prepare_data = Object.assign({}, company)
   delete prepare_data['image']

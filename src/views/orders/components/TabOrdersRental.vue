@@ -224,6 +224,7 @@ import FluentPagination from "@/components/commonComponents/FluentPagination.vue
 import OrderDataService from "@/services/certificates/orderDataService"
 import ClientDataService from "@/services/clients/clientDataService"
 import ClientMappers from "@/mappers/clientMappers"
+import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import DialogFactura from "./DialogFactura.vue"
 import DialogLiquidacion from "./DialogLiquidacion.vue"
 import EditOrder from "./EditOrder.vue"
@@ -240,7 +241,21 @@ export default {
   setup() {
     const theme = useTheme()
     const isDark = vueComputed(() => theme.global.current.value.dark)
-    return { isDark }
+    
+    // PUENTE: Instanciamos el Composable y lo devolvemos para que Options API lo vea en 'this'
+    const filter_client_id = ref(null)
+    const { 
+      items: clients, 
+      loading: loading_clients, 
+      searchQuery: search_client, 
+      retrieveData: retrieveClientes 
+    } = usePaginatedSearch(
+      (page, size, query) => ClientDataService.getFiltered(page, size, query),
+      ClientMappers.getMap,
+      () => filter_client_id.value
+    )
+
+    return { isDark, filter_client_id, clients, loading_clients, search_client, retrieveClientes }
   },
   data: () => ({
     edit_order_modal: false, factura_modal: false, liquidacion_modal: false, selected_order: null,
@@ -254,8 +269,8 @@ export default {
       { title: 'Opciones',       key: 'actions',     align: 'center', sortable: false },
       { title: '',               key: 'data-table-expand' },
     ],
-    orders: [], expanded: [], filter_order: '', filter_client_ref: '', filter_client_id: '',
-    clients: [], loading_clients: false, search_client: '', filter_date_gt: '', filter_date_lt: '', filter_status: '',
+    orders: [], expanded: [], filter_order: '', filter_client_ref: '', 
+    filter_date_gt: '', filter_date_lt: '', filter_status: '',
     order_statuses: [ {id: 1, name: 'Abierta'}, {id: 2, name: 'Facturada'}, {id: 3, name: 'Pagada'}, {id: 4, name: 'Anulada'} ],
     loading_list: false, total_orders: 0, options: { page: 1, itemsPerPage: 15 },
     is_admin: false, user_permissions: [],
@@ -268,7 +283,6 @@ export default {
     filter_date_gt() { this.applyFilters() },
     filter_date_lt() { this.applyFilters() },
     filter_status() { this.applyFilters() },
-    search_client(val) { this.retrieveClientes(val) },
     // Expansión única y Carga Perezosa de Equipos Alquilados
     expanded(newVal) {
       if (newVal.length > 1) {
@@ -321,13 +335,7 @@ export default {
       this.filter_date_lt = value
       this.applyFilters()
     },
-    retrieveClientes(client) {
-      this.loading_clients = true
-      ClientDataService.getFiltered(1, 10, client || '').then((res) => {
-        this.loading_clients = false
-        this.clients = res.data.results.map(ClientMappers.getMap)
-      })
-    },
+    
     fetchAndInjectSingleOrder(event) {
       const orderId = event.detail
       OrderDataService.get(orderId).then(response => {

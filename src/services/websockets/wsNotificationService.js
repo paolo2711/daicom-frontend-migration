@@ -169,8 +169,8 @@ export default {
                 error_msg: data.error_msg,
                 url: data.url || undefined
             });
-
-            if (data.status === 'success') {
+            //warning proceso qr que si se cargo en nube pero no en local
+            if (data.status === 'success' || data.status === 'warning') {
                 window.dispatchEvent(new CustomEvent('wss-update-row', { detail: data.cert_id }));
             }
         }

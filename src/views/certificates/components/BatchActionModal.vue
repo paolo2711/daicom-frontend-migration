@@ -79,9 +79,10 @@
                   <v-chip v-else color="info" size="x-small" variant="tonal">Con PDF</v-chip>
                 </template>
                 <template v-else>
-                  <v-chip v-if="item.disabled" color="warning" size="x-small" variant="tonal">Notificado</v-chip>
+                  <v-chip v-if="item.disabled && item.signature_requested" color="warning" size="x-small" variant="tonal">Notificado</v-chip>
+                  <v-chip v-else-if="item.disabled" color="error" size="x-small" variant="tonal">Sin Excel</v-chip>
                   <v-chip v-else-if="item.already_has_it" color="success" size="x-small" variant="tonal">En Nube</v-chip>
-                  <v-chip v-else color="grey" size="x-small" variant="tonal">Sin subir</v-chip>
+                  <v-chip v-else color="info" size="x-small" variant="tonal">Con PDF</v-chip>
                 </template>
               </td>
 
@@ -116,7 +117,8 @@
 
                 <template v-else>
                   <v-icon v-if="!item.disabled" color="blue-darken-1" size="small" title="Apto para notificar">mdi-bell-check</v-icon>
-                  <v-icon v-else color="grey" size="small" title="Ya tiene una solicitud activa">mdi-minus-circle</v-icon>
+                  <v-icon v-else-if="item.signature_requested" color="grey" size="small" title="Ya tiene una solicitud activa">mdi-minus-circle</v-icon>
+                  <v-icon v-else color="error" size="small" title="Falta Excel">mdi-close-circle</v-icon>
                 </template>
               </td>
             </tr>
@@ -236,7 +238,9 @@ const open = async (actionType, selectedCerts) => {
         already_has_it = true // Ya está en Nube (Permitido pero Desmarcado)
       }
     } else if (actionType === 'notify') {
-      if (cert.signature_requested) {
+      if (!tieneExcelSubido(cert)) {
+        disabled = true // Bloqueado: Le falta el Excel base
+      } else if (cert.signature_requested) {
         disabled = true // 2da: Ya notificado (Bloqueado, no se puede hacer spam)
       } else if (cert.uploaded) {
         already_has_it = true // 1ra: Ya está en nube, pero podría ser corrección (Permitido pero Desmarcado)

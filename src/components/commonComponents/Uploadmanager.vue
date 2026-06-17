@@ -87,7 +87,7 @@
                           <v-icon v-else color="grey" size="24">mdi-cancel</v-icon>
                         </template>
 
-                        <template v-else-if="task.status === 'success'">
+                        <template v-else-if="task.status === 'success' || task.status === 'warning'">
                           <template v-if="isHovering">
                             <v-tooltip location="bottom" z-index="100000">
                               <template v-slot:activator="{ props: tooltipProps }">
@@ -101,9 +101,12 @@
                               <span>{{ task.type === 'sheet' ? 'Revisar PDF' : 'Ver PDF Subido' }}</span>
                             </v-tooltip>
                           </template>
-                          <v-progress-circular v-else :model-value="100" color="success" size="28" width="3">
-                            <v-icon size="small" color="success">mdi-check</v-icon>
-                          </v-progress-circular>
+                          <template v-else>
+                            <v-progress-circular v-if="task.status === 'success'" :model-value="100" color="success" size="28" width="3">
+                              <v-icon size="small" color="success">mdi-check</v-icon>
+                            </v-progress-circular>
+                            <v-icon v-else color="warning" size="28">mdi-alert-circle</v-icon>
+                          </template>
                         </template>
 
                         <template v-else>
@@ -202,11 +205,15 @@ const errorTasksCount = computed(() =>
 const successTasksCount = computed(() =>
   tasks.value.filter(t => t.status === 'success').length
 )
+const warningTasksCount = computed(() =>
+  tasks.value.filter(t => t.status === 'warning').length
+)
 const headerText = computed(() => {
   const total = tasks.value.length
   if (activeTasksCount.value > 0)           return `Procesando ${activeTasksCount.value}...`
   if (successTasksCount.value === total)     return 'Tareas completadas con éxito'
   if (errorTasksCount.value   === total)     return 'Error en todas las tareas.'
+  if (warningTasksCount.value > 0)           return 'Completado (con advertencias)'
   return `Fallaron ${errorTasksCount.value} tareas de ${total}.`
 })
 
@@ -217,10 +224,17 @@ function getStatusText(task) {
   // 2. Mostrar el paso a paso dinámico
   if (task.step) return task.step; 
 
-  // 3. Textos genéricos por defecto si el backend no mandó nada
+  // 3. Textos genéricos por defecto (Esto soluciona el texto borrado por el WebSocket)
   const maps = {
     sheet: { generating: 'Procesando Excel...', success: 'Listo para revisión.', canceled: 'Cancelado por usuario.' },
-    qr:    { generating: 'Iniciando proceso...', uploading: 'Enviando a la red...', retrying: `Reintentando (${task.attempts || 0}/3)...`, success: '¡Completado!', canceled: 'Cancelado por usuario.' }
+    qr:    { 
+      generating: 'Iniciando proceso...', 
+      uploading: 'Enviando a la red...', 
+      retrying: `Reintentando (${task.attempts || 0}/3)...`, 
+      success: '¡Completado!', 
+      canceled: 'Cancelado por usuario.',
+      warning: 'Nube OK. Fallo Local(Archivo abieto)'
+    }
   };
   return maps[task.type]?.[task.status] || '';
 }

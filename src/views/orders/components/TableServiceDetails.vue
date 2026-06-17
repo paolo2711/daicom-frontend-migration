@@ -35,9 +35,24 @@
 
           <td class="text-center">
             <div class="d-flex justify-center align-center">
-              <v-icon :color="cert.uploaded_xls ? 'green' : 'grey-lighten-1'" size="small" class="mx-1">mdi-file-excel</v-icon>
-              <v-btn icon variant="text" density="comfortable" size="x-small" :href="cert.attached_pdf" target="_blank" :disabled="!cert.attached_pdf" class="mx-1">
-                <v-icon :color="cert.attached_pdf ? 'purple' : 'grey-lighten-1'">mdi-qrcode</v-icon>
+              <v-btn 
+                icon variant="text" density="comfortable" size="x-small" class="mx-1"
+                :href="(cert.uploaded_xls && cert.uploaded_xls !== '0' && cert.uploaded_xls !== 'False') ? `/media/${cert.uploaded_xls}` : undefined" 
+                target="_blank" 
+                :disabled="!(cert.uploaded_xls && cert.uploaded_xls !== '0' && cert.uploaded_xls !== 'False')"
+              >
+                <v-icon :color="(cert.uploaded_xls && cert.uploaded_xls !== '0' && cert.uploaded_xls !== 'False') ? 'primary' : 'grey-lighten-1'">
+                  mdi-file-pdf-box
+                </v-icon>
+              </v-btn>
+
+              <v-btn 
+                icon variant="text" density="comfortable" size="x-small" class="mx-1"
+                :href="cert.uploaded ? `https://daicomperu.com/${cert.uuid || cert.correlative}` : undefined" 
+                target="_blank" 
+                :disabled="!cert.uploaded" 
+              >
+                <v-icon :color="cert.uploaded ? 'primary' : 'grey-lighten-1'">mdi-cloud-check</v-icon>
               </v-btn>
             </div>
           </td>

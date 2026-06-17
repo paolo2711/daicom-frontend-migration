@@ -85,9 +85,20 @@ async function processQR(certId) {
     
     if (isCancelled(certId)) return
 
-    // Si la promesa se resuelve, es porque el backend subió el archivo y guardó la BD con éxito.
-    appStore.updateUploadTask(certId, 'qr', { status: 'success', progress: 100, uuid: generated_qr.data.uuid })
-    sendWSProgress(certId, 100, 'success', getCode(), getAttempts())
+    // Extraer la data sin importar si Axios la desempaquetó o no
+    const responseData = generated_qr.data || generated_qr;
+
+    // Evaluamos el status real basado estrictamente en el flag del backend
+    const finalStatus = responseData.warning === true ? 'warning' : 'success';
+    const finalStep   = responseData.success || '¡Completado!';
+
+    appStore.updateUploadTask(certId, 'qr', { 
+      status: finalStatus, 
+      progress: 100, 
+      uuid: responseData.uuid,
+      step: finalStep
+    })
+    sendWSProgress(certId, 100, finalStatus, getCode(), getAttempts())
 
   } catch (error) {
     if (isCancelled(certId) || error.name === 'AbortError') return

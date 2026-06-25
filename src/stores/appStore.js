@@ -86,6 +86,12 @@ export const useAppStore = defineStore('app', {
 
     uploadTasks: JSON.parse(localStorage.getItem('daicom_uploads')) || [],
     pendingSignaturesCount: 0,
+    pendingPaymentsServiceCount: 0,
+    pendingInvoicesServiceCount: 0,
+    pendingPaymentsRentalCount: 0,
+    pendingInvoicesRentalCount: 0,
+    afectasDetraccionServiceCount: 0,
+    afectasDetraccionRentalCount: 0,
   }),
 
   actions: {
@@ -130,7 +136,13 @@ export const useAppStore = defineStore('app', {
     },
     setPendingSignaturesCount(count) {
       this.pendingSignaturesCount = count;
-    }
+    },
+    setPendingPaymentsServiceCount(count) { this.pendingPaymentsServiceCount = count; },
+    setPendingInvoicesServiceCount(count) { this.pendingInvoicesServiceCount = count; },
+    setPendingPaymentsRentalCount(count) { this.pendingPaymentsRentalCount = count; },
+    setPendingInvoicesRentalCount(count) { this.pendingInvoicesRentalCount = count; },
+    setAfectasDetraccionServiceCount(count) { this.afectasDetraccionServiceCount = count; },
+    setAfectasDetraccionRentalCount(count) { this.afectasDetraccionRentalCount = count; }
   },
   getters: {
     sidebarColorEffective: (state) => state.darkStatus ? '#1b2028' : state.sidebarColor,

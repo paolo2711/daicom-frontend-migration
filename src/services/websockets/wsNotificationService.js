@@ -167,7 +167,9 @@ export default {
                 attempts: data.attempts,
                 step: data.step,            
                 error_msg: data.error_msg,
-                url: data.url || undefined
+                url: data.url || undefined,
+                is_cloud_error: data.is_cloud_error || false,
+                offline_url: data.offline_url || null
             });
             //warning proceso qr que si se cargo en nube pero no en local
             if (data.status === 'success' || data.status === 'warning') {

@@ -31,44 +31,58 @@
                   :bg-color="isDark ? 'grey-darken-4' : 'white'">
             <template v-for="(task, index) in tasks" :key="task.id + task.type">
               <v-divider v-if="index > 0"></v-divider>
-              <v-list-item class="px-3 py-3">
+              
+              <v-hover>
+                <template v-slot:default="{ isHovering, props: hoverProps }">
+                  <v-list-item class="px-3 py-3" v-bind="hoverProps">
 
-                <template v-slot:prepend>
-                  <v-avatar size="32" class="mr-3" :color="isDark ? 'grey-darken-3' : 'grey-lighten-4'">
-                    <v-icon size="small" :color="task.type === 'sheet' ? 'green-darken-2' : 'red-darken-2'">
-                      {{ task.type === 'sheet' ? 'mdi-file-excel-box' : 'mdi-file-pdf-box' }}
-                    </v-icon>
-                  </v-avatar>
-                </template>
+                    <template v-slot:prepend>
+                      <v-avatar size="32" class="mr-3" :color="isDark ? 'grey-darken-3' : 'grey-lighten-4'">
+                        <v-icon size="small" :color="task.type === 'sheet' ? 'green-darken-2' : 'red-darken-2'">
+                          {{ task.type === 'sheet' ? 'mdi-file-excel-box' : 'mdi-file-pdf-box' }}
+                        </v-icon>
+                      </v-avatar>
+                    </template>
 
-                <v-list-item-title class="font-weight-medium text-caption">{{ task.code }}</v-list-item-title>
-                <v-list-item-subtitle 
-                  style="font-size: 10px; max-width: 175px;" 
-                  class="text-truncate"
-                  :class="task.status === 'error' ? 'text-error font-weight-bold' : 'text-medium-emphasis'"
-                  :title="getStatusText(task)"
-                >
-                  {{ getStatusText(task) }}
-                </v-list-item-subtitle>
+                    <v-list-item-title class="font-weight-medium text-caption">{{ task.code }}</v-list-item-title>
+                    <v-list-item-subtitle 
+                      style="font-size: 10px; max-width: 175px;" 
+                      class="text-truncate"
+                      :class="(task.status === 'error' || task.status === 'cloud_error') ? 'text-error font-weight-bold' : 'text-medium-emphasis'"
+                      :title="getStatusText(task)"
+                    >
+                      {{ getStatusText(task) }}
+                    </v-list-item-subtitle>
 
-                <template v-slot:append>
-                  <v-hover>
-                    <template v-slot:default="{ isHovering, props: hoverProps }">
-                      <div v-bind="hoverProps" style="width: 36px; height: 36px; display: flex; justify-content: center; align-items: center;">
+                    <template v-slot:append>
+                      <div style="width: 72px; height: 36px; display: flex; justify-content: flex-end; align-items: center;">
 
-                        <template v-if="task.status === 'error'">
+                        <template v-if="task.status === 'error' || task.status === 'cloud_error'">
                           <template v-if="isHovering">
-                            <v-tooltip location="bottom" z-index="100000">
-                              <template v-slot:activator="{ props: tooltipProps }">
-                                <v-btn v-if="task.type === 'sheet'" v-bind="tooltipProps" icon variant="text" size="small" color="grey" @click.stop="discardTask(task)">
-                                  <v-icon>mdi-close</v-icon>
-                                </v-btn>
-                                <v-btn v-else v-bind="tooltipProps" icon variant="text" size="small" color="error" @click.stop="retryQr(task)">
-                                  <v-icon>mdi-refresh</v-icon>
-                                </v-btn>
-                              </template>
-                              <span>{{ task.type === 'sheet' ? 'Descartar' : 'Reintentar subida' }}</span>
-                            </v-tooltip>
+                            <div class="d-flex align-center justify-end" style="gap: 4px;">
+                              
+                              <v-tooltip v-if="task.is_cloud_error && task.offline_url" location="bottom" z-index="100000">
+                                <template v-slot:activator="{ props: tooltipProps }">
+                                  <v-btn v-bind="tooltipProps" icon variant="text" size="small" color="info" @click.stop="downloadOfflinePdf(task)">
+                                    <v-icon>mdi-download</v-icon>
+                                  </v-btn>
+                                </template>
+                                <span>Descargar Rescate</span>
+                              </v-tooltip>
+
+                              <v-tooltip location="bottom" z-index="100000">
+                                <template v-slot:activator="{ props: tooltipProps }">
+                                  <v-btn v-if="task.type === 'sheet' || task.source === 'manual'" v-bind="tooltipProps" icon variant="text" size="small" color="grey" @click.stop="discardTask(task)">
+                                    <v-icon>mdi-close</v-icon>
+                                  </v-btn>
+                                  <v-btn v-else v-bind="tooltipProps" icon variant="text" size="small" color="error" @click.stop="retryQr(task)">
+                                    <v-icon>mdi-refresh</v-icon>
+                                  </v-btn>
+                                </template>
+                                <span>{{ (task.type === 'sheet' || task.source === 'manual') ? 'Descartar' : 'Reintentar' }}</span>
+                              </v-tooltip>
+
+                            </div>
                           </template>
                           <v-icon v-else color="error" size="24">mdi-alert-circle</v-icon>
                         </template>
@@ -135,10 +149,10 @@
 
                       </div>
                     </template>
-                  </v-hover>
-                </template>
 
-              </v-list-item>
+                  </v-list-item>
+                </template>
+              </v-hover>
             </template>
           </v-list>
         </v-expand-transition>
@@ -200,7 +214,7 @@ const activeTasksCount = computed(() =>
   tasks.value.filter(t => ['generating', 'uploading', 'retrying'].includes(t.status)).length
 )
 const errorTasksCount = computed(() =>
-  tasks.value.filter(t => ['error', 'canceled'].includes(t.status)).length
+  tasks.value.filter(t => ['error', 'cloud_error', 'canceled'].includes(t.status)).length
 )
 const successTasksCount = computed(() =>
   tasks.value.filter(t => t.status === 'success').length
@@ -218,8 +232,7 @@ const headerText = computed(() => {
 })
 
 function getStatusText(task) {
-  // 1. Prioridad máxima: Mostrar el error real del backend
-  if (task.status === 'error') return task.error_msg || 'Error de conexión / servidor';
+  if (task.status === 'error' || task.status === 'cloud_error') return task.error_msg || 'Error de conexión / servidor';
   
   // 2. Mostrar el paso a paso dinámico
   if (task.step) return task.step; 
@@ -248,6 +261,21 @@ function discardTask(task) {
 
 function retryQr(task) {
   window.dispatchEvent(new CustomEvent('wss-qr-retry', { detail: { id: task.id } }))
+}
+
+function downloadOfflinePdf(task) {
+  if (!task.offline_url) return;
+
+  let finalUrl = task.offline_url;
+  if (finalUrl.startsWith('/')) {
+    const base = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+      ? 'http://localhost:8000'
+      : window.location.origin;
+    finalUrl = base + finalUrl;
+  }
+
+  window.open(finalUrl, '_blank');
+  discardTask(task);
 }
 
 function cancelQr(task) {

@@ -283,7 +283,6 @@ const save = async () => {
 
     peticion
       .then(() => { 
-        if (window.notificarActualizacionFila) window.notificarActualizacionFila(null, props.order.id);
         closeDialog()
         Swal.fire(appStore.successSavedOptions)
       })
@@ -324,7 +323,6 @@ const eliminarPago = (id) => {
   }).then((result) => {
     if (result.isConfirmed) {
       OrderDataService.deletePayment(id).then(() => {
-        if (window.notificarActualizacionFila) window.notificarActualizacionFila(null, props.order.id);
         Swal.fire('Eliminado', 'El abono ha sido borrado.', 'success')
       }).catch(() => {
         Swal.fire('Error', 'No se pudo eliminar el abono.', 'error')

@@ -55,16 +55,16 @@
                 <v-icon size="small">mdi-pencil</v-icon>
               </v-btn>
             </template>
-            <span>Editar Equipo</span>
+            <span>Editar y Documentos</span>
           </v-tooltip>
 
           <v-tooltip location="top">
             <template v-slot:activator="{ props }">
               <v-btn icon variant="text" size="small" color="indigo" class="mr-1" v-bind="props" @click="$emit('view-history', item)">
-                <v-icon size="small">mdi-clipboard-text-clock</v-icon>
+                <v-icon size="small">mdi-truck-fast</v-icon>
               </v-btn>
             </template>
-            <span>Hoja de Vida</span>
+            <span>Historial de Viajes</span>
           </v-tooltip>
 
           <v-tooltip location="top">

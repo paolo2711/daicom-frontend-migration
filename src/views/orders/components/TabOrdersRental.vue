@@ -1,51 +1,178 @@
 <template>
   <div>
     <!-- FILTROS -->
-    <v-card variant="flat" class="border rounded-lg mb-4">
-      <div class="py-4 px-4">
-        <v-row align="center" class="mb-0">
-          <v-col cols="12" md="3" class="d-flex align-center text-medium-emphasis">
-            <v-icon color="primary" class="mr-2">mdi-filter-variant</v-icon>
-            <span class="text-subtitle-1 font-weight-medium">Filtros de alquiler</span>
-          </v-col>
-        </v-row>
-        <v-row>
-          <v-col cols="12" md="2">
-            <v-text-field v-model="filter_order" label="Nro Orden Alquiler" prepend-inner-icon="mdi-folder-search" variant="outlined" density="compact" hide-details clearable @update:model-value="applyFilters" />
-          </v-col>
-          <v-col cols="12" md="2">
-            <v-text-field v-model="filter_client_ref" label="Ref. OC Cliente" prepend-inner-icon="mdi-pound" variant="outlined" density="compact" hide-details clearable @update:model-value="applyFilters" />
-          </v-col>
-          <v-col cols="12" md="2">
-            <v-autocomplete
-              v-model="filter_client_id"
-              hide-details
-              density="compact"
-              :loading="loading_clients"
-              prepend-inner-icon="mdi-account-group"
-              :items="clients"
-              v-model:search="search_client"
-              item-title="name"
-              item-value="id"
-              placeholder="Buscar..."
-              no-data-text="No se encontraron clientes"
-              clearable
-              variant="outlined"
-              label="Cliente"
-              @update:model-value="applyFilters"
-            />
-          </v-col>
-          <v-col cols="12" md="2">
-            <date-picker :date="filter_date_gt" label="Desde:" @setPickedDate="onDateGtChange" />
-          </v-col>
-          <v-col cols="12" md="2">
-            <date-picker :date="filter_date_lt" label="Hasta:" @setPickedDate="onDateLtChange" />
-          </v-col>
-          <v-col cols="12" md="2">
-            <v-select v-model="filter_status" hide-details density="compact" prepend-inner-icon="mdi-list-status" :items="order_statuses" item-title="name" item-value="id" clearable variant="outlined" label="Estado de Facturación" @update:model-value="applyFilters" />
-          </v-col>
-        </v-row>
+    <v-card variant="flat" class="border rounded-lg mb-4 pa-4 bg-surface">
+      <div class="d-flex flex-wrap align-center" style="gap: 16px;">
+        
+        <v-text-field
+          v-model="filter_order"
+          hide-details
+          density="compact"
+          prepend-inner-icon="mdi-magnify"
+          variant="outlined"
+          label="Buscar Nro Orden"
+          clearable
+          style="max-width: 220px;"
+          @update:model-value="applyFilters"
+        />
+
+        <v-text-field
+          v-model="filter_client_ref"
+          hide-details
+          density="compact"
+          prepend-inner-icon="mdi-pound"
+          variant="outlined"
+          label="Ref. OC Cliente"
+          clearable
+          style="max-width: 220px;"
+          @update:model-value="applyFilters"
+        />
+
+        <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
+
+        <v-badge
+          :model-value="appStore.pendingPaymentsRentalCount > 0"
+          :content="appStore.pendingPaymentsRentalCount"
+          color="error"
+          offset-x="4"
+          offset-y="4"
+        >
+          <v-chip
+            :color="(appStore.pendingPaymentsRentalCount > 0 && !filtro_falta_pago) ? 'grey-darken-1' : (filtro_falta_pago ? 'error' : 'grey-darken-1')"
+            class="font-weight-bold cursor-pointer transition-swing"
+            @click="toggleFiltroPago"
+          >
+            <v-icon start size="small">mdi-cash-remove</v-icon>
+            Falta Pago
+            <v-tooltip activator="parent" location="top">Filtrar alquileres facturados sin abonos</v-tooltip>
+          </v-chip>
+        </v-badge>
+
+        <v-badge
+          :model-value="appStore.pendingInvoicesRentalCount > 0"
+          :content="appStore.pendingInvoicesRentalCount"
+          color="warning"
+          offset-x="4"
+          offset-y="4"
+        >
+          <v-chip
+            :color="(appStore.pendingInvoicesRentalCount > 0 && !filtro_sin_factura) ? 'grey-darken-1' : (filtro_sin_factura ? 'warning' : 'grey-darken-1')"
+            class="font-weight-bold cursor-pointer transition-swing"
+            @click="toggleFiltroFactura"
+          >
+            <v-icon start size="small">mdi-file-document-remove-outline</v-icon>
+            Sin Emitir Factura
+            <v-tooltip activator="parent" location="top">Filtrar alquileres abiertos pendientes de facturar</v-tooltip>
+          </v-chip>
+        </v-badge>
+
+        <v-badge
+          :model-value="filtro_detraccion && appStore.afectasDetraccionRentalCount > 0"
+          :content="appStore.afectasDetraccionRentalCount"
+          color="deep-orange"
+          offset-x="4"
+          offset-y="4"
+        >
+          <v-chip
+            :color="filtro_detraccion ? 'deep-orange' : 'grey-darken-1'"
+            class="font-weight-bold cursor-pointer transition-swing"
+            @click="toggleFiltroDetraccion"
+          >
+            <v-icon start size="small">mdi-bank-outline</v-icon>
+            Detracción
+            <v-tooltip activator="parent" location="top">Filtrar alquileres afectos a detracción SUNAT</v-tooltip>
+          </v-chip>
+        </v-badge>
+
+        <v-spacer></v-spacer>
+
+        <v-btn 
+          :variant="mostrar_filtros_avanzados ? 'tonal' : 'text'" 
+          color="primary"
+          class="font-weight-bold text-none"
+          @click="mostrar_filtros_avanzados = !mostrar_filtros_avanzados"
+        >
+          <v-icon start>{{ mostrar_filtros_avanzados ? 'mdi-filter-minus' : 'mdi-filter-plus' }}</v-icon>
+          {{ mostrar_filtros_avanzados ? 'Ocultar Filtros' : 'Filtros Avanzados' }}
+        </v-btn>
       </div>
+
+      <v-expand-transition>
+        <div v-show="mostrar_filtros_avanzados">
+          <v-divider class="my-4 border-opacity-25"></v-divider>
+          <v-row dense>
+            <v-col cols="12" md="4">
+              <v-menu v-model="menu_fechas" :close-on-content-click="false" location="bottom">
+                <template v-slot:activator="{ props }">
+                  <v-text-field
+                    v-bind="props"
+                    :model-value="textoRangoFechas"
+                    label="Rango de Fechas"
+                    prepend-inner-icon="mdi-calendar-range"
+                    variant="outlined"
+                    density="compact"
+                    readonly
+                    clearable
+                    @click:clear="limpiarFechas"
+                    hide-details="auto"
+                    class="cursor-pointer"
+                  ></v-text-field>
+                </template>
+                <v-card class="pa-4 elevation-4 border rounded-lg" min-width="320">
+                  <div class="text-caption font-weight-bold text-medium-emphasis mb-3">Seleccione el periodo:</div>
+                  <v-row dense>
+                    <v-col cols="12" sm="6">
+                      <date-picker :date="filter_date_gt" label="Desde:" @setPickedDate="(value) => filter_date_gt = value" />
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                      <date-picker :date="filter_date_lt" label="Hasta:" @setPickedDate="(value) => filter_date_lt = value" />
+                    </v-col>
+                  </v-row>
+                  <div class="d-flex justify-end mt-4">
+                    <v-btn color="primary" variant="tonal" size="small" class="font-weight-bold" @click="menu_fechas = false; applyFilters()">Aplicar</v-btn>
+                  </div>
+                </v-card>
+              </v-menu>
+            </v-col>
+
+            <v-col cols="12" md="4">
+              <v-autocomplete
+                v-model="filter_client_id"
+                :loading="loading_clients"
+                prepend-inner-icon="mdi-account-group"
+                :items="clients"
+                v-model:search="search_client"
+                @update:model-value="applyFilters"
+                item-title="name"
+                item-value="id"
+                placeholder="Buscar cliente..."
+                no-data-text="No se encontraron clientes"
+                clearable
+                variant="outlined"
+                density="compact"
+                hide-details="auto"
+                label="Cliente"
+              />
+            </v-col>
+
+            <v-col cols="12" md="4">
+              <v-select
+                v-model="filter_status"
+                prepend-inner-icon="mdi-list-status"
+                :items="order_statuses"
+                item-title="name"
+                item-value="id"
+                clearable
+                variant="outlined"
+                density="compact"
+                hide-details="auto"
+                label="Estado"
+                @update:model-value="applyFilters"
+              />
+            </v-col>
+          </v-row>
+        </div>
+      </v-expand-transition>
     </v-card>
 
     <table-loading-overlay :loading="loading_list" :isEmpty="orders.length === 0">
@@ -158,12 +285,12 @@
               <v-tooltip location="bottom">
                 <template v-slot:activator="{ props }">
                   <span v-bind="props" class="d-inline-block">
-                    <v-btn icon variant="text" density="comfortable" :color="item.status === 4 ? 'grey-lighten-2' : (item.billed || item.billed_pdf ? 'primary' : 'grey')" :disabled="item.status === 4" @click="abrirFactura(item)">
-                      <v-icon>{{ item.billed || item.billed_pdf ? 'mdi-file-document-check' : 'mdi-file-document-plus' }}</v-icon>
+                    <v-btn icon variant="text" density="comfortable" :color="item.status === 4 ? 'grey-lighten-2' : ((item.invoices?.length > 0 || item.wants_invoice === false) ? 'primary' : 'grey')" :disabled="item.status === 4" @click="abrirFactura(item)">
+                      <v-icon>{{ item.wants_invoice === false ? 'mdi-file-document-remove-outline' : (item.invoices?.length > 0 ? 'mdi-file-document-check' : 'mdi-file-document-plus') }}</v-icon>
                     </v-btn>
                   </span>
                 </template>
-                <span>{{ item.billed || item.billed_pdf ? 'Ver/Editar Factura' : 'Subir Factura' }}</span>
+                <span>{{ item.wants_invoice === false ? 'Sin Comprobante (Ver)' : (item.invoices?.length > 0 ? 'Ver/Editar Factura' : 'Subir Factura') }}</span>
               </v-tooltip>
 
               <v-tooltip location="bottom">
@@ -179,6 +306,26 @@
             </div>
           </div>
         </template>
+
+        <template v-slot:item.detraccion="{ item }">
+          <div class="d-flex justify-center">
+            <template v-if="item.detraccion && item.detraccion.afecto">
+              <v-chip 
+                size="small" 
+                color="deep-orange" 
+                variant="tonal" 
+                class="font-weight-bold px-3 text-caption"
+              >
+                S/ {{ item.detraccion.monto.toFixed(2) }}
+                <v-tooltip activator="parent" location="top">
+                  Detracción {{ item.detraccion.tasa }}% · SUNAT
+                </v-tooltip>
+              </v-chip>
+            </template>
+            <span v-else class="text-caption text-grey">—</span>
+          </div>
+        </template>
+
 
         <template v-slot:item.actions="{ item }">
           <v-tooltip location="bottom" color="primary">
@@ -203,7 +350,7 @@
         <template v-slot:expanded-row="{ columns, item }">
           <tr class="fila-activa-alq">
             <td :colspan="columns.length" class="pa-0">
-              <table-rental-details :order="item" @reload="retrieveOrders" />
+              <table-rental-details :order="item" @add-rental="prepareExtraEquipment(item)" @reload="expanded = []; retrieveOrders()" />
             </td>
           </tr>
         </template>
@@ -214,6 +361,8 @@
     <dialog-factura v-model="factura_modal" :order="selected_order" @updateOrder="updateSingleOrderInList" @close="factura_modal = false" />
     <dialog-liquidacion v-model="liquidacion_modal" :order="selected_order" @updateOrder="updateSingleOrderInList" @close="liquidacion_modal = false" />
     <edit-order v-model="edit_order_modal" :order="selected_order" @updateOrder="updateSingleOrderInList" @close="edit_order_modal = false" />
+    
+    <add-extra-equipment v-model="dialog_extra" :order="selected_order" @close="dialog_extra = false" @reload="expanded = []; retrieveOrders()" />
   </div>
 </template>
 
@@ -225,18 +374,20 @@ import OrderDataService from "@/services/certificates/orderDataService"
 import ClientDataService from "@/services/clients/clientDataService"
 import ClientMappers from "@/mappers/clientMappers"
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import { useAppStore } from '@/stores/appStore'
 import DialogFactura from "./DialogFactura.vue"
 import DialogLiquidacion from "./DialogLiquidacion.vue"
 import EditOrder from "./EditOrder.vue"
 import TableRentalDetails from "./TableRentalDetails.vue"
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
+import AddExtraEquipment from "./AddExtraEquipment.vue"
 
 export default {
   name: "TabOrdersRental",
   components: {
     FluentPagination,
     DatePicker: defineAsyncComponent(() => import("@/components/commonComponents/DatePicker.vue")),
-    DialogFactura, DialogLiquidacion, EditOrder, TableRentalDetails
+    DialogFactura, DialogLiquidacion, EditOrder, TableRentalDetails, TableLoadingOverlay, AddExtraEquipment
   },
   setup() {
     const theme = useTheme()
@@ -254,11 +405,13 @@ export default {
       ClientMappers.getMap,
       () => filter_client_id.value
     )
+    
+    const appStore = useAppStore()
 
-    return { isDark, filter_client_id, clients, loading_clients, search_client, retrieveClientes }
+    return { isDark, filter_client_id, clients, loading_clients, search_client, retrieveClientes, appStore }
   },
   data: () => ({
-    edit_order_modal: false, factura_modal: false, liquidacion_modal: false, selected_order: null,
+    edit_order_modal: false, factura_modal: false, liquidacion_modal: false, dialog_extra: false, selected_order: null,
     headers: [
       { title: 'Nro Alquiler',   key: 'order_number' },
       { title: 'Ref. Cliente',   key: 'client_order_reference' },
@@ -266,22 +419,31 @@ export default {
       { title: 'Estado',         key: 'status',      align: 'center', sortable: false },
       { title: 'Documentos',     key: 'documentos',  align: 'center', sortable: false },
       { title: 'Cobros',         key: 'cobros',      align: 'center', sortable: false },
+      { title: 'Detracción',     key: 'detraccion',  align: 'center', sortable: false },
       { title: 'Opciones',       key: 'actions',     align: 'center', sortable: false },
       { title: '',               key: 'data-table-expand' },
     ],
     orders: [], expanded: [], filter_order: '', filter_client_ref: '', 
     filter_date_gt: '', filter_date_lt: '', filter_status: '',
+    mostrar_filtros_avanzados: false, menu_fechas: false,
+    filtro_falta_pago: false, filtro_sin_factura: false, filtro_detraccion: false,
     order_statuses: [ {id: 1, name: 'Abierta'}, {id: 2, name: 'Facturada'}, {id: 3, name: 'Pagada'}, {id: 4, name: 'Anulada'} ],
     loading_list: false, total_orders: 0, options: { page: 1, itemsPerPage: 15 },
     is_admin: false, user_permissions: [],
   }),
+  computed: {
+    textoRangoFechas() {
+      if (!this.filter_date_gt && !this.filter_date_lt) return 'Cualquier fecha'
+      if (this.filter_date_gt && !this.filter_date_lt) return `Desde el ${this.filter_date_gt}`
+      if (!this.filter_date_gt && this.filter_date_lt) return `Hasta el ${this.filter_date_lt}`
+      return `${this.filter_date_gt} al ${this.filter_date_lt}`
+    }
+  },
   watch: {
     options: { handler() { this.retrieveOrders() }, deep: true },
     filter_order() { this.applyFilters() },
     filter_client_ref() { this.applyFilters() },
     filter_client_id() { this.applyFilters() },
-    filter_date_gt() { this.applyFilters() },
-    filter_date_lt() { this.applyFilters() },
     filter_status() { this.applyFilters() },
     // Expansión única y Carga Perezosa de Equipos Alquilados
     expanded(newVal) {
@@ -304,11 +466,12 @@ export default {
     this.user_permissions = user.action_permissions || []
     this.retrieveClientes()
     this.retrieveOrders()
-    window.addEventListener('wss-reload-orders-rental', this.retrieveOrders)
+    this.cargarResumenes()
+    window.addEventListener('wss-reload-orders-rental', this.handleWssReload)
     window.addEventListener('wss-update-order-row', this.fetchAndInjectSingleOrder)
   },
   beforeUnmount() {
-    window.removeEventListener('wss-reload-orders-rental', this.retrieveOrders)
+    window.removeEventListener('wss-reload-orders-rental', this.handleWssReload)
     window.removeEventListener('wss-update-order-row', this.fetchAndInjectSingleOrder)
   },
   methods: {
@@ -323,9 +486,48 @@ export default {
         this.expanded = [itemId]
       }
     },
+    toggleFiltroPago() {
+      this.filtro_falta_pago = !this.filtro_falta_pago
+      this.applyFilters()
+    },
+    toggleFiltroFactura() {
+      this.filtro_sin_factura = !this.filtro_sin_factura
+      this.applyFilters()
+    },
+    toggleFiltroDetraccion() {
+      this.filtro_detraccion = !this.filtro_detraccion
+      this.applyFilters()
+    },
+    limpiarFechas() {
+      this.filter_date_gt = ''
+      this.filter_date_lt = ''
+      this.applyFilters()
+    },
+    cargarResumenes() {
+      OrderDataService.getPendingPaymentsSummary(2, this.filter_client_id, this.filter_order, this.filter_client_ref, this.filter_date_gt, this.filter_date_lt).then((res) => {
+        this.appStore.setPendingPaymentsRentalCount(res.data.pending_payments)
+      }).catch(() => {})
+      
+      OrderDataService.getPendingInvoicesSummary(2, this.filter_client_id, this.filter_order, this.filter_client_ref, this.filter_date_gt, this.filter_date_lt).then((res) => {
+        this.appStore.setPendingInvoicesRentalCount(res.data.pending_invoices)
+      }).catch(() => {})
+
+      if (this.filtro_detraccion) {
+        OrderDataService.getAfectasDetraccionSummary(2, this.filter_client_id, this.filter_order, this.filter_client_ref, this.filter_date_gt, this.filter_date_lt).then((res) => {
+          this.appStore.setAfectasDetraccionRentalCount(res.data.afectas_detraccion)
+        }).catch(() => {})
+      } else {
+        this.appStore.setAfectasDetraccionRentalCount(0)
+      }
+    },
+    handleWssReload() {
+      this.retrieveOrders()
+      this.cargarResumenes()
+    },
     applyFilters() {
       this.options.page = 1
       this.retrieveOrders()
+      this.cargarResumenes() // Sincroniza las píldoras al filtrar
     },
     onDateGtChange(value) {
       this.filter_date_gt = value
@@ -342,6 +544,10 @@ export default {
         if (response && response.data) {
           if (response.data.order_type === 2) {
             this.updateSingleOrderInList(response.data)
+            
+            // Refrescar resúmenes con Debounce de 1.5s para evitar DDoS
+            if (this.debounceTimeout) clearTimeout(this.debounceTimeout)
+            this.debounceTimeout = setTimeout(() => { this.cargarResumenes() }, 1500)
           }
         }
       }).catch(() => {})
@@ -352,6 +558,8 @@ export default {
         this.orders.splice(index, 1, { ...this.orders[index], ...updatedOrder })
         this.orders = [...this.orders]
       }
+      // Se eliminó this.cargarResumenes() aquí porque el Anti-DDoS (setTimeout) 
+      // del WebSocket ya se encarga de llamarlo de forma segura.
     },
     retrieveOrders() {
       this.loading_list = true
@@ -359,7 +567,7 @@ export default {
       OrderDataService.getFiltered(
         this.options.page, limite, this.filter_client_id, this.filter_order,
         this.filter_client_ref, this.filter_date_gt, this.filter_date_lt,
-        this.filter_status, 2
+        this.filter_status, 2, this.filtro_falta_pago, this.filtro_sin_factura, this.filtro_detraccion
       ).then(res => {
         this.orders = res.data.results
         this.total_orders = res.data.count
@@ -368,13 +576,13 @@ export default {
     getStatusOrderLabel(o) {
       if (o.status === 4) return 'Anulada'
       if (o.sent || (o.payments && o.payments.length > 0)) return 'Liquidada'
-      if (o.billed || o.billed_pdf) return 'Facturada'
+      if ((o.invoices && o.invoices.length > 0) || o.wants_invoice === false) return 'Facturada'
       return 'En Proceso'
     },
     getStatusOrderColor(o) {
       if (o.status === 4) return 'red-darken-2'
       if (o.sent || (o.payments && o.payments.length > 0)) return 'success'
-      if (o.billed || o.billed_pdf) return 'warning'
+      if ((o.invoices && o.invoices.length > 0) || o.wants_invoice === false) return 'warning'
       return 'grey-darken-1'
     },
     totalPagos(o) {
@@ -398,6 +606,7 @@ export default {
     abrirFactura(i) { this.selected_order = i; this.factura_modal = true },
     abrirPago(i) { this.selected_order = i; this.liquidacion_modal = true },
     abrirEditarOrden(o) { this.selected_order = o; this.edit_order_modal = true },
+    prepareExtraEquipment(o) { this.selected_order = o; this.dialog_extra = true },
     hasPermission(id) {
       if (this.is_admin) return true
       return this.user_permissions.includes(id)

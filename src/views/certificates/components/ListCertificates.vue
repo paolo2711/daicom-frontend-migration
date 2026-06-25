@@ -353,18 +353,24 @@
               }"
             >
               <template v-slot:activator="{ props: menuProps }">
-                <v-badge
-                  :color="item.order_status === 4
-                    ? 'red'
-                    : (item.order_sent
-                      ? 'success'
-                      : (item.order_billed ? 'warning' : 'primary'))"
-                  dot
-                >
-                  <v-btn icon variant="text" density="comfortable" color="primary" v-bind="menuProps" @click.stop>
-                    <v-icon>mdi-file-document-arrow-right-outline</v-icon>
-                  </v-btn>
-                </v-badge>
+                <v-tooltip location="top" :color="getSemaforoColor(item)">
+                  <template v-slot:activator="{ props: tooltipProps }">
+                    <v-badge
+                      :color="getSemaforoColor(item)"
+                      dot
+                      :class="{
+                        'boton-orden-atenuado': menu_abierto_id !== null
+                          && menu_abierto_id !== item.id
+                          && orden_resonancia === item.order_number
+                      }"
+                    >
+                      <v-btn icon variant="text" density="comfortable" color="primary" v-bind="mergeProps(menuProps, tooltipProps)" @click.stop>
+                        <v-icon>mdi-file-document-arrow-right-outline</v-icon>
+                      </v-btn>
+                    </v-badge>
+                  </template>
+                  <span class="font-weight-bold">{{ getSemaforoText(item) }}</span>
+                </v-tooltip>
               </template>
 
               <order-summary-card
@@ -422,7 +428,7 @@
     ════════════════════════════════════════════════════ -->
     
     
-    <attach-q-r ref="attachQrModalRef" />
+    
     
     
     <certificate-modal
@@ -516,7 +522,7 @@ import ClientDataService   from '@/services/clients/clientDataService'
 import ClientMappers       from '@/mappers/clientMappers'
 import LabDataService      from '@/services/labs/labDataService'
 import LabMappers          from '@/mappers/labMappers'
-import AttachQR            from './AttachQR.vue'
+
 import OrderSummaryCard    from './OrderSummaryCard.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 
@@ -539,7 +545,7 @@ const $swal = appContext.config.globalProperties.$swal
 const certificateModal     = ref(null)
 const batchActionModalRef  = ref(null)
 // uploadSheetModalRef eliminado, ahora se maneja desde batch
-const attachQrModalRef     = ref(null)
+
 
 // ─── Estado de la tabla ───────────────────────────────────────────────────────
 const certificados_seleccionados = ref([])
@@ -742,12 +748,47 @@ function seleccionarTodaLaOrden (orderNum) {
   menu_abierto_id.value = null
 }
 
+import { mergeProps } from 'vue' // <--- Inyectamos mergeProps para que el Tooltip y el Menu convivan
+
 function getTipoAbreviado (tipoOriginal) {
   if (tipoOriginal === 'ACREDITADO')    return 'ACR'
   if (tipoOriginal === 'NO ACREDITADO') return 'NAC'
   if (tipoOriginal === 'OPERATIVIDAD')  return 'OPE'
   return tipoOriginal
 }
+
+// ---  SEMAFORO INTELIGENTE (FINANCIERO + OPERATIVO) ---
+const tieneExcelBase = (item) => item.uploaded_xls && item.uploaded_xls !== '0' && item.uploaded_xls !== 'False'
+
+const getSemaforoColor = (item) => {
+  if (item.order_status === 4) return 'grey-darken-3' // Anulada
+  
+  const hasInv = item.order_has_invoices
+  const hasPay = item.order_has_payments
+
+  if (hasInv && hasPay) return 'success'  // Verde: Facturado y pagado
+  if (hasInv || hasPay) return 'warning'  // Amarillo: Hay plata moviéndose (falta factura o falta pago)
+  
+  // Si llegamos aquí, es porque NO hay factura y NO hay pago
+  if (tieneExcelBase(item)) return 'red'  // Rojo Alerta: Trabajo técnico hecho, pero no han cobrado
+  return 'primary'                        // Azul: Borrador recién creado, nadie ha trabajado ni cobrado
+}
+
+const getSemaforoText = (item) => {
+  if (item.order_status === 4) return 'Orden Anulada'
+  
+  const hasInv = item.order_has_invoices
+  const hasPay = item.order_has_payments
+
+  if (hasInv && hasPay) return 'Facturación y Liquidación Completadas'
+  if (hasInv && !hasPay) return 'Facturada (Pendiente de Liquidación)'
+  if (!hasInv && hasPay) return 'Liquidación en Proceso (Pendiente de Facturación)'
+  
+  // Si llegamos aquí, es porque NO hay factura y NO hay pago
+  if (tieneExcelBase(item)) return 'Trabajo técnico listo, falta Facturar y Cobrar'
+  return 'Pendiente de Trabajo Técnico y Cobro'
+}
+// --------------------------------------
 
 // Estado del menú contextual global
 const contextMenu = ref({
@@ -768,6 +809,13 @@ function handleRightClick (event, { item }) {
   
   // 2. Apagamos el menú si estaba abierto
   contextMenu.value.show = false 
+
+  // el clic derecho siempre deja seleccionada unicamente
+  // esa fila, sin importar lo que estuviera marcado antes. Así el batch que se
+  // abra desde el menú siempre coincide con lo que el usuario ve resaltado.
+  if (cert.status !== 5) {
+    certificados_seleccionados.value = [cert]
+  }
   
   // 3. Usamos setTimeout en lugar de nextTick para evitar la condición de carrera con el "click-outside" nativo de Vuetify
   setTimeout(() => {
@@ -835,8 +883,8 @@ function retrieveAllCertificates () {
       mapped.status        = cert.status
       mapped.created_at    = cert.created_at
       mapped.order_number  = cert.order_number
-      mapped.order_billed  = cert.order_billed
-      mapped.order_sent    = cert.order_sent
+      mapped.order_has_invoices  = cert.order_has_invoices
+      mapped.order_has_payments  = cert.order_has_payments
       mapped.order_status  = cert.order_status
       mapped.signature_requested = cert.signature_requested 
       return mapped
@@ -871,8 +919,8 @@ function updateSingleCertificateInList (updatedCert) {
     mapped.created_at          = updatedCert.created_at
     mapped.order_number        = updatedCert.order_number
     mapped.order_status        = updatedCert.order_status
-    mapped.order_billed        = updatedCert.order_billed
-    mapped.order_sent          = updatedCert.order_sent
+    mapped.order_has_invoices  = updatedCert.order_has_invoices
+    mapped.order_has_payments  = updatedCert.order_has_payments
     mapped.signature_requested = updatedCert.signature_requested 
     
     //Sobrescribe la fila entera en el array para forzar a Vue a re-dibujar
@@ -890,8 +938,8 @@ function fetchAndInjectOrderUpdate (event) {
       if (cert.order_number === updatedOrder.order_number) {
         certificates.value[index] = {
           ...certificates.value[index],
-          order_billed: updatedOrder.billed || !!updatedOrder.billed_pdf,
-          order_sent:   updatedOrder.sent || (updatedOrder.payments?.length > 0),
+          order_has_invoices: (updatedOrder.invoices && updatedOrder.invoices.length > 0) || updatedOrder.wants_invoice === false,
+          order_has_payments: updatedOrder.payments && updatedOrder.payments.length > 0,
           order_status: updatedOrder.status,
         }
       }
@@ -1000,8 +1048,9 @@ function eliminarDeLaNubeConfirm(cert) {
         
         cert.uploaded = false
         cert.status = 3 // Lo retrocedemos a Firmado localmente
-      }).catch(() => {
-        $swal.fire('Error', 'No se pudo contactar con el FTP.', 'error')
+      }).catch((error) => {
+        const errorMsg = error.response?.data?.error || 'No se pudo contactar con el FTP.'
+        $swal.fire('Error al eliminar de la Nube', errorMsg, 'error')
       })
     }
   })
@@ -1009,12 +1058,14 @@ function eliminarDeLaNubeConfirm(cert) {
 
 function openUploadDialog (item) {
   if (batchActionModalRef.value) {
-    batchActionModalRef.value.open('excel', [item])
+    batchActionModalRef.value.open('excel', [item], true)
   }
 }
 
 function openQRDialog (item) {
-  attachQrModalRef.value?.open(item)
+  if (batchActionModalRef.value) {
+    batchActionModalRef.value.open('qr', [item], true)
+  }
 }
 
 </script>
@@ -1028,6 +1079,20 @@ function openQRDialog (item) {
 .anulado-atenuado {
   opacity: 0.3 !important;
   pointer-events: none;
+}
+
+
+
+/* =========================================================
+   BOTÓN DE ORDEN: HERMANOS ATENUADOS
+   Cuando un menú de orden está abierto, los botones de las
+   otras filas de la MISMA orden se apagan y no son clicables.
+   La transición es suave para no ser brusca.
+   ========================================================= */
+.boton-orden-atenuado {
+  opacity: 0.2 !important;
+  pointer-events: none !important;
+  transition: opacity 0.25s ease !important;
 }
 
 

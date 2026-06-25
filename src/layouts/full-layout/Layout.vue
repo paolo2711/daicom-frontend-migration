@@ -56,14 +56,14 @@ const conectarWebSocket = () => {
     wsNotificationService.handle(data, appStore, $swal)
   }
 
-  window.enviarProgresoWebSocket = (certId, progress, status, code, attempts, task_type = 'qr') => {
+  window.enviarProgresoWebSocket = (certId, progress, status, code, attempts, task_type = 'qr', step = '', error_msg = '', is_cloud_error = false, offline_url = null) => {
     const user = JSON.parse(localStorage.getItem('user')) || {}
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({
         action: 'broadcast_progress',
         cert_id: certId, progress, status, code, attempts,
         username: user.username || 'unknown',
-        task_type,
+        task_type, step, error_msg, is_cloud_error, offline_url
       }))
     }
   }

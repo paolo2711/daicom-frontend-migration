@@ -62,6 +62,17 @@
           
           <td class="text-center">
             <div class="d-flex justify-center align-center">
+              <v-tooltip location="bottom" color="info">
+                <template v-slot:activator="{ props }">
+                  <v-btn icon size="x-small" variant="text" color="info" density="comfortable"
+                         class="mx-1" v-bind="props"
+                         @click="verEquipo(rental)">
+                    <v-icon>mdi-eye</v-icon>
+                  </v-btn>
+                </template>
+                <span>Ver / Editar Equipo</span>
+              </v-tooltip>
+
               <v-tooltip location="bottom" color="success">
                 <template v-slot:activator="{ props }">
                   <v-btn icon size="x-small" variant="text" color="green" density="comfortable"
@@ -96,14 +107,18 @@
     </v-table>
     
     <dialog-edit-rental-dates ref="dialogEditRef" @reload="emit('reload')" />
+    
+    <add-equipment ref="addEquipmentRef" @saved="emit('reload')" />
   </v-card>
 </template>
 
 <script setup>
 import { computed, getCurrentInstance, ref } from 'vue'
 import DialogEditRentalDates from './DialogEditRentalDates.vue'
+import AddEquipment from '@/views/inventory/components/AddEquipment.vue'
 import { useTheme } from 'vuetify'
 import OrderDataService from '@/services/certificates/orderDataService'
+import InventoryDataService from '@/services/inventory/inventoryDataService'
 
 const props = defineProps({
   order: { type: Object, required: true },
@@ -117,6 +132,29 @@ const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
 
 const dialogEditRef = ref(null)
+const addEquipmentRef = ref(null)
+
+// --- NUEVA FUNCIÓN PARA ABRIR LA EDICIÓN DEL EQUIPO ---
+async function verEquipo(rental) {
+  try {
+    // La FK suele venir como rental.equipment en el JSON de Django
+    const equipoId = rental.equipment || rental.equipment_id; 
+    
+    if (!equipoId) {
+      $swal.fire('Error', 'No se pudo detectar el ID del equipo en el registro.', 'error')
+      return
+    }
+
+    // Traemos toda la info completa del backend (fotos, certificado, notas)
+    const response = await InventoryDataService.get(equipoId)
+    
+    // Lo abrimos como si estuviéramos en la tabla de inventario
+    addEquipmentRef.value?.open(response.data)
+  } catch (error) {
+    console.error(error)
+    $swal.fire('Error', 'No se pudo cargar la información completa del equipo.', 'error')
+  }
+}
 
 function abrirEditarFechas(rental) {
   dialogEditRef.value?.open(rental)

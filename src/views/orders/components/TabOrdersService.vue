@@ -1,89 +1,178 @@
 <template>
   <div>
     <!-- FILTROS (mismo padding y estructura que ListCertificates) -->
-    <v-card variant="flat" class="border rounded-lg mb-4">
-      <div class="py-4 px-4">
-        <v-row align="center" class="mb-0">
-          <v-col cols="12" md="3" class="d-flex align-center text-medium-emphasis">
-            <v-icon color="primary" class="mr-2">mdi-filter-variant</v-icon>
-            <span class="text-subtitle-1 font-weight-medium">Filtros de búsqueda</span>
-          </v-col>
-        </v-row>
-        <v-row>
-          <v-col cols="12" md="2">
-            <v-text-field
-              v-model="filter_order"
-              label="Nro Orden"
-              prepend-inner-icon="mdi-folder-search"
-              variant="outlined"
-              density="compact"
-              hide-details
-              clearable
-              @update:model-value="applyFilters"
-            />
-          </v-col>
-          <v-col cols="12" md="2">
-            <v-text-field
-              v-model="filter_correlative"
-              label="Nro Certificado"
-              prepend-inner-icon="mdi-certificate"
-              variant="outlined"
-              density="compact"
-              hide-details
-              clearable
-              @update:model-value="applyFilters"
-            />
-          </v-col>
-          <v-col cols="12" md="2">
-            <v-autocomplete
-              v-model="filter_client_id"
-              :loading="loading_clients"
-              prepend-inner-icon="mdi-account-group"
-              :items="clients"
-              v-model:search="search_client"
-              @update:model-value="applyFilters"
-              item-title="name"
-              item-value="id"
-              placeholder="Buscar..."
-              no-data-text="No se encontraron clientes"
-              clearable
-              variant="outlined"
-              density="compact"
-              hide-details
-              label="Cliente"
-            />
-          </v-col>
-          <v-col cols="12" md="2">
-            <date-picker
-              :date="filter_date_gt"
-              label="Desde:"
-              @setPickedDate="onDateGtChange"
-            />
-          </v-col>
-          <v-col cols="12" md="2">
-            <date-picker
-              :date="filter_date_lt"
-              label="Hasta:"
-              @setPickedDate="onDateLtChange"
-            />
-          </v-col>
-          <v-col cols="12" md="2">
-            <v-select
-              v-model="filter_status"
-              prepend-inner-icon="mdi-list-status"
-              :items="order_statuses"
-              item-title="name"
-              item-value="id"
-              clearable
-              variant="outlined"
-              density="compact"
-              hide-details
-              label="Estado"
-              @update:model-value="applyFilters"
-            />
-          </v-col>
-        </v-row>
+    <v-card variant="flat" class="border rounded-lg mb-4 pa-4 bg-surface">
+      <div class="d-flex flex-wrap align-center" style="gap: 16px;">
+        
+        <v-text-field
+          v-model="filter_order"
+          hide-details
+          density="compact"
+          prepend-inner-icon="mdi-magnify"
+          variant="outlined"
+          label="Buscar Nro Orden"
+          clearable
+          style="max-width: 220px;"
+          @update:model-value="applyFilters"
+        />
+
+        <v-text-field
+          v-model="filter_correlative"
+          hide-details
+          density="compact"
+          prepend-inner-icon="mdi-certificate"
+          variant="outlined"
+          label="Nro Certificado"
+          clearable
+          style="max-width: 220px;"
+          @update:model-value="applyFilters"
+        />
+
+        <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
+
+        <v-badge
+          :model-value="appStore.pendingPaymentsServiceCount > 0"
+          :content="appStore.pendingPaymentsServiceCount"
+          color="error"
+          offset-x="4"
+          offset-y="4"
+        >
+          <v-chip
+            :color="(appStore.pendingPaymentsCount > 0 && !filtro_falta_pago) ? 'grey-darken-1' : (filtro_falta_pago ? 'error' : 'grey-darken-1')"
+            class="font-weight-bold cursor-pointer transition-swing"
+            @click="toggleFiltroPago"
+          >
+            <v-icon start size="small">mdi-cash-remove</v-icon>
+            Falta Pago
+            <v-tooltip activator="parent" location="top">Filtrar órdenes facturadas pero sin abonos</v-tooltip>
+          </v-chip>
+        </v-badge>
+
+        <v-badge
+          :model-value="appStore.pendingInvoicesServiceCount > 0"
+          :content="appStore.pendingInvoicesServiceCount"
+          color="warning"
+          offset-x="4"
+          offset-y="4"
+        >
+          <v-chip
+            :color="(appStore.pendingInvoicesCount > 0 && !filtro_sin_factura) ? 'grey-darken-1' : (filtro_sin_factura ? 'warning' : 'grey-darken-1')"
+            class="font-weight-bold cursor-pointer transition-swing"
+            @click="toggleFiltroFactura"
+          >
+            <v-icon start size="small">mdi-file-document-remove-outline</v-icon>
+            Sin Emitir Factura
+            <v-tooltip activator="parent" location="top">Filtrar órdenes abiertas pendientes de facturar</v-tooltip>
+          </v-chip>
+        </v-badge>
+
+        <v-badge
+          :model-value="filtro_detraccion && appStore.afectasDetraccionServiceCount > 0"
+          :content="appStore.afectasDetraccionServiceCount"
+          color="deep-orange"
+          offset-x="4"
+          offset-y="4"
+        >
+          <v-chip
+            :color="filtro_detraccion ? 'deep-orange' : 'grey-darken-1'"
+            class="font-weight-bold cursor-pointer transition-swing"
+            @click="toggleFiltroDetraccion"
+          >
+            <v-icon start size="small">mdi-bank-outline</v-icon>
+            Detracción
+            <v-tooltip activator="parent" location="top">Filtrar órdenes afectas a detracción SUNAT</v-tooltip>
+          </v-chip>
+        </v-badge>
+
+        <v-spacer></v-spacer>
+
+        <v-btn 
+          :variant="mostrar_filtros_avanzados ? 'tonal' : 'text'" 
+          color="primary"
+          class="font-weight-bold text-none"
+          @click="mostrar_filtros_avanzados = !mostrar_filtros_avanzados"
+        >
+          <v-icon start>{{ mostrar_filtros_avanzados ? 'mdi-filter-minus' : 'mdi-filter-plus' }}</v-icon>
+          {{ mostrar_filtros_avanzados ? 'Ocultar Filtros' : 'Filtros Avanzados' }}
+        </v-btn>
       </div>
+
+      <v-expand-transition>
+        <div v-show="mostrar_filtros_avanzados">
+          <v-divider class="my-4 border-opacity-25"></v-divider>
+          <v-row dense>
+            <v-col cols="12" md="4">
+              <v-menu v-model="menu_fechas" :close-on-content-click="false" location="bottom">
+                <template v-slot:activator="{ props }">
+                  <v-text-field
+                    v-bind="props"
+                    :model-value="textoRangoFechas"
+                    label="Rango de Fechas"
+                    prepend-inner-icon="mdi-calendar-range"
+                    variant="outlined"
+                    density="compact"
+                    readonly
+                    clearable
+                    @click:clear="limpiarFechas"
+                    hide-details="auto"
+                    class="cursor-pointer"
+                  ></v-text-field>
+                </template>
+                <v-card class="pa-4 elevation-4 border rounded-lg" min-width="320">
+                  <div class="text-caption font-weight-bold text-medium-emphasis mb-3">Seleccione el periodo:</div>
+                  <v-row dense>
+                    <v-col cols="12" sm="6">
+                      <date-picker :date="filter_date_gt" label="Desde:" @setPickedDate="(value) => filter_date_gt = value" />
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                      <date-picker :date="filter_date_lt" label="Hasta:" @setPickedDate="(value) => filter_date_lt = value" />
+                    </v-col>
+                  </v-row>
+                  <div class="d-flex justify-end mt-4">
+                    <v-btn color="primary" variant="tonal" size="small" class="font-weight-bold" @click="menu_fechas = false; applyFilters()">Aplicar</v-btn>
+                  </div>
+                </v-card>
+              </v-menu>
+            </v-col>
+
+            <v-col cols="12" md="4">
+              <v-autocomplete
+                v-model="filter_client_id"
+                :loading="loading_clients"
+                prepend-inner-icon="mdi-account-group"
+                :items="clients"
+                v-model:search="search_client"
+                @update:model-value="applyFilters"
+                item-title="name"
+                item-value="id"
+                placeholder="Buscar cliente..."
+                no-data-text="No se encontraron clientes"
+                clearable
+                variant="outlined"
+                density="compact"
+                hide-details="auto"
+                label="Cliente"
+              />
+            </v-col>
+
+            <v-col cols="12" md="4">
+              <v-select
+                v-model="filter_status"
+                prepend-inner-icon="mdi-list-status"
+                :items="order_statuses"
+                item-title="name"
+                item-value="id"
+                clearable
+                variant="outlined"
+                density="compact"
+                hide-details="auto"
+                label="Estado"
+                @update:model-value="applyFilters"
+              />
+            </v-col>
+          </v-row>
+        </div>
+      </v-expand-transition>
     </v-card>
 
     <table-loading-overlay :loading="loading_list" :isEmpty="orders.length === 0">
@@ -164,18 +253,17 @@
                   <span v-bind="props" class="d-inline-block">
                     <v-btn
                       icon
-                      :color="item.status === 4 ? 'grey-lighten-2' : (item.billed || item.billed_pdf ? 'primary' : 'grey')"
+                      :color="item.status === 4 ? 'grey-lighten-2' : ((item.invoices?.length > 0 || item.wants_invoice === false) ? 'primary' : 'grey')"
                       :disabled="item.status === 4"
                       variant="text"
                       density="comfortable"
                       @click="abrirFactura(item)"
                     >
-                      <v-icon>{{ item.billed || item.billed_pdf ? 'mdi-file-document-check' : 'mdi-file-document-plus' }}</v-icon>
+                      <v-icon>{{ item.wants_invoice === false ? 'mdi-file-document-remove-outline' : (item.invoices?.length > 0 ? 'mdi-file-document-check' : 'mdi-file-document-plus') }}</v-icon>
                     </v-btn>
                   </span>
                 </template>
-                <span>{{ item.billed || item.billed_pdf ? 'Ver/Editar Factura' : 'Subir Factura' }}</span>
-              </v-tooltip>
+                <span>{{ item.wants_invoice === false ? 'Sin Comprobante (Ver)' : (item.invoices?.length > 0 ? 'Ver/Editar Factura' : 'Subir Factura') }}</span>              </v-tooltip>
 
               <v-tooltip location="bottom">
                 <template v-slot:activator="{ props }">
@@ -197,6 +285,26 @@
             </div>
           </div>
         </template>
+
+        <template v-slot:item.detraccion="{ item }">
+          <div class="d-flex justify-center">
+            <template v-if="item.detraccion && item.detraccion.afecto">
+              <v-chip 
+                size="small" 
+                color="deep-orange" 
+                variant="tonal" 
+                class="font-weight-bold px-3 text-caption"
+              >
+                S/ {{ item.detraccion.monto.toFixed(2) }}
+                <v-tooltip activator="parent" location="top">
+                  Detracción {{ item.detraccion.tasa }}% · SUNAT
+                </v-tooltip>
+              </v-chip>
+            </template>
+            <span v-else class="text-caption text-grey">—</span>
+          </div>
+        </template>
+
 
         <template v-slot:item.created_at="{ item }">
           <span :class="item.status === 4 ? 'text-grey' : ''">
@@ -263,9 +371,10 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTheme } from 'vuetify'
+import { useAppStore } from '@/stores/appStore'
 import Swal from 'sweetalert2'
 import OrderDataService from '@/services/certificates/orderDataService'
 import CertificateDataService from '@/services/certificates/certificateDataService'
@@ -284,6 +393,22 @@ import CertificateModal from '@/views/certificates/components/CertificateModal.v
 
 const theme = useTheme()
 const route = useRoute()
+const appStore = useAppStore()
+
+// Nuevos estados UI de Filtros Avanzados y Chips
+const mostrar_filtros_avanzados = ref(false)
+const menu_fechas = ref(false)
+const filtro_falta_pago = ref(false)
+const filtro_sin_factura = ref(false)
+const filtro_detraccion = ref(false)
+
+// Texto computado para el calendario elegante
+const textoRangoFechas = computed(() => {
+  if (!filter_date_gt.value && !filter_date_lt.value) return 'Cualquier fecha'
+  if (filter_date_gt.value && !filter_date_lt.value) return `Desde el ${filter_date_gt.value}`
+  if (!filter_date_gt.value && filter_date_lt.value) return `Hasta el ${filter_date_lt.value}`
+  return `${filter_date_gt.value} al ${filter_date_lt.value}`
+})
 
 // Estados de modales
 const edit_order_modal = ref(false)
@@ -304,6 +429,7 @@ const headers = [
   { title: 'Estado', key: 'status', align: 'center', sortable: false },
   { title: 'Progreso', key: 'progress', align: 'center', sortable: false },
   { title: 'Cobros', key: 'cobros', align: 'center', sortable: false },
+  { title: 'Detracción', key: 'detraccion', align: 'center', sortable: false },
   { title: 'F. Agregado', key: 'created_at', sortable: false },
   { title: 'Opciones', key: 'actions', align: 'center', sortable: false },
   { title: '', key: 'data-table-expand' },
@@ -363,24 +489,56 @@ const user = JSON.parse(localStorage.getItem('user')) || {}
 const is_admin = user.kind !== undefined && user.kind < 1
 const user_permissions = user.action_permissions || []
 
-// Control de peticiones
+// Control de peticiones y Anti-DDoS para Resúmenes
 const pendingRequest = ref(false)
+let debounceTimeout = null
 
 // Funciones de filtro
 const applyFilters = () => {
   if (pendingRequest.value) return
   options.value.page = 1
   retrieveOrders()
+  cargarResumenes() // Sincroniza las píldoras cada vez que filtras
 }
 
-
-const onDateGtChange = (value) => {
-  filter_date_gt.value = value
+const toggleFiltroPago = () => {
+  filtro_falta_pago.value = !filtro_falta_pago.value
   applyFilters()
 }
 
-const onDateLtChange = (value) => {
-  filter_date_lt.value = value
+const toggleFiltroFactura = () => {
+  filtro_sin_factura.value = !filtro_sin_factura.value
+  applyFilters()
+}
+
+const toggleFiltroDetraccion = () => {
+  filtro_detraccion.value = !filtro_detraccion.value
+  applyFilters()
+}
+
+const cargarResumenes = () => {
+  OrderDataService.getPendingPaymentsSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value).then((res) => {
+    appStore.setPendingPaymentsServiceCount(res.data.pending_payments)
+  }).catch(() => {})
+  
+  OrderDataService.getPendingInvoicesSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value).then((res) => {
+    appStore.setPendingInvoicesServiceCount(res.data.pending_invoices)
+  }).catch(() => {})
+
+  if (filtro_detraccion.value) {
+    OrderDataService.getAfectasDetraccionSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value).then((res) => {
+      appStore.setAfectasDetraccionServiceCount(res.data.afectas_detraccion)
+    }).catch(() => {})
+  } else {
+    appStore.setAfectasDetraccionServiceCount(0)
+  }
+}
+
+
+
+const limpiarFechas = () => {
+  filter_date_gt.value = ''
+  filter_date_lt.value = ''
   applyFilters()
 }
 
@@ -401,7 +559,10 @@ const retrieveOrders = () => {
     filter_date_gt.value,
     filter_date_lt.value,
     filter_status.value,
-    1
+    1,
+    filtro_falta_pago.value,
+    filtro_sin_factura.value,
+    filtro_detraccion.value
   )
     .then((res) => {
       orders.value = res.data.results
@@ -445,19 +606,20 @@ const getColorPago = (m) => {
   return 'grey-darken-1'
 }
 
+const tieneFact = (o) => (o.invoices && o.invoices.length > 0) || o.wants_invoice === false
+
 const getStatusOrderLabel = (o) => {
-  const todosAnulados = o.certificates && o.certificates.length > 0 && o.certificates.every(c => c.status === 5)
+  const todosAnulados = o.certificates?.length > 0 && o.certificates.every(c => c.status === 5)
   if (o.status === 4 || todosAnulados) return 'Anulada'
-  if (o.sent || (o.payments && o.payments.length > 0)) return 'Liquidada'
-  if (o.billed || o.billed_pdf) return 'Facturada'
+  if (o.sent || o.payments?.length > 0) return 'Liquidada'
+  if (tieneFact(o)) return 'Facturada'
   return 'En Proceso'
 }
-
 const getStatusOrderColor = (o) => {
-  const todosAnulados = o.certificates && o.certificates.length > 0 && o.certificates.every(c => c.status === 5)
+  const todosAnulados = o.certificates?.length > 0 && o.certificates.every(c => c.status === 5)
   if (o.status === 4 || todosAnulados) return 'red-darken-2'
-  if (o.sent || (o.payments && o.payments.length > 0)) return 'success'
-  if (o.billed || o.billed_pdf) return 'warning'
+  if (o.sent || o.payments?.length > 0) return 'success'
+  if (tieneFact(o)) return 'warning'
   return 'grey-darken-1'
 }
 
@@ -527,6 +689,10 @@ const fetchAndInjectSingleOrder = (event) => {
       if (response && response.data) {
         if (response.data.order_type === 1 || !response.data.order_type) {
           updateSingleOrderInList(response.data)
+          
+          // Refrescar resúmenes agrupados (Debounce de 1.5s) para evitar DDoS
+          clearTimeout(debounceTimeout)
+          debounceTimeout = setTimeout(() => { cargarResumenes() }, 1500)
         }
       }
     })
@@ -551,7 +717,8 @@ const handleWssReload = () => {
 // Watchers (igual que en ListCertificates)
 watch(options, () => { retrieveOrders() }, { deep: true })
 
-watch([filter_order, filter_correlative, filter_client_id, filter_date_gt, filter_date_lt, filter_status], () => {
+// Quitamos filter_date_gt y filter_date_lt para que solo se apliquen con el botón "Aplicar"
+watch([filter_order, filter_correlative, filter_client_id, filter_status], () => {
   applyFilters()
 })
 
@@ -561,6 +728,7 @@ onMounted(() => {
     filter_order.value = route.query.buscar_orden
   }
   
+  cargarResumenes() // Cargamos el número para el badge rojo
   retrieveClientes()
   retrieveOrders()
   window.addEventListener('wss-reload-orders-service', handleWssReload)

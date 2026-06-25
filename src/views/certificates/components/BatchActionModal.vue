@@ -88,31 +88,35 @@
 
               <td class="text-center">
                 <template v-if="action === 'excel'">
-                  <div v-if="['found', 'manual'].includes(item.validation_status)" class="d-flex align-center justify-center">
-                    <v-icon v-if="item.validation_status === 'found'" color="success" size="small" title="Encontrado en Servidor">mdi-check-circle</v-icon>
-                    <v-icon v-else color="info" size="small" title="Adjuntado Manualmente">mdi-paperclip</v-icon>
-                    <v-btn icon variant="text" size="small" color="error" class="ml-1" title="Descartar Excel" @click.stop="discardExcel(item)">
+                  <div v-if="item.validation_status === 'manual'" class="d-flex align-center justify-center">
+                    <v-icon color="info" size="small" title="Adjuntado Manualmente">mdi-paperclip</v-icon>
+                    <v-btn icon variant="text" size="small" color="error" class="ml-1" title="Quitar Excel Manual" @click.stop="discardExcel(item)">
                       <v-icon>mdi-close</v-icon>
                     </v-btn>
                   </div>
-                  
-                  <div v-else-if="item.validation_status === 'discarded'" class="d-flex align-center justify-center">
+                  <div v-else class="d-flex align-center justify-center">
+                    <v-icon v-if="item.validation_status === 'found'" color="success" size="small" title="Encontrado en Servidor" class="mr-2">mdi-check-circle</v-icon>
+                    <v-icon v-else color="error" size="small" title="No encontrado" class="mr-2">mdi-close-circle</v-icon>
                     <v-btn icon variant="text" size="small" color="primary" title="Adjuntar Manualmente" @click.stop="openManualUpload(item)">
                       <v-icon>mdi-upload</v-icon>
                     </v-btn>
-                    <v-btn icon variant="text" size="small" color="success" title="Restaurar del Servidor" @click.stop="restoreNative(item)">
-                      <v-icon>mdi-backup-restore</v-icon>
-                    </v-btn>
                   </div>
-                  
-                  <v-btn v-else icon variant="text" size="small" color="primary" title="Adjuntar Manualmente" @click.stop="openManualUpload(item)">
-                    <v-icon>mdi-upload</v-icon>
-                  </v-btn>
                 </template>
 
                 <template v-else-if="action === 'qr'">
-                  <v-icon v-if="!item.disabled || item.already_has_it" color="success" size="small">mdi-check-circle</v-icon>
-                  <v-icon v-else color="error" size="small" title="Falta Excel">mdi-close-circle</v-icon>
+                  <div v-if="item.validation_status === 'manual_pdf'" class="d-flex align-center justify-center">
+                    <v-icon color="info" size="small" title="PDF Adjuntado Manualmente">mdi-paperclip</v-icon>
+                    <v-btn icon variant="text" size="small" color="error" class="ml-1" title="Descartar PDF" @click.stop="discardManualPdf(item)">
+                      <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                  </div>
+                  <div v-else class="d-flex align-center justify-center">
+                    <v-icon v-if="!item.disabled || item.already_has_it" color="success" size="small" class="mr-2">mdi-check-circle</v-icon>
+                    <v-icon v-else color="error" size="small" title="Falta Excel" class="mr-2">mdi-close-circle</v-icon>
+                    <v-btn v-if="!item.disabled" icon variant="text" size="small" color="primary" title="Subir PDF Manual" @click.stop="openManualPdfUpload(item)">
+                      <v-icon>mdi-upload</v-icon>
+                    </v-btn>
+                  </div>
                 </template>
 
                 <template v-else>
@@ -166,6 +170,7 @@ const selected_items = ref([]) // IDs de los checkboxes marcados
 const loading_validation = ref(false)
 const is_processing = ref(false)
 const loadSheetModalRef = ref(null)
+const force_select = ref(false)
 
 const configMap = {
   excel: {
@@ -223,15 +228,20 @@ const toggleSelectAll = () => {
   }
 }
 
-const open = async (actionType, selectedCerts) => {
+const open = async (actionType, selectedCerts, forceSelect = false) => {
   action.value = actionType
   selected_items.value = []
+  force_select.value = forceSelect
 
   items.value = selectedCerts.map(cert => {
     let disabled = false
     let already_has_it = false
 
-    if (actionType === 'qr') {
+    if (actionType === 'excel') {
+      if (tieneExcelSubido(cert)) {
+        already_has_it = true // Ya tiene Excel adjuntado (chip "Tiene Excel")
+      }
+    } else if (actionType === 'qr') {
       if (!tieneExcelSubido(cert)) {
         disabled = true // Le falta Excel (Bloqueado)
       } else if (cert.uploaded) {
@@ -259,7 +269,9 @@ const open = async (actionType, selectedCerts) => {
   // Preseleccionar los "Nuevos" y válidos para QR y Notify
   if (actionType !== 'excel') {
     items.value.forEach(item => {
-      if (!item.disabled && !item.already_has_it) {
+      // forceSelect: el usuario pidió explícitamente esta acción para este certificado puntual
+      // (ej. botón "Reemplazar"), así que ignoramos already_has_it y lo marcamos igual.
+      if (!item.disabled && (forceSelect || !item.already_has_it)) {
         selected_items.value.push(item.id)
       }
     })
@@ -274,17 +286,33 @@ const open = async (actionType, selectedCerts) => {
 
 const openManualUpload = (item) => {
   if (loadSheetModalRef.value) {
-    loadSheetModalRef.value.open(item)
+    loadSheetModalRef.value.open(item, 'excel')
   }
+}
+
+const openManualPdfUpload = (item) => {
+  if (loadSheetModalRef.value) {
+    loadSheetModalRef.value.open(item, 'pdf')
+  }
+}
+
+const discardManualPdf = (item) => {
+  item.validation_status = 'pending'
+  item.file = null
 }
 
 const onFileAttached = (payload) => {
   const item = items.value.find(i => i.id === payload.id)
   if (item) {
-    item.validation_status = 'manual'
-    item.disabled = false
-    item.file = payload.file
-    item.password = payload.password
+    if (action.value === 'qr') {
+      item.validation_status = 'manual_pdf'
+      item.file = payload.file
+    } else {
+      item.validation_status = 'manual'
+      item.disabled = false
+      item.file = payload.file
+      item.password = payload.password
+    }
     
     // marca check automatico para agilizar proceso
     if (!selected_items.value.includes(item.id)) {
@@ -294,26 +322,21 @@ const onFileAttached = (payload) => {
 }
 
 const discardExcel = (item) => {
-  if (item.validation_status === 'found') {
-    item.validation_status = 'discarded'
-  } else if (item.validation_status === 'manual') {
-    item.validation_status = item.native_filename ? 'discarded' : 'not_found'
-    item.file = null
-    item.password = ''
-  }
-  item.disabled = true
-  selected_items.value = selected_items.value.filter(id => id !== item.id)
-}
-
-const restoreNative = (item) => {
-  item.validation_status = 'found'
-  item.disabled = false
+  // Si el servidor ya tenía un excel nativo para este item, lo recuperamos automáticamente.
+  // Si no, queda sin excel disponible (igual que un manual_pdf descartado en QR).
+  item.validation_status = item.native_filename ? 'found' : 'not_found'
   item.file = null
   item.password = ''
-  if (!selected_items.value.includes(item.id)) {
+  item.disabled = !item.native_filename
+
+  if (item.disabled) {
+    selected_items.value = selected_items.value.filter(id => id !== item.id)
+  } else if (!selected_items.value.includes(item.id)) {
     selected_items.value.push(item.id)
   }
 }
+
+
 
 const validarExcelsEnServidor = async () => {
   loading_validation.value = true
@@ -329,10 +352,10 @@ const validarExcelsEnServidor = async () => {
         item.validation_status = 'found'
         item.native_filename = info.filename
         
-        if (tieneExcelSubido(item)) {
+        if (tieneExcelSubido(item) && !force_select.value) {
           item.already_has_it = true // Ya tiene Excel (Permitido pero desmarcado)
         } else {
-          selected_items.value.push(item.id) // Nuevo (Marcado)
+          selected_items.value.push(item.id) // Nuevo o forzado (Marcado)
         }
       } else {
         item.validation_status = info ? info.status : 'not_found'
@@ -365,11 +388,15 @@ const confirmAction = async () => {
     
     else if (action.value === 'qr') {
       aptos.forEach(cert => {
-        window.dispatchEvent(new CustomEvent('wss-qr-start', { detail: { certificate: cert } }))
+        if (cert.validation_status === 'manual_pdf' && cert.file) {
+          window.dispatchEvent(new CustomEvent('wss-manual-pdf-upload', { detail: { certificate: cert, file: cert.file } }))
+        } else {
+          window.dispatchEvent(new CustomEvent('wss-qr-start', { detail: { certificate: cert } }))
+        }
       })
       $swal.fire({
         toast: true, position: 'top-end', showConfirmButton: false, timer: 4000,
-        icon: 'info', title: `Procesando ${aptos.length} firmas en segundo plano...`
+        icon: 'info', title: `Procesando ${aptos.length} firmas/subidas en segundo plano...`
       })
       emit('clearSelection')
       close()

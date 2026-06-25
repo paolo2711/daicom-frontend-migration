@@ -104,6 +104,14 @@ export default {
     return axios.post('certificates/scan-excels', { cert_ids: certIds }, { headers: headers });
   },
 
+  manualCloudUpload(id, data) {
+    let headers = authHeader();
+    if (data instanceof FormData) {
+      delete headers['Content-Type'];
+    }
+    return axios.post(`certificates/${id}/manual-upload`, data, { headers: headers });
+  },
+
   removeFromCloud(id) {
     let headers = authHeader();
     return axios.delete(`certificates/${id}/cloud`, { headers: headers });

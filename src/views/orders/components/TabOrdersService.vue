@@ -185,12 +185,17 @@
         show-expand
         single-expand
         item-value="id"
-        class="elevation-0 rounded-lg tabla-mejorada bg-surface"
+        :hover="false"
+        class="elevation-0 rounded-lg tabla-mejorada tabla-ordenes-servicio bg-surface"
         style="border: 1px solid rgba(0,0,0,0.12);"
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
         @click:row="manejarClicFila"
+        
+        :row-props="(data) => ({ 
+          class: expanded.includes(data.item.id || (data.item.raw && data.item.raw.id)) ? 'fila-padre-activa' : '' 
+        })"
       >
         <template v-slot:bottom>
           <fluent-pagination
@@ -748,48 +753,63 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss">
-.tabla-mejorada.v-data-table-server {
-  border: 1px solid var(--v-border-color);
-  border-radius: 8px;
-  overflow: hidden;
-}
+/*
+ * POR QUÉ FALLABAN LOS INTENTOS ANTERIORES
+ * ──────────────────────────────────────────
+ * Vuetify NO pinta el hover con background-color en el <tr>.
+ * Lo hace con un pseudo-elemento ::after en cada <td>:
+ *
+ *   .v-table--hover tbody tr:hover > td::after {
+ *     content: "";
+ *     position: absolute;
+ *     background: rgba(var(--v-border-color), var(--v-hover-opacity));
+ *   }
+ *
+ * Todos los !important en background-color del tr eran invisibles porque
+ * la capa de hover se pinta ENCIMA como overlay en el td.
+ *
+ * SOLUCIÓN: anular el td::after en las filas donde no queremos hover.
+ *
+ * ESTRUCTURA DOM al expandir:
+ *   tr.fila-padre-activa   ← fila con datos de la orden
+ *   tr.fila-activa         ← fila con TableServiceDetails (expanded-row)
+ *     └─ v-table (sub-tabla interna con sus propios tr)
+ */
 
-.v-theme--light .tabla-mejorada tbody tr td {
-  border-bottom: 1px solid #BDBDBD !important;
-}
-.v-theme--dark .tabla-mejorada tbody tr td {
-  border-bottom: 1px solid #616161 !important;
-}
-
-.v-theme--light .tabla-mejorada tbody tr.fila-activa,
-.v-theme--light .tabla-mejorada tbody tr.v-data-table__expanded__content {
-  background-color: #eeeeee !important;
-}
-.v-theme--dark .tabla-mejorada tbody tr.fila-activa,
-.v-theme--dark .tabla-mejorada tbody tr.v-data-table__expanded__content {
-  background-color: #333333 !important;
-}
-
-.tabla-mejorada tr.v-data-table__expanded__content .v-data-table {
-  background-color: transparent !important;
-}
-
-/* --- UX: Filas Clickables --- */
-.tabla-mejorada tbody tr {
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-/* Hover suave: Solo aplica a la fila principal, ignorando la tabla anidada desplegada */
-.v-theme--light .tabla-mejorada tbody tr:not(.v-data-table__expanded__content):hover {
+/* ── Hover de filas normales (las no expandidas) ── */
+/* Replicamos lo que haría Vuetify pero solo donde queremos */
+.v-theme--light .tabla-ordenes-servicio tbody tr:not(.fila-padre-activa):not(.fila-activa):hover > td {
   background-color: rgba(0, 0, 0, 0.04) !important;
 }
-.v-theme--dark .tabla-mejorada tbody tr:not(.v-data-table__expanded__content):hover {
+.v-theme--dark .tabla-ordenes-servicio tbody tr:not(.fila-padre-activa):not(.fila-activa):hover > td {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
-.anulado-atenuado {
-  opacity: 0.25 !important;
-  pointer-events: none;
+/* ── Anular el td::after de Vuetify en filas activas ── */
+/* Esto elimina la capa de hover que Vuetify pinta encima */
+.tabla-ordenes-servicio tbody tr.fila-padre-activa > td::after,
+.tabla-ordenes-servicio tbody tr.fila-activa > td::after {
+  display: none !important;
+}
+
+/* ── Anular el td::after en la sub-tabla interna (TableServiceDetails) ── */
+.tabla-ordenes-servicio tr.fila-activa .v-table tbody tr > td::after {
+  display: none !important;
+}
+
+/* ── Color de fondo del estado activo ── */
+.v-theme--light .tabla-ordenes-servicio tbody tr.fila-padre-activa > td,
+.v-theme--light .tabla-ordenes-servicio tbody tr.fila-activa > td {
+  background-color: #e8e8e8 !important;
+}
+.v-theme--dark .tabla-ordenes-servicio tbody tr.fila-padre-activa > td,
+.v-theme--dark .tabla-ordenes-servicio tbody tr.fila-activa > td {
+  background-color: #292929 !important;
+}
+
+/* ── Sub-tabla transparente para heredar el fondo del padre ── */
+.tabla-ordenes-servicio tr.fila-activa .v-table,
+.tabla-ordenes-servicio tr.fila-activa .v-table__wrapper {
+  background-color: transparent !important;
 }
 </style>

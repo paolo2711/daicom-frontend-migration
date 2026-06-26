@@ -1,9 +1,9 @@
 <template>
-  <v-card flat tile :class="isDark ? 'bg-blue-grey-darken-4' : 'bg-blue-lighten-5'">
+  <v-card flat tile color="transparent" class="elevation-0">
     <v-toolbar density="compact" flat color="transparent" class="pl-3">
-      <v-icon start :color="isDark ? 'blue-lighten-2' : 'blue-darken-3'">mdi-clipboard-list</v-icon>
-      <span class="text-subtitle-2 font-weight-bold" :class="isDark ? 'text-blue-lighten-2' : 'text-blue-darken-4'">
-        Detalle de Equipos: {{ order.order_number }}
+      <v-icon start color="primary">mdi-clipboard-list</v-icon>
+      <span class="text-subtitle-2 font-weight-bold text-primary">
+        Equipos en este Servicio: {{ order.order_number }}
       </span>
       <v-spacer/>
       <!-- size="x-small" | left → start (V3) -->
@@ -18,9 +18,9 @@
       <div class="text-caption mt-2 text-medium-emphasis">Cargando detalle de equipos...</div>
     </div>
 
-    <v-table density="compact" v-else :class="isDark ? 'bg-blue-grey-darken-4' : 'bg-blue-lighten-5'">
+    <v-table density="compact" :hover="false" v-else class="bg-transparent">
       <thead>
-        <tr :class="isDark ? 'bg-blue-grey-darken-3' : 'bg-blue-lighten-4'">
+        <tr class="bg-transparent">
           <th class="text-overline">EXPEDIENTE</th>
           <th class="text-overline">EQUIPO</th>
           <th class="text-center text-overline">DOCUMENTACIÓN</th>

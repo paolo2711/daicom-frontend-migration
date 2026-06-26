@@ -140,7 +140,7 @@
             <div v-if="invoices.length > 0" class="mt-3 rounded-lg border pa-3 d-flex justify-space-around">
               <div class="text-center">
                 <div class="text-caption text-medium-emphasis mb-1">Total Facturado</div>
-                <div class="font-weight-bold">S/ {{ parseFloat(props.order?.total_facturado || 0).toFixed(2) }}</div>
+                <div class="font-weight-bold">S/ {{ totalFacturado.toFixed(2) }}</div>
               </div>
               <template v-if="totalDetraccion > 0">
                 <v-divider vertical />
@@ -151,7 +151,7 @@
                 <v-divider vertical />
                 <div class="text-center">
                   <div class="text-caption text-medium-emphasis mb-1">Neto a Cobrar</div>
-                  <div class="font-weight-bold text-primary">S/ {{ parseFloat(props.order?.neto_a_cobrar || 0).toFixed(2) }}</div>
+                  <div class="font-weight-bold text-primary">S/ {{ netoACobrar.toFixed(2) }}</div>
                 </div>
               </template>
             </div>
@@ -352,6 +352,12 @@ const totalDetraccion = computed(() =>
     acc + (inv.detraccion_applies ? parseFloat(inv.detraccion_amount || 0) : 0), 0)
 )
 
+const totalFacturado = computed(() =>
+  invoices.value.reduce((acc, inv) => acc + parseFloat(inv.amount || 0), 0)
+)
+
+const netoACobrar = computed(() => totalFacturado.value - totalDetraccion.value)
+
 const detraccionEstimada = computed(() => {
   const monto = parseFloat(facturaData.value.amount)
   const fecha = facturaData.value.invoice_date
@@ -493,8 +499,6 @@ const save = async () => {
       text: `Tienes ${invoices.value.length} comprobante(s) registrado(s). Si el cliente ya no requiere factura, estos se eliminarán de forma permanente.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#FF5252',
-      cancelButtonColor: '#757575',
       confirmButtonText: 'Sí, eliminar todo',
       cancelButtonText: 'Cancelar'
     });
@@ -546,8 +550,6 @@ const eliminarFactura = (inv) => {
     text: `${inv.invoice_number || 'Sin número'} — S/ ${parseFloat(inv.amount || 0).toFixed(2)}`,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonColor: '#FF5252',
-    cancelButtonColor: '#757575',
     confirmButtonText: 'Sí, eliminar',
     cancelButtonText: 'Cancelar',
   }).then(async (result) => {

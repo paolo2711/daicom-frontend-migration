@@ -186,12 +186,17 @@
         single-expand
         
         item-value="id"
-        class="elevation-0 rounded-lg tabla-mejorada bg-surface"
+        :hover="false"
+        class="elevation-0 rounded-lg tabla-mejorada tabla-ordenes-alquiler bg-surface"
         style="border: 1px solid #FFCA28;"
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
         @click:row="manejarClicFila"
+
+        :row-props="(data) => ({ 
+          class: expanded.includes(data.item.id || (data.item.raw && data.item.raw.id)) ? 'fila-padre-activa' : '' 
+        })"
       >
         <template v-slot:bottom>
           <fluent-pagination
@@ -348,7 +353,7 @@
         </template>
 
         <template v-slot:expanded-row="{ columns, item }">
-          <tr class="fila-activa-alq">
+          <tr class="fila-activa">
             <td :colspan="columns.length" class="pa-0">
               <table-rental-details :order="item" @add-rental="prepareExtraEquipment(item)" @reload="expanded = []; retrieveOrders()" />
             </td>
@@ -611,31 +616,48 @@ export default {
 }
 </script>
 
-<style>
+<style lang="scss">
 .anulado-atenuado {
   opacity: 0.25 !important;
   pointer-events: none;
 }
 
-.v-theme--light .tabla-mejorada tbody tr.fila-activa-alq,
-.v-theme--light .tabla-mejorada tbody tr.v-data-table__tr--expanded { background-color: #FFF8E1 !important; }
-.v-theme--dark .tabla-mejorada tbody tr.fila-activa-alq,
-.v-theme--dark .tabla-mejorada tbody tr.v-data-table__tr--expanded { background-color: #424242 !important; }
-.tabla-mejorada tr.v-data-table__expanded__content .v-data-table {
-  background-color: transparent !important;
-}
-
-/* --- UX: Filas Clickables --- */
-.tabla-mejorada tbody tr {
+.tabla-ordenes-alquiler tbody tr {
   cursor: pointer;
-  transition: background-color 0.2s ease;
 }
 
-/* Hover suave: Solo aplica a la fila principal */
-.v-theme--light .tabla-mejorada tbody tr:not(.v-data-table__expanded__content):hover {
+/* ── Hover de filas normales ── */
+.v-theme--light .tabla-ordenes-alquiler tbody tr:not(.fila-padre-activa):not(.fila-activa):hover > td {
   background-color: rgba(0, 0, 0, 0.04) !important;
 }
-.v-theme--dark .tabla-mejorada tbody tr:not(.v-data-table__expanded__content):hover {
+.v-theme--dark .tabla-ordenes-alquiler tbody tr:not(.fila-padre-activa):not(.fila-activa):hover > td {
   background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* ── Anular el td::after de Vuetify en filas activas ── */
+.tabla-ordenes-alquiler tbody tr.fila-padre-activa > td::after,
+.tabla-ordenes-alquiler tbody tr.fila-activa > td::after {
+  display: none !important;
+}
+
+/* ── Anular el td::after en la sub-tabla interna (TableRentalDetails) ── */
+.tabla-ordenes-alquiler tr.fila-activa .v-table tbody tr > td::after {
+  display: none !important;
+}
+
+/* ── Color de fondo del estado activo ── */
+.v-theme--light .tabla-ordenes-alquiler tbody tr.fila-padre-activa > td,
+.v-theme--light .tabla-ordenes-alquiler tbody tr.fila-activa > td {
+  background-color: #e8e8e8 !important;
+}
+.v-theme--dark .tabla-ordenes-alquiler tbody tr.fila-padre-activa > td,
+.v-theme--dark .tabla-ordenes-alquiler tbody tr.fila-activa > td {
+  background-color: #292929 !important;
+}
+
+/* ── Sub-tabla transparente para heredar el fondo del padre ── */
+.tabla-ordenes-alquiler tr.fila-activa .v-table,
+.tabla-ordenes-alquiler tr.fila-activa .v-table__wrapper {
+  background-color: transparent !important;
 }
 </style>

@@ -11,9 +11,9 @@
       </v-btn>
     </v-toolbar>
 
-    <v-table density="compact" :class="isDark ? 'bg-brown-darken-4' : 'bg-amber-lighten-5'">
+    <v-table density="compact" :hover="false" class="bg-transparent">
       <thead>
-        <tr :class="isDark ? 'bg-brown-darken-3' : 'bg-amber-lighten-4'">
+        <tr class="bg-transparent">
           <th class="text-overline">ID INVENTARIO</th>
           <th class="text-overline">EQUIPO Y OBSERVACIONES</th>
           <th class="text-overline">SERIE</th>

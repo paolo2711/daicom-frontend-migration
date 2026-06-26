@@ -210,13 +210,13 @@
         </template>
 
         <template v-slot:item.client_data.name="{ item }">
-          <span class="font-weight-bald">{{ item.client_data.name }}</span>
+          <span :class="item.status === 4 ? 'anulado-atenuado' : ''">{{ item.client_data.name }}</span>
         </template>
 
         <template v-slot:item.status="{ item }">
-          <div class="d-flex justify-center">
-            <v-chip :color="getStatusOrderColor(item)" size="small" class="text-white font-weight-medium" style="width: 100px; justify-content: center;">
-              {{ getStatusOrderLabel(item) }}
+          <div class="d-flex align-center justify-center">
+            <v-chip :color="getStatusFinancialColor(item)" size="small" class="text-white font-weight-medium" style="width: 100px; justify-content: center;">
+              {{ getStatusFinancialLabel(item) }}
             </v-chip>
           </div>
         </template>
@@ -263,66 +263,66 @@
           </div>
         </template>
 
-        <template v-slot:item.cobros="{ item }">
-          <div class="d-flex align-center mx-auto" style="width: 190px;">
-            <div class="text-left" style="width: 100px;">
-              <template v-if="item.payments && item.payments.length > 0">
-                <div class="font-weight-medium text-body-2 mb-n1" :class="item.status === 4 ? 'text-grey' : (isDark ? 'text-grey-lighten-2' : 'text-grey-darken-3')">
-                  S/ {{ totalPagos(item) }}
-                </div>
-                <div class="text-caption text-grey">
-                  {{ item.payments.length }} {{ item.payments.length === 1 ? 'abono' : 'abonos' }}
-                </div>
-              </template>
-              <template v-else>
-                <div class="font-weight-medium text-body-2 text-grey" :class="isDark ? 'text-darken-1' : 'text-lighten-1'">
-                  ---
-                </div>
-              </template>
+        <template v-slot:item.facturacion="{ item }">
+          <div class="d-flex align-center justify-end w-100">
+            <div class="d-flex flex-column align-end pr-1">
+              <div class="font-weight-medium body-2 mb-n1" :class="item.status === 4 ? 'text-grey' : (isDark ? 'text-grey-lighten-2' : 'text-grey-darken-3')">
+                {{ item.total_facturado > 0 || (item.wants_invoice === false && item.total_pagado > 0) ? 'S/ ' + formatMoney(item.neto_a_cobrar) : '---' }}
+              </div>
+              <div class="text-caption text-grey" style="font-size: 10px !important;">
+                <span v-if="item.wants_invoice === false">Sin comprobante</span>
+                <span v-else-if="item.has_detraccion">Detr: -S/ {{ formatMoney(item.detraccion_total) }}</span>
+              </div>
             </div>
-
-            <div class="d-flex justify-end" style="width: 90px;">
+            <div class="d-flex pl-1">
               <v-tooltip location="bottom">
                 <template v-slot:activator="{ props }">
-                  <span v-bind="props" class="d-inline-block">
-                    <v-btn icon variant="text" density="comfortable" :color="item.status === 4 ? 'grey-lighten-2' : ((item.invoices?.length > 0 || item.wants_invoice === false) ? 'primary' : 'grey')" :disabled="item.status === 4" @click="abrirFactura(item)">
-                      <v-icon>{{ item.wants_invoice === false ? 'mdi-file-document-remove-outline' : (item.invoices?.length > 0 ? 'mdi-file-document-check' : 'mdi-file-document-plus') }}</v-icon>
-                    </v-btn>
-                  </span>
+                  <v-btn
+                    icon
+                    :color="item.status === 4 ? 'grey-lighten-2' : ((item.invoices?.length > 0 || item.wants_invoice === false) ? 'primary' : 'grey')"
+                    :disabled="item.status === 4"
+                    variant="text"
+                    density="compact"
+                    @click.stop="abrirFactura(item)"
+                    v-bind="props"
+                  >
+                    <v-icon size="small">{{ item.wants_invoice === false ? 'mdi-file-document-remove-outline' : (item.invoices?.length > 0 ? 'mdi-file-document-check' : 'mdi-file-document-plus') }}</v-icon>
+                  </v-btn>
                 </template>
                 <span>{{ item.wants_invoice === false ? 'Sin Comprobante (Ver)' : (item.invoices?.length > 0 ? 'Ver/Editar Factura' : 'Subir Factura') }}</span>
-              </v-tooltip>
-
-              <v-tooltip location="bottom">
-                <template v-slot:activator="{ props }">
-                  <span v-bind="props" class="d-inline-block">
-                    <v-btn icon variant="text" density="comfortable" :color="item.status === 4 ? 'grey-lighten-2' : (item.sent || (item.payments && item.payments.length > 0) ? 'primary' : 'grey')" :disabled="item.status === 4" @click="abrirPago(item)">
-                      <v-icon>{{ item.sent || (item.payments && item.payments.length > 0) ? 'mdi-cash-check' : 'mdi-cash-plus' }}</v-icon>
-                    </v-btn>
-                  </span>
-                </template>
-                <span>{{ item.sent || (item.payments && item.payments.length > 0) ? 'Ver/Editar Pagos' : 'Registrar Pago' }}</span>
               </v-tooltip>
             </div>
           </div>
         </template>
 
-        <template v-slot:item.detraccion="{ item }">
-          <div class="d-flex justify-center">
-            <template v-if="item.detraccion && item.detraccion.afecto">
-              <v-chip 
-                size="small" 
-                color="deep-orange" 
-                variant="tonal" 
-                class="font-weight-bold px-3 text-caption"
-              >
-                S/ {{ item.detraccion.monto.toFixed(2) }}
-                <v-tooltip activator="parent" location="top">
-                  Detracción {{ item.detraccion.tasa }}% · SUNAT
-                </v-tooltip>
-              </v-chip>
-            </template>
-            <span v-else class="text-caption text-grey">—</span>
+        <template v-slot:item.cobros="{ item }">
+          <div class="d-flex align-center justify-end w-100">
+            <div class="d-flex flex-column align-end pr-1">
+              <div class="font-weight-medium body-2 mb-n1" :class="item.status === 4 ? 'text-grey' : (isDark ? 'text-grey-lighten-2' : 'text-grey-darken-3')">
+                {{ item.total_pagado > 0 ? 'S/ ' + formatMoney(item.total_pagado) : '---' }}
+              </div>
+              <div v-if="item.payments?.length > 0" class="text-caption text-grey" style="font-size: 10px !important;">
+                {{ item.payments.length }} {{ item.payments.length === 1 ? 'abono' : 'abonos' }}
+              </div>
+            </div>
+            <div class="d-flex pl-1">
+              <v-tooltip location="bottom">
+                <template v-slot:activator="{ props }">
+                  <v-btn
+                    icon
+                    :color="item.status === 4 ? 'grey-lighten-2' : ((item.payments && item.payments.length > 0) ? 'primary' : 'grey')"
+                    :disabled="item.status === 4"
+                    variant="text"
+                    density="compact"
+                    @click.stop="abrirPago(item)"
+                    v-bind="props"
+                  >
+                    <v-icon size="small">{{ (item.payments && item.payments.length > 0) ? 'mdi-cash-check' : 'mdi-cash-plus' }}</v-icon>
+                  </v-btn>
+                </template>
+                <span>{{ (item.payments && item.payments.length > 0) ? 'Ver/Editar Pagos' : 'Registrar Pago' }}</span>
+              </v-tooltip>
+            </div>
           </div>
         </template>
 
@@ -368,6 +368,7 @@
 
 <script>
 import { defineAsyncComponent, ref, watch, onMounted, onUnmounted, computed as vueComputed } from 'vue'
+import Swal from 'sweetalert2'
 import { useTheme } from 'vuetify'
 import FluentPagination from "@/components/commonComponents/FluentPagination.vue"
 import OrderDataService from "@/services/certificates/orderDataService"
@@ -416,10 +417,10 @@ export default {
       { title: 'Nro Alquiler',   key: 'order_number' },
       { title: 'Ref. Cliente',   key: 'client_order_reference' },
       { title: 'Empresa',        key: 'client_data.name' },
-      { title: 'Estado',         key: 'status',      align: 'center', sortable: false },
       { title: 'Documentos',     key: 'documentos',  align: 'center', sortable: false },
-      { title: 'Cobros',         key: 'cobros',      align: 'center', sortable: false },
-      { title: 'Detracción',     key: 'detraccion',  align: 'center', sortable: false },
+      { title: 'Facturación',    key: 'facturacion', align: 'center', sortable: false },
+      { title: 'Cobro',         key: 'cobros',      align: 'center', sortable: false },
+      { title: 'Estado',         key: 'status',      align: 'center', sortable: false },
       { title: 'Opciones',       key: 'actions',     align: 'center', sortable: false },
       { title: '',               key: 'data-table-expand' },
     ],
@@ -427,7 +428,7 @@ export default {
     filter_date_gt: '', filter_date_lt: '', filter_status: '',
     mostrar_filtros_avanzados: false, menu_fechas: false,
     filtro_falta_pago: false, filtro_sin_factura: false, filtro_detraccion: false,
-    order_statuses: [ {id: 1, name: 'Abierta'}, {id: 2, name: 'Facturada'}, {id: 3, name: 'Pagada'}, {id: 4, name: 'Anulada'} ],
+    order_statuses: [ {id: 1, name: 'En Proceso'}, {id: 2, name: 'Deuda'}, {id: 3, name: 'Abonado'}, {id: 4, name: 'Pagado'}, {id: 5, name: 'Anulada'}, {id: 6, name: 'Excedido'} ],
     loading_list: false, total_orders: 0, options: { page: 1, itemsPerPage: 15 },
     is_admin: false, user_permissions: [],
   }),
@@ -573,31 +574,26 @@ export default {
         this.total_orders = res.data.count
       }).finally(() => { this.loading_list = false })
     },
-    getStatusOrderLabel(o) {
-      if (o.status === 4) return 'Anulada'
-      if (o.sent || (o.payments && o.payments.length > 0)) return 'Liquidada'
-      if ((o.invoices && o.invoices.length > 0) || o.wants_invoice === false) return 'Facturada'
-      return 'En Proceso'
+    getStatusFinancialLabel(o) {
+      const map = { 1: 'En Proceso', 2: 'Deuda', 3: 'Abonado', 4: 'Anulada', 5: 'Pagado', 6: 'Excedido' }
+      return map[o.status] || 'En Proceso'
     },
-    getStatusOrderColor(o) {
-      if (o.status === 4) return 'red-darken-2'
-      if (o.sent || (o.payments && o.payments.length > 0)) return 'success'
-      if ((o.invoices && o.invoices.length > 0) || o.wants_invoice === false) return 'warning'
-      return 'grey-darken-1'
+    getStatusFinancialColor(o) {
+      const map = { 1: 'grey-darken-1', 2: 'error', 3: 'warning', 4: 'grey-darken-1', 5: 'success', 6: 'blue-darken-1' }
+      return map[o.status] || 'grey-darken-1'
     },
-    totalPagos(o) {
-      if (!o.payments || !o.payments.length) return '0.00'
-      const t = o.payments.reduce((acc, p) => acc + parseFloat(p.amount || 0), 0)
-      return t.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    formatMoney(val) {
+      const num = parseFloat(val || 0)
+      return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     },
     anularOrderConfirm(order) {
-      this.$swal.fire({
+      Swal.fire({
         title: '¿Anular Alquiler?', text: `Se invalidará la orden de alquiler ${order.order_number}`,
         icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, anular'
       }).then((result) => {
         if (result.isConfirmed) {
           OrderDataService.patch(order.id, { status: 4 }).then(() => {
-            this.$swal.fire('Completado', 'Orden anulada.', 'success')
+            Swal.fire('Completado', 'Orden anulada.', 'success')
             this.retrieveOrders()
           })
         }
@@ -616,6 +612,11 @@ export default {
 </script>
 
 <style>
+.anulado-atenuado {
+  opacity: 0.25 !important;
+  pointer-events: none;
+}
+
 .v-theme--light .tabla-mejorada tbody tr.fila-activa-alq,
 .v-theme--light .tabla-mejorada tbody tr.v-data-table__tr--expanded { background-color: #FFF8E1 !important; }
 .v-theme--dark .tabla-mejorada tbody tr.fila-activa-alq,

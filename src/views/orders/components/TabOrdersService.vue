@@ -205,9 +205,9 @@
         </template>
 
         <template v-slot:item.status="{ item }">
-          <div class="d-flex justify-center">
-            <v-chip :color="getStatusOrderColor(item)" size="small" class="text-white font-weight-medium" style="width: 100px; justify-content: center;">
-              {{ getStatusOrderLabel(item) }}
+          <div class="d-flex align-center justify-center">
+            <v-chip :color="getStatusFinancialColor(item)" size="small" class="text-white font-weight-medium" style="width: 100px; justify-content: center;">
+              {{ getStatusFinancialLabel(item) }}
             </v-chip>
           </div>
         </template>
@@ -229,58 +229,66 @@
           <span v-else class="text-grey">---</span>
         </template>
 
-        <template v-slot:item.cobros="{ item }">
-          <div class="d-flex align-center mx-auto" style="width: 190px;">
-            <div class="text-left" style="width: 100px;">
-              <template v-if="item.payments && item.payments.length > 0">
-                <div class="font-weight-medium body-2 mb-n1" :class="item.status === 4 ? 'text-grey' : (theme.global.current.value.dark ? 'text-grey-lighten-2' : 'text-grey-darken-3')">
-                  S/ {{ totalPagos(item) }}
-                </div>
-                <div class="caption text-grey">
-                  {{ item.payments.length }} {{ item.payments.length === 1 ? 'abono' : 'abonos' }}
-                </div>
-              </template>
-              <template v-else>
-                <div class="font-weight-medium body-2 text-grey" :class="theme.global.current.value.dark ? 'text--darken-1' : 'text--lighten-1'">
-                  ---
-                </div>
-              </template>
+        <template v-slot:item.facturacion="{ item }">
+          <div class="d-flex align-center justify-end w-100">
+            <div class="d-flex flex-column align-end pr-1">
+              <div class="font-weight-medium body-2 mb-n1" :class="item.status === 4 ? 'text-grey' : (theme.global.current.value.dark ? 'text-grey-lighten-2' : 'text-grey-darken-3')">
+                {{ item.total_facturado > 0 || (item.wants_invoice === false && item.total_pagado > 0) ? 'S/ ' + formatMoney(item.neto_a_cobrar) : '---' }}
+              </div>
+              <div class="text-caption text-grey" style="font-size: 10px !important;">
+                <span v-if="item.wants_invoice === false">Sin comprobante</span>
+                <span v-else-if="item.has_detraccion">Detr: -S/ {{ formatMoney(item.detraccion_total) }}</span>
+              </div>
             </div>
-
-            <div class="d-flex justify-end" style="width: 90px;">
+            
+            <div class="d-flex pl-1">
               <v-tooltip location="bottom">
                 <template v-slot:activator="{ props }">
-                  <span v-bind="props" class="d-inline-block">
-                    <v-btn
-                      icon
-                      :color="item.status === 4 ? 'grey-lighten-2' : ((item.invoices?.length > 0 || item.wants_invoice === false) ? 'primary' : 'grey')"
-                      :disabled="item.status === 4"
-                      variant="text"
-                      density="comfortable"
-                      @click="abrirFactura(item)"
-                    >
-                      <v-icon>{{ item.wants_invoice === false ? 'mdi-file-document-remove-outline' : (item.invoices?.length > 0 ? 'mdi-file-document-check' : 'mdi-file-document-plus') }}</v-icon>
-                    </v-btn>
-                  </span>
+                  <v-btn
+                    icon
+                    :color="item.status === 4 ? 'grey-lighten-2' : ((item.invoices?.length > 0 || item.wants_invoice === false) ? 'primary' : 'grey')"
+                    :disabled="item.status === 4"
+                    variant="text"
+                    density="compact"
+                    @click.stop="abrirFactura(item)"
+                    v-bind="props"
+                  >
+                    <v-icon size="small">{{ item.wants_invoice === false ? 'mdi-file-document-remove-outline' : (item.invoices?.length > 0 ? 'mdi-file-document-check' : 'mdi-file-document-plus') }}</v-icon>
+                  </v-btn>
                 </template>
-                <span>{{ item.wants_invoice === false ? 'Sin Comprobante (Ver)' : (item.invoices?.length > 0 ? 'Ver/Editar Factura' : 'Subir Factura') }}</span>              </v-tooltip>
+                <span>{{ item.wants_invoice === false ? 'Sin Comprobante (Ver)' : (item.invoices?.length > 0 ? 'Ver/Editar Factura' : 'Subir Factura') }}</span>
+              </v-tooltip>
+            </div>
+          </div>
+        </template>
 
+        <template v-slot:item.cobros="{ item }">
+          <div class="d-flex align-center justify-end w-100">
+            <div class="d-flex flex-column align-end pr-1">
+              <div class="font-weight-medium body-2 mb-n1" :class="item.status === 4 ? 'text-grey' : (theme.global.current.value.dark ? 'text-grey-lighten-2' : 'text-grey-darken-3')">
+                {{ item.total_pagado > 0 ? 'S/ ' + formatMoney(item.total_pagado) : '---' }}
+              </div>
+              <div v-if="item.payments?.length > 0" class="text-caption text-grey" style="font-size: 10px !important;">
+                {{ item.payments.length }} {{ item.payments.length === 1 ? 'abono' : 'abonos' }}
+              </div>
+            </div>
+            
+            <div class="d-flex pl-1">
               <v-tooltip location="bottom">
                 <template v-slot:activator="{ props }">
-                  <span v-bind="props" class="d-inline-block">
-                    <v-btn
-                      icon
-                      :color="item.status === 4 ? 'grey-lighten-2' : (item.sent || (item.payments && item.payments.length > 0) ? 'primary' : 'grey')"
-                      :disabled="item.status === 4"
-                      variant="text"
-                      density="comfortable"
-                      @click="abrirPago(item)"
-                    >
-                      <v-icon>{{ item.sent || (item.payments && item.payments.length > 0) ? 'mdi-cash-check' : 'mdi-cash-plus' }}</v-icon>
-                    </v-btn>
-                  </span>
+                  <v-btn
+                    icon
+                    :color="item.status === 4 ? 'grey-lighten-2' : ((item.payments && item.payments.length > 0) ? 'primary' : 'grey')"
+                    :disabled="item.status === 4"
+                    variant="text"
+                    density="compact"
+                    @click.stop="abrirPago(item)"
+                    v-bind="props"
+                  >
+                    <v-icon size="small">{{ (item.payments && item.payments.length > 0) ? 'mdi-cash-check' : 'mdi-cash-plus' }}</v-icon>
+                  </v-btn>
                 </template>
-                <span>{{ item.sent || (item.payments && item.payments.length > 0) ? 'Ver/Editar Pagos' : 'Registrar Pago' }}</span>
+                <span>{{ (item.payments && item.payments.length > 0) ? 'Ver/Editar Pagos' : 'Registrar Pago' }}</span>
               </v-tooltip>
             </div>
           </div>
@@ -426,10 +434,10 @@ const openCertificateModal = (cert) => {
 const headers = [
   { title: 'Nro Orden', key: 'order_number' },
   { title: 'Cliente', key: 'client_data.name' },
-  { title: 'Estado', key: 'status', align: 'center', sortable: false },
   { title: 'Progreso', key: 'progress', align: 'center', sortable: false },
-  { title: 'Cobros', key: 'cobros', align: 'center', sortable: false },
-  { title: 'Detracción', key: 'detraccion', align: 'center', sortable: false },
+  { title: 'Facturación', key: 'facturacion', align: 'center', sortable: false },
+  { title: 'Cobro', key: 'cobros', align: 'center', sortable: false },
+  { title: 'Estado', key: 'status', align: 'center', sortable: false },
   { title: 'F. Agregado', key: 'created_at', sortable: false },
   { title: 'Opciones', key: 'actions', align: 'center', sortable: false },
   { title: '', key: 'data-table-expand' },
@@ -466,10 +474,12 @@ const filter_date_gt = ref('')
 const filter_date_lt = ref('')
 const filter_status = ref('')
 const order_statuses = [
-  { id: 1, name: 'Abierta' },
-  { id: 2, name: 'Facturada' },
-  { id: 3, name: 'Pagada' },
-  { id: 4, name: 'Anulada' },
+  { id: 1, name: 'En Proceso' },
+  { id: 2, name: 'Deuda' },
+  { id: 3, name: 'Abonado' },
+  { id: 4, name: 'Pagado' },
+  { id: 5, name: 'Anulada' },
+  { id: 6, name: 'Excedido' },
 ]
 
 // Clientes
@@ -606,21 +616,23 @@ const getColorPago = (m) => {
   return 'grey-darken-1'
 }
 
-const tieneFact = (o) => (o.invoices && o.invoices.length > 0) || o.wants_invoice === false
-
-const getStatusOrderLabel = (o) => {
-  const todosAnulados = o.certificates?.length > 0 && o.certificates.every(c => c.status === 5)
-  if (o.status === 4 || todosAnulados) return 'Anulada'
-  if (o.sent || o.payments?.length > 0) return 'Liquidada'
-  if (tieneFact(o)) return 'Facturada'
-  return 'En Proceso'
+const formatMoney = (val) => {
+  const num = parseFloat(val || 0)
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
-const getStatusOrderColor = (o) => {
+
+const getStatusFinancialLabel = (o) => {
   const todosAnulados = o.certificates?.length > 0 && o.certificates.every(c => c.status === 5)
-  if (o.status === 4 || todosAnulados) return 'red-darken-2'
-  if (o.sent || o.payments?.length > 0) return 'success'
-  if (tieneFact(o)) return 'warning'
-  return 'grey-darken-1'
+  if (todosAnulados) return 'Anulada'
+  const map = { 1: 'En Proceso', 2: 'Deuda', 3: 'Abonado', 4: 'Anulada', 5: 'Pagado', 6: 'Excedido' }
+  return map[o.status] || 'En Proceso'
+}
+
+const getStatusFinancialColor = (o) => {
+  const todosAnulados = o.certificates?.length > 0 && o.certificates.every(c => c.status === 5)
+  if (todosAnulados) return 'grey-darken-1'
+  const map = { 1: 'grey-darken-1', 2: 'error', 3: 'warning', 4: 'grey-darken-1', 5: 'success', 6: 'blue-darken-1' }
+  return map[o.status] || 'grey-darken-1'
 }
 
 const getProgreso = (o) => {
@@ -628,12 +640,6 @@ const getProgreso = (o) => {
   const v = o.certificates.filter(c => c.status !== 5)
   const l = v.filter(c => c.status === 4 || c.uploaded)
   return { total: v.length, listos: l.length }
-}
-
-const totalPagos = (o) => {
-  if (!o.payments || !o.payments.length) return '0.00'
-  const t = o.payments.reduce((acc, p) => acc + parseFloat(p.amount || 0), 0)
-  return t.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 const hasPermission = (id) => {

@@ -136,18 +136,25 @@
               </v-list-item>
             </v-list>
 
-            <!-- Resumen detracción total -->
-            <v-alert
-              v-if="totalDetraccion > 0"
-              type="warning"
-              variant="tonal"
-              density="compact"
-              class="mt-3"
-              icon="mdi-bank-outline"
-            >
-              Detracción total de la orden:
-              <strong>S/ {{ totalDetraccion.toFixed(2) }}</strong>
-            </v-alert>
+            <!-- Resumen financiero -->
+            <div v-if="invoices.length > 0" class="mt-3 rounded-lg border pa-3 d-flex justify-space-around">
+              <div class="text-center">
+                <div class="text-caption text-medium-emphasis mb-1">Total Facturado</div>
+                <div class="font-weight-bold">S/ {{ parseFloat(props.order?.total_facturado || 0).toFixed(2) }}</div>
+              </div>
+              <template v-if="totalDetraccion > 0">
+                <v-divider vertical />
+                <div class="text-center">
+                  <div class="text-caption text-medium-emphasis mb-1">Detracción</div>
+                  <div class="font-weight-bold text-deep-orange">— S/ {{ totalDetraccion.toFixed(2) }}</div>
+                </div>
+                <v-divider vertical />
+                <div class="text-center">
+                  <div class="text-caption text-medium-emphasis mb-1">Neto a Cobrar</div>
+                  <div class="font-weight-bold text-primary">S/ {{ parseFloat(props.order?.neto_a_cobrar || 0).toFixed(2) }}</div>
+                </div>
+              </template>
+            </div>
           </template>
         </div>
 
@@ -222,7 +229,7 @@
                   @update:model-value="onPdfSelected"
                 />
               </v-col>
-              <v-col cols="12" class="mt-1" v-if="!editando">
+              <v-col cols="12" class="mt-1">
                 <v-switch
                   v-model="extraerCorrelativo"
                   label="Auto-extraer datos del PDF"
@@ -423,7 +430,7 @@ const resetDialog = () => {
 
 const onPdfSelected = async (archivo) => {
   // Validar que hay archivo y que el switch de Magia está encendido
-  if (!archivo || !extraerCorrelativo.value || editando.value) return
+  if (!archivo || !extraerCorrelativo.value) return
   
   isExtracting.value = true
   const data = new FormData()

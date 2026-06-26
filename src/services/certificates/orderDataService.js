@@ -14,7 +14,7 @@ class OrderDataService {
         if (correlative)       params.correlative       = correlative;
         if (date_gt)           params.date_gt           = date_gt;
         if (date_lt)           params.date_lt           = date_lt;
-        if (status)            params.status            = status;
+        if (status)            params.status_custom     = status;
         if (order_type)        params.order_type        = order_type;
         if (missing_payment)   params.missing_payment   = missing_payment;
         if (missing_invoice)   params.missing_invoice   = missing_invoice;

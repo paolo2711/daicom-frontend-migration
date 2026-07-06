@@ -4,14 +4,14 @@ import App from './App.vue'
 import router from './router'
 import axios from 'axios'
 
-// 1. Importamos tus Plugins migrados
+// 1. Importamos Plugins migrados
 import vuetify from './plugins/vuetify'
 import registerBaseComponents from './plugins/base'
 import registerAlerts from './plugins/alerts'
 
 // 2. Variables SCSS
 import '@/scss/variables.scss'
-import '@/scss/vuetify/overrides.scss' // <-- AGREGAR ESTA LÍNEA
+import '@/scss/vuetify/overrides.scss' 
 import 'animate.css'
 
 // 3. Configuración de Axios

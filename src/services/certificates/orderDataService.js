@@ -5,13 +5,15 @@ class OrderDataService {
 
     // ─── ÓRDENES ────────────────────────────────────────────────────────────────
 
-    getFiltered(page, itemsPerPage, client, order_number, correlative, date_gt, date_lt, status, order_type, missing_payment = false, missing_invoice = false, afecta_detraccion = false) {
+    // Agregamos `invoice_number` como último parámetro con valor por defecto
+    getFiltered(page, itemsPerPage, client, order_number, correlative, date_gt, date_lt, status, order_type, missing_payment = false, missing_invoice = false, afecta_detraccion = false, invoice_number = '') {
         let headers = authHeader();
         let params = { page: page, page_size: itemsPerPage };
 
         if (client)            params.client            = client;
         if (order_number)      params.order_number      = order_number;
         if (correlative)       params.correlative       = correlative;
+        if (invoice_number)    params.invoice_number    = invoice_number;
         if (date_gt)           params.date_gt           = date_gt;
         if (date_lt)           params.date_lt           = date_lt;
         if (status)            params.status_custom     = status;
@@ -52,6 +54,28 @@ class OrderDataService {
 
     // ─── FACTURAS (OrderInvoice) ─────────────────────────────────────────────
 
+    /** Busca facturas existentes con saldo a favor (Arquitectura N:M) */
+    searchInvoices(query) {
+        let headers = authHeader();
+        return axios.get(`orders/invoices/search?q=${query}`, { headers });
+    }
+
+    /** Vincula una factura existente a una orden asignándole un monto específico */
+    linkInvoice(order_id, data) {
+        let headers = authHeader();
+        headers['Content-Type'] = "application/json";
+        return axios.post(`orders/${order_id}/invoices/link`, data, { headers });
+    }
+
+    /** Edita SOLO el monto asignado a ESTA orden de una factura compartida (N:M).
+     *  No toca el monto físico de la factura ni las asignaciones de otras órdenes.
+     *  El sobrante liberado queda disponible para vincularse a otras órdenes. */
+    updateInvoiceAllocation(order_id, invoice_id, amount_allocated) {
+        let headers = authHeader();
+        headers['Content-Type'] = "application/json";
+        return axios.patch(`orders/${order_id}/invoices/${invoice_id}/allocation`, { amount_allocated }, { headers });
+    }
+
     /** Extrae los datos PDF */
     extractInvoiceData(data) {
         let headers = authHeader();
@@ -86,9 +110,9 @@ class OrderDataService {
         return axios.patch(`orders/invoices/${invoice_id}`, data, { headers });
     }
 
-    /** Elimina una factura. La señal post_delete recalcula detracciones  */
-    deleteInvoice(invoice_id) {
-        return axios.delete(`orders/invoices/${invoice_id}`, { headers: authHeader() });
+    /** Desvincula la factura de una orden. Si era la última orden usándola, se elimina por completo. */
+    deleteInvoice(invoice_id, order_id) {
+        return axios.delete(`orders/invoices/${invoice_id}`, { params: { order_id }, headers: authHeader() });
     }
 
     // ─── PAGOS ───────────────────────────────────────────────────────────────
@@ -129,7 +153,7 @@ class OrderDataService {
 
     // ─── RESÚMENES (Smart Chips) ─────────────────────────────────────────────
 
-    getPendingPaymentsSummary(order_type, client, order_number, correlative, date_gt, date_lt) {
+    getPendingPaymentsSummary(order_type, client, order_number, correlative, date_gt, date_lt, invoice_number = '') {
         let headers = authHeader();
         let params = { order_type };
         if (client)       params.client       = client;
@@ -137,10 +161,11 @@ class OrderDataService {
         if (correlative)  params.correlative   = correlative;
         if (date_gt)      params.date_gt       = date_gt;
         if (date_lt)      params.date_lt       = date_lt;
+        if (invoice_number) params.invoice_number = invoice_number;
         return axios.get("orders/summary/pending-payments", { params, headers });
     }
 
-    getPendingInvoicesSummary(order_type, client, order_number, correlative, date_gt, date_lt) {
+    getPendingInvoicesSummary(order_type, client, order_number, correlative, date_gt, date_lt, invoice_number = '') {
         let headers = authHeader();
         let params = { order_type };
         if (client)       params.client       = client;
@@ -148,10 +173,11 @@ class OrderDataService {
         if (correlative)  params.correlative   = correlative;
         if (date_gt)      params.date_gt       = date_gt;
         if (date_lt)      params.date_lt       = date_lt;
+        if (invoice_number) params.invoice_number = invoice_number;
         return axios.get("orders/summary/pending-invoices", { params, headers });
     }
 
-    getAfectasDetraccionSummary(order_type, client, order_number, correlative, date_gt, date_lt) {
+    getAfectasDetraccionSummary(order_type, client, order_number, correlative, date_gt, date_lt, invoice_number = '') {
         let headers = authHeader();
         let params = { order_type };
         if (client)       params.client       = client;
@@ -159,6 +185,7 @@ class OrderDataService {
         if (correlative)  params.correlative   = correlative;
         if (date_gt)      params.date_gt       = date_gt;
         if (date_lt)      params.date_lt       = date_lt;
+        if (invoice_number) params.invoice_number = invoice_number;
         return axios.get("orders/summary/afectas-detraccion", { params, headers });
     }
 }

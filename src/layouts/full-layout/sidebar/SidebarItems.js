@@ -9,7 +9,7 @@ export default [
     {
         icon: 'mdi-folder-table',
         title: 'Órdenes',
-        to: '/orders',
+        to: '/orders/servicios',
         id: 2, 
         name: 'Órdenes de Servicio',
     },

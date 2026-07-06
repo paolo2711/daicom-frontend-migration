@@ -28,6 +28,18 @@
           @update:model-value="applyFilters"
         />
 
+        <v-text-field
+          v-model="filter_invoice"
+          hide-details
+          density="compact"
+          prepend-inner-icon="mdi-file-document-outline"
+          variant="outlined"
+          label="Nro Factura"
+          clearable
+          style="max-width: 220px;"
+          @update:model-value="applyFilters"
+        />
+
         <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
 
         <v-badge
@@ -474,6 +486,7 @@ const options = ref({ page: 1, itemsPerPage: 30 })
 // Filtros
 const filter_order = ref('')
 const filter_correlative = ref('')
+const filter_invoice = ref('')
 const filter_client_id = ref(null)
 const filter_date_gt = ref('')
 const filter_date_lt = ref('')
@@ -532,16 +545,16 @@ const toggleFiltroDetraccion = () => {
 }
 
 const cargarResumenes = () => {
-  OrderDataService.getPendingPaymentsSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value).then((res) => {
+  OrderDataService.getPendingPaymentsSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value).then((res) => {
     appStore.setPendingPaymentsServiceCount(res.data.pending_payments)
   }).catch(() => {})
   
-  OrderDataService.getPendingInvoicesSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value).then((res) => {
+  OrderDataService.getPendingInvoicesSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value).then((res) => {
     appStore.setPendingInvoicesServiceCount(res.data.pending_invoices)
   }).catch(() => {})
 
   if (filtro_detraccion.value) {
-    OrderDataService.getAfectasDetraccionSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value).then((res) => {
+    OrderDataService.getAfectasDetraccionSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value).then((res) => {
       appStore.setAfectasDetraccionServiceCount(res.data.afectas_detraccion)
     }).catch(() => {})
   } else {
@@ -577,7 +590,8 @@ const retrieveOrders = () => {
     1,
     filtro_falta_pago.value,
     filtro_sin_factura.value,
-    filtro_detraccion.value
+    filtro_detraccion.value,
+    filter_invoice.value
   )
     .then((res) => {
       orders.value = res.data.results
@@ -729,14 +743,25 @@ const handleWssReload = () => {
 watch(options, () => { retrieveOrders() }, { deep: true })
 
 // Quitamos filter_date_gt y filter_date_lt para que solo se apliquen con el botón "Aplicar"
-watch([filter_order, filter_correlative, filter_client_id, filter_status], () => {
+watch([filter_order, filter_correlative, filter_invoice, filter_client_id, filter_status], () => {
   applyFilters()
 })
 
 // Ciclo de vida
+watch(() => route.query.buscar_orden, (val) => {
+  if (val) filter_order.value = val
+})
+
+watch(() => route.query.buscar_factura, (val) => {
+  if (val) filter_invoice.value = val
+})
+
 onMounted(() => {
   if (route.query.buscar_orden) {
     filter_order.value = route.query.buscar_orden
+  }
+  if (route.query.buscar_factura) {
+    filter_invoice.value = route.query.buscar_factura
   }
   
   cargarResumenes() // Cargamos el número para el badge rojo

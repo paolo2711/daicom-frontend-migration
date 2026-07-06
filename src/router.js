@@ -22,7 +22,20 @@ const routes = [
       {
         name: "orders",
         path: "orders",
+        redirect: { name: "orders-service" },
         component: () => import("@/views/orders/Orders.vue"),
+        children: [
+          {
+            name: "orders-service",
+            path: "servicios",
+            component: () => import("@/views/orders/components/TabOrdersService.vue"),
+          },
+          {
+            name: "orders-rental",
+            path: "alquileres",
+            component: () => import("@/views/orders/components/TabOrdersRental.vue"),
+          },
+        ],
       },
       {
         name: "clients",

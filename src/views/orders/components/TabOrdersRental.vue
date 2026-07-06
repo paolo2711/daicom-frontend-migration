@@ -28,6 +28,18 @@
           @update:model-value="applyFilters"
         />
 
+        <v-text-field
+          v-model="filter_invoice"
+          hide-details
+          density="compact"
+          prepend-inner-icon="mdi-file-document-outline"
+          variant="outlined"
+          label="Nro Factura"
+          clearable
+          style="max-width: 220px;"
+          @update:model-value="applyFilters"
+        />
+
         <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
 
         <v-badge
@@ -429,7 +441,7 @@ export default {
       { title: 'Opciones',       key: 'actions',     align: 'center', sortable: false },
       { title: '',               key: 'data-table-expand' },
     ],
-    orders: [], expanded: [], filter_order: '', filter_client_ref: '', 
+    orders: [], expanded: [], filter_order: '', filter_client_ref: '', filter_invoice: '',
     filter_date_gt: '', filter_date_lt: '', filter_status: '',
     mostrar_filtros_avanzados: false, menu_fechas: false,
     filtro_falta_pago: false, filtro_sin_factura: false, filtro_detraccion: false,
@@ -448,6 +460,13 @@ export default {
   watch: {
     options: { handler() { this.retrieveOrders() }, deep: true },
     filter_order() { this.applyFilters() },
+    '$route.query.buscar_orden'(val) {
+      if (val) this.filter_order = val
+    },
+    filter_invoice() { this.applyFilters() },
+    '$route.query.buscar_factura'(val) {
+      if (val) this.filter_invoice = val
+    },
     filter_client_ref() { this.applyFilters() },
     filter_client_id() { this.applyFilters() },
     filter_status() { this.applyFilters() },
@@ -470,6 +489,12 @@ export default {
     const user = JSON.parse(localStorage.getItem('user')) || {}
     this.is_admin = user.kind !== undefined && user.kind < 1
     this.user_permissions = user.action_permissions || []
+    if (this.$route.query.buscar_orden) {
+      this.filter_order = this.$route.query.buscar_orden
+    }
+    if (this.$route.query.buscar_factura) {
+      this.filter_invoice = this.$route.query.buscar_factura
+    }
     this.retrieveClientes()
     this.retrieveOrders()
     this.cargarResumenes()
@@ -510,16 +535,16 @@ export default {
       this.applyFilters()
     },
     cargarResumenes() {
-      OrderDataService.getPendingPaymentsSummary(2, this.filter_client_id, this.filter_order, this.filter_client_ref, this.filter_date_gt, this.filter_date_lt).then((res) => {
+      OrderDataService.getPendingPaymentsSummary(2, this.filter_client_id, this.filter_order, this.filter_client_ref, this.filter_date_gt, this.filter_date_lt, this.filter_invoice).then((res) => {
         this.appStore.setPendingPaymentsRentalCount(res.data.pending_payments)
       }).catch(() => {})
       
-      OrderDataService.getPendingInvoicesSummary(2, this.filter_client_id, this.filter_order, this.filter_client_ref, this.filter_date_gt, this.filter_date_lt).then((res) => {
+      OrderDataService.getPendingInvoicesSummary(2, this.filter_client_id, this.filter_order, this.filter_client_ref, this.filter_date_gt, this.filter_date_lt, this.filter_invoice).then((res) => {
         this.appStore.setPendingInvoicesRentalCount(res.data.pending_invoices)
       }).catch(() => {})
 
       if (this.filtro_detraccion) {
-        OrderDataService.getAfectasDetraccionSummary(2, this.filter_client_id, this.filter_order, this.filter_client_ref, this.filter_date_gt, this.filter_date_lt).then((res) => {
+        OrderDataService.getAfectasDetraccionSummary(2, this.filter_client_id, this.filter_order, this.filter_client_ref, this.filter_date_gt, this.filter_date_lt, this.filter_invoice).then((res) => {
           this.appStore.setAfectasDetraccionRentalCount(res.data.afectas_detraccion)
         }).catch(() => {})
       } else {
@@ -573,7 +598,8 @@ export default {
       OrderDataService.getFiltered(
         this.options.page, limite, this.filter_client_id, this.filter_order,
         this.filter_client_ref, this.filter_date_gt, this.filter_date_lt,
-        this.filter_status, 2, this.filtro_falta_pago, this.filtro_sin_factura, this.filtro_detraccion
+        this.filter_status, 2, this.filtro_falta_pago, this.filtro_sin_factura, this.filtro_detraccion,
+        this.filter_invoice
       ).then(res => {
         this.orders = res.data.results
         this.total_orders = res.data.count

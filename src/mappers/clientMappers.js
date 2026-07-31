@@ -9,6 +9,7 @@ export default {
       address: element.address,
       phone: element.phone,
       email: element.email,
+      needs_review: element.needs_review,
     };
   },
   putMap(element) {

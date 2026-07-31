@@ -55,6 +55,18 @@
           <v-tooltip activator="parent" location="top">Filtrar certificados que aún no tienen archivo base</v-tooltip>
         </v-chip>
 
+        <!-- ── TEMPORAL Antapacay — borrar esta píldora al terminar contrato (~ago 2026) ── -->
+        <v-chip
+          variant="flat"
+          :class="['antapaccay-chip', 'font-weight-bold', 'cursor-pointer', 'ml-2', { 'antapaccay-chip--active': filtro_antapacay }]"
+          @click="toggleFiltroAntapacay"
+        >
+          <v-icon start size="small" class="antapaccay-pico">mdi-pickaxe</v-icon>
+          Antapaccay
+          <v-tooltip activator="parent" location="top">Ver solo los certificados de Antapaccay (ocultos en el listado normal)</v-tooltip>
+        </v-chip>
+        <!-- ── FIN TEMPORAL Antapacay ── -->
+
         <v-spacer></v-spacer>
 
         <v-btn 
@@ -123,34 +135,11 @@
       </v-expand-transition>
     </v-card>
 
-    <v-slide-y-reverse-transition>
-      <v-card 
-        v-if="certificados_seleccionados.length > 0" 
-        class="floating-selection-pill elevation-6"
-      >
-        <div class="d-flex align-center px-4 py-2">
-          <v-tooltip location="top">
-            <template v-slot:activator="{ props }">
-              <v-btn 
-                v-bind="props" 
-                icon="mdi-close"
-                variant="text" 
-                density="compact"
-                class="text-white opacity-80 hover-opacity-100" 
-                @click="certificados_seleccionados = []"
-              />
-            </template>
-            <span>Desmarcar todo</span>
-          </v-tooltip>
-
-          <span class="text-body-2 font-weight-bold text-white ml-3 mr-4">
-            {{ certificados_seleccionados.length }} seleccionado(s)
-          </span>
-          
-          <v-divider vertical class="border-opacity-100 mx-2 text-white" style="height: 20px; align-self: center;"></v-divider>
-
-
-
+    <selection-bar
+      :count="certificados_seleccionados.length"
+      label="seleccionado(s)"
+      @clear="certificados_seleccionados = []"
+    >
           <v-tooltip location="top">
             <template v-slot:activator="{ props }">
               <v-btn v-bind="props" icon="mdi-file-pdf-box" variant="text" density="compact" class="text-white opacity-80 hover-opacity-100 mx-1" @click="abrirModalLote('excel')" />
@@ -171,9 +160,7 @@
             </template>
             <span>Solicitar Firma</span>
           </v-tooltip>
-        </div>
-      </v-card>
-    </v-slide-y-reverse-transition>      
+    </selection-bar>
 
     <table-loading-overlay :loading="loading_list" :isEmpty="certificates.length === 0">
       <v-data-table-server
@@ -513,6 +500,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/appStore'
 
 import FluentPagination    from '@/components/commonComponents/FluentPagination.vue'
+import SelectionBar         from '@/components/commonComponents/SelectionBar.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import OrderDataService    from '@/services/certificates/orderDataService.js'
@@ -556,14 +544,16 @@ const options                  = ref({ page: 1, itemsPerPage: 30 })
 
 const filtro_firma_pendiente   = ref(false) // Estado del Smart Chip
 const filtro_excel_pendiente   = ref(false) // Estado del Smart Chip Excel
+const filtro_antapacay         = ref(false) // TEMPORAL Antapacay — borrar al terminar contrato (~ago 2026)
 const mostrar_filtros_avanzados = ref(false) // Toggle de la UI
 const menu_fechas              = ref(false) // Estado del menú flotante de fechas
 
 // ─── Filtros de fecha ─────────────────────────────────────────────────────────
-const emission_date__gt = ref(
-  new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
-    .toISOString().substring(0, 10)
-)
+const emission_date__gt = ref((() => {
+  const d = new Date()
+  d.setMonth(d.getMonth() - 8) // ventana por defecto: últimos 8 meses
+  return d.toISOString().substring(0, 10)
+})())
 const emission_date__lt = ref(
   new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
     .toISOString().substring(0, 10)
@@ -631,7 +621,7 @@ const ver_bandeja_firmas = computed(() => {
 
 // ─── Headers de la tabla ──────────────────────────────────────────────────────
 // Vuetify 3: "title" en lugar de "text", "key" en lugar de "value"
-const headers = [
+const baseHeaders = [
   { title: 'Cód. Registro',       key: 'registry_code',         align: 'start',  sortable: false },
   { title: 'Tipo',                key: 'certificate_type_label', align: 'start',  sortable: false },
   { title: 'Cliente Certificado', key: 'client_data.name',                        sortable: false },
@@ -643,6 +633,14 @@ const headers = [
   { title: 'F. Agregado',         key: 'created_at',                              sortable: false },
   { title: 'Opciones',            key: 'actions',               align: 'center', sortable: false },
 ]
+
+// Con el filtro Antapaccay todas las filas son el mismo cliente → ocultamos esa
+// columna. TEMPORAL Antapaccay — al quitar el filtro, volver headers a baseHeaders.
+const headers = computed(() =>
+  filtro_antapacay.value
+    ? baseHeaders.filter(h => h.key !== 'client_data.name')
+    : baseHeaders
+)
 
 
 
@@ -726,6 +724,13 @@ function toggleFiltroExcel () {
   filtro_excel_pendiente.value = !filtro_excel_pendiente.value
   options.value.page = 1
   retrieveAllCertificates() // Ejecuta la búsqueda
+}
+
+// ── TEMPORAL Antapacay — borrar al terminar contrato (~ago 2026) ──
+function toggleFiltroAntapacay () {
+  filtro_antapacay.value = !filtro_antapacay.value
+  options.value.page = 1
+  retrieveAllCertificates()
 }
 
 function aplicarFiltroFechas () {
@@ -876,19 +881,10 @@ function retrieveAllCertificates () {
     correlativeNumber,
     certificate_type.value || '',
     filtro_firma_pendiente.value,
-    filtro_excel_pendiente.value
+    filtro_excel_pendiente.value,
+    filtro_antapacay.value // TEMPORAL Antapacay — borrar al terminar contrato
   ).then((response) => {
-    certificates.value = response.data.results.map(cert => {
-      const mapped         = CertificateMappers.getMap(cert)
-      mapped.status        = cert.status
-      mapped.created_at    = cert.created_at
-      mapped.order_number  = cert.order_number
-      mapped.order_has_invoices  = cert.order_has_invoices
-      mapped.order_has_payments  = cert.order_has_payments
-      mapped.order_status  = cert.order_status
-      mapped.signature_requested = cert.signature_requested 
-      return mapped
-    })
+    certificates.value = response.data.results.map(cert => CertificateMappers.getMap(cert))
     total_certificates.value = response.data.count
   }).catch((e) => {
     if (e.response?.status === 401) {
@@ -910,22 +906,9 @@ function fetchAndInjectSingleCert (event) {
 function updateSingleCertificateInList (updatedCert) {
   const index = certificates.value.findIndex(c => c.id === updatedCert.id)
   if (index !== -1) {
-    // mapper real 
-    const mapped = CertificateMappers.getMap(updatedCert)
-    
-    // 2. Le inyectamos los datos extra (dinámicos) que el mapper no procesa 
-    // pero que las columnas de esta tabla sí necesitan para colorear y mostrar íconos
-    mapped.status              = updatedCert.status
-    mapped.created_at          = updatedCert.created_at
-    mapped.order_number        = updatedCert.order_number
-    mapped.order_status        = updatedCert.order_status
-    mapped.order_has_invoices  = updatedCert.order_has_invoices
-    mapped.order_has_payments  = updatedCert.order_has_payments
-    mapped.signature_requested = updatedCert.signature_requested 
-    
-    //Sobrescribe la fila entera en el array para forzar a Vue a re-dibujar
-    certificates.value[index] = mapped
-    certificates.value = [...certificates.value]
+    // Al tener el mapper actualizado, obtenemos el objeto limpio.
+    // Object.assign muta el proxy reactivo directamente para que Vue 3 repinte solo esta fila.
+    Object.assign(certificates.value[index], CertificateMappers.getMap(updatedCert))
   }
 }
 
@@ -966,7 +949,7 @@ function anularCertConfirm (cert) {
   }).then((result) => {
     if (result.isConfirmed) {
       CertificateDataService.patch(cert.id, { status: 5 }).then(() => {
-        $swal.fire({ title: 'Anulado', text: 'Equipo invalidado.', icon: 'success' })
+        $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo anulado' })
         if (window.notificarActualizacionFila) window.notificarActualizacionFila(cert.id, null);
         const currentUser = JSON.parse(localStorage.getItem('user')) || {}
         if (window.enviarNotificacionGlobal) {
@@ -993,7 +976,7 @@ function revivirCertConfirm (cert) {
     if (result.isConfirmed) {
       CertificateDataService.patch(cert.id, { status: 1 })
         .then(() => {
-          $swal.fire({ title: 'Restaurado', text: 'El equipo está activo nuevamente.', icon: 'success' })
+          $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo restaurado' })
           if (window.notificarActualizacionFila) window.notificarActualizacionFila(cert.id, null);
         })
         .catch(() => {
@@ -1043,7 +1026,7 @@ function eliminarDeLaNubeConfirm(cert) {
         if (data.warning) {
           $swal.fire('Nube Limpia', data.success, 'warning')
         } else {
-          $swal.fire('Eliminado', data.success || 'El documento ha sido bajado de la red.', 'success')
+          $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: data.success || 'Documento eliminado' })
         }
         
         cert.uploaded = false
@@ -1071,6 +1054,60 @@ function openQRDialog (item) {
 </script>
 
 <style>
+
+/* ── TEMPORAL Antapaccay — borrar este bloque al terminar contrato (~ago 2026) ── */
+.antapaccay-chip {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(184, 115, 51, 0.45) !important;
+  background: rgba(184, 115, 51, 0.10) !important;
+  color: #8a5a2b !important;
+  transition: transform .2s ease, box-shadow .25s ease, background .25s ease;
+}
+.antapaccay-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(184, 115, 51, 0.35) !important;
+}
+.antapaccay-chip--active {
+  background: linear-gradient(120deg, #6d3810, #b87333 42%, #e6b483 52%, #b87333 62%, #6d3810) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 3px 14px rgba(184, 115, 51, 0.55) !important;
+}
+/* Brillo metálico que barre de lado a lado */
+.antapaccay-chip--active::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -70%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  animation: antapaccay-shine 2.6s ease-in-out infinite;
+}
+.antapaccay-chip .v-chip__content {
+  position: relative;
+  z-index: 1;
+}
+@keyframes antapaccay-shine {
+  0%   { left: -70%; }
+  55%  { left: 130%; }
+  100% { left: 130%; }
+}
+/* El pico "pica" mientras está activa */
+.antapaccay-chip--active .antapaccay-pico {
+  transform-origin: 65% 65%;
+  animation: antapaccay-pick 1.5s ease-in-out infinite;
+}
+@keyframes antapaccay-pick {
+  0%, 100% { transform: rotate(0deg); }
+  40%      { transform: rotate(-22deg); }
+  55%      { transform: rotate(8deg); }
+  70%      { transform: rotate(0deg); }
+}
+/* ── FIN TEMPORAL Antapaccay ── */
 
 
 /* =========================================================
@@ -1110,36 +1147,8 @@ function openQRDialog (item) {
   background-color: #0f1d31 !important;
 }
 
-/* =========================================================
-   PÍLDORA DE SELECCIÓN FLOTANTE (FLOATING ACTION BAR)
-   ========================================================= */
-.floating-selection-pill {
-  position: fixed !important;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  border-radius: 50px !important;
-  background-color: #212121 !important; /* Modo claro: Gris oscuro contrastando con el fondo blanco */
-  border: 1px solid rgba(0, 0, 0, 0.12) !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25) !important;
-}
-
-.v-theme--dark .floating-selection-pill {
-  background-color: #444444 !important; /* Modo oscuro: Se aclara el gris para reflejar elevación */
-  border: 1px solid rgba(255, 255, 255, 0.22) !important; /* Borde nítido para definir el contorno */
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 1px rgba(255, 255, 255, 0.2) !important; /* Doble sombra de profundidad */
-}
-
-/* Utilidades para los íconos de la píldora */
-.opacity-80 {
-  opacity: 0.8;
-  transition: opacity 0.2s ease-in-out, transform 0.2s ease;
-}
-.hover-opacity-100:hover {
-  opacity: 1 !important;
-  transform: scale(1.1);
-}
+/* La píldora de selección flotante vive ahora en el componente común
+   @/components/commonComponents/SelectionBar.vue (estilos incluidos). */
 
 /* =========================================================
    EFECTO GMAIL: CHECKBOXES INVISIBLES Y FILAS CLIQUEABLES

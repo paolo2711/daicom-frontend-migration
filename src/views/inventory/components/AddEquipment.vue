@@ -62,7 +62,13 @@
                 <v-col cols="12" md="8">
                   <v-row dense>
                     <v-col cols="12" sm="6">
-                      <v-text-field v-model="form.internal_id" label="ID Interno (*)" placeholder="Ej: DAI-001" :rules="[v => !!v || 'Requerido']" variant="outlined" density="compact"></v-text-field>
+                      <v-text-field
+                        :model-value="isEditing ? form.internal_id : (nextId || 'Calculando...')"
+                        :label="isEditing ? 'ID Interno' : 'ID Interno (se asignará este)'"
+                        variant="outlined" density="compact"
+                        readonly :disabled="!isEditing"
+                        prepend-inner-icon="mdi-identifier"
+                      ></v-text-field>
                     </v-col>
                     <v-col cols="12" sm="6">
                       <v-text-field v-model="form.name" label="Nombre del Equipo (*)" :rules="[v => !!v || 'Requerido']" variant="outlined" density="compact"></v-text-field>
@@ -190,6 +196,7 @@ const dialog = ref(false)
 const valid = ref(false)
 const loading = ref(false)
 const isEditing = ref(false)
+const nextId = ref('')
 const tab = ref(0)
 const formRef = ref(null)
 const fileInput = ref(null)
@@ -237,6 +244,11 @@ const open = (item = null) => {
     existingImages.value = item.gallery ? JSON.parse(JSON.stringify(item.gallery)) : []
   } else {
     isEditing.value = false
+    // Previsualiza el ID que le tocará (DAI-XXX).
+    nextId.value = ''
+    InventoryDataService.getNextId()
+      .then(r => { nextId.value = r.data.next_id })
+      .catch(() => { nextId.value = '' })
   }
   dialog.value = true
 }
@@ -289,7 +301,7 @@ const save = async () => {
   loading.value = true
 
   let formData = new FormData()
-  formData.append('internal_id', form.internal_id)
+  // internal_id lo genera el backend (DAI-XXX); no se envía.
   formData.append('name', form.name)
   if (form.brand) formData.append('brand', form.brand)
   if (form.model) formData.append('model', form.model)
@@ -312,10 +324,10 @@ const save = async () => {
   try {
     if (isEditing.value) {
       await InventoryDataService.update(form.id, formData)
-      Swal.fire('Actualizado', 'Equipo actualizado correctamente', 'success')
+      Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo actualizado' })
     } else {
       await InventoryDataService.create(formData)
-      Swal.fire('Guardado', 'Equipo registrado en inventario', 'success')
+      Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo registrado' })
     }
     emit('saved')
     close()

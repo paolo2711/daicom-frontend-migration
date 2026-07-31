@@ -1,45 +1,39 @@
 // src/services/external/apiPeruService.js
+import axios from "axios";
+import authHeader from "@/services/auth-header";
 
+/**
+ * Por dentro, ya NO llama directo a api.apis.net.pe vía corsproxy.io (eso
+ * fallaba en producción porque corsproxy.io solo es gratis para
+ * localhost/red local). Ahora llama a nuestro propio backend
+ * (/clients/lookup/dni/... y /clients/lookup/ruc/...), que hace la consulta
+ * servidor-a-servidor sin restricción de CORS.
+ */
 class ApiPeruService {
     async consultaDNI(dni) {
         if (!dni || dni.length !== 8) return "";
-        
-        // Usamos el proxy para evitar el error de CORS en producción
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://api.apis.net.pe/v1/dni?numero=${dni}`)}`;
-        
+
         try {
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error('DNI no encontrado');
-            
-            const data = await response.json();
-            return `${data.nombres} ${data.apellidoPaterno} ${data.apellidoMaterno}`;
+            const response = await axios.get(`clients/lookup/dni/${dni}`, {
+                headers: authHeader()
+            });
+            return response.data.nombre || "";
         } catch (error) {
             console.error("Error al consultar DNI:", error);
-            throw error; 
+            throw error;
         }
     }
 
     async consultaRUC(ruc) {
         if (!ruc || ruc.length !== 11) return { compania: "", direccion: "" };
-        
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://api.apis.net.pe/v1/ruc?numero=${ruc}`)}`;
-        
-        try {
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error('RUC no encontrado');
-            
-            const data = await response.json();
-            
-            let direccionCompleta = "-";
-            if (data.direccion && data.direccion.trim() !== "" && data.direccion !== "-") {
-                direccionCompleta = data.direccion;
-                if (data.distrito) direccionCompleta += `, ${data.distrito}`;
-                if (data.provincia) direccionCompleta += `, ${data.provincia}`;
-            }
 
+        try {
+            const response = await axios.get(`clients/lookup/ruc/${ruc}`, {
+                headers: authHeader()
+            });
             return {
-                compania: data.nombre || data.razonSocial || "Nombre no disponible",
-                direccion: direccionCompleta
+                compania: response.data.compania || "",
+                direccion: response.data.direccion || ""
             };
         } catch (error) {
             console.error("Error al consultar RUC:", error);
@@ -48,5 +42,5 @@ class ApiPeruService {
     }
 }
 
-// Exportamos una única instancia para usarla en todo el sistema
+// unica instancia 
 export default new ApiPeruService();

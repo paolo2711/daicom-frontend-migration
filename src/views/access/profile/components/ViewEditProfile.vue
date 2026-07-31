@@ -78,6 +78,35 @@
               @keypress="isLetterOrSpace"
             />
           </v-col>
+
+          <v-col cols="12" md="12">
+            <v-file-input 
+              v-model="uploadSignature" 
+              label="Firma Digital (Imagen)" 
+              accept="image/png, image/jpeg" 
+              prepend-inner-icon="mdi-draw-pen" 
+              density="compact" 
+              variant="outlined" 
+              hide-details="auto" 
+              :disabled="!isEditing" 
+              @change="onSignatureChange"
+            />
+
+            <div class="d-flex align-center mt-3" style="gap: 16px;" v-if="signaturePreviewUrl || profile.signature_image">
+              <div>
+                <div class="text-caption text-medium-emphasis mb-1">
+                  {{ signaturePreviewUrl ? 'Nueva firma (sin guardar):' : 'Firma actual guardada:' }}
+                </div>
+                <v-img
+                  :src="signaturePreviewUrl || profile.signature_image"
+                  max-width="180"
+                  max-height="90"
+                  contain
+                  class="border rounded"
+                />
+              </div>
+            </div>
+          </v-col>
         </v-row>
 
         <div class="mt-8 mb-4">
@@ -194,12 +223,15 @@ const edit_password = ref(false)
 const userRole = ref('')
 const is_valid = ref(false)
 const is_on_sending_process = ref(false)
+const uploadSignature = ref([])
+const signaturePreviewUrl = ref(null)
 
 const profile = reactive({
   username: '',
   first_name: '',
   last_name: '',
   email: '',
+  signature_image: null,
   current_password: '',
   password: '',
   confirm_password: '',
@@ -232,9 +264,27 @@ const getProfile = () => {
 
 const initProfile = () => {
   getProfile()
+  uploadSignature.value = []
+  if (signaturePreviewUrl.value) {
+    URL.revokeObjectURL(signaturePreviewUrl.value)
+    signaturePreviewUrl.value = null
+  }
   edit_password.value = false
   isEditing.value = false
   if (editForm.value) editForm.value.resetValidation()
+}
+
+// Muestra un preview inmediato del archivo elegido, ANTES de guardar,
+// para confirmar visualmente que sí se seleccionó la imagen correcta.
+const onSignatureChange = () => {
+  if (signaturePreviewUrl.value) {
+    URL.revokeObjectURL(signaturePreviewUrl.value)
+    signaturePreviewUrl.value = null
+  }
+  const file = Array.isArray(uploadSignature.value) ? uploadSignature.value[0] : uploadSignature.value
+  if (file instanceof File) {
+    signaturePreviewUrl.value = URL.createObjectURL(file)
+  }
 }
 
 const cancelEdit = () => {
@@ -256,7 +306,23 @@ const saveProfile = async (profileData) => {
   is_loading.value = true
 
   try {
-    const response = await ProfileDataService.update(payload)
+    let formData = new FormData()
+    for (let key in payload) {
+      // Evitamos enviar la cadena de texto (URL) de la firma actual al backend
+      if (key === 'signature_image') continue;
+      
+      formData.append(key, payload[key] === null ? '' : payload[key])
+    }
+    
+    // Evaluamos si hay un archivo sin depender de .length
+    if (uploadSignature.value) {
+      let file = Array.isArray(uploadSignature.value) ? uploadSignature.value[0] : uploadSignature.value
+      if (file instanceof File) {
+        formData.append('signature_image', file)
+      }
+    }
+
+    const response = await ProfileDataService.update(formData)
     if (response.status === 200 || response.status === 204) {
       Swal.fire(appStore.successSavedOptions)
       initProfile()

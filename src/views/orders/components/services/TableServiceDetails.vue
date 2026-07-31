@@ -1,12 +1,21 @@
 <template>
   <v-card flat tile color="transparent" class="elevation-0">
     <v-toolbar density="compact" flat color="transparent" class="pl-3">
-      <v-icon start color="primary">mdi-clipboard-list</v-icon>
-      <span class="text-subtitle-2 font-weight-bold text-primary">
-        Equipos en este Servicio: {{ order.order_number }}
-      </span>
+      <div class="d-flex align-center">
+        <v-icon start color="primary">mdi-clipboard-list</v-icon>
+        <span class="text-subtitle-2 font-weight-bold text-primary">
+          Equipos en este Servicio: {{ order.order_number }}
+        </span>
+        <span v-if="order.created_at" class="text-caption text-medium-emphasis ml-3 mt-1 font-weight-medium d-flex align-center">
+          <v-icon size="x-small" class="mr-1">mdi-calendar-blank</v-icon>
+          {{ order.created_at.substring(0, 10) }}
+        </span>
+      </div>
       <v-spacer/>
       <!-- size="x-small" | left → start (V3) -->
+      <v-btn size="x-small" color="orange-darken-3" variant="flat" class="text-white mr-2" @click="$emit('request-signatures', order.certificates)" :disabled="order.status === 4 || !order.certificates || order.certificates.length === 0">
+        <v-icon start size="x-small">mdi-bell-ring</v-icon> Solicitar Firmas
+      </v-btn>
       <v-btn size="x-small" color="primary" variant="flat" class="text-white" @click="$emit('add-extra')" :disabled="order.status === 4">
         <v-icon start size="x-small">mdi-plus</v-icon> Añadir Equipo Extra
       </v-btn>
@@ -37,22 +46,24 @@
             <div class="d-flex justify-center align-center">
               <v-btn 
                 icon variant="text" density="comfortable" size="x-small" class="mx-1"
-                :href="(cert.uploaded_xls && cert.uploaded_xls !== '0' && cert.uploaded_xls !== 'False') ? `/media/${cert.uploaded_xls}` : undefined" 
+                :href="getValidPdfUrl(cert)" 
                 target="_blank" 
-                :disabled="!(cert.uploaded_xls && cert.uploaded_xls !== '0' && cert.uploaded_xls !== 'False')"
+                :disabled="!hasValidPdf(cert)"
               >
-                <v-icon :color="(cert.uploaded_xls && cert.uploaded_xls !== '0' && cert.uploaded_xls !== 'False') ? 'primary' : 'grey-lighten-1'">
+                <v-icon :color="hasValidPdf(cert) ? 'primary' : 'grey-lighten-1'">
                   mdi-file-pdf-box
                 </v-icon>
               </v-btn>
 
               <v-btn 
                 icon variant="text" density="comfortable" size="x-small" class="mx-1"
-                :href="cert.uploaded ? `https://daicomperu.com/${cert.uuid || cert.correlative}` : undefined" 
+                :href="getValidCloudUrl(cert)" 
                 target="_blank" 
-                :disabled="!cert.uploaded" 
+                :disabled="!hasValidCloud(cert)" 
               >
-                <v-icon :color="cert.uploaded ? 'primary' : 'grey-lighten-1'">mdi-cloud-check</v-icon>
+                <v-icon :color="hasValidCloud(cert) ? 'primary' : 'grey-lighten-1'">
+                  mdi-cloud-check
+                </v-icon>
               </v-btn>
             </div>
           </td>
@@ -151,6 +162,27 @@ export default {
     this.user_permissions = user.action_permissions || [];
   },
   methods: {
+    hasValidPdf(cert) {
+      const val = cert.uploaded_xls;
+      
+      // 1. Escudo de tipos: Si el backend envía un booleano en el primer renderizado (Listado),
+      // asumimos 'false' para evitar el parpadeo hasta que llegue la ruta string (Detalle).
+      if (typeof val === 'boolean') return false;
+
+      // 2. Validación estricta para la ruta final
+      return Boolean(val && val !== '0' && val !== 'False' && val !== 'null' && val !== 'undefined');
+    },
+    getValidPdfUrl(cert) {
+      return this.hasValidPdf(cert) ? `/media/${cert.uploaded_xls}` : undefined;
+    },
+    hasValidCloud(cert) {
+      const val = cert.uploaded;
+      // Previene falsos positivos con strings de base de datos
+      return Boolean(val && val !== 'False' && val !== '0' && val !== 'null');
+    },
+    getValidCloudUrl(cert) {
+      return this.hasValidCloud(cert) ? `https://daicomperu.com/${cert.uuid || cert.correlative}` : undefined;
+    },
     irACertificado(cert) {
       this.$router.push({ path: '/certificates', query: { correlativo: cert.correlative } }).catch(() => {});
     },
@@ -178,7 +210,7 @@ export default {
         if (result.isConfirmed) {
           // Mandamos order en null para romper la relación de llave foránea en Django
           CertificateDataService.patch(cert.id, { order: null }).then(() => {
-            this.$swal.fire('Desvinculado', 'El equipo ya no pertenece a esta orden.', 'success');
+            this.$swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo desvinculado' });
             
             // 1. Avisamos al padre (TabOrdersService) que recargue SOLO esta orden específica
             if (window.notificarActualizacionFila) {
@@ -203,7 +235,7 @@ export default {
       }).then((result) => {
         if (result.isConfirmed) {
           CertificateDataService.patch(cert.id, { status: 5 }).then(() => {
-            this.$swal.fire('Anulado', 'Equipo invalidado.', 'success');
+            this.$swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo anulado' });
             
             if (window.notificarActualizacionFila) {
               window.notificarActualizacionFila(null, this.order.id);
@@ -232,7 +264,7 @@ export default {
       }).then((result) => {
         if (result.isConfirmed) {
           CertificateDataService.patch(cert.id, { status: 1 }).then(() => {
-            this.$swal.fire({ title: 'Restaurado', text: 'El equipo está activo nuevamente.', icon: 'success' });
+            this.$swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo restaurado' });
             
             if (window.notificarActualizacionFila) {
               window.notificarActualizacionFila(null, this.order.id);

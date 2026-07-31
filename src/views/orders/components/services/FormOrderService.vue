@@ -15,27 +15,22 @@
       </div>
 
       <template v-if="temp_eq.modo === 'nuevo'">
-        <v-row dense>
-          <v-col cols="12" md="5">
-            <v-autocomplete v-model="selected_equipment_name" :items="unique_catalog_names" :loading="loading_equipments"
-                            label="Equipo (Familia)" density="compact" variant="outlined" hide-details="auto"
-                            prepend-inner-icon="mdi-toolbox-outline"
-                            @update:model-value="onFamilyChange" clearable />
-          </v-col>
-          <v-col cols="12" md="4">
-            <v-autocomplete v-model="selected_variant_obj" :items="filtered_equipment_variants"
-                            :disabled="!selected_equipment_name" item-title="type_display" return-object
-                            label="Característica / Tipo" density="compact" variant="outlined" hide-details="auto"
-                            prepend-inner-icon="mdi-shape-outline"
-                            @update:model-value="onVariantSelect" clearable />
-          </v-col>
-          <v-col cols="12" md="3" class="ml-auto">
-            <v-btn color="primary" variant="flat" block class="font-weight-bold" style="height: 40px;" @click="equipmentModal?.open()">
-              <template #prepend><v-icon>mdi-plus</v-icon></template>
-              Catálogo
-            </v-btn>
-          </v-col>
-        </v-row>
+            <v-row dense>
+              <v-col cols="12" md="9">
+                <v-autocomplete v-model="temp_eq.name" :items="equipments_catalog" :loading="loading_equipments"
+                                v-model:search="search_equipment" item-title="name" item-value="id"
+                                label="Equipo" density="compact" variant="outlined" hide-details="auto"
+                                prepend-inner-icon="mdi-toolbox-outline"
+                                :custom-filter="filtroSinTildes"
+                                clearable />
+              </v-col>
+              <v-col cols="12" md="3" class="ml-auto">
+                <v-btn color="primary" variant="flat" block class="font-weight-bold" style="height: 40px;" @click="equipoMaestroModalRef?.open()">
+                  <template #prepend><v-icon>mdi-plus</v-icon></template>
+                  CATALOGO
+                </v-btn>
+              </v-col>
+            </v-row>
 
         <v-row dense class="mt-2">
           <v-col cols="12" md="5">
@@ -78,8 +73,8 @@
       <v-row dense>
         <v-col cols="12" class="text-right mt-2">
           <v-btn color="primary" variant="flat" size="small" @click="addEquipmentToBatch"
-                 density="comfortable"
-                 :disabled="(temp_eq.modo === 'nuevo' && (!selected_variant_obj || !temp_eq.lab || !temp_eq.certificate_type)) || (temp_eq.modo === 'existente' && !certificado_encontrado)">
+                     density="comfortable"
+                     :disabled="(temp_eq.modo === 'nuevo' && (!temp_eq.name || !temp_eq.lab || !temp_eq.certificate_type)) || (temp_eq.modo === 'existente' && !certificado_encontrado)">
             <template #prepend><v-icon size="small">mdi-plus</v-icon></template>
             Añadir a la Lista
           </v-btn>
@@ -117,9 +112,8 @@
       </tbody>
     </v-table>
 
-    <equipment-modal ref="equipmentModal" :existingEquipments="equipments_catalog" :units="units_catalog"
-                     @reload="retrieveEquipmentsCatalog" @open-unit-modal="unitModal?.open()" />
-    <unit-modal ref="unitModal" @reload="retrieveEquipmentsCatalog" />
+    
+  <equipo-maestro-modal ref="equipoMaestroModalRef" @reload="retrieveEquipmentsCatalog('')" />
   </div>
 </template>
 
@@ -130,11 +124,10 @@ import LabDataService from '@/services/labs/labDataService'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import LabMappers from '@/mappers/labMappers'
 import CertificateDataService from '@/services/certificates/certificateDataService'
-import CorrelativeDataService from '@/services/correlative/correlativeDataService'
 import EquipmentDataService from '@/services/equipments/equipmentDataService'
-import UnitDataService from '@/services/equipments/unitDataService'
-import EquipmentModal from '@/views/equipments/components/EquipmentModal.vue'
-import UnitModal from '@/views/equipments/components/UnitModal.vue'
+import EquipmentMappers from '@/mappers/equipmentMappers'
+import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal.vue'
+import CorrelativeDataService from '@/services/correlative/correlativeDataService'
 
 const emit = defineEmits(['update-list'])
 
@@ -155,7 +148,12 @@ const cert_types = [
   { title: 'OPERATIVIDAD',  value: 3 },
 ]
 
-const equipments_catalog = ref([])
+// Filtro personalizado para Vuetify: ignora tildes en el frontend para no bloquear la data de MySQL
+const filtroSinTildes = (itemTitle, queryText, item) => {
+  if (!queryText) return true
+  const normalizar = (texto) => (texto || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  return normalizar(itemTitle).includes(normalizar(queryText))
+}
 
 // Instancia del buscador de Laboratorios usando el Composable global
 const { 
@@ -168,13 +166,21 @@ const {
   LabMappers.getMap,
   () => temp_eq.value.lab
 )
-const units_catalog      = ref([])
-const loading_equipments = ref(false)
-const selected_equipment_name = ref(null)
-const selected_variant_obj    = ref(null)
 
-const equipmentModal = ref(null)
-const unitModal      = ref(null)
+// Instancia del buscador de Equipos usando el mismo Composable global
+// (antes traia los 250+ equipos de golpe con page_size=1000000000)
+const { 
+  items: equipments_catalog, 
+  loading: loading_equipments, 
+  searchQuery: search_equipment, 
+  retrieveData: retrieveEquipmentsCatalog 
+} = usePaginatedSearch(
+  (page, size, query) => EquipmentDataService.getFiltered(page, size, query),
+  EquipmentMappers.getMap,
+  () => temp_eq.value.name
+)
+const equipoMaestroModalRef = ref(null)
+
 
 const next_cert_number_preview = computed(() => {
   const type = temp_eq.value.certificate_type
@@ -183,23 +189,15 @@ const next_cert_number_preview = computed(() => {
   return (parseInt(base_correlatives.value[type]) + offset).toString().padStart(8, '0')
 })
 
-const unique_catalog_names = computed(() => {
-  const names = equipments_catalog.value.map(e => e.equipment_name)
-  return [...new Set(names)].sort()
-})
 
-const filtered_equipment_variants = computed(() => {
-  if (!selected_equipment_name.value) return []
-  return equipments_catalog.value.filter(e => e.equipment_name === selected_equipment_name.value)
-})
 
 watch(equipments, (val) => { emit('update-list', val) }, { deep: true })
 
 
 onMounted(() => {
   retrieveLabs('')
+  retrieveEquipmentsCatalog('')
   initCorrelatives()
-  retrieveEquipmentsCatalog()
 })
 
 function inyectarBorrador(datosRecuperados) {
@@ -254,19 +252,18 @@ function getCalculatedCorrelative(index) {
 
 function addEquipmentToBatch() {
   if (temp_eq.value.modo === 'nuevo') {
-    if (!selected_variant_obj.value || !temp_eq.value.lab || !temp_eq.value.certificate_type) return
+    if (!temp_eq.value.name || !temp_eq.value.lab || !temp_eq.value.certificate_type) return
     const labObj  = labs.value.find(l => l.id === temp_eq.value.lab)
     const typeObj = cert_types.find(t => t.value === temp_eq.value.certificate_type)
     equipments.value.push({
       modo:             'nuevo',
-      name:             selected_variant_obj.value.clean_name,
+      name:             temp_eq.value.name,
       lab:              temp_eq.value.lab,
       lab_name:         labObj ? labObj.name : 'No asignado',
       certificate_type: temp_eq.value.certificate_type,
       type_label:       typeObj ? typeObj.title : 'ACREDITADO',
     })
-    selected_equipment_name.value = null
-    selected_variant_obj.value    = null
+    temp_eq.value.name = ''
   } else {
     if (!certificado_encontrado.value) return
     
@@ -291,41 +288,6 @@ function addEquipmentToBatch() {
     temp_eq.value.correlative_busqueda = ''
   }
   temp_eq.value.name = ''
-}
-
-function retrieveEquipmentsCatalog() {
-  loading_equipments.value = true
-  UnitDataService.getAll().then(res => { units_catalog.value = res.data.results || res.data })
-  EquipmentDataService.getAll().then((response) => {
-    let items = response.data.results || response.data
-    equipments_catalog.value = items.map(eq => {
-      let fullName = eq.type ? `${eq.equipment_name} - ${eq.type}` : eq.equipment_name
-      let unitSym  = eq.unit_detail ? eq.unit_detail.symbol : '--'
-      return {
-        ...eq,
-        clean_name:   fullName,
-        type_display: eq.type ? `${eq.type} (${unitSym})` : `Estándar (${unitSym})`,
-      }
-    })
-  }).finally(() => { loading_equipments.value = false })
-}
-
-function onFamilyChange() {
-  selected_variant_obj.value = null
-  if (selected_equipment_name.value) {
-    nextTick(() => {
-      if (filtered_equipment_variants.value.length === 1) {
-        selected_variant_obj.value = filtered_equipment_variants.value[0]
-        onVariantSelect(selected_variant_obj.value)
-      }
-    })
-  }
-}
-
-function onVariantSelect(val) {
-  if (val && typeof val === 'object') {
-    temp_eq.value.name = val.clean_name
-  }
 }
 
 defineExpose({ inyectarBorrador })

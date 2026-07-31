@@ -5,6 +5,10 @@
       <span class="text-subtitle-2 font-weight-bold" :class="isDark ? 'text-amber-lighten-2' : 'text-amber-darken-4'">
         Equipos en este Alquiler
       </span>
+      <span v-if="order.created_at" class="text-caption text-medium-emphasis ml-3 mt-1 font-weight-medium d-flex align-center">
+        <v-icon size="x-small" class="mr-1">mdi-calendar-blank</v-icon>
+        {{ order.created_at.substring(0, 10) }}
+      </span>
       <v-spacer />
       <v-btn size="x-small" color="amber-darken-3" variant="flat" class="text-white" @click="emit('add-rental')" :disabled="order.status === 4">
         <v-icon start size="x-small">mdi-plus</v-icon> Añadir Equipo Extra
@@ -217,7 +221,7 @@ function marcarDevuelto(rental) {
       if (window.notificarActualizacionFila) {
         window.notificarActualizacionFila(null, props.order.id);
       }
-      $swal.fire('Listo', 'Equipo devuelto y disponible en inventario', 'success')
+      $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo devuelto' })
     }
   })
 }

@@ -119,7 +119,7 @@ async function save() {
 
     await OrderDataService.updateRentalDates(form.value.id, payload)
     
-    $swal.fire('Actualizado', 'Las fechas se actualizaron correctamente.', 'success')
+    $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Fechas actualizadas' })
     emit('reload')
     close()
   } catch (error) {

@@ -45,7 +45,6 @@
                     :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
                     @click:append-inner="showPassword = !showPassword"
                     :type="showPassword ? 'text' : 'password'"
-                    @keydown.space.prevent
                     counter
                   ></v-text-field>
 
@@ -122,8 +121,7 @@ const submit = async () => {
         router.push({ path: "/profile" })
       }
     } catch (error) {
-      // El error visual ya es manejado por SweetAlert en el authStore
-      console.error("Error en login:", error)
+      // El error visual ya lo maneja SweetAlert en el authStore.
     } finally {
       loading.value = false
     }

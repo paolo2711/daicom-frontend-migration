@@ -28,12 +28,12 @@ const routes = [
           {
             name: "orders-service",
             path: "servicios",
-            component: () => import("@/views/orders/components/TabOrdersService.vue"),
+            component: () => import("@/views/orders/components/services/TabOrdersService.vue"),
           },
           {
             name: "orders-rental",
             path: "alquileres",
-            component: () => import("@/views/orders/components/TabOrdersRental.vue"),
+            component: () => import("@/views/orders/components/rentals/TabOrdersRental.vue"),
           },
         ],
       },
@@ -41,6 +41,12 @@ const routes = [
         name: "clients",
         path: "clients",
         component: () => import("@/views/clients/Clients.vue"),
+      },
+      
+      {
+        name: "documents",
+        path: "documentos",
+        component: () => import("@/views/documents/Documents.vue"),
       },
       {
         name: "labs",

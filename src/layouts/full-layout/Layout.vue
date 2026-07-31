@@ -13,6 +13,8 @@
     <upload-manager />
     <upload-sheets />
     <upload-q-r />
+
+    <update-available-overlay />
   </v-app>
 </template>
 
@@ -27,6 +29,7 @@ import Footer from './footer/Footer.vue'
 import UploadManager from '@/components/commonComponents/UploadManager.vue'
 import UploadSheets from '@/components/commonComponents/UploadSheets.vue'
 import UploadQR from '@/components/commonComponents/UploadQR.vue'
+import UpdateAvailableOverlay from '@/components/commonComponents/UpdateAvailableOverlay.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
 
 let socket = null
@@ -81,11 +84,12 @@ const conectarWebSocket = () => {
   }
 
   // NUEVO PUENTE: Envía el aviso de actualización de fila directo al WebSocket
-  window.notificarActualizacionFila = (certId, orderId = null) => {
+  window.notificarActualizacionFila = (certId, orderId = null, docId = null) => {
     if (socket && socket.readyState === WebSocket.OPEN) {
       let payload = { action: 'broadcast_update_row' };
       if (certId) payload.cert_id = certId;
       if (orderId) payload.order_id = orderId;
+      if (docId) payload.doc_id = docId; // Agregamos el soporte para documentos
       socket.send(JSON.stringify(payload));
     }
   }

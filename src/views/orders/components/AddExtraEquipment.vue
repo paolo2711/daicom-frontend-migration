@@ -40,8 +40,8 @@
 
 <script setup>
 import { ref, computed, watch, getCurrentInstance } from 'vue'
-import FormOrderService from './FormOrderService.vue'
-import FormOrderRental from './FormOrderRental.vue'
+import FormOrderService from './services/FormOrderService.vue'
+import FormOrderRental from './rentals/FormOrderRental.vue'
 import CertificateDataService from "@/services/certificates/certificateDataService"
 import OrderDataService from "@/services/certificates/orderDataService"
 
@@ -123,7 +123,7 @@ async function saveExtraEquipments() {
 
     await Promise.all(promesas)
 
-    $swal.fire('Éxito', `${items_to_save.value.length} equipo(s) añadido(s) a la orden`, 'success')
+    $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: `${items_to_save.value.length} equipo(s) añadido(s)` })
 
     const currentUser = JSON.parse(localStorage.getItem('user')) || {}
     if (window.enviarNotificacionGlobal) {

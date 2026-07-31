@@ -3,8 +3,12 @@ import authHeader from "@/services/auth-header";
 
 
 class ClientDataService {
-    getFiltered(page, page_size, name){
-        return axios.get(`clients?page=${page}&page_size=${page_size}&name=${name}`,  {
+    getFiltered(page, page_size, name, needs_review = ''){
+        let url = `clients?page=${page}&page_size=${page_size}&search=${encodeURIComponent(name || '')}`;
+        if (needs_review) {
+            url += `&needs_review=true`;
+        }
+        return axios.get(url,  {
             headers: authHeader()
         });
     }
@@ -35,6 +39,12 @@ class ClientDataService {
 
     delete(id) {
         return axios.delete(`clients/${id}`, {
+            headers: authHeader()
+        });
+    }
+
+    resolve(data) {
+        return axios.post("clients/resolve", data, {
             headers: authHeader()
         });
     }

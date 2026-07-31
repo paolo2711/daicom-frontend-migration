@@ -78,24 +78,6 @@
           </v-chip>
         </v-badge>
 
-        <v-badge
-          :model-value="filtro_detraccion && appStore.afectasDetraccionServiceCount > 0"
-          :content="appStore.afectasDetraccionServiceCount"
-          color="deep-orange"
-          offset-x="4"
-          offset-y="4"
-        >
-          <v-chip
-            :color="filtro_detraccion ? 'deep-orange' : 'grey-darken-1'"
-            class="font-weight-bold cursor-pointer transition-swing"
-            @click="toggleFiltroDetraccion"
-          >
-            <v-icon start size="small">mdi-bank-outline</v-icon>
-            Detracción
-            <v-tooltip activator="parent" location="top">Filtrar órdenes afectas a detracción SUNAT</v-tooltip>
-          </v-chip>
-        </v-badge>
-
         <v-spacer></v-spacer>
 
         <v-btn 
@@ -187,16 +169,22 @@
       </v-expand-transition>
     </v-card>
 
-    <table-loading-overlay :loading="loading_list" :isEmpty="orders.length === 0">
-      <v-data-table-server
-        v-model:expanded="expanded"
-        :headers="headers"
-        :items="orders"
-        :items-length="total_orders"
-        :loading="loading_list"
-        show-expand
-        single-expand
-        item-value="id"
+    <v-row class="mt-2 mx-0">
+      <!-- COLUMNA IZQUIERDA: TABLA OPERATIVA (65% aprox) -->
+      <v-col cols="12" :md="panel_expandido ? 0 : 8" v-show="!panel_expandido" class="pa-0 pr-md-2 transition-swing">
+        <table-loading-overlay :loading="loading_list" :isEmpty="orders.length === 0">
+          <v-data-table-server
+            v-model="ordenes_seleccionadas"
+            show-select
+            return-object
+            v-model:expanded="expanded"
+            :headers="headers"
+            :items="orders"
+            :items-length="total_orders"
+            :loading="loading_list"
+            show-expand
+            single-expand
+            item-value="id"
         :hover="false"
         class="elevation-0 rounded-lg tabla-mejorada tabla-ordenes-servicio bg-surface"
         style="border: 1px solid rgba(0,0,0,0.12);"
@@ -206,7 +194,7 @@
         @click:row="manejarClicFila"
         
         :row-props="(data) => ({ 
-          class: expanded.includes(data.item.id || (data.item.raw && data.item.raw.id)) ? 'fila-padre-activa' : '' 
+          class: isOrderExpanded(data.item) ? 'fila-padre-activa' : '' 
         })"
       >
         <template v-slot:bottom>
@@ -219,14 +207,6 @@
 
         <template v-slot:item.client_data.name="{ item }">
           <span :class="item.status === 4 ? 'anulado-atenuado' : ''">{{ item.client_data.name }}</span>
-        </template>
-
-        <template v-slot:item.status="{ item }">
-          <div class="d-flex align-center justify-center">
-            <v-chip :color="getStatusFinancialColor(item)" size="small" class="text-white font-weight-medium" style="width: 100px; justify-content: center;">
-              {{ getStatusFinancialLabel(item) }}
-            </v-chip>
-          </div>
         </template>
 
         <template v-slot:item.progress="{ item }">
@@ -246,68 +226,24 @@
           <span v-else class="text-grey">---</span>
         </template>
 
-        <template v-slot:item.facturacion="{ item }">
-          <div class="d-flex align-center justify-end w-100">
-            <div class="d-flex flex-column align-end pr-1">
-              <div class="font-weight-medium body-2 mb-n1" :class="item.status === 4 ? 'text-grey' : (theme.global.current.value.dark ? 'text-grey-lighten-2' : 'text-grey-darken-3')">
-                {{ item.total_facturado > 0 || (item.wants_invoice === false && item.total_pagado > 0) ? 'S/ ' + formatMoney(item.neto_a_cobrar) : '---' }}
-              </div>
-              <div class="text-caption text-grey" style="font-size: 10px !important;">
-                <span v-if="item.wants_invoice === false">Sin comprobante</span>
-                <span v-else-if="item.has_detraccion">Detr: -S/ {{ formatMoney(item.detraccion_total) }}</span>
-              </div>
-            </div>
-            
-            <div class="d-flex pl-1">
-              <v-tooltip location="bottom">
-                <template v-slot:activator="{ props }">
-                  <v-btn
-                    icon
-                    :color="item.status === 4 ? 'grey-lighten-2' : ((item.invoices?.length > 0 || item.wants_invoice === false) ? 'primary' : 'grey')"
-                    :disabled="item.status === 4"
-                    variant="text"
-                    density="compact"
-                    @click.stop="abrirFactura(item)"
-                    v-bind="props"
-                  >
-                    <v-icon size="small">{{ item.wants_invoice === false ? 'mdi-file-document-remove-outline' : (item.invoices?.length > 0 ? 'mdi-file-document-check' : 'mdi-file-document-plus') }}</v-icon>
-                  </v-btn>
-                </template>
-                <span>{{ item.wants_invoice === false ? 'Sin Comprobante (Ver)' : (item.invoices?.length > 0 ? 'Ver/Editar Factura' : 'Subir Factura') }}</span>
-              </v-tooltip>
-            </div>
-          </div>
-        </template>
-
-        <template v-slot:item.cobros="{ item }">
-          <div class="d-flex align-center justify-end w-100">
-            <div class="d-flex flex-column align-end pr-1">
-              <div class="font-weight-medium body-2 mb-n1" :class="item.status === 4 ? 'text-grey' : (theme.global.current.value.dark ? 'text-grey-lighten-2' : 'text-grey-darken-3')">
-                {{ item.total_pagado > 0 ? 'S/ ' + formatMoney(item.total_pagado) : '---' }}
-              </div>
-              <div v-if="item.payments?.length > 0" class="text-caption text-grey" style="font-size: 10px !important;">
-                {{ item.payments.length }} {{ item.payments.length === 1 ? 'abono' : 'abonos' }}
-              </div>
-            </div>
-            
-            <div class="d-flex pl-1">
-              <v-tooltip location="bottom">
-                <template v-slot:activator="{ props }">
-                  <v-btn
-                    icon
-                    :color="item.status === 4 ? 'grey-lighten-2' : ((item.payments && item.payments.length > 0) ? 'primary' : 'grey')"
-                    :disabled="item.status === 4"
-                    variant="text"
-                    density="compact"
-                    @click.stop="abrirPago(item)"
-                    v-bind="props"
-                  >
-                    <v-icon size="small">{{ (item.payments && item.payments.length > 0) ? 'mdi-cash-check' : 'mdi-cash-plus' }}</v-icon>
-                  </v-btn>
-                </template>
-                <span>{{ (item.payments && item.payments.length > 0) ? 'Ver/Editar Pagos' : 'Registrar Pago' }}</span>
-              </v-tooltip>
-            </div>
+        <template v-slot:item.vinculo_financiero="{ item }">
+          <div class="d-flex align-center justify-center">
+            <v-tooltip location="bottom">
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  v-bind="props"
+                  icon
+                  variant="text"
+                  density="compact"
+                  :disabled="item.status === 4"
+                  :color="getColorSemaforoFinanciero(item)"
+                  @click.stop="seleccionarFacturaEnPanel(item)"
+                >
+                  <v-icon size="small">{{ getIconoSemaforoFinanciero(item) }}</v-icon>
+                </v-btn>
+              </template>
+              <span class="font-weight-bold">{{ getTextoSemaforoFinanciero(item) }}</span>
+            </v-tooltip>
           </div>
         </template>
 
@@ -320,7 +256,7 @@
                 variant="tonal" 
                 class="font-weight-bold px-3 text-caption"
               >
-                S/ {{ item.detraccion.monto.toFixed(2) }}
+                {{ getCurrencySymbol(item.currency) }} {{ item.detraccion.monto.toFixed(2) }}
                 <v-tooltip activator="parent" location="top">
                   Detracción {{ item.detraccion.tasa }}% · SUNAT
                 </v-tooltip>
@@ -359,7 +295,6 @@
               <v-btn
                 v-bind="props"
                 icon
-                color="red-darken-2"
                 variant="text"
                 density="comfortable"
                 @click="anularOrderConfirm(item)"
@@ -379,16 +314,66 @@
                 @reload="retrieveOrders"
                 @add-extra="prepareExtraEquipment(item)"
                 @edit-certificate="openCertificateModal"
+                @request-signatures="abrirBatchModal"
               />
             </td>
           </tr>
         </template>
       </v-data-table-server>
     </table-loading-overlay>
+      </v-col>
 
-    <!-- MODALES (ya migrados) -->
-    <dialog-factura v-model="factura_modal" :order="selected_order" @updateOrder="updateSingleOrderInList" @close="factura_modal = false" />
-    <dialog-liquidacion v-model="liquidacion_modal" :order="selected_order" @updateOrder="updateSingleOrderInList" @close="liquidacion_modal = false" />
+      <!-- COLUMNA DERECHA: PANEL DE FACTURAS (35% aprox) -->
+      <v-col cols="12" :md="panel_expandido ? 12 : 4" class="pa-0 pl-md-2 transition-swing">
+        <div class="panel-sticky-wrapper">
+        <panel-facturas 
+          :order_type="1"
+          :ordenes_seleccionadas="ordenes_seleccionadas"
+          :search="filter_invoice"
+          :foco_order_id="foco_order_id"
+          :foco_order_number="foco_order_number"
+          v-model:expandido="panel_expandido"
+          @recargar-ordenes="retrieveOrders"
+          @limpiar-seleccion="ordenes_seleccionadas = []"
+          @limpiar-busqueda="filter_invoice = ''; applyFilters()"
+          @limpiar-foco-orden="foco_order_id = null; foco_order_number = ''"
+          @filtrar-ordenes-por-factura="filter_invoice = $event; applyFilters()"
+        />
+        </div>
+      </v-col>
+    </v-row>
+
+    <!-- Barra flotante de selección (componente común). El botón "Vincular" se
+         quitó: al marcar órdenes el PanelFacturas ya entra en modo selección y
+         tocar una factura ahí las vincula — el botón era redundante. -->
+    <selection-bar
+      :count="ordenes_seleccionadas.length"
+      label="seleccionada(s)"
+      @clear="ordenes_seleccionadas = []"
+    >
+      <v-tooltip location="top" text="Crear una factura para las órdenes marcadas">
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" icon="mdi-file-document-plus" variant="text" density="compact"
+                 class="text-white opacity-80 hover-opacity-100 mx-1" @click="crearFacturaParaSeleccion" />
+        </template>
+      </v-tooltip>
+
+      <v-tooltip location="top" :text="seleccion_sin_factura ? 'Marcar que SÍ requiere comprobante' : 'Marcar como sin comprobante'">
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props"
+                 :icon="seleccion_sin_factura ? 'mdi-file-document-check-outline' : 'mdi-file-remove-outline'"
+                 variant="text" density="compact"
+                 :loading="marcando_sin_factura"
+                 class="text-white opacity-80 hover-opacity-100 mx-1"
+                 @click="seleccion_sin_factura ? requerirFactura() : marcarSinFactura()" />
+        </template>
+      </v-tooltip>
+    </selection-bar>
+
+    <!-- MODALES -->
+    <batch-action-modal ref="batchActionModalRef" @reloadListComponent="retrieveOrders" />
+
+    <dialog-factura v-model="factura_modal" :order="selected_order" :orders="ordenes_factura_multi" :order_type="1" @updateOrder="onFacturaGuardada" @close="cerrarFacturaModal" />
     <edit-order v-model="edit_order_modal" :order="selected_order" @updateOrder="updateSingleOrderInList" @close="edit_order_modal = false" />
     <add-extra-equipment v-model="dialog_extra" :order="selected_order" @close="dialog_extra = false" @reload="retrieveOrders" />
     <certificate-modal ref="certificateModalRef" @updateCertificate="retrieveOrders" @reloadListComponent="retrieveOrders" />
@@ -405,27 +390,35 @@ import OrderDataService from '@/services/certificates/orderDataService'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import ClientDataService from '@/services/clients/clientDataService'
 import ClientMappers from '@/mappers/clientMappers'
+import OrderMappers from '@/mappers/orderMappers'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
-import DialogFactura from './DialogFactura.vue'
-import DialogLiquidacion from './DialogLiquidacion.vue'
-import EditOrder from './EditOrder.vue'
-import AddExtraEquipment from './AddExtraEquipment.vue'
+import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
+import DialogFactura from '../DialogFactura.vue'
+import EditOrder from '../EditOrder.vue'
+import AddExtraEquipment from '../AddExtraEquipment.vue'
 import TableServiceDetails from './TableServiceDetails.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import CertificateModal from '@/views/certificates/components/CertificateModal.vue'
+import PanelFacturas from '../PanelFacturas.vue' // NUEVO COMPONENTE DE LA FASE 3
+import { defineAsyncComponent } from 'vue'
+
+const BatchActionModal = defineAsyncComponent(() => import('@/views/certificates/components/BatchActionModal.vue'))
 
 const theme = useTheme()
 const route = useRoute()
 const appStore = useAppStore()
+
+// Estado UI Split-Screen
+const ordenes_seleccionadas = ref([])
+const panel_expandido = ref(false)
 
 // Nuevos estados UI de Filtros Avanzados y Chips
 const mostrar_filtros_avanzados = ref(false)
 const menu_fechas = ref(false)
 const filtro_falta_pago = ref(false)
 const filtro_sin_factura = ref(false)
-const filtro_detraccion = ref(false)
 
 // Texto computado para el calendario elegante
 const textoRangoFechas = computed(() => {
@@ -439,9 +432,17 @@ const textoRangoFechas = computed(() => {
 const edit_order_modal = ref(false)
 const dialog_extra = ref(false)
 const factura_modal = ref(false)
-const liquidacion_modal = ref(false)
+const ordenes_factura_multi = ref(null) // órdenes para crear UNA factura por selección
+const marcando_sin_factura = ref(false)
 const selected_order = ref(null)
 const certificateModalRef = ref(null)
+const batchActionModalRef = ref(null)
+
+const abrirBatchModal = (certs) => {
+  if (batchActionModalRef.value) {
+    batchActionModalRef.value.open('notify', certs)
+  }
+}
 
 const openCertificateModal = (cert) => {
   certificateModalRef.value?.open(cert)
@@ -452,10 +453,8 @@ const headers = [
   { title: 'Nro Orden', key: 'order_number' },
   { title: 'Cliente', key: 'client_data.name' },
   { title: 'Progreso', key: 'progress', align: 'center', sortable: false },
-  { title: 'Facturación', key: 'facturacion', align: 'center', sortable: false },
-  { title: 'Cobro', key: 'cobros', align: 'center', sortable: false },
-  { title: 'Estado', key: 'status', align: 'center', sortable: false },
-  { title: 'F. Agregado', key: 'created_at', sortable: false },
+  { title: 'Estado Financiero', key: 'vinculo_financiero', align: 'center', sortable: false },
+  //{ title: 'F. Agregado', key: 'created_at', sortable: false },
   { title: 'Opciones', key: 'actions', align: 'center', sortable: false },
   { title: '', key: 'data-table-expand' },
 ]
@@ -464,6 +463,17 @@ const headers = [
 const orders = ref([])
 const expanded = ref([])
 
+// --- LÓGICA DE EXPANSIÓN ROBUSTA (Resiliencia a return-object) ---
+const getSafeId = (val) => {
+  if (!val) return null
+  return typeof val === 'object' ? (val.id || val.raw?.id || val.value) : val
+}
+
+const isOrderExpanded = (item) => {
+  const targetId = getSafeId(item)
+  return expanded.value.some(e => getSafeId(e) === targetId)
+}
+
 // Forzar expansión única y cargar el detalle pesado (Lazy Loading)
 watch(expanded, (newVal) => {
   if (newVal.length > 1) {
@@ -471,7 +481,9 @@ watch(expanded, (newVal) => {
   }
   
   if (expanded.value.length === 1) {
-    const orderId = expanded.value[0]
+    const orderId = getSafeId(expanded.value[0])
+    if (!orderId) return
+
     OrderDataService.get(orderId).then(response => {
       if (response && response.data) {
         updateSingleOrderInList(response.data)
@@ -487,17 +499,30 @@ const options = ref({ page: 1, itemsPerPage: 30 })
 const filter_order = ref('')
 const filter_correlative = ref('')
 const filter_invoice = ref('')
+const foco_order_id = ref(null)
+const foco_order_number = ref('')
+
+// El filtro por orden (foco) se limpia solo cuando el usuario hace otra acción:
+// marcar/desmarcar órdenes cambia la selección → soltamos el foco.
+watch(ordenes_seleccionadas, () => {
+  if (foco_order_id.value !== null) {
+    foco_order_id.value = null
+    foco_order_number.value = ''
+  }
+})
 const filter_client_id = ref(null)
 const filter_date_gt = ref('')
 const filter_date_lt = ref('')
 const filter_status = ref('')
+// IDs según el backend (Order.OrderStatus): 4=Anulada, 5=Pagado. Antes estaban
+// cruzados (4=Pagado/5=Anulada) → filtrar "Pagado" traía las Anuladas.
 const order_statuses = [
   { id: 1, name: 'En Proceso' },
   { id: 2, name: 'Deuda' },
   { id: 3, name: 'Abonado' },
-  { id: 4, name: 'Pagado' },
-  { id: 5, name: 'Anulada' },
+  { id: 5, name: 'Pagado' },
   { id: 6, name: 'Excedido' },
+  { id: 4, name: 'Anulada' },
 ]
 
 // Clientes
@@ -524,6 +549,9 @@ let debounceTimeout = null
 // Funciones de filtro
 const applyFilters = () => {
   if (pendingRequest.value) return
+  // Si el panel de facturas está maximizado, tapa la tabla: al filtrar lo
+  // achicamos para que se vean los resultados.
+  panel_expandido.value = false
   options.value.page = 1
   retrieveOrders()
   cargarResumenes() // Sincroniza las píldoras cada vez que filtras
@@ -539,11 +567,6 @@ const toggleFiltroFactura = () => {
   applyFilters()
 }
 
-const toggleFiltroDetraccion = () => {
-  filtro_detraccion.value = !filtro_detraccion.value
-  applyFilters()
-}
-
 const cargarResumenes = () => {
   OrderDataService.getPendingPaymentsSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value).then((res) => {
     appStore.setPendingPaymentsServiceCount(res.data.pending_payments)
@@ -552,14 +575,6 @@ const cargarResumenes = () => {
   OrderDataService.getPendingInvoicesSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value).then((res) => {
     appStore.setPendingInvoicesServiceCount(res.data.pending_invoices)
   }).catch(() => {})
-
-  if (filtro_detraccion.value) {
-    OrderDataService.getAfectasDetraccionSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value).then((res) => {
-      appStore.setAfectasDetraccionServiceCount(res.data.afectas_detraccion)
-    }).catch(() => {})
-  } else {
-    appStore.setAfectasDetraccionServiceCount(0)
-  }
 }
 
 
@@ -590,14 +605,14 @@ const retrieveOrders = () => {
     1,
     filtro_falta_pago.value,
     filtro_sin_factura.value,
-    filtro_detraccion.value,
+    false,
     filter_invoice.value
   )
-    .then((res) => {
-      orders.value = res.data.results
-      total_orders.value = res.data.count
-    })
-    .finally(() => {
+      .then((res) => {
+        orders.value = res.data.results.map(orden => OrderMappers.getMap(orden))
+        total_orders.value = res.data.count
+      })
+      .finally(() => {
       loading_list.value = false
       pendingRequest.value = false
     })
@@ -605,18 +620,16 @@ const retrieveOrders = () => {
 
 // Manejador centralizado de clics en la fila (UX de Expansión)
 const manejarClicFila = (event, { item }) => {
-  // Ignoramos el clic si el usuario hizo clic en un botón, chip, o en la propia flechita (Vuetify ya la maneja)
+  // Ignoramos clics en elementos interactivos (Vuetify ya maneja el ícono de expansión)
   if (event.target.closest('button') || event.target.closest('.v-btn') || event.target.closest('.v-chip') || event.target.closest('.v-data-table__expand-icon')) {
     return
   }
   
-  // Dependiendo de la versión interna de Vuetify 3, el id puede venir directo o en raw
-  const itemId = item.id || (item.raw && item.raw.id) || item.value
-  
-  if (expanded.value.includes(itemId)) {
+  if (isOrderExpanded(item)) {
     expanded.value = []
   } else {
-    expanded.value = [itemId]
+    // Al usar return-object, almacenamos el objeto completo para evitar conflictos de estado interno
+    expanded.value = [item.raw || item]
   }
 }
 
@@ -635,23 +648,182 @@ const getColorPago = (m) => {
   return 'grey-darken-1'
 }
 
-const formatMoney = (val) => {
-  const num = parseFloat(val || 0)
-  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const getCurrencySymbol = (currency) => {
+  const symbols = { 'PEN': 'S/', 'USD': '$', 'EUR': '€' }
+  return symbols[currency] || 'S/'
 }
 
-const getStatusFinancialLabel = (o) => {
-  const todosAnulados = o.certificates?.length > 0 && o.certificates.every(c => c.status === 5)
-  if (todosAnulados) return 'Anulada'
-  const map = { 1: 'En Proceso', 2: 'Deuda', 3: 'Abonado', 4: 'Anulada', 5: 'Pagado', 6: 'Excedido' }
-  return map[o.status] || 'En Proceso'
+// --- LOGICA DEL SEMÁFORO FINANCIERO (VÍNCULO) ---
+// Única columna financiera de la tabla: ya no hay un "Estado" aparte
+// leyendo o.status crudo — ese campo queda congelado para órdenes
+// facturadas desde que el pago vive en la Factura, no en la Orden
+// (ver Order.estado_financiero en el backend). Todo sale de ahí.
+// El estado sale ÚNICAMENTE de estado_financiero (que el backend calcula
+// agregando las facturas de la orden). Los campos total_pagado/saldo_pendiente
+// ya NO existen en la orden — usarlos daba siempre "pagado" por undefined.
+// estado_financiero: 1=En Proceso, 2=Deuda, 3=Abonado, 4=Anulada, 5=Pagado, 6=Excedido
+const getColorSemaforoFinanciero = (o) => {
+  if (o.wants_invoice === false) {
+    // Sin comprobante: verde si ya tiene abono (pagado), gris si aún no.
+    return o.estado_financiero === 5 ? 'success' : 'grey-darken-2'
+  }
+  switch (o.estado_financiero) {
+    case 4: return 'grey-darken-1'   // Anulada
+    case 6: return 'blue-darken-1'   // Excedido
+    case 5: return 'success'         // Pagado
+    case 3: return 'warning'         // Abonado (parcial)
+    case 2: return 'error'           // Deuda
+    case 1:
+    default: return 'grey'           // En proceso / sin factura
+  }
 }
 
-const getStatusFinancialColor = (o) => {
-  const todosAnulados = o.certificates?.length > 0 && o.certificates.every(c => c.status === 5)
-  if (todosAnulados) return 'grey-darken-1'
-  const map = { 1: 'grey-darken-1', 2: 'error', 3: 'warning', 4: 'grey-darken-1', 5: 'success', 6: 'blue-darken-1' }
-  return map[o.status] || 'grey-darken-1'
+const getIconoSemaforoFinanciero = (o) => {
+  // Ícono único de trazo fino, adaptado al estado financiero
+  if (o.wants_invoice === false) {
+    return o.estado_financiero === 5 ? 'mdi-file-document-check-outline' : 'mdi-file-document-remove-outline'
+  }
+  switch (o.estado_financiero) {
+    case 4: return 'mdi-file-document-remove-outline' // Anulada
+    case 6: return 'mdi-file-document-alert-outline'  // Excedido
+    case 5: return 'mdi-file-document-check-outline'  // Pagado
+    case 3: return 'mdi-file-document-edit-outline'   // Abonado parcial
+    case 2: return 'mdi-file-document-alert-outline'  // Deuda
+    case 1:
+    default: return 'mdi-file-document-plus-outline'  // Libre / sin factura
+  }
+}
+
+const getTextoSemaforoFinanciero = (o) => {
+  if (o.wants_invoice === false) {
+    return o.estado_financiero === 5 ? 'Sin comprobante · Pagado' : 'Sin comprobante · Sin abono aún'
+  }
+  const n = o.invoices ? o.invoices.length : 0
+  const cuantas = n > 1 ? `${n} facturas` : (o.invoices[0]?.invoice_number || '')
+  switch (o.estado_financiero) {
+    case 4: return 'Orden anulada'
+    case 6: return `Excedido (${cuantas})`
+    case 5: return `Pagado (${cuantas})`
+    case 3: return `Abono parcial (${cuantas})`
+    case 2: return `Sin abonos / Deuda (${cuantas})`
+    case 1:
+    default: return 'Libre (Sin Factura) — clic para crear/vincular'
+  }
+}
+
+// Clic en el semáforo: si la orden tiene factura(s), enfoca el panel en
+// TODAS ellas (por order_id, no por número — así una orden con 2+ facturas
+// las muestra todas). Si está libre, la selecciona para vincular.
+const seleccionarFacturaEnPanel = (o) => {
+  if (o.invoices && o.invoices.length > 0) {
+    // Toggle: si ya está enfocada esta orden, el segundo clic quita el filtro.
+    if (foco_order_id.value === o.id) {
+      foco_order_id.value = null
+      foco_order_number.value = ''
+    } else {
+      foco_order_id.value = o.id
+      foco_order_number.value = o.order_number
+    }
+  } else if (!ordenes_seleccionadas.value.some(sel => sel.id === o.id)) {
+    ordenes_seleccionadas.value = [o]
+  }
+}
+
+// "FACTURAR LOTE": crea UNA factura y la reparte automáticamente entre
+// todas las órdenes marcadas (partes iguales, sin pedirte nada). Si es
+// "CREAR FACTURA": abre DialogFactura para crear una factura nueva.
+// Con 1 orden marcada la crea y vincula directo. Con varias, por ahora
+// se crea sobre la primera y las demás se vinculan luego con VINCULAR
+// (crear-factura-multi vive en la limpieza pendiente de DialogFactura).
+// "CREAR FACTURA" desde la barra: una sola factura para TODAS las órdenes
+// marcadas. Deben compartir moneda (el backend exige lo mismo al vincular).
+const crearFacturaParaSeleccion = () => {
+  const ordenes = ordenes_seleccionadas.value
+  if (ordenes.length === 0) return
+  const monedas = new Set(ordenes.map(o => o.currency))
+  if (monedas.size > 1) {
+    Swal.fire('Monedas distintas', 'Solo puedes crear una factura para órdenes de la misma moneda. Desmarca las que no coincidan.', 'warning')
+    return
+  }
+  selected_order.value = null
+  ordenes_factura_multi.value = [...ordenes]
+  factura_modal.value = true
+}
+
+// Marca las órdenes seleccionadas como "no requiere comprobante". Vive en la
+// barra (antes estaba en el header del panel, que mutaba de tamaño).
+const marcarSinFactura = async () => {
+  const ordenes = ordenes_seleccionadas.value
+  if (ordenes.length === 0) return
+  const r = await Swal.fire({
+    title: '¿Sin comprobante?',
+    html: `Se marcarán <b>${ordenes.length}</b> ${ordenes.length === 1 ? 'orden' : 'órdenes'} como "no requiere factura". Podrás registrarles abonos igual.`,
+    icon: 'question', showCancelButton: true,
+    confirmButtonText: 'Sí, sin factura', cancelButtonText: 'Cancelar',
+  })
+  if (!r.isConfirmed) return
+  marcando_sin_factura.value = true
+  try {
+    for (const o of ordenes) {
+      await OrderDataService.patch(o.id, { wants_invoice: false })
+    }
+    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Marcadas sin factura' })
+    ordenes_seleccionadas.value = []
+    // El WS refresca las filas de las órdenes afectadas.
+  } catch (err) {
+    Swal.fire('Error', 'No se pudo marcar alguna orden.', 'error')
+  } finally {
+    marcando_sin_factura.value = false
+  }
+}
+
+// El botón de la barra es contextual: si TODAS las órdenes marcadas ya están
+// "sin comprobante", ofrece re-activar; si no, ofrece marcarlas sin comprobante.
+const seleccion_sin_factura = computed(() =>
+  ordenes_seleccionadas.value.length > 0 &&
+  ordenes_seleccionadas.value.every(o => o.wants_invoice === false)
+)
+
+// Re-activa "requiere comprobante". El backend (perform_update) descarta la
+// factura interna vacía al pasar wants_invoice a true.
+const requerirFactura = async () => {
+  const ordenes = ordenes_seleccionadas.value
+  if (ordenes.length === 0) return
+  const r = await Swal.fire({
+    title: '¿Requiere comprobante?',
+    html: `Se marcarán <b>${ordenes.length}</b> ${ordenes.length === 1 ? 'orden' : 'órdenes'} como que SÍ requieren factura. Si tenían un contenedor de abonos vacío, se descarta.`,
+    icon: 'question', showCancelButton: true,
+    confirmButtonText: 'Sí, requiere factura', cancelButtonText: 'Cancelar',
+  })
+  if (!r.isConfirmed) return
+  marcando_sin_factura.value = true
+  try {
+    for (const o of ordenes) {
+      await OrderDataService.patch(o.id, { wants_invoice: true })
+    }
+    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Marcadas: requieren factura' })
+    ordenes_seleccionadas.value = []
+  } catch (err) {
+    Swal.fire('Error', 'No se pudo actualizar alguna orden.', 'error')
+  } finally {
+    marcando_sin_factura.value = false
+  }
+}
+
+// ------------------------------------------------
+
+// Guardado de factura desde el diálogo. En multi limpiamos la selección; en
+// single refrescamos su fila. En ambos casos el WS refresca fila(s) y panel.
+const onFacturaGuardada = (payload) => {
+  if (ordenes_factura_multi.value) {
+    ordenes_seleccionadas.value = []
+  } else if (payload && payload.id) {
+    updateSingleOrderInList(payload)
+  }
+}
+const cerrarFacturaModal = () => {
+  factura_modal.value = false
+  ordenes_factura_multi.value = null
 }
 
 const getProgreso = (o) => {
@@ -678,7 +850,7 @@ const anularOrderConfirm = (order) => {
     if (result.isConfirmed) {
       OrderDataService.patch(order.id, { status: 4 }).then(() => {
         Promise.all(order.certificates.map(c => CertificateDataService.patch(c.id, { status: 5 }))).then(() => {
-          Swal.fire('Completado', 'Orden anulada.', 'success')
+          Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Orden anulada' })
           if (window.notificarActualizacionFila) window.notificarActualizacionFila(null, order.id);
         })
       })
@@ -691,19 +863,25 @@ const prepareExtraEquipment = (o) => {
   dialog_extra.value = true
 }
 
-const abrirFactura = (i) => {
-  selected_order.value = i
-  factura_modal.value = true
-}
-
-const abrirPago = (i) => {
-  selected_order.value = i
-  liquidacion_modal.value = true
-}
-
 const abrirEditarOrden = (o) => {
-  selected_order.value = o
-  edit_order_modal.value = true
+  // 1. Forzar la expansión visual de la tabla (abre TableServiceDetails)
+  if (!isOrderExpanded(o)) {
+    expanded.value = [o]
+  }
+  
+  // 2. Traer la data completa (con client_data dentro de certificates) 
+  // para que EditOrder.vue no falle al renderizar a los dueños.
+  OrderDataService.get(o.id).then(response => {
+    if (response && response.data) {
+      updateSingleOrderInList(response.data)
+      selected_order.value = response.data
+      edit_order_modal.value = true
+    }
+  }).catch(() => {
+    // Fallback de seguridad en caso de error de red
+    selected_order.value = o
+    edit_order_modal.value = true
+  })
 }
 
 // WebSockets
@@ -727,11 +905,7 @@ const fetchAndInjectSingleOrder = (event) => {
 const updateSingleOrderInList = (updatedOrder) => {
   const index = orders.value.findIndex(o => o.id === updatedOrder.id)
   if (index !== -1) {
-    orders.value = [
-      ...orders.value.slice(0, index),
-      { ...orders.value[index], ...updatedOrder },
-      ...orders.value.slice(index + 1)
-    ]
+    Object.assign(orders.value[index], OrderMappers.getMap(updatedOrder))
   }
 }
 
@@ -778,6 +952,17 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss">
+/* Panel de facturas: se mantiene fijo mientras la tabla de órdenes scrollea.
+   El scroll de la página vive en .v-main (overflow-y:auto), así que el sticky
+   se calcula respecto a ese contenedor. */
+.panel-sticky-wrapper {
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+}
+/* La píldora flotante de selección vive ahora en el componente común
+   @/components/commonComponents/SelectionBar.vue (estilos incluidos). */
+
 /*
  * POR QUÉ FALLABAN LOS INTENTOS ANTERIORES
  * ──────────────────────────────────────────

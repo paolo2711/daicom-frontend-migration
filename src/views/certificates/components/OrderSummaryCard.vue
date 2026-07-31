@@ -44,7 +44,7 @@
               <span class="text-caption text-grey-darken-1">{{ inv.invoice_date || 'Sin fecha' }}</span>
             </div>
             <div class="d-flex align-center">
-              <span class="text-body-2 font-weight-bold text-primary mr-2">S/ {{ formatMoney(inv.amount) }}</span>
+              <span class="text-body-2 font-weight-bold text-primary mr-2">{{ simbolo(inv.currency) }} {{ formatMoney(inv.amount) }}</span>
               <v-tooltip location="bottom" v-if="inv.pdf_url">
                 <template v-slot:activator="{ props }">
                   <v-btn icon variant="text" size="small" color="primary" density="comfortable" :href="inv.pdf_url" target="_blank" v-bind="props">
@@ -75,12 +75,12 @@
             <div class="d-flex align-center">
               <v-icon size="small" :color="getColorPago(pay.payment_method)" class="mr-2">{{ getIconoPago(pay.payment_method) }}</v-icon>
               <div class="d-flex flex-column">
-                <span class="text-body-2 font-weight-bold text-capitalize">{{ pay.payment_method.toLowerCase() }}</span>
+                <span class="text-body-2 font-weight-bold text-capitalize">{{ (pay.payment_method || '').toLowerCase() }}</span>
                 <span class="text-caption text-grey-darken-1">{{ pay.payment_date }}</span>
               </div>
             </div>
             <div class="d-flex align-center">
-              <span class="text-body-2 font-weight-bold text-success mr-2">S/ {{ formatMoney(pay.amount) }}</span>
+              <span class="text-body-2 font-weight-bold text-success mr-2">{{ simbolo(pay.currency) }} {{ formatMoney(pay.amount) }}</span>
               <v-tooltip location="bottom" v-if="pay.payment_proof">
                 <template v-slot:activator="{ props }">
                   <v-btn icon variant="text" size="small" color="primary" density="comfortable" :href="pay.payment_proof" target="_blank" v-bind="props">
@@ -93,7 +93,7 @@
           </v-sheet>
           
           <div v-if="orderData.payments.length > 1" class="d-flex justify-end mt-1 px-2">
-            <span class="text-caption font-weight-bold">Total Abonado: <span class="text-success">S/ {{ totalPagado }}</span></span>
+            <span class="text-caption font-weight-bold">Total Abonado: <span class="text-success">{{ simbolo() }} {{ totalPagado }}</span></span>
           </div>
         </div>
 
@@ -147,6 +147,10 @@ const totalPagado = computed(() => {
 })
 
 const formatMoney = (val) => parseFloat(val || 0).toFixed(2)
+
+// Símbolo de moneda. Todas las facturas/abonos de una orden comparten su
+// moneda (el vínculo la valida), así que caemos a la moneda de la orden.
+const simbolo = (currency) => ((currency || orderData.value.currency) === 'USD' ? '$' : 'S/')
 
 const irAOrden = () => {
   router.push({ path: '/orders', query: { buscar_orden: props.orderNumber } }).catch(()=>{})

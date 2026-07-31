@@ -5,6 +5,9 @@ class InventoryDataService {
     getAll(params = {}) {
         return axios.get("inventory/items/", { headers: authHeader(), params: params });
     }
+    getNextId() {
+        return axios.get("inventory/items/next_id/", { headers: authHeader() });
+    }
     get(id) {
         return axios.get(`inventory/items/${id}/`, { headers: authHeader() });
     }

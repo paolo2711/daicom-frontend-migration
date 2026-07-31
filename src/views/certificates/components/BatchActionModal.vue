@@ -381,7 +381,7 @@ const confirmAction = async () => {
     if (action.value === 'notify') {
       const ids = aptos.map(i => i.id)
       await CertificateDataService.requestBatchSignatures(ids)
-      $swal.fire({ ...appStore.ToastGuardadoExito, title: '¡Solicitud Registrada!' })
+      $swal.fire({ ...appStore.toastGuardadoExito, title: '¡Solicitud Registrada!' })
       emit('clearSelection')
       close()
     } 

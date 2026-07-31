@@ -1,8 +1,25 @@
 import CertificateDataService from '@/services/certificates/certificateDataService'
 
+// Versión al cargar la pestaña; si el back reporta otra al reconectar, hubo deploy.
+let bootVersion = null
+
 export default {
     handle(data, appStore, swal) {
         const currentUser = JSON.parse(localStorage.getItem('user')) || {};
+
+        // Versión de la app (viene del back por WS).
+        if (data.message && data.message.action === 'APP_VERSION') {
+            const v = data.message.version;
+            if (v) {
+                if (bootVersion === null) {
+                    bootVersion = v;
+                    if (appStore) appStore.serverVersion = v;
+                } else if (v !== bootVersion) {
+                    appStore.updateAvailable = true; // cambió = hubo deploy
+                }
+            }
+            return;
+        }
 
         // Función auxiliar para forzar la sincronización del contador con la Base de Datos
         const updatePendingCount = () => {
@@ -33,6 +50,15 @@ export default {
             window.dispatchEvent(new CustomEvent('wss-reload-orders-rental'));
             return;
         } 
+        if (data.message === 'RELOAD_DOCUMENTS') {
+            window.dispatchEvent(new CustomEvent('wss-reload-documents'));
+            return;
+        }
+
+        if (data.message === 'RELOAD_INVOICES') {
+            window.dispatchEvent(new CustomEvent('wss-reload-invoices'));
+            return;
+        }
         
         if (data.message && data.message.action === 'UPDATE_ROW') {
             updatePendingCount();
@@ -40,6 +66,10 @@ export default {
                 window.dispatchEvent(new CustomEvent('wss-update-row', { detail: data.message.cert_id }));
             } else if (data.message.order_id) {
                 window.dispatchEvent(new CustomEvent('wss-update-order-row', { detail: data.message.order_id }));
+            } else if (data.message.invoice_id) {
+                window.dispatchEvent(new CustomEvent('wss-update-invoice-row', { detail: data.message.invoice_id }));
+            } else if (data.message.doc_id) {
+                window.dispatchEvent(new CustomEvent('wss-update-document-row', { detail: data.message.doc_id }));
             }
             return;
         }

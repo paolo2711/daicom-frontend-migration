@@ -4,6 +4,9 @@
       <base-modal-header :title="dialogTitle" icon="mdi-account-plus" @close="closeDialog" />
 
       <v-card-text class="pt-4">
+        <v-alert v-if="!props.client" type="info" variant="tonal" density="compact" class="mb-4" icon="mdi-information-outline">
+          Carga manual. Si ya tenés el RUC/DNI a mano, el buscador (lupa grande) es más rápido: valida contra RENIEC/SUNAT y evita duplicados automáticamente.
+        </v-alert>
         <v-form ref="formRef" @submit.prevent v-model="isValid">
           <v-row>
             <v-col cols="12">
@@ -18,10 +21,9 @@
                 :rules="client_documentType_rules" @update:model-value="onDocumentTypeChange" />
             </v-col>
             <v-col cols="6">
-              <v-text-field v-model="formData.document" label="Documento" :disabled="formData.documentType === 3"
+              <v-text-field v-model="formData.document" label="Documento (*)" :disabled="!formData.documentType"
                 density="compact" variant="outlined" hide-details="auto" :rules="dynamicDocumentRules"
-                @keypress="isDigit" :append-inner-icon="showDocSearchIcon ? 'mdi-magnify' : ''"
-                :loading="isSearchingDoc" @click:append-inner="buscarDatosEnApiPeru" />
+                @keypress="isDigit" />
             </v-col>
           </v-row>
           <v-row>
@@ -59,7 +61,6 @@ import ClientDataService from '@/services/clients/clientDataService'
 import ClientRules from '@/validators/rules/clientRules'
 import Characters from '@/validators/commonValidators/characters'
 import ClientMappers from '@/mappers/clientMappers'
-import ApiPeruService from '@/services/external/apiPeruService'
 import { useAppStore } from '@/stores/appStore'
 
 const props = defineProps({
@@ -79,7 +80,6 @@ const dialogModel = computed({
 const formRef = ref(null)
 const isSending = ref(false)
 const isValid = ref(false)
-const isSearchingDoc = ref(false)
 
 const formData = reactive({
   name: '',
@@ -94,7 +94,6 @@ const formData = reactive({
 const documentTypes = [
   { value: 1, name: 'DNI' },
   { value: 2, name: 'RUC' },
-  { value: 3, name: 'SIN DOCUMENTO' },
 ]
 
 const client_name_rules = ClientRules.client_name_rules()
@@ -107,8 +106,8 @@ const client_email_rules = ClientRules.client_email_rules()
 const dialogTitle = computed(() => props.client ? 'Editar Cliente' : 'Nuevo Cliente')
 
 const dynamicDocumentRules = computed(() => {
-  if (formData.documentType === 3) return []
-  const baseRules = [...(client_document_rules || [])]
+  // Ahora el documento siempre es obligatorio
+  const baseRules = [...(client_document_rules || []), v => !!v || 'El documento es obligatorio']
   const lengthRule = v => {
     if (!v) return true
     if (formData.documentType === 1) return v.length === 8 || 'El DNI debe tener exactamente 8 dígitos'
@@ -116,10 +115,6 @@ const dynamicDocumentRules = computed(() => {
     return true
   }
   return [...baseRules, lengthRule]
-})
-
-const showDocSearchIcon = computed(() => {
-  return !props.client && (formData.documentType === 1 || formData.documentType === 2) && !!formData.document
 })
 
 watch(() => props.modelValue, (val) => {
@@ -135,7 +130,7 @@ watch(() => props.modelValue, (val) => {
 })
 
 const onDocumentTypeChange = () => {
-  if (formData.documentType === 3) formData.document = ''
+  formData.document = ''
 }
 
 const save = async () => {
@@ -155,7 +150,7 @@ const save = async () => {
     }
   } catch (e) {
     let errorText = ''
-    const fieldNames = { email: 'Email', name: 'Nombre', documentType: 'Tipo de documento' }
+    const fieldNames = { email: 'Email', name: 'Nombre', documentType: 'Tipo de documento', document: 'Documento' }
     if (e.response?.data) {
       for (const key in e.response.data) {
         const field = fieldNames[key] || key
@@ -171,24 +166,6 @@ const save = async () => {
 const closeDialog = () => {
   formRef.value?.reset()
   emit('update:modelValue', false)
-}
-
-const buscarDatosEnApiPeru = async () => {
-  if (!formData.document || props.client) return
-  isSearchingDoc.value = true
-  try {
-    if (formData.documentType === 1) {
-      formData.name = await ApiPeruService.consultaDNI(formData.document)
-    } else if (formData.documentType === 2) {
-      const res = await ApiPeruService.consultaRUC(formData.document)
-      formData.name = res.compania
-      formData.address = res.direccion
-    }
-  } catch {
-    Swal.fire({ icon: 'warning', title: 'No encontrado', text: 'No se encontraron datos para este documento.' })
-  } finally {
-    isSearchingDoc.value = false
-  }
 }
 
 const isDigit = (e) => Characters.checkDigits(e, false)

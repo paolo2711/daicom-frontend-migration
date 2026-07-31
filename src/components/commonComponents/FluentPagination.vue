@@ -21,22 +21,38 @@
         <span class="text-caption text-md-body-2 text-medium-emphasis ml-3">de {{ totalItems }} en total</span>
       </div>
 
-      <v-pagination
-        :model-value="page"
-        @update:model-value="changePage"
-        :length="Math.ceil(totalItems / itemsPerPage) || 1"
-        :total-visible="7"
-        density="compact"
-        class="fluent-pagination my-0"
-        next-icon="mdi-chevron-right"
-        prev-icon="mdi-chevron-left"
-      />
+      <div class="d-flex align-center my-1">
+        <v-pagination
+          :model-value="page"
+          @update:model-value="changePage"
+          :length="totalPages"
+          :total-visible="5"
+          density="compact"
+          class="fluent-pagination my-0"
+          next-icon="mdi-chevron-right"
+          prev-icon="mdi-chevron-left"
+        />
+        <v-text-field
+          v-if="totalPages > 5"
+          v-model.number="gotoPage"
+          type="number"
+          density="compact"
+          variant="outlined"
+          hide-details
+          single-line
+          placeholder="Pág."
+          class="fluent-goto ml-2"
+          @keyup.enter="irAPagina"
+        />
+      </div>
 
     </div>
   </div>
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
+
 const props = defineProps({
   page:         { type: Number, required: true },
   itemsPerPage: { type: Number, required: true },
@@ -44,6 +60,9 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:page', 'update:itemsPerPage'])
+
+const totalPages = computed(() => Math.ceil(props.totalItems / props.itemsPerPage) || 1)
+const gotoPage = ref(null)
 
 function changePage(newPage) {
   emit('update:page', newPage)
@@ -53,10 +72,19 @@ function changeItemsPerPage(newItemsPerPage) {
   emit('update:itemsPerPage', newItemsPerPage)
   emit('update:page', 1)
 }
+
+// Ir directo a una página escrita (útil cuando hay muchas páginas).
+function irAPagina() {
+  let p = parseInt(gotoPage.value, 10)
+  if (!p || isNaN(p)) return
+  p = Math.min(Math.max(p, 1), totalPages.value)
+  emit('update:page', p)
+  gotoPage.value = null
+}
 </script>
 
 <style>
-.fluent-footer { width: 100%; background: transparent; }
+.fluent-footer { width: 100%; background: transparent; gap: 6px 12px; }
 .fluent-per-page-activator { cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: background-color 0.2s ease; user-select: none; }
 .v-theme--light .fluent-per-page-activator:hover { background-color: rgba(0, 0, 0, 0.05); }
 .v-theme--dark  .fluent-per-page-activator:hover { background-color: rgba(255, 255, 255, 0.08); }
@@ -90,4 +118,16 @@ function changeItemsPerPage(newItemsPerPage) {
   color: rgb(var(--v-theme-primary)) !important;
   font-weight: bold;
 }
+
+/* Input "Ir a página" compacto (misma altura que los botones, sin flechitas) */
+.fluent-goto { max-width: 58px; }
+.fluent-goto .v-field__input {
+  min-height: 32px !important;
+  padding: 0 6px !important;
+  font-size: 0.8rem;
+  text-align: center;
+}
+.fluent-goto input::-webkit-outer-spin-button,
+.fluent-goto input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.fluent-goto input[type=number] { -moz-appearance: textfield; }
 </style>

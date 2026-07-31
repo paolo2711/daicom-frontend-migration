@@ -22,48 +22,31 @@
               </v-row>
 
               <v-row align="center">
-                <v-col cols="12" md="4">
+                <v-col cols="12" md="8">
                   <v-autocomplete 
-                    v-model="selected_equipment_name" 
-                    :items="unique_catalog_names" 
+                    v-model="certificate.equipment" 
+                    :items="equipments_catalog" 
                     :loading="loading_equipments"
-                    label="Equipo (Familia)"
+                    v-model:search="search_equipment"
+                    item-title="name" item-value="id"
+                    label="Equipo"
                     density="compact" variant="outlined" hide-details="auto" 
                     prepend-inner-icon="mdi-toolbox-outline"
-                    placeholder="Seleccione familia..."
-                    @update:model-value="onFamilyChange"
+                    placeholder="Seleccione un equipo..."
+                    :custom-filter="filtroSinTildes"
                     clearable
                   />
                 </v-col>            
                 <v-col cols="12" md="4">
-                  <v-autocomplete 
-                    v-model="selected_variant_obj" 
-                    :items="filtered_equipment_variants" 
-                    :disabled="!selected_equipment_name"
-                    item-title="type_display" 
-                    return-object
-                    label="Característica / Tipo"
-                    density="compact" variant="outlined" hide-details="auto" 
-                    prepend-inner-icon="mdi-shape-outline"
-                    placeholder="Seleccione tipo..."
-                    no-data-text="No hay variantes registradas"
-                    @update:model-value="onVariantSelect"
-                    clearable
-                  />
-                </v-col>            
-                <v-col cols="12" md="4">
-                  <v-btn color="secondary" variant="outlined" block class="font-weight-bold" style="height: 40px;" @click="equipmentModalRef.open()">
-                    <v-icon start>mdi-plus</v-icon> Nuevo al Catálogo
+                  <v-btn color="secondary" variant="outlined" block class="font-weight-bold" style="height: 40px;" @click="equipoMaestroModalRef?.open()">
+                    <v-icon start>mdi-plus</v-icon> CATALOGO
                   </v-btn>
                 </v-col>
               </v-row>
 
               <v-row align="center" class="mt-2">
                 <v-col cols="12" md="9">
-                  <v-autocomplete v-model="certificate.client" hide-details="auto" density="compact"
-                            :loading="loading_clients"
-                            :items="clients" v-model:search="search_client"
-                            item-title="name" item-value="id" clearable variant="outlined" label="Cliente (*)"/>
+                  <ClientSmartSearch v-model="certificate.client" />
                 </v-col>
                 <v-col cols="12" md="3">
                   <v-btn color="primary" variant="flat" block height="40" @click="clientDialogOpen = true">
@@ -177,20 +160,19 @@
         <v-btn :disabled="window_step===2" color="primary" @click="window_step++" icon variant="text" size="large" class="ml-2"><v-icon>mdi-arrow-right</v-icon></v-btn>
         <v-spacer/> 
         <v-btn variant="flat" class="font-weight-bold rounded-lg mr-3 px-6" @click="close">Cancelar</v-btn>
-        <v-btn color="primary" variant="flat" elevation="2"class="text-white font-weight-bold rounded-lg px-6" @click="save" 
-            :disabled="!certificate.client || !certificate.lab || !selected_variant_obj || is_on_sending_process" 
+        <v-btn color="primary" variant="flat" elevation="2" class="text-white font-weight-bold rounded-lg px-6" @click="save" 
+            :disabled="!certificate.client || !certificate.lab || !certificate.equipment || is_on_sending_process" 
             :loading="is_on_sending_process">
         {{ isEdit ? 'Guardar Cambios' : 'Registrar' }}
         </v-btn>
       </v-card-actions>
     </v-card>
 
-    <equipment-modal ref="equipmentModalRef" :existingEquipments="equipments_catalog" :units="units_catalog" @reload="retrieveEquipmentsCatalog" @open-unit-modal="unitModalRef.open()" />
-    <unit-modal ref="unitModalRef" @reload="retrieveEquipmentsCatalog" />
 
     <client-form-dialog v-model="clientDialogOpen" @reloadListComponent="retrieveClientes('')" />
     <lab-form-dialog v-model="labDialogOpen" @reloadListComponent="retrieveLabs('')" />
-
+    
+    <equipo-maestro-modal ref="equipoMaestroModalRef" @reload="retrieveEquipmentsCatalog('')" />
   </v-dialog>
 </template>
 
@@ -198,6 +180,8 @@
 import { ref, computed, watch, getCurrentInstance, onMounted, nextTick } from 'vue'
 import DatePicker from "@/components/commonComponents/DatePicker.vue"
 import CertificatesRules from "@/validators/rules/certificatesRules.js"
+import EquipmentDataService from "@/services/equipments/equipmentDataService.js"
+import EquipmentMappers from "@/mappers/equipmentMappers.js"
 import ClientDataService from "@/services/clients/clientDataService.js"
 import ClientMappers from "@/mappers/clientMappers.js"
 import LabDataService from "@/services/labs/labDataService.js"
@@ -205,11 +189,13 @@ import LabMappers from "@/mappers/labMappers.js"
 import CertificateDataService from "@/services/certificates/certificateDataService.js"
 import Characters from "@/validators/commonValidators/characters.js"
 import CertificateMappers from "@/mappers/certificateMappers.js"
-import EquipmentDataService from "@/services/equipments/equipmentDataService.js"
-import UnitDataService from "@/services/equipments/unitDataService.js"
+
+
 import CorrelativeDataService from "@/services/correlative/correlativeDataService.js"
-import EquipmentModal from "@/views/equipments/components/EquipmentModal.vue"
-import UnitModal from "@/views/equipments/components/UnitModal.vue"
+
+
+import ClientSmartSearch from '@/components/shared/ClientSmartSearch.vue'
+import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal.vue'
 
 import { useAppStore } from '@/stores/appStore'
 import { defineAsyncComponent } from 'vue'
@@ -224,9 +210,9 @@ const appStore = useAppStore()
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
 
-const equipmentModalRef = ref(null)
-const unitModalRef = ref(null)
+
 const smartForm = ref(null)
+const equipoMaestroModalRef = ref(null)
 
 const dialog = ref(false)
 const clientDialogOpen = ref(false)
@@ -244,12 +230,6 @@ const permiso_solicitar_firma = computed(() => {
   const permissions = user.action_permissions || []
   return isAdmin || permissions.includes(14) || permissions.includes(10)
 })
-
-const equipments_catalog = ref([])
-const units_catalog = ref([])
-const loading_equipments = ref(false)
-const selected_equipment_name = ref(null)
-const selected_variant_obj = ref(null)
 
 const certificate_client_rules = CertificatesRules.client_rules()
 
@@ -277,6 +257,26 @@ const {
   () => certificate.value.lab
 )
 
+// Instancia del buscador de Equipos usando el mismo Composable global
+// (antes traia los 250+ equipos de golpe con page_size=1000000000)
+const { 
+  items: equipments_catalog, 
+  loading: loading_equipments, 
+  searchQuery: search_equipment, 
+  retrieveData: retrieveEquipmentsCatalog 
+} = usePaginatedSearch(
+  (page, size, query) => EquipmentDataService.getFiltered(page, size, query),
+  EquipmentMappers.getMap,
+  () => certificate.value.equipment
+)
+
+// Filtro personalizado
+const filtroSinTildes = (itemTitle, queryText, item) => {
+  if (!queryText) return true
+  const normalizar = (texto) => (texto || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  return normalizar(itemTitle).includes(normalizar(queryText))
+}
+
 const correlative_preview = computed(() => {
   let mask = ''
   if (certificate.value.emission_date) mask = certificate.value.emission_date.slice(0,4) + '-'
@@ -285,18 +285,10 @@ const correlative_preview = computed(() => {
   return mask
 })
 
-const unique_catalog_names = computed(() => {
-  const names = equipments_catalog.value.map(e => e.equipment_name)
-  return [...new Set(names)].sort()
-})
 
-const filtered_equipment_variants = computed(() => {
-  if (!selected_equipment_name.value) return []
-  return equipments_catalog.value.filter(e => e.equipment_name === selected_equipment_name.value)
-})
 
 onMounted(() => {
-  retrieveEquipmentsCatalog()
+  retrieveEquipmentsCatalog('')
 })
 
 const open = (item = null) => {
@@ -312,15 +304,10 @@ const open = (item = null) => {
     
     if (item.client_data) clients.value = [item.client_data]
     if (item.lab_data) labs.value = [item.lab_data]
-
-    const found = equipments_catalog.value.find(eq => eq.clean_name === certificate.value.equipment)
-    if (found) {
-      selected_equipment_name.value = found.equipment_name
-      selected_variant_obj.value = found
-    } else {
-      selected_equipment_name.value = certificate.value.equipment
-      selected_variant_obj.value = null
-    }
+    // 'equipment' es texto plano (no FK), asi que armamos el item nosotros
+    // para que el autocomplete muestre el valor actual aunque no este en la
+    // primera pagina de resultados del buscador.
+    if (item.equipment) equipments_catalog.value = [{ id: item.equipment, name: item.equipment }]
   } else {
     isEdit.value = false
     let today = (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().substr(0, 10)
@@ -330,8 +317,6 @@ const open = (item = null) => {
       calibration_date: today, emission_date: today, signed_pdf: null, uploaded_xls: '', observations: '',
       signature_requested: false
     }
-    selected_equipment_name.value = null
-    selected_variant_obj.value = null
     retrieveClientes('')
     retrieveLabs('')
     retrieveCorrelative()
@@ -345,56 +330,6 @@ const close = () => {
   dialog.value = false
   window_step.value = 1
 }
-
-const retrieveEquipmentsCatalog = () => {
-  loading_equipments.value = true
-  
-  UnitDataService.getAll().then(res => {
-    units_catalog.value = res.data.results || res.data
-  })
-
-  EquipmentDataService.getAll().then((response) => {
-    let items = response.data.results || response.data
-    equipments_catalog.value = items.map(eq => {
-      let fullName = eq.type ? `${eq.equipment_name} - ${eq.type}` : eq.equipment_name
-      let unitSym = eq.unit_detail ? eq.unit_detail.symbol : '--'
-      return {
-        ...eq,
-        display_name: `${fullName} (${unitSym})`,
-        clean_name: fullName,
-        type_display: eq.type ? `${eq.type} (${unitSym})` : `Estándar (${unitSym})`,
-        unit_symbol: eq.unit_detail ? eq.unit_detail.symbol : ''
-      }
-    })
-  }).finally(() => { loading_equipments.value = false })
-}
-
-const onFamilyChange = () => {
-  selected_variant_obj.value = null
-  certificate.value.equipment = ''
-
-  if (selected_equipment_name.value) {
-    nextTick(() => {
-      if (filtered_equipment_variants.value.length === 1) {
-        selected_variant_obj.value = filtered_equipment_variants.value[0]
-        onVariantSelect(filtered_equipment_variants.value[0])
-      }
-    })
-  }
-}
-
-const onVariantSelect = (val) => {
-  if (val && typeof val === 'object') {
-    certificate.value.equipment = val.clean_name
-    if (!certificate.value.indication_interval) {
-      certificate.value.indication_interval = val.unit_symbol
-    }
-  } else {
-    certificate.value.equipment = ''
-  }
-}
-
-
 
 const retrieveCorrelative = () => {
   CorrelativeDataService.get(certificate.value.certificate_type).then((response) => {
@@ -433,7 +368,7 @@ const save = () => {
     }
 
     dialog.value = false
-    $swal.fire(appStore.ToastGuardando || { title: 'Guardando...' })
+    $swal.fire(appStore.toastGuardando)
 
     let request = isEdit.value 
       ? CertificateDataService.update(certificate.value.id, data)
@@ -446,13 +381,13 @@ const save = () => {
         }
         // Nota: Si es nuevo, el backend (signals.py) ya emite el RELOAD_CERTIFICATES por WebSocket
         close()
-        $swal.fire(appStore.ToastGuardadoExito || { title: 'Éxito', icon: 'success' })
+        $swal.fire(appStore.toastGuardadoExito)
       }
     }).catch((e) => {
       dialog.value = true
       let errorMsg = 'Error al procesar la solicitud.'
       if (e.response && e.response.data) errorMsg = JSON.stringify(e.response.data).substring(0, 150)
-      $swal.fire({ ...(appStore.ToastErrorRed || {}), title: 'Error', text: errorMsg, icon: 'error' })
+      $swal.fire({ ...appStore.toastErrorRed, title: 'Error', text: errorMsg, icon: 'error' })
     }).finally(() => {
       is_on_sending_process.value = false
     })

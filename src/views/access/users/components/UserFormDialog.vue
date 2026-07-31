@@ -217,10 +217,14 @@ const save = async () => {
   } catch (e) {
     let errorText = ''
     const fieldNames = { email: 'Email', username: 'Usuario' }
-    if (e.response?.data) {
-      for (const key in e.response.data) {
+    const data = e.response?.data
+    if (data?.detail) {
+      // Errores de permiso/autenticación (ej. no eres admin) → mensaje directo.
+      errorText = data.detail
+    } else if (data) {
+      for (const key in data) {
         const field = fieldNames[key] || key
-        errorText += `<b>${field}:</b> ${e.response.data[key]}\n`
+        errorText += `<b>${field}:</b> ${data[key]}\n`
       }
     }
     Swal.fire({ ...appStore.errorSavedOptions, html: errorText || 'Ocurrió un error al guardar el usuario.' })

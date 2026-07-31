@@ -37,8 +37,23 @@
         </template>
 
         <template v-slot:item.actions="{ item }">
-          <v-icon class="d-inline" @click="openEditDialog(item)">mdi-pencil</v-icon>
-          <v-icon class="d-inline ml-2" color="accent" @click="deleteLabConfirm(item)">mdi-delete</v-icon>
+          <v-tooltip location="bottom">
+            <template v-slot:activator="{ props }">
+              <v-btn v-bind="props" icon variant="text" density="comfortable" @click="openEditDialog(item)">
+                <v-icon>mdi-pencil</v-icon>
+              </v-btn>
+            </template>
+            <span>Editar Laboratorio</span>
+          </v-tooltip>
+
+          <v-tooltip location="bottom" color="error">
+            <template v-slot:activator="{ props }">
+              <v-btn v-bind="props" icon color="red-darken-2" variant="text" density="comfortable" @click="deleteLabConfirm(item)">
+                <v-icon>mdi-delete-outline</v-icon>
+              </v-btn>
+            </template>
+            <span>Eliminar Laboratorio</span>
+          </v-tooltip>
         </template>
       </v-data-table-server>
     </table-loading-overlay>

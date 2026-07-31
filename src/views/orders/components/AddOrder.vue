@@ -3,6 +3,12 @@
     <v-card style="max-height: 90vh; display: flex; flex-direction: column;">
       <base-modal-header :title="`Generar Orden de ${order.order_type === 1 ? 'Servicio' : 'Alquiler'}`" icon="mdi-file-document-plus" @close="close">
         <span v-if="next_order_number">Sig. Orden: <span class="font-weight-bold text-primary ml-1">{{ next_order_number }}</span></span>
+        <div class="currency-switch ml-4">
+          <v-btn-toggle v-model="order.currency" mandatory density="compact" class="currency-switch__toggle">
+            <v-btn value="PEN">S/</v-btn>
+            <v-btn value="USD">$</v-btn>
+          </v-btn-toggle>
+        </div>
       </base-modal-header>
 
       <v-card-text class="pt-4" style="overflow-y: auto; flex-grow: 1;">
@@ -10,10 +16,7 @@
 
           <v-row align="start" dense>
             <v-col cols="12" md="9">
-              <v-autocomplete v-model="order.client" density="compact" :loading="loading_clients"
-                              :items="clients" v-model:search="search_client"
-                              item-title="name" item-value="id" variant="outlined" hide-details="auto"
-                              label="Cliente (* Obligatorio)" :rules="[v => !!v || 'Debe seleccionar un cliente']" />
+              <ClientSmartSearch v-model="order.client" />
             </v-col>
             <v-col cols="12" md="3" class="pt-1">
               <v-btn color="primary" variant="flat" block height="40" @click="clientDialogOpen = true">
@@ -22,31 +25,8 @@
             </v-col>
           </v-row>
 
-          <template v-if="order.order_type === 2">
-            <v-row dense class="mt-3">
-              <v-col cols="12" md="6">
-                <v-text-field v-model="order.client_order_reference" label="Ref. OC del Cliente" variant="outlined" density="compact" hide-details="auto" prepend-inner-icon="mdi-pound" placeholder="Ej: OC-99234" />
-              </v-col>
-            </v-row>
-
-            <v-row dense class="mt-2">
-              <v-col cols="12" md="6">
-                <v-file-input v-model="order.quote_pdf" label="Cotización DAICOM" variant="outlined" density="compact" hide-details="auto" accept="application/pdf" prepend-inner-icon="mdi-file-pdf-box" show-size />
-              </v-col>
-              <v-col cols="12" md="6">
-                <v-file-input v-model="order.client_oc_pdf" label="OC Cliente (PDF)" variant="outlined" density="compact" hide-details="auto" accept="application/pdf" prepend-inner-icon="mdi-file-document" show-size />
-              </v-col>
-            </v-row>
-
-            <v-row dense class="mt-2">
-              <v-col cols="12" md="6">
-                <v-file-input v-model="order.dispatch_guide_pdf" label="Guía de Remisión (Salida)" variant="outlined" density="compact" hide-details="auto" accept="application/pdf" prepend-inner-icon="mdi-truck-fast" show-size />
-              </v-col>
-              <v-col cols="12" md="6">
-                <v-file-input v-model="order.return_guide_pdf" label="Guía de Retorno (Opcional)" variant="outlined" density="compact" hide-details="auto" accept="application/pdf" prepend-inner-icon="mdi-truck-check" show-size />
-              </v-col>
-            </v-row>
-          </template>
+          <!-- Documentos del alquiler (cotización, OC, guías, valorizaciones) se
+               gestionan luego en Editar → hogar único de documentos. Crear queda mínimo. -->
 
           <v-divider class="my-4" />
 
@@ -71,14 +51,15 @@
 </template>
 
 <script setup>
+import ClientSmartSearch from '@/components/shared/ClientSmartSearch.vue'
 import { ref, watch, nextTick, defineAsyncComponent, getCurrentInstance } from 'vue'
 import { useAppStore } from '@/stores/appStore'
 import ClientDataService from '@/services/clients/clientDataService'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import ClientMappers from '@/mappers/clientMappers'
 import OrderDataService from '@/services/certificates/orderDataService'
-import FormOrderService from './FormOrderService.vue'
-import FormOrderRental from './FormOrderRental.vue'
+import FormOrderService from './services/FormOrderService.vue'
+import FormOrderRental from './rentals/FormOrderRental.vue'
 
 const ClientFormDialog = defineAsyncComponent(() => import('@/views/clients/components/ClientFormDialog.vue'))
 
@@ -122,7 +103,7 @@ watch(items_to_save, (newVal) => {
 function open(tipo) {
   const draft = tipo === 1 ? localStorage.getItem('daicom_draft_items_1') : null
   items_to_save.value = []
-  order.value = { client: null, order_type: tipo }
+  order.value = { client: null, order_type: tipo, currency: 'PEN' }
   dialog.value = true
   retrieveClientes('')
   calculateNextNumber()
@@ -170,26 +151,15 @@ async function save() {
   is_on_sending_process.value = true
 
   try {
-    const payload_orden = { client: order.value.client, order_type: order.value.order_type }
+    const payload_orden = { client: order.value.client, order_type: order.value.order_type, currency: order.value.currency }
     if (order.value.order_type === 2 && order.value.client_order_reference) {
       payload_orden.client_order_reference = order.value.client_order_reference
     }
     payload_orden.items = items_to_save.value
 
-    const orderResponse = await OrderDataService.create(payload_orden)
-    const newOrderId = orderResponse.data.id
-
-    if (order.value.order_type === 2) {
-      let fileData = new FormData()
-      let hasFiles = false
-      if (order.value.quote_pdf)         { fileData.append('quote_pdf', order.value.quote_pdf); hasFiles = true }
-      if (order.value.client_oc_pdf)     { fileData.append('client_oc_pdf', order.value.client_oc_pdf); hasFiles = true }
-      if (order.value.dispatch_guide_pdf){ fileData.append('dispatch_guide_pdf', order.value.dispatch_guide_pdf); hasFiles = true }
-      if (order.value.return_guide_pdf)  { fileData.append('return_guide_pdf', order.value.return_guide_pdf); hasFiles = true }
-      if (hasFiles) {
-        await OrderDataService.uploadInvoice(newOrderId, fileData)
-      }
-    }
+    await OrderDataService.create(payload_orden)
+    // Los documentos del alquiler (cotización, OC, guías, valorizaciones) se
+    // suben luego desde Editar. Crear solo registra la orden.
 
     $swal.fire(appStore.successSavedOptions).then(() => {
       const currentUser = JSON.parse(localStorage.getItem('user')) || {}
@@ -225,3 +195,30 @@ function close() {
 
 defineExpose({ open })
 </script>
+
+<style scoped>
+.currency-switch {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.currency-switch__toggle {
+  height: 26px !important;
+  border-radius: 20px !important;
+  overflow: hidden;
+  border: 1px solid rgba(0,0,0,0.12) !important;
+}
+.currency-switch__toggle .v-btn {
+  min-width: 36px !important;
+  height: 26px !important;
+  font-size: 0.75rem !important;
+  font-weight: 700;
+  padding: 0 8px !important;
+  letter-spacing: 0;
+}
+/* Forzamos el color primario dinámico de DAICOM (el azul/tema principal) */
+.currency-switch__toggle .v-btn--active {
+  background-color: rgb(var(--v-theme-primary)) !important;
+  color: #fff !important;
+}
+</style>

@@ -1,17 +1,28 @@
 <template>
   <v-container fluid class="down-top-padding pa-0">
 
-    <v-card variant="flat" class="border rounded-lg mb-4 pa-2 elevation-0">
-      <v-text-field
-        v-model="search"
-        append-inner-icon="mdi-magnify"
-        label="Buscar cliente por nombre o documento..."
-        single-line
-        hide-details
-        variant="outlined"
-        density="compact"
-        @update:model-value="applyFilters"
-      />
+    <v-card variant="flat" class="border rounded-lg mb-4 pa-4 bg-surface">
+      <div class="d-flex flex-wrap align-center" style="gap: 16px;">
+        <v-text-field
+          v-model="search"
+          hide-details
+          density="compact"
+          prepend-inner-icon="mdi-magnify"
+          variant="outlined"
+          label="Buscar cliente por nombre o documento..."
+          clearable
+          style="max-width: 300px;"
+          @update:model-value="applyFilters"
+        />
+        <v-switch
+          v-model="filterNeedsReview"
+          label="Solo posibles duplicados"
+          color="error"
+          hide-details
+          density="compact"
+          @update:model-value="applyFilters"
+        />
+      </div>
     </v-card>
 
     <table-loading-overlay :loading="loading_list" :isEmpty="clients.length === 0">
@@ -21,6 +32,7 @@
         :items-length="total_clients"
         :loading="loading_list"
         item-value="id"
+        :hover="false"
         class="elevation-0 rounded-lg tabla-mejorada bg-surface"
         style="border: 1px solid rgba(0,0,0,0.12);"
         v-model:page="options.page"
@@ -37,9 +49,33 @@
           />
         </template>
 
+        <template v-slot:item.name="{ item }">
+          <div class="d-flex align-center">
+            <span class="font-weight-bold">{{ item.name }}</span>
+            <v-chip v-if="item.needs_review" size="x-small" color="error" variant="flat" class="ml-2 font-weight-bold">
+              <v-icon start size="x-small">mdi-alert</v-icon> Revisar
+            </v-chip>
+          </div>
+        </template>
+
         <template v-slot:item.actions="{ item }">
-          <v-icon class="d-inline" @click="openEditDialog(item)">mdi-pencil</v-icon>
-          <v-icon class="d-inline ml-2" color="accent" @click="deleteClientConfirm(item)">mdi-delete</v-icon>
+          <v-tooltip location="bottom">
+            <template v-slot:activator="{ props }">
+              <v-btn v-bind="props" icon variant="text" density="comfortable" @click="openEditDialog(item)">
+                <v-icon>mdi-pencil</v-icon>
+              </v-btn>
+            </template>
+            <span>Editar Cliente</span>
+          </v-tooltip>
+
+          <v-tooltip location="bottom" color="error">
+            <template v-slot:activator="{ props }">
+              <v-btn v-bind="props" icon color="red-darken-2" variant="text" density="comfortable" @click="deleteClientConfirm(item)">
+                <v-icon>mdi-delete-outline</v-icon>
+              </v-btn>
+            </template>
+            <span>Eliminar Cliente</span>
+          </v-tooltip>
         </template>
 
       </v-data-table-server>
@@ -81,6 +117,7 @@ const total_clients = ref(0)
 const loading_list = ref(false)
 const options = ref({ page: 1, itemsPerPage: 15 })
 const search = ref('')
+const filterNeedsReview = ref(false)
 const dialogOpen = ref(false)
 const selectedClient = ref(null)
 
@@ -88,7 +125,10 @@ const retrieveAllClients = () => {
   if (loading_list.value) return
   loading_list.value = true
   const pageSize = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
-  ClientDataService.getFiltered(options.value.page, pageSize, search.value || '')
+  
+  const reviewParam = filterNeedsReview.value ? 'true' : ''
+  
+  ClientDataService.getFiltered(options.value.page, pageSize, search.value || '', reviewParam)
     .then((response) => {
       clients.value = response.data.results.map(ClientMappers.getMap)
       total_clients.value = response.data.count

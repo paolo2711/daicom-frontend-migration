@@ -34,13 +34,14 @@ export default [
         id: 7,
         name: 'Clientes',
     },
-    /*{
-        icon: 'mdi-file-document-multiple', 
-        title: 'Plantillas',
-        to: '/plantillas', 
+    // En src/layouts/full-layout/sidebar/SidebarItems.js
+    {
+        icon: 'mdi-file-document-multiple-outline', 
+        title: 'Documentos',
+        to: '/documentos', 
         id: 8, 
-        name: 'Plantillas',
-    },*/
+        name: 'Documentos de Gestión',
+    },
     {
         icon: 'mdi-clipboard-list-outline', 
         title: 'Inventario',

@@ -19,7 +19,6 @@ onMounted(() => {
     localStorage.setItem('dark', 'true')
     theme.global.name.value = 'dark'
     localStorage.setItem(VERSION_CSS, 'true')
-    console.log("Sistema: Se ha forzado la actualización de CSS y Modo Oscuro.")
   } else {
     const isDark = localStorage.getItem('dark') !== 'false'
     theme.global.name.value = isDark ? 'dark' : 'light'

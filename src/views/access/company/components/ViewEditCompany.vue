@@ -55,6 +55,26 @@
               <v-col cols="12" md="4">
                 <v-text-field v-model="company.operationality_correlative" label="Correlativo para Operatividad" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
               </v-col>
+
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.quote_correlative" label="Correlativo de Cotización" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.admission_form_correlative" label="Correlativo Formato de Ingreso" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.order_service_correlative" label="Correlativo Orden de Servicio" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.order_rental_correlative" label="Correlativo Orden de Alquiler" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.inventory_correlative" label="Correlativo Inventario (DAI-XXX)" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
             </v-row>
 
             <v-row class="mt-4">
@@ -114,6 +134,30 @@
               hide-details="auto" 
               prepend-icon="" 
               prepend-inner-icon="mdi-camera" 
+              class="mb-3"
+            />
+
+            <v-divider class="mb-3"></v-divider>
+            <div class="text-subtitle-2 font-weight-bold text-grey-darken-1 mb-3">Cuentas Bancarias</div>
+
+            <v-card v-if="bankAccountsPreview" variant="flat" class="bg-grey-lighten-4 mb-4 rounded-lg d-flex align-center justify-center overflow-hidden" style="min-height: 180px; border: 1px solid rgba(0,0,0,0.12);">
+              <v-img :src="bankAccountsPreview" contain max-height="250" class="w-100"></v-img>
+            </v-card>
+            <v-card v-else variant="flat" class="bg-grey-lighten-4 mb-4 rounded-lg d-flex align-center justify-center" style="min-height: 180px; border: 1px dashed rgba(0,0,0,0.24);">
+              <v-icon size="64" color="grey-lighten-1">mdi-bank-outline</v-icon>
+            </v-card>
+
+            <v-file-input 
+              v-model="uploadFiles.bank_accounts_image" 
+              label="Imagen de Cuentas Bancarias" 
+              density="compact" 
+              variant="outlined" 
+              show-size 
+              accept="image/png, image/jpeg" 
+              :disabled="!isEditing" 
+              hide-details="auto" 
+              prepend-icon="" 
+              prepend-inner-icon="mdi-bank" 
             />
           </v-col>
         </v-row>
@@ -157,9 +201,15 @@ const company = reactive({
   phone: '',
   email: '',
   image: '',
+  bank_accounts_image: '',
   accredited_correlative: '',
   non_accredited_correlative: '',
   operationality_correlative: '',
+  quote_correlative: '',
+  admission_form_correlative: '',
+  order_service_correlative: '',
+  order_rental_correlative: '',
+  inventory_correlative: '',
   accredited_correlative_pdf_first_page: '',
   accredited_correlative_pdf_other_pages: '',
   non_accredited_correlative_pdf_first_page: '',
@@ -169,6 +219,7 @@ const company = reactive({
 
 const uploadFiles = reactive({
   image: [],
+  bank_accounts_image: [],
   accFirst: [],
   accOther: [],
   nonAccFirst: [],
@@ -190,6 +241,14 @@ const logoPreview = computed(() => {
   return company.image || null
 })
 
+const bankAccountsPreview = computed(() => {
+  const f = Array.isArray(uploadFiles.bank_accounts_image) ? uploadFiles.bank_accounts_image[0] : uploadFiles.bank_accounts_image
+  if (f instanceof File) {
+    return URL.createObjectURL(f)
+  }
+  return company.bank_accounts_image || null
+})
+
 const getCompany = () => {
   is_loading.value = true
   CompanyDataService.get().then((response) => {
@@ -202,6 +261,7 @@ const getCompany = () => {
 
 const clearUploads = () => {
   uploadFiles.image = []
+  uploadFiles.bank_accounts_image = []
   uploadFiles.accFirst = []
   uploadFiles.accOther = []
   uploadFiles.nonAccFirst = []
@@ -232,6 +292,7 @@ const saveCompany = async () => {
   }
 
   appendFile('image', uploadFiles.image)
+  appendFile('bank_accounts_image', uploadFiles.bank_accounts_image)
   appendFile('accredited_correlative_pdf_first_page', uploadFiles.accFirst)
   appendFile('accredited_correlative_pdf_other_pages', uploadFiles.accOther)
   appendFile('non_accredited_correlative_pdf_first_page', uploadFiles.nonAccFirst)
@@ -239,6 +300,7 @@ const saveCompany = async () => {
 
   let prepare_data = Object.assign({}, company)
   delete prepare_data['image']
+  delete prepare_data['bank_accounts_image']
   delete prepare_data['accredited_correlative_pdf_first_page']
   delete prepare_data['accredited_correlative_pdf_other_pages']
   delete prepare_data['non_accredited_correlative_pdf_first_page']

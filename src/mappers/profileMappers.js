@@ -4,7 +4,8 @@ class ProfileMappers {
             username: element.username,
             first_name: element.first_name,
             last_name: element.last_name,
-            email: element.email
+            email: element.email,
+            signature_image: element.signature_image || null
         }
     }
 }

@@ -2,17 +2,22 @@ import axios from "axios";
 import authHeader from "@/services/auth-header";
 
 export default {
-  getFiltered(page, page_size, client, lab, emission_date__gt, emission_date__lt, correlative, certificate_type, signature_requested = false, pending_excel = false) {
+  getFiltered(page, page_size, client, lab, emission_date__gt, emission_date__lt, correlative, certificate_type, signature_requested = false, pending_excel = false, antapacay = false) {
     let url = `certificates?page=${page}&page_size=${page_size}&correlative=${correlative}&client=${client}&lab=${lab}&emission_date__gt=${emission_date__gt}&emission_date__lt=${emission_date__lt}&certificate_type=${certificate_type}`;
-    
+
     // chip de filtro de firma solicitada
     if (signature_requested) {
       url += `&signature_requested=true`;
     }
-    
+
     // chip de filtro de excel pendiente
     if (pending_excel) {
       url += `&pending_excel=true`;
+    }
+
+    // TEMPORAL Antapacay — solo certificados del cliente 60 (borrar al terminar contrato)
+    if (antapacay) {
+      url += `&antapacay=1`;
     }
 
     return axios.get(url, {

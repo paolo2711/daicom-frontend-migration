@@ -6,7 +6,11 @@
         icon="mdi-cash-register"
         @close="closeDialog"
       >
-        <span v-if="order">
+        <span v-if="invoice">
+          Factura:
+          <span class="font-weight-bold text-primary ml-1">{{ invoice.invoice_number || 'Sin número' }}</span>
+        </span>
+        <span v-else-if="order">
           Orden:
           <span class="font-weight-bold text-primary ml-1">{{ order.order_number }}</span>
         </span>
@@ -20,13 +24,13 @@
           <div class="text-subtitle-2 font-weight-bold mb-2">Historial de Pagos:</div>
 
           <v-alert
-            v-if="!order || !order.payments || order.payments.length === 0"
+            v-if="historialPagos.length === 0"
             type="info"
             variant="text"
             density="compact"
             class="mb-0"
           >
-            No hay pagos registrados para esta orden.
+            No hay pagos registrados todavía.
           </v-alert>
 
           <v-list
@@ -36,7 +40,7 @@
             lines="two"
           >
             <v-list-item
-              v-for="pago in order.payments"
+              v-for="pago in historialPagos"
               :key="pago.id"
               class="border-bottom"
             >
@@ -52,7 +56,7 @@
               </template>
 
               <v-list-item-title class="font-weight-bold">
-                S/ {{ pago.amount }}
+                {{ monedaActual === 'USD' ? '$' : 'S/' }} {{ pago.amount }}
               </v-list-item-title>
               <v-list-item-subtitle>
                 {{ pago.payment_method }} - {{ pago.payment_date }}
@@ -122,14 +126,31 @@
         <v-divider class="mx-6 mb-0" />
 
         <v-form ref="liquidarFormRef" @submit.prevent class="pa-4">
-          <div class="text-subtitle-2 font-weight-bold mb-3">
-            {{ editando ? 'Editar Abono:' : 'Registrar Nuevo Abono:' }}
+          <div class="d-flex align-center justify-space-between mb-3">
+            <div class="text-subtitle-2 font-weight-bold">
+              {{ editando ? 'Editar Abono:' : 'Registrar Nuevo Abono:' }}
+            </div>
+            <v-tooltip location="top">
+              <template v-slot:activator="{ props: tooltipProps }">
+                <v-chip
+                  v-bind="tooltipProps"
+                  :color="monedaActual === 'USD' ? 'green-darken-1' : 'blue-darken-1'"
+                  variant="tonal"
+                  size="small"
+                  class="font-weight-bold"
+                >
+                  <v-icon start size="14">mdi-cash-multiple</v-icon>
+                  {{ monedaActual === 'USD' ? 'USD' : 'PEN' }}
+                </v-chip>
+              </template>
+              <span>Se liquida en {{ monedaActual === 'USD' ? 'Dólares (US$)' : 'Soles (S/)' }}</span>
+            </v-tooltip>
           </div>
           <v-row density="compact">
             <v-col cols="12" md="6">
               <v-text-field
                 v-model="payment_data.amount"
-                label="Monto Pagado (S/)"
+                :label="`Monto Pagado (${monedaActual === 'USD' ? '$' : 'S/'})`"
                 variant="outlined"
                 density="compact"
                 type="number"
@@ -207,7 +228,8 @@ import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
-  order: { type: Object, default: null }
+  order: { type: Object, default: null },
+  invoice: { type: Object, default: null }
 })
 
 const emit = defineEmits(['update:modelValue', 'updateOrder', 'close'])
@@ -219,6 +241,11 @@ const dialogModel = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val)
 })
+
+// Unifica el contexto: el abono puede abrirse desde una FACTURA (caso
+// normal, panel) o desde una ORDEN (compatibilidad). La factura manda.
+const monedaActual = computed(() => props.invoice?.currency || props.order?.currency || 'PEN')
+const historialPagos = computed(() => props.invoice?.payments || props.order?.payments || [])
 
 const is_on_sending_process = ref(false)
 const file = ref(null)
@@ -269,6 +296,7 @@ const save = async () => {
 
     const data = new FormData()
     data.append('amount', payment_data.amount)
+    data.append('currency', monedaActual.value)
     data.append('payment_method', payment_data.payment_method)
     data.append('payment_date', payment_data.payment_date)
     data.append('notes', payment_data.notes)
@@ -277,12 +305,20 @@ const save = async () => {
       data.append('payment_proof', file.value)
     }
 
-    const peticion = editando.value
-      ? OrderDataService.updatePayment(pago_id_editar.value, data)
-      : OrderDataService.liquidate(props.order.id, data)
+    // El abono va a la FACTURA (caso normal). Si por compatibilidad se abrió
+    // desde una orden sin factura, cae al endpoint de orden.
+    let peticion
+    if (editando.value) {
+      peticion = OrderDataService.updatePayment(pago_id_editar.value, data)
+    } else if (props.invoice) {
+      peticion = OrderDataService.createInvoicePayment(props.invoice.id, data)
+    } else {
+      peticion = OrderDataService.liquidate(props.order.id, data)
+    }
 
     peticion
-      .then(() => { 
+      .then(() => {
+        emit('updateOrder')
         closeDialog()
         Swal.fire(appStore.successSavedOptions)
       })
@@ -323,7 +359,7 @@ const eliminarPago = (id) => {
   }).then((result) => {
     if (result.isConfirmed) {
       OrderDataService.deletePayment(id).then(() => {
-        Swal.fire('Eliminado', 'El abono ha sido borrado.', 'success')
+        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Abono eliminado' })
       }).catch(() => {
         Swal.fire('Error', 'No se pudo eliminar el abono.', 'error')
       })

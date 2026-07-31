@@ -3,8 +3,8 @@
     <v-row>
       <v-col cols="12">
         <div class="d-flex align-center mb-4">
-          <v-icon size="large" color="primary" class="mr-3">mdi-toolbox</v-icon>
-          <h2 class="text-h5 font-weight-bold mb-0">Gestión del Catálogo Maestro</h2>
+          <v-icon size="large" color="primary" class="mr-3">mdi-toolbox-outline</v-icon>
+          <h2 class="text-h5 font-weight-bold mb-0">Catálogo de Equipos y Servicios</h2>
         </div>
 
         <list-equipments ref="listEquipments" />

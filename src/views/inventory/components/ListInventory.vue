@@ -10,7 +10,6 @@
           hide-details
           variant="outlined"
           density="compact"
-          @update:model-value="options.page = 1"
         />
         <v-btn icon variant="text" class="ml-2" color="primary" @click="loadItems" :loading="loading">
           <v-icon>mdi-refresh</v-icon>
@@ -19,21 +18,20 @@
     </v-card>
 
     <table-loading-overlay :loading="loading" :isEmpty="equipos.length === 0">
-      <v-data-table
+      <v-data-table-server
         :headers="headers"
         :items="equipos"
-        :search="search"
+        :items-length="total"
+        :loading="loading"
         class="elevation-0 tabla-mejorada bg-surface"
-        v-model:page="options.page"
-        v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
       >
         <template v-slot:bottom>
           <fluent-pagination
             :page="options.page"
             :itemsPerPage="options.itemsPerPage"
-            :totalItems="filteredEquiposCount"
-            @update:page="options.page = $event"
+            :totalItems="total"
+            @update:page="onPageChange"
             @update:itemsPerPage="onItemsPerPageChange"
           />
         </template>
@@ -69,20 +67,20 @@
 
           <v-tooltip location="top">
             <template v-slot:activator="{ props }">
-              <v-btn icon variant="text" size="small" color="red" v-bind="props" @click="deleteItem(item)">
-                <v-icon size="small">mdi-delete</v-icon>
+              <v-btn icon variant="text" size="small" color="error" v-bind="props" @click="deleteItem(item)">
+                <v-icon size="small">mdi-delete-outline</v-icon>
               </v-btn>
             </template>
-            <span>Dar de Baja</span>
+            <span>Eliminar equipo</span>
           </v-tooltip>
         </template>
-      </v-data-table>
+      </v-data-table-server>
     </table-loading-overlay>
   </v-container>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 
 import Swal from 'sweetalert2'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
@@ -91,13 +89,12 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 
 const emit = defineEmits(['edit-item', 'view-history'])
 
-
-
-
 const search = ref('')
 const loading = ref(false)
 const equipos = ref([])
+const total = ref(0)
 const options = ref({ page: 1, itemsPerPage: 30 })
+let searchTimeout = null
 
 const headers = [
   { title: 'ID Interno', key: 'internal_id' },
@@ -116,30 +113,40 @@ const statusOptions = [
   { text: 'Baja', value: 4, color: 'grey' },
 ]
 
-const filteredEquiposCount = computed(() => {
-  if (!search.value) return equipos.value.length
-  const s = search.value.toLowerCase()
-  return equipos.value.filter(item =>
-    (item.internal_id && item.internal_id.toLowerCase().includes(s)) ||
-    (item.name && item.name.toLowerCase().includes(s)) ||
-    (item.brand && item.brand.toLowerCase().includes(s))
-  ).length
-})
-
-const onItemsPerPageChange = (newVal) => {
-  options.value.itemsPerPage = newVal
-  options.value.page = 1
-}
-
+// ── Carga server-side (paginación + búsqueda en el backend) ──
 const loadItems = () => {
   loading.value = true
-  InventoryDataService.getAll()
-    .then(response => {
-      equipos.value = response.data.results ? response.data.results : response.data
-    })
-    .catch(e => console.error("Error cargando equipos:", e))
-    .finally(() => loading.value = false)
+  InventoryDataService.getAll({
+    page: options.value.page,
+    page_size: options.value.itemsPerPage,
+    search: search.value || undefined,
+  }).then(response => {
+    equipos.value = response.data.results ?? response.data ?? []
+    total.value = response.data.count ?? equipos.value.length
+  }).catch(() => {
+    Swal.fire('Error', 'No se pudieron cargar los equipos.', 'error')
+  }).finally(() => { loading.value = false })
 }
+
+const onPageChange = (nuevaPagina) => {
+  options.value.page = nuevaPagina
+  loadItems()
+}
+
+const onItemsPerPageChange = (nuevoTamano) => {
+  options.value.itemsPerPage = nuevoTamano
+  options.value.page = 1
+  loadItems()
+}
+
+// Búsqueda con debounce (vuelve a página 1)
+watch(search, () => {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    options.value.page = 1
+    loadItems()
+  }, 350)
+})
 
 const getStatusText = (val) => {
   const status = statusOptions.find(s => s.value === val)
@@ -148,7 +155,7 @@ const getStatusText = (val) => {
 
 const getStatusColor = (val) => {
   const status = statusOptions.find(s => s.value === val)
-  return status ? status.color : 'black'
+  return status ? status.color : 'grey'
 }
 
 const editItem = (item) => {
@@ -166,25 +173,18 @@ const deleteItem = (item) => {
     if (result.isConfirmed) {
       InventoryDataService.delete(item.id).then(() => {
         loadItems()
-        Swal.fire('Eliminado', 'El equipo ha sido borrado.', 'success')
-      }).catch(e => {
-        Swal.fire('Error', 'No se pudo eliminar', 'error')
-        console.error(e)
+        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo eliminado' })
+      }).catch((e) => {
+        const msg = e.response?.data?.detail || 'No se pudo eliminar'
+        Swal.fire('No se pudo eliminar', msg, 'error')
       })
     }
   })
 }
 
-const updateRow = (updatedItem) => {
-  const index = equipos.value.findIndex(e => e.id === updatedItem.id)
-  if (index !== -1) {
-    equipos.value[index] = { ...equipos.value[index], ...updatedItem }
-  }
-}
-
-const addRow = (newItem) => {
-  equipos.value.unshift(newItem)
-}
+// El padre puede pedir refrescar tras crear/editar (server-side: recargamos la página actual).
+const updateRow = () => loadItems()
+const addRow = () => { options.value.page = 1; loadItems() }
 
 onMounted(() => {
   loadItems()

@@ -54,26 +54,22 @@ class OrderDataService {
 
     // ─── FACTURAS (OrderInvoice) ─────────────────────────────────────────────
 
-    /** Busca facturas existentes con saldo a favor (Arquitectura N:M) */
-    searchInvoices(query) {
-        let headers = authHeader();
-        return axios.get(`orders/invoices/search?q=${query}`, { headers });
-    }
-
-    /** Vincula una factura existente a una orden asignándole un monto específico */
-    linkInvoice(order_id, data) {
+    /** Vincula 1..N órdenes a una factura existente. SIN monto: solo crea
+     *  el puente orden<->factura. order_ids: array de IDs de orden. */
+    linkInvoice(invoice_id, order_ids) {
         let headers = authHeader();
         headers['Content-Type'] = "application/json";
-        return axios.post(`orders/${order_id}/invoices/link`, data, { headers });
+        const ids = Array.isArray(order_ids) ? order_ids : [order_ids];
+        return axios.post(`orders/invoices/${invoice_id}/link`, { order_ids: ids }, { headers });
     }
 
-    /** Edita SOLO el monto asignado a ESTA orden de una factura compartida (N:M).
-     *  No toca el monto físico de la factura ni las asignaciones de otras órdenes.
-     *  El sobrante liberado queda disponible para vincularse a otras órdenes. */
-    updateInvoiceAllocation(order_id, invoice_id, amount_allocated) {
+    /** Búsqueda liviana de órdenes por número (autocomplete). */
+    lookupOrders(query, excludeId = null, currency = null) {
         let headers = authHeader();
-        headers['Content-Type'] = "application/json";
-        return axios.patch(`orders/${order_id}/invoices/${invoice_id}/allocation`, { amount_allocated }, { headers });
+        let params = { q: query };
+        if (excludeId) params.exclude = excludeId;
+        if (currency)  params.currency = currency;
+        return axios.get(`orders/lookup`, { params, headers });
     }
 
     /** Extrae los datos PDF */
@@ -100,6 +96,17 @@ class OrderDataService {
     }
 
     /**
+     * Crea una factura SUELTA (sin orden), nace en el limbo. Vía del panel
+     * de finanzas y del drag&drop de PDF.
+     * @param {FormData} data — invoice_number, invoice_date, amount, currency, exchange_rate, pdf
+     */
+    createInvoiceSuelta(data) {
+        let headers = authHeader();
+        headers['Content-Type'] = "multipart/form-data";
+        return axios.post(`orders/invoices/create`, data, { headers });
+    }
+
+    /**
      * Edita una factura existente (número, fecha o monto)
      * @param {number} invoice_id
      * @param {FormData} data
@@ -115,8 +122,27 @@ class OrderDataService {
         return axios.delete(`orders/invoices/${invoice_id}`, { params: { order_id }, headers: authHeader() });
     }
 
+    /** Lista TODAS las facturas de la empresa (no solo las que tienen saldo
+     *  libre) — fuente de datos correcta para un panel/listado financiero.
+     *  filtros: { order_type, currency, estado, q, page, page_size } */
+    listInvoices(filtros = {}) {
+        let headers = authHeader();
+        return axios.get('orders/invoices', { params: filtros, headers });
+    }
+
     // ─── PAGOS ───────────────────────────────────────────────────────────────
 
+    /** Registra un abono contra una FACTURA (caso normal, con comprobante). */
+    createInvoicePayment(invoice_id, data) {
+        let headers = authHeader();
+        headers['Content-Type'] = "multipart/form-data";
+        return axios.post(`orders/invoices/${invoice_id}/payments`, data, { headers });
+    }
+
+    /** @deprecated TRANSITORIO. Abono directo a la orden. Se eliminará al
+     *  implementar la factura interna (es_fiscal=False): entonces incluso
+     *  las órdenes "sin comprobante" recibirán abonos vía createInvoicePayment.
+     *  No usar en código nuevo. */
     liquidate(id, data) {
         let headers = authHeader();
         headers['Content-Type'] = "multipart/form-data";
@@ -131,6 +157,26 @@ class OrderDataService {
         let headers = authHeader();
         headers['Content-Type'] = "multipart/form-data";
         return axios.patch(`orders/payments/${id}`, data, { headers });
+    }
+
+    // ─── DOCUMENTOS (OC / Valorizaciones — solo alquiler) ─────────────────────
+
+    /** Lista los documentos de una orden. tipo opcional: 1=OC, 2=Valorización. */
+    listDocuments(order_id, tipo) {
+        let params = {};
+        if (tipo) params.tipo = tipo;
+        return axios.get(`orders/${order_id}/documents`, { params, headers: authHeader() });
+    }
+
+    /** Sube un documento (FormData: tipo, numero, fecha, pdf). */
+    addDocument(order_id, data) {
+        let headers = authHeader();
+        headers['Content-Type'] = "multipart/form-data";
+        return axios.post(`orders/${order_id}/documents`, data, { headers });
+    }
+
+    deleteDocument(doc_id) {
+        return axios.delete(`orders/documents/${doc_id}`, { headers: authHeader() });
     }
 
     // ─── ALQUILERES ──────────────────────────────────────────────────────────

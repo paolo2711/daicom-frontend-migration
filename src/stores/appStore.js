@@ -19,6 +19,9 @@ export const useAppStore = defineStore('app', {
       cancelButtonText: "No, cancelar",
     },
     successDeletedOptions: {
+      toast: true,
+      position: 'top-end',
+      timerProgressBar: true,
       title: "Eliminado correctamente",
       icon: "success",
       showConfirmButton: false,
@@ -37,6 +40,9 @@ export const useAppStore = defineStore('app', {
       confirmButtonText: 'OK',
     },
     successSavedOptions: {
+      toast: true,
+      position: 'top-end',
+      timerProgressBar: true,
       title: "Guardado correctamente",
       icon: "success",
       showConfirmButton: false,
@@ -83,6 +89,10 @@ export const useAppStore = defineStore('app', {
       icon: 'error',
       title: 'Error de red o servidor'
     },
+
+    // Aviso de nueva versión (lo enciende el WS).
+    updateAvailable: false,
+    serverVersion: null, // la que reporta el back, se ve en el footer
 
     uploadTasks: JSON.parse(localStorage.getItem('daicom_uploads')) || [],
     pendingSignaturesCount: 0,

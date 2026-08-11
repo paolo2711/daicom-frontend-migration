@@ -29,22 +29,46 @@
 
                   <input type="file" ref="fileInput" multiple accept="image/*" style="display: none" @change="onFileChange">
 
-                  <v-card
-                    variant="outlined"
-                    :class="isDark ? 'bg-grey-darken-3' : 'bg-grey-lighten-5'"
-                    style="border: 2px dashed #9e9e9e; cursor: pointer;"
-                    class="d-flex flex-column align-center justify-center pa-4 mb-3 transition-swing"
-                    height="120"
-                    hover
-                    @click="fileInput?.click()"
-                  >
-                    <v-icon size="36" color="primary">mdi-cloud-upload</v-icon>
-                    <div class="text-caption mt-2 font-weight-medium text-center">Haz clic para subir fotos</div>
-                  </v-card>
+                  <!-- Zona clic + arrastrar (mismo componente común PdfDropZone, en modo imagen) -->
+                  <pdf-drop-zone accept="image/*" multiple label="Suelta las fotos aquí" icon="mdi-image-plus" @files="onFilesDropped">
+                    <v-card
+                      variant="outlined"
+                      :class="isDark ? 'bg-grey-darken-3' : 'bg-grey-lighten-5'"
+                      style="border: 2px dashed #9e9e9e; cursor: pointer;"
+                      class="d-flex flex-column align-center justify-center pa-4 mb-2 transition-swing"
+                      height="120"
+                      hover
+                      @click="fileInput?.click()"
+                    >
+                      <v-icon size="36" color="primary">mdi-cloud-upload</v-icon>
+                      <div class="text-caption mt-2 font-weight-medium text-center">Haz clic o <strong>arrastra</strong> las fotos aquí</div>
+                    </v-card>
+                  </pdf-drop-zone>
+
+                  <div v-if="existingImages.length || previewUrls.length" class="text-caption text-medium-emphasis mb-2">
+                    <v-icon size="13" color="primary">mdi-star</v-icon> La <strong>primera</strong> foto es la que se muestra en el listado.
+                  </div>
 
                   <div class="d-flex flex-wrap" style="gap: 8px; max-height: 250px; overflow-y: auto;">
-                    <v-card v-for="(img, i) in existingImages" :key="'exist-'+i" variant="outlined" class="rounded" style="position: relative; width: 70px; height: 70px; cursor: zoom-in;" @click="openViewer(i)">
+                    <v-card
+                      v-for="(img, i) in existingImages" :key="'exist-'+img.id"
+                      variant="outlined" class="rounded"
+                      style="position: relative; width: 70px; height: 70px; cursor: zoom-in;"
+                      :style="i === 0 ? 'border: 2px solid rgb(var(--v-theme-primary)) !important;' : ''"
+                      @click="openViewer(i)"
+                    >
                       <v-img :src="img.image" height="100%" width="100%" cover></v-img>
+
+                      <!-- Etiqueta "Principal" en la 1ra -->
+                      <div v-if="i === 0" class="foto-principal-badge">Principal</div>
+                      <!-- Estrella para marcar principal en las demás -->
+                      <v-btn v-else icon variant="flat" size="x-small" color="amber-darken-2"
+                             style="position: absolute; bottom: -4px; left: -4px; height: 20px; width: 20px; z-index: 2;"
+                             @click.stop="setPrincipal(i)">
+                        <v-icon size="13">mdi-star-outline</v-icon>
+                        <v-tooltip activator="parent" location="top">Marcar como principal</v-tooltip>
+                      </v-btn>
+
                       <v-btn icon variant="flat" size="x-small" color="red" class="text-white" style="position: absolute; top: -4px; right: -4px; height: 20px; width: 20px; z-index: 2;" @click.stop="removeExistingImage(i, img.id)">
                         <v-icon size="14">mdi-close</v-icon>
                       </v-btn>
@@ -71,7 +95,19 @@
                       ></v-text-field>
                     </v-col>
                     <v-col cols="12" sm="6">
-                      <v-text-field v-model="form.name" label="Nombre del Equipo (*)" :rules="[v => !!v || 'Requerido']" variant="outlined" density="compact"></v-text-field>
+                      <!-- Combobox: sugiere nombres del catálogo de equipos, pero
+                           deja escribir libre (inventario más flexible que órdenes). -->
+                      <v-combobox
+                        v-model="form.name"
+                        :items="nameSuggestions"
+                        v-model:search="nameSearch"
+                        :loading="loadingNames"
+                        label="Nombre del Equipo (*)"
+                        :rules="[v => !!v || 'Requerido']"
+                        variant="outlined" density="compact"
+                        hide-no-data auto-select-first
+                        prepend-inner-icon="mdi-toolbox-outline"
+                      ></v-combobox>
                     </v-col>
                     <v-col cols="12" sm="6">
                       <v-text-field v-model="form.brand" label="Marca" variant="outlined" density="compact"></v-text-field>
@@ -83,7 +119,24 @@
                       <v-text-field v-model="form.series" label="N° de Serie" variant="outlined" density="compact"></v-text-field>
                     </v-col>
                     <v-col cols="12" sm="6">
-                      <v-select v-model="form.status" :items="statusOptions" item-title="text" item-value="value" label="Estado actual" variant="outlined" density="compact"></v-select>
+                      <!-- "Alquilado" lo maneja el flujo de alquiler, no se edita a mano -->
+                      <v-text-field
+                        v-if="isEditing && form.status === 2"
+                        model-value="Alquilado"
+                        label="Estado actual"
+                        variant="outlined" density="compact"
+                        readonly disabled
+                        prepend-inner-icon="mdi-truck-fast"
+                        hint="Gestionado por los alquileres" persistent-hint
+                      ></v-text-field>
+                      <v-select
+                        v-else
+                        v-model="form.status"
+                        :items="statusOptions"
+                        item-title="text" item-value="value"
+                        label="Estado actual"
+                        variant="outlined" density="compact"
+                      ></v-select>
                     </v-col>
                     <v-col cols="12">
                       <v-textarea v-model="form.notes" label="Observaciones / Detalles adicionales" rows="3" variant="outlined" density="compact" hide-details></v-textarea>
@@ -106,16 +159,24 @@
             <p class="text-body-2 px-10 text-grey">Vincula un certificado de operatividad emitido por tu laboratorio a este equipo.</p>
 
             <div v-if="form.latest_certificate" class="mb-6 mt-4">
-              <v-chip color="success" variant="flat" class="text-white font-weight-bold text-subtitle-2 px-4 py-4 mb-4">
-                <v-icon start size="20">mdi-check-decagram</v-icon> EQUIPO CERTIFICADO
+              <v-chip :color="certVigencia.chipColor" variant="flat" class="text-white font-weight-bold text-subtitle-2 px-4 py-4 mb-4">
+                <v-icon start size="20">{{ certVigencia.icon }}</v-icon> {{ certVigencia.headline }}
               </v-chip>
-              
-              <div class="text-subtitle-1 font-weight-bold">
-                Expediente: <span class="text-primary">{{ form.latest_certificate.registry_code }}</span>
-              </div>
-              <div class="text-caption mb-4 text-grey">
-                Emitido el: {{ form.latest_certificate.emission_date || '---' }}
-              </div>
+
+              <v-card variant="tonal" :color="certVigencia.chipColor" class="mx-auto pa-4 mb-4 text-left" max-width="360" rounded="lg">
+                <div class="d-flex justify-space-between align-center mb-2">
+                  <span class="text-caption text-medium-emphasis">Expediente</span>
+                  <span class="font-weight-bold text-primary">{{ form.latest_certificate.registry_code }}</span>
+                </div>
+                <div class="d-flex justify-space-between align-center mb-2">
+                  <span class="text-caption text-medium-emphasis">Emitido</span>
+                  <span class="font-weight-medium">{{ form.latest_certificate.emission_date || '---' }}</span>
+                </div>
+                <div class="d-flex justify-space-between align-center">
+                  <span class="text-caption text-medium-emphasis">Vence</span>
+                  <span class="font-weight-medium">{{ certVigencia.vence || '---' }}</span>
+                </div>
+              </v-card>
 
               <div class="d-flex justify-center" style="gap: 10px;">
                 <v-btn color="primary" variant="outlined" :href="`https://daicomperu.com/${form.latest_certificate.uuid}`" target="_blank" :disabled="!form.latest_certificate.uuid">
@@ -182,11 +243,13 @@
 
 <script setup>
 import { Toast } from '@/plugins/alerts'
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch, nextTick } from 'vue'
 import { useTheme } from 'vuetify'
 import Swal from 'sweetalert2'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import CertificateDataService from '@/services/certificates/certificateDataService'
+import EquipmentDataService from '@/services/equipments/equipmentDataService'
+import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
 
 const emit = defineEmits(['saved'])
 
@@ -216,6 +279,22 @@ const searchingCert = ref(false)
 const foundCert = ref(null)
 const linkingCert = ref(false)
 
+// Sugerencias de nombre (catálogo de equipos maestro), editable.
+const nameSuggestions = ref([])
+const nameSearch = ref('')
+const loadingNames = ref(false)
+let nameDebounce = null
+watch(nameSearch, (q) => {
+  clearTimeout(nameDebounce)
+  nameDebounce = setTimeout(() => {
+    loadingNames.value = true
+    EquipmentDataService.getFiltered(1, 20, q || '')
+      .then(r => { nameSuggestions.value = (r.data.results || []).map(e => e.nombre_tecnico).filter(Boolean) })
+      .catch(() => { nameSuggestions.value = [] })
+      .finally(() => { loadingNames.value = false })
+  }, 300)
+})
+
 const form = reactive({
   id: null,
   internal_id: '',
@@ -228,14 +307,44 @@ const form = reactive({
   latest_certificate: null
 })
 
+// "Alquilado" (2) no está: lo gestiona el flujo de alquiler, no se pone a mano.
 const statusOptions = [
   { text: 'Disponible', value: 1 },
-  { text: 'Alquilado', value: 2 },
   { text: 'Mantenimiento', value: 3 },
   { text: 'Baja', value: 4 },
 ]
 
-const open = (item = null) => {
+// Vigencia del expediente: emisión + 1 año vs hoy → vigente / por vencer / vencido.
+const certVigencia = computed(() => {
+  const r = { vence: '', chipColor: 'success', icon: 'mdi-check-decagram', headline: 'EQUIPO CERTIFICADO' }
+  const cert = form.latest_certificate
+  if (!cert || !cert.emission_date) return r
+  const emis = new Date(cert.emission_date)
+  if (isNaN(emis.getTime())) return r
+  const vence = new Date(emis); vence.setFullYear(vence.getFullYear() + 1)
+  r.vence = vence.toISOString().slice(0, 10)
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+  const dias = Math.round((vence - hoy) / 86400000)
+  if (dias < 0) { r.chipColor = 'error'; r.icon = 'mdi-alert-decagram'; r.headline = 'EXPEDIENTE VENCIDO' }
+  else if (dias <= 30) { r.chipColor = 'warning'; r.icon = 'mdi-calendar-alert'; r.headline = 'EXPEDIENTE POR VENCER' }
+  return r
+})
+
+// Marca una foto existente como principal: la pone primera (la que se muestra en la lista).
+const setPrincipal = (i) => {
+  const [img] = existingImages.value.splice(i, 1)
+  existingImages.value.unshift(img)
+}
+
+// Fotos soltadas por drag&drop (mismo destino que el input file).
+const onFilesDropped = (files) => {
+  (files || []).forEach(file => {
+    imageFiles.value.push(file)
+    previewUrls.value.push(URL.createObjectURL(file))
+  })
+}
+
+const open = (item = null, targetTab = 0, openViewerImage = false) => {
   resetForm()
   if (item) {
     isEditing.value = true
@@ -251,7 +360,13 @@ const open = (item = null) => {
       .then(r => { nextId.value = r.data.next_id })
       .catch(() => { nextId.value = '' })
   }
+  // Pestaña con la que abre: 0 = Datos y Fotos, 1 = Certificado.
+  tab.value = targetTab
   dialog.value = true
+  // Clic en la foto de la tabla: abrimos el visor en la principal (índice 0).
+  if (openViewerImage && existingImages.value.length) {
+    nextTick(() => openViewer(0))
+  }
 }
 
 const openViewer = (index) => {
@@ -321,6 +436,10 @@ const save = async () => {
   if (deletedImagesIds.value.length > 0) {
     formData.append('deleted_images', deletedImagesIds.value.join(','))
   }
+  // Foto principal = la primera de las existentes (la que se muestra en el listado).
+  if (existingImages.value.length > 0 && existingImages.value[0].id) {
+    formData.append('primary_image_id', existingImages.value[0].id)
+  }
 
   try {
     if (isEditing.value) {
@@ -337,11 +456,12 @@ const save = async () => {
     let errorMsg = 'Revisa los datos e intenta de nuevo.'
 
     if (error.response && error.response.data && typeof error.response.data === 'object') {
+      const labels = { series: 'N° de Serie', name: 'Nombre', brand: 'Marca', model: 'Modelo', status: 'Estado' }
       let messages = []
       for (let key in error.response.data) {
         let fieldErrors = error.response.data[key]
         let errorText = Array.isArray(fieldErrors) ? fieldErrors.join(', ') : fieldErrors
-        messages.push(`<b>${key}:</b> ${errorText}`)
+        messages.push(`<b>${labels[key] || key}:</b> ${errorText}`)
       }
       if (messages.length > 0) {
         errorMsg = messages.join('<br>')
@@ -427,3 +547,22 @@ const unlinkCertificate = async () => {
 
 defineExpose({ open })
 </script>
+
+<style scoped>
+.foto-principal-badge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  background: rgba(var(--v-theme-primary), 0.9);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.5px;
+  padding: 1px 0;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+</style>

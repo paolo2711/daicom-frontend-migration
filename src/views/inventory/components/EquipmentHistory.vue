@@ -21,6 +21,7 @@
               <th class="text-center font-weight-bold text-uppercase">Salida</th>
               <th class="text-center font-weight-bold text-uppercase">Retorno Real</th>
               <th class="text-center font-weight-bold text-uppercase">Estado Viaje</th>
+              <th class="text-center font-weight-bold text-uppercase">Orden</th>
             </tr>
           </thead>
           <tbody>
@@ -34,9 +35,18 @@
                   {{ h.return_status === 2 ? 'DEVUELTO' : 'EN OBRA' }}
                 </v-chip>
               </td>
+              <td class="text-center">
+                <v-tooltip location="top" text="Ver en Alquileres">
+                  <template v-slot:activator="{ props }">
+                    <v-btn v-bind="props" icon variant="text" size="x-small" color="primary" @click="irAOrden(h)">
+                      <v-icon>mdi-open-in-new</v-icon>
+                    </v-btn>
+                  </template>
+                </v-tooltip>
+              </td>
             </tr>
             <tr v-if="!equipment.rental_history || equipment.rental_history.length === 0">
-              <td colspan="5" class="text-center py-8 text-grey">
+              <td colspan="6" class="text-center py-8 text-grey">
                 <v-icon size="large" color="grey-lighten-2">mdi-history</v-icon><br>
                 El equipo no registra movimientos históricos.
               </td>
@@ -51,9 +61,11 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useTheme } from 'vuetify'
+import { useRouter } from 'vue-router'
 
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
+const router = useRouter()
 
 const dialog = ref(false)
 const equipment = ref(null)
@@ -61,6 +73,14 @@ const equipment = ref(null)
 const open = (item) => {
   equipment.value = item
   dialog.value = true
+}
+
+// Lleva a la pestaña Alquileres con esa orden ya filtrada (mismo patrón que
+// "ir al certificado" en órdenes de servicio).
+const irAOrden = (h) => {
+  if (!h.order_number) return
+  dialog.value = false
+  router.push({ name: 'orders-rental', query: { buscar_orden: h.order_number } }).catch(() => {})
 }
 
 defineExpose({ open })

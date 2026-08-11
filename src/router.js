@@ -122,27 +122,19 @@ const router = createRouter({
   routes,
 });
 
-router.beforeResolve((to, from, next) => {
+router.beforeResolve((to) => {
   if (to.name) {
     NProgress.start();
   }
-  next();
+  return true;
 });
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to) => {
   const authStore = useAuthStore();
-  
-  if (to.name === 'Login') {
-    next();
-  } else if (authStore.status.loggedIn) {
-    next();
-  } else {
-    if (from.name !== 'Login') {
-      next({ name: 'Login' });
-    } else {
-      next({ name: 'Login' });
-    }
-  }
+
+  if (to.name === 'Login') return true;
+  if (authStore.status.loggedIn) return true;
+  return { name: 'Login' };
 });
 
 router.afterEach(() => {

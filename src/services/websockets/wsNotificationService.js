@@ -60,6 +60,11 @@ export default {
             window.dispatchEvent(new CustomEvent('wss-reload-invoices'));
             return;
         }
+
+        if (data.message === 'RELOAD_INVENTORY') {
+            window.dispatchEvent(new CustomEvent('wss-reload-inventory'));
+            return;
+        }
         
         if (data.message && data.message.action === 'UPDATE_ROW') {
             updatePendingCount();

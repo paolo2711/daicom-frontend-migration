@@ -159,7 +159,7 @@ const adminGroup = computed(() => items.value.find(item => item.id === 11))
 watch(
   () => appStore.darkStatus,
   (isDark) => {
-    theme.global.name.value = isDark ? 'dark' : 'light'
+    theme.change(isDark ? 'dark' : 'light')
     if (isDark) {
       document.body.classList.add('v-theme--dark')
     } else {

@@ -130,10 +130,9 @@ const onItemsPerPageChange = (newItemsPerPage) => {
 const deleteLab = (lab) => {
   LabDataService.delete(lab.id).then((response) => {
     if (response.status === 204) {
-      Swal.fire(appStore.successDeletedOptions).then(() => {
-        const index = labs.value.findIndex(l => l.id === lab.id)
-        if (index !== -1) labs.value.splice(index, 1)
-      })
+      const index = labs.value.findIndex(l => l.id === lab.id)
+      if (index !== -1) labs.value.splice(index, 1)
+      Swal.fire(appStore.successDeletedOptions)
     }
   }).catch(() => {
     Swal.fire(appStore.errorDeleteOptions)

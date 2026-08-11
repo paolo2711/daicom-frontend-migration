@@ -17,11 +17,11 @@ onMounted(() => {
 
   if (!yaActualizado) {
     localStorage.setItem('dark', 'true')
-    theme.global.name.value = 'dark'
+    theme.change('dark')
     localStorage.setItem(VERSION_CSS, 'true')
   } else {
     const isDark = localStorage.getItem('dark') !== 'false'
-    theme.global.name.value = isDark ? 'dark' : 'light'
+    theme.change(isDark ? 'dark' : 'light')
   }
 })
 </script>

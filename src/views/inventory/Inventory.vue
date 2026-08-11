@@ -4,7 +4,7 @@
       <v-col cols="12">
         <div class="d-flex align-center mb-4">
           <v-icon size="large" color="primary" class="mr-3">mdi-toolbox</v-icon>
-          <h2 class="text-h5 font-weight-bold mb-0">Gestión de Equipos</h2>
+          <h2 class="text-h5 font-weight-bold mb-0">Inventario de Equipos</h2>
           <v-spacer></v-spacer>
           
           <v-btn color="primary" variant="flat" @click="addModal?.open()">
@@ -36,7 +36,7 @@ const openHistory = (item) => {
   historyModal.value?.open(item)
 }
 
-const openEdit = (item) => {
-  addModal.value?.open(item)
+const openEdit = (item, tab = 0, viewer = false) => {
+  addModal.value?.open(item, tab, viewer)
 }
 </script>

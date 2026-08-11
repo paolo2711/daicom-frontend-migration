@@ -121,10 +121,9 @@ const onItemsPerPageChange = (newVal) => {
 const deleteUser = (user) => {
   UserDataService.delete(user.id).then((response) => {
     if (response.status === 204) {
-      Swal.fire(appStore.successDeletedOptions).then(() => {
-        const index = users.value.findIndex(u => u.id === user.id)
-        if (index !== -1) users.value.splice(index, 1)
-      })
+      const index = users.value.findIndex(u => u.id === user.id)
+      if (index !== -1) users.value.splice(index, 1)
+      Swal.fire(appStore.successDeletedOptions)
     }
   }).catch(() => {
     Swal.fire(appStore.errorDeleteOptions)

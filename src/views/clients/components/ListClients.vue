@@ -160,10 +160,9 @@ const onItemsPerPageChange = (newItemsPerPage) => {
 const deleteClient = (client) => {
   ClientDataService.delete(client.id).then((response) => {
     if (response.status === 204) {
-      Swal.fire(appStore.successDeletedOptions).then(() => {
-        const index = clients.value.findIndex(c => c.id === client.id)
-        if (index !== -1) clients.value.splice(index, 1)
-      })
+      const index = clients.value.findIndex(c => c.id === client.id)
+      if (index !== -1) clients.value.splice(index, 1)
+      Swal.fire(appStore.successDeletedOptions)
     }
   }).catch(() => {
     Swal.fire(appStore.errorDeleteOptions)

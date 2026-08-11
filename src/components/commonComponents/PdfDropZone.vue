@@ -1,5 +1,5 @@
 <template>
-  <!-- Drop de PDF: overlay con marco punteado sobre el slot, valida y emite el File. -->
+  <!-- Zona de drop: overlay con marco punteado sobre el slot, valida y emite el/los File(s). -->
   <div
     class="pdf-drop-zone"
     @dragover.prevent="onDragOver"
@@ -8,7 +8,7 @@
   >
     <transition name="pdf-drop-fade">
       <div v-if="arrastrando" class="pdf-drop-overlay d-flex flex-column align-center justify-center">
-        <v-icon size="48" color="primary">mdi-file-upload-outline</v-icon>
+        <v-icon size="48" color="primary">{{ icon }}</v-icon>
         <div class="text-body-1 font-weight-medium mt-2">{{ label }}</div>
       </div>
     </transition>
@@ -20,14 +20,26 @@
 <script setup>
 import { ref } from 'vue'
 
-defineProps({
+const props = defineProps({
   // Texto del overlay mientras se arrastra.
-  label: { type: String, default: 'Suelta el PDF aquí' },
+  label:    { type: String,  default: 'Suelta el PDF aquí' },
+  // Mime aceptado: exacto ('application/pdf') o comodín ('image/*'). '*' = todo.
+  accept:   { type: String,  default: 'application/pdf' },
+  // Permite soltar varios archivos.
+  multiple: { type: Boolean, default: false },
+  icon:     { type: String,  default: 'mdi-file-upload-outline' },
 })
-// 'file' = PDF válido soltado; 'invalid' = se soltó algo que no es PDF.
-const emit = defineEmits(['file', 'invalid'])
+// 'file' = primer archivo válido (compat); 'files' = todos los válidos; 'invalid' = nada válido.
+const emit = defineEmits(['file', 'files', 'invalid'])
 
 const arrastrando = ref(false)
+
+const acepta = (file) => {
+  const a = props.accept
+  if (!a || a === '*') return true
+  if (a.endsWith('/*')) return file.type.startsWith(a.slice(0, -1)) // 'image/*' -> 'image/'
+  return file.type === a
+}
 
 const onDragOver = (e) => {
   if (e.dataTransfer?.types?.includes('Files')) arrastrando.value = true
@@ -43,12 +55,14 @@ const onDragLeave = (e) => {
 
 const onDrop = (e) => {
   arrastrando.value = false
-  const file = e.dataTransfer?.files?.[0]
-  if (!file || file.type !== 'application/pdf') {
+  const soltados = Array.from(e.dataTransfer?.files || [])
+  const validos = soltados.filter(acepta)
+  if (validos.length === 0) {
     emit('invalid')
     return
   }
-  emit('file', file)
+  emit('file', validos[0])
+  emit('files', props.multiple ? validos : [validos[0]])
 }
 </script>
 

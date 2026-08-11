@@ -162,20 +162,17 @@ async function save() {
     // Los documentos del alquiler (cotización, OC, guías, valorizaciones) se
     // suben luego desde Editar. Crear solo registra la orden.
 
-    Toast.fire(appStore.successSavedOptions).then(() => {
-      const currentUser = JSON.parse(localStorage.getItem('user')) || {}
-      if (window.enviarNotificacionGlobal) {
-        window.enviarNotificacionGlobal(
-          currentUser.username,
-          'info',
-          order.value.order_type === 1 ? 'Nueva Orden de Servicio' : 'Nueva Orden de Alquiler',
-          `Se registró una orden con ${items_to_save.value.length} equipos.`
-        )
-      }
-      close()
-      
-      
-    })
+    const currentUser = JSON.parse(localStorage.getItem('user')) || {}
+    if (window.enviarNotificacionGlobal) {
+      window.enviarNotificacionGlobal(
+        currentUser.username,
+        'info',
+        order.value.order_type === 1 ? 'Nueva Orden de Servicio' : 'Nueva Orden de Alquiler',
+        `Se registró una orden con ${items_to_save.value.length} equipos.`
+      )
+    }
+    close()
+    Toast.fire(appStore.successSavedOptions)
   } catch (error) {
     console.error('Error al guardar la orden:', error)
     $swal.fire('Error', 'Fallo de conexión. Revise los datos e intente de nuevo.', 'error')

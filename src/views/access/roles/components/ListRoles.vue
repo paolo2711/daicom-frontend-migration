@@ -132,10 +132,9 @@ const onItemsPerPageChange = (newVal) => {
 const deleteRole = (role) => {
   RoleDataService.delete(role.id).then((response) => {
     if (response.status === 204) {
-      Swal.fire(appStore.successDeletedOptions).then(() => {
-        const index = roles.value.findIndex(r => r.id === role.id)
-        if (index !== -1) roles.value.splice(index, 1)
-      })
+      const index = roles.value.findIndex(r => r.id === role.id)
+      if (index !== -1) roles.value.splice(index, 1)
+      Swal.fire(appStore.successDeletedOptions)
     }
   }).catch(() => {
     Swal.fire(appStore.errorDeleteOptions)

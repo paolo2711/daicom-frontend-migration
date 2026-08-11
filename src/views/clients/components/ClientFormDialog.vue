@@ -143,10 +143,9 @@ const save = async () => {
       ? await ClientDataService.update(payload.id, payload)
       : await ClientDataService.create(payload)
     if (response.status === 200 || response.status === 201) {
-      Swal.fire(appStore.successSavedOptions).then(() => {
-        closeDialog()
-        emit('reloadListComponent')
-      })
+      closeDialog()
+      emit('reloadListComponent')
+      Swal.fire(appStore.successSavedOptions)
     }
   } catch (e) {
     let errorText = ''

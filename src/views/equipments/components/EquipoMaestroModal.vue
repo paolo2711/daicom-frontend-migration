@@ -27,6 +27,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, reactive } from 'vue'
 import Swal from 'sweetalert2'
 import EquipmentDataService from '@/services/equipments/equipmentDataService'
@@ -64,7 +65,7 @@ const save = async () => {
     request.then(() => {
       emit('reload')
       close()
-      Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo maestro guardado' })
+      Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo maestro guardado' })
     }).catch(e => {
       let errorMsg = 'No se pudo guardar el equipo. Posible nombre duplicado.'
       if (e.response?.data?.nombre_tecnico) errorMsg = "Ese equipo ya existe en el diccionario."

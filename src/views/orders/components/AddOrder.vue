@@ -51,6 +51,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import ClientSmartSearch from '@/components/shared/ClientSmartSearch.vue'
 import { ref, watch, nextTick, defineAsyncComponent, getCurrentInstance } from 'vue'
 import { useAppStore } from '@/stores/appStore'
@@ -161,7 +162,7 @@ async function save() {
     // Los documentos del alquiler (cotización, OC, guías, valorizaciones) se
     // suben luego desde Editar. Crear solo registra la orden.
 
-    $swal.fire(appStore.successSavedOptions).then(() => {
+    Toast.fire(appStore.successSavedOptions).then(() => {
       const currentUser = JSON.parse(localStorage.getItem('user')) || {}
       if (window.enviarNotificacionGlobal) {
         window.enviarNotificacionGlobal(

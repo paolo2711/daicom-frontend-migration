@@ -5,7 +5,7 @@
       <base-modal-header :title="isEdit ? 'Editar Certificado' : 'Nuevo Certificado'" icon="mdi-certificate-outline" @close="close">
         Página: <v-chip variant="outlined" label color="primary" size="small" class="font-weight-bold mx-1">{{window_step}} de 2</v-chip>
         <span v-if="isEdit" class="ml-2">Tipo: <span class="font-weight-bold text-primary">{{certificate.certificate_type_label}}</span></span>
-        <span v-if="certificate.emission_date" class="ml-2">Correlativo: <span class="font-weight-bold text-primary">{{correlative_preview}}</span></span>
+        <span v-if="correlative_preview" class="ml-2">Correlativo: <span class="font-weight-bold text-primary">{{correlative_preview}}</span></span>
       </base-modal-header>
 
       <v-form ref="smartForm" @submit.prevent v-model="is_valid">
@@ -177,6 +177,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, computed, watch, getCurrentInstance, onMounted, nextTick } from 'vue'
 import DatePicker from "@/components/commonComponents/DatePicker.vue"
 import CertificatesRules from "@/validators/rules/certificatesRules.js"
@@ -278,6 +279,8 @@ const filtroSinTildes = (itemTitle, queryText, item) => {
 }
 
 const correlative_preview = computed(() => {
+  // En edición el certificado ya trae su código completo; lo usamos directo.
+  if (certificate.value.registry_code) return certificate.value.registry_code
   let mask = ''
   if (certificate.value.emission_date) mask = certificate.value.emission_date.slice(0,4) + '-'
   let correlative = String(certificate.value.correlative || '')
@@ -368,7 +371,7 @@ const save = () => {
     }
 
     dialog.value = false
-    $swal.fire(appStore.toastGuardando)
+    Toast.fire(appStore.toastGuardando)
 
     let request = isEdit.value 
       ? CertificateDataService.update(certificate.value.id, data)
@@ -381,13 +384,13 @@ const save = () => {
         }
         // Nota: Si es nuevo, el backend (signals.py) ya emite el RELOAD_CERTIFICATES por WebSocket
         close()
-        $swal.fire(appStore.toastGuardadoExito)
+        Toast.fire(appStore.toastGuardadoExito)
       }
     }).catch((e) => {
       dialog.value = true
       let errorMsg = 'Error al procesar la solicitud.'
       if (e.response && e.response.data) errorMsg = JSON.stringify(e.response.data).substring(0, 150)
-      $swal.fire({ ...appStore.toastErrorRed, title: 'Error', text: errorMsg, icon: 'error' })
+      Toast.fire({ ...appStore.toastErrorRed, title: 'Error', text: errorMsg, icon: 'error' })
     }).finally(() => {
       is_on_sending_process.value = false
     })

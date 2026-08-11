@@ -31,10 +31,8 @@
 </template>
 
 <script setup>
-import { getCurrentInstance, ref } from 'vue'
-
-const { appContext } = getCurrentInstance()
-const $swal = appContext.config.globalProperties.$swal
+import { Toast } from '@/plugins/alerts'
+import { ref } from 'vue'
 
 const dialog = ref(false)
 const certificate = ref(null)
@@ -53,11 +51,7 @@ const generate = () => {
     detail: { certificate: certificate.value }
   }))
 
-  const Toast = $swal.mixin({
-    toast: true, position: 'top-end', showConfirmButton: false,
-    timer: 3000, timerProgressBar: true,
-  })
-  Toast.fire({ icon: 'info', title: `Procesando ${certificate.value.registry_code} en segundo plano...` })
+  Toast.fire({ icon: 'info', title: `Procesando ${certificate.value.registry_code} en segundo plano...`, timer: 3000 })
 
   close()
 }

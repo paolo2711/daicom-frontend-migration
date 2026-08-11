@@ -150,6 +150,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, computed, getCurrentInstance } from 'vue'
 import { useAppStore } from '@/stores/appStore'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
@@ -381,7 +382,7 @@ const confirmAction = async () => {
     if (action.value === 'notify') {
       const ids = aptos.map(i => i.id)
       await CertificateDataService.requestBatchSignatures(ids)
-      $swal.fire({ ...appStore.toastGuardadoExito, title: '¡Solicitud Registrada!' })
+      Toast.fire({ ...appStore.toastGuardadoExito, title: '¡Solicitud Registrada!' })
       emit('clearSelection')
       close()
     } 
@@ -394,8 +395,7 @@ const confirmAction = async () => {
           window.dispatchEvent(new CustomEvent('wss-qr-start', { detail: { certificate: cert } }))
         }
       })
-      $swal.fire({
-        toast: true, position: 'top-end', showConfirmButton: false, timer: 4000,
+      Toast.fire({ timer: 4000,
         icon: 'info', title: `Procesando ${aptos.length} firmas/subidas en segundo plano...`
       })
       emit('clearSelection')
@@ -416,8 +416,7 @@ const confirmAction = async () => {
         }))
       })
 
-      $swal.fire({
-        toast: true, position: 'top-end', showConfirmButton: false, timer: 3000,
+      Toast.fire({ timer: 3000,
         icon: 'success', title: `Enviando ${aptos.length} archivos a procesar...`
       })
       emit('clearSelection')

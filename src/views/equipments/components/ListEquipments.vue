@@ -148,6 +148,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, watch, onMounted } from 'vue'
 import Swal from 'sweetalert2'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
@@ -225,7 +226,7 @@ const deleteEquipo = (item) => {
     if (result.isConfirmed) {
       EquipmentDataService.delete(item.id).then(() => {
         retrieveAll()
-        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo eliminado' })
+        Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo eliminado' })
       }).catch(() => Swal.fire('Error', 'No se pudo eliminar, puede estar en uso.', 'error'))
     }
   })
@@ -242,7 +243,7 @@ const deleteServicio = (serv) => {
     if (result.isConfirmed) {
       ServicioCatalogoDataService.delete(serv.id).then(() => {
         retrieveAll()
-        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Servicio eliminado' })
+        Toast.fire({ timer: 2200, icon: 'success', title: 'Servicio eliminado' })
       }).catch(() => Swal.fire('Error', 'No se pudo eliminar.', 'error'))
     }
   })

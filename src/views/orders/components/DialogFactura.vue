@@ -132,6 +132,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { Toast } from '@/plugins/alerts'
 import Swal from 'sweetalert2'
 import OrderDataService from '@/services/certificates/orderDataService'
 import { useAppStore } from '@/stores/appStore'
@@ -257,13 +258,13 @@ const onPdfSelected = async (archivo) => {
     facturaData.value.invoice_date = res.data.invoice_date || facturaData.value.invoice_date
     facturaData.value.amount = res.data.amount || facturaData.value.amount
     if (res.data.warning) {
-      Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, icon: 'warning', title: 'Extracción parcial', text: res.data.warning })
+      Toast.fire({ timer: 5000, icon: 'warning', title: 'Extracción parcial', text: res.data.warning })
     } else {
-      Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2500, icon: 'success', title: '¡Datos extraídos!' })
+      Toast.fire({ timer: 2500, icon: 'success', title: '¡Datos extraídos!' })
     }
   } catch (err) {
     const msg = err.response?.data?.error || 'No se pudo leer el PDF. Ingresa los datos a mano.'
-    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 4000, icon: 'info', title: msg })
+    Toast.fire({ timer: 4000, icon: 'info', title: msg })
   } finally {
     isExtracting.value = false
   }
@@ -276,7 +277,7 @@ const onPdfDropped = (file) => {
   onPdfSelected(file)
 }
 const pdfInvalido = () => {
-  Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2500, icon: 'info', title: 'Suelta un archivo PDF.' })
+  Toast.fire({ timer: 2500, icon: 'info', title: 'Suelta un archivo PDF.' })
 }
 
 const buildFormData = () => {
@@ -320,7 +321,7 @@ const save = async () => {
     } else {
       await OrderDataService.createInvoiceSuelta(data)
     }
-    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: editando.value ? 'Factura actualizada' : 'Factura guardada' })
+    Toast.fire({ timer: 2200, icon: 'success', title: editando.value ? 'Factura actualizada' : 'Factura guardada' })
     resetForm()
     emit('updateOrder')
     closeDialog()
@@ -346,7 +347,7 @@ const eliminar = async () => {
   isDeleting.value = true
   try {
     await OrderDataService.deleteInvoice(props.invoiceToEdit.id, props.order?.id)
-    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Factura eliminada' })
+    Toast.fire({ timer: 2200, icon: 'success', title: 'Factura eliminada' })
     emit('updateOrder')
     closeDialog()
   } catch (err) {

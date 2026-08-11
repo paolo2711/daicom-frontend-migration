@@ -1,3 +1,4 @@
+import { Toast } from '@/plugins/alerts'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 
 // Versión al cargar la pestaña; si el back reporta otra al reconectar, hubo deploy.
@@ -79,9 +80,9 @@ export default {
         // --------------------------------------------------------
         if (data.message && data.message.action === 'GLOBAL_NOTIFY') {
             if (data.message.sender !== currentUser.username) {
-                if (swal && appStore) {
-                    const Toast = swal.mixin(appStore.toastBase);
+                if (appStore) {
                     Toast.fire({
+                        ...appStore.toastBase,
                         icon: data.message.msg_type,
                         title: data.message.title,
                         text: data.message.body
@@ -93,9 +94,9 @@ export default {
 
         if (data.message && data.message.action === 'GLOBAL_SUCCESS_TOAST') {
             if (data.message.username !== currentUser.username) {
-                if (swal && appStore) {
-                    const Toast = swal.mixin(appStore.toastBase);
+                if (appStore) {
                     Toast.fire({
+                        ...appStore.toastBase,
                         icon: 'success',
                         title: `Certificado ${data.message.code} subido por ${data.message.username}`
                     });
@@ -110,9 +111,9 @@ export default {
         if (data.message && data.message.action === 'SIGNATURE_REQUEST_TOAST') {
             updatePendingCount();
             if (data.message.sender !== currentUser.username) {
-                if (swal && appStore) {
-                    const Toast = swal.mixin(appStore.toastBase);
+                if (appStore) {
                     Toast.fire({
+                        ...appStore.toastBase,
                         icon: 'info',
                         title: 'Firma Solicitada',
                         text: `${data.message.sender} solicitó tu firma para ${data.message.count} certificado(s).`

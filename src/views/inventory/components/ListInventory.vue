@@ -81,6 +81,7 @@
 
 <script setup>
 import { ref, watch, onMounted } from 'vue'
+import { Toast } from '@/plugins/alerts'
 
 import Swal from 'sweetalert2'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
@@ -173,7 +174,7 @@ const deleteItem = (item) => {
     if (result.isConfirmed) {
       InventoryDataService.delete(item.id).then(() => {
         loadItems()
-        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo eliminado' })
+        Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo eliminado' })
       }).catch((e) => {
         const msg = e.response?.data?.detail || 'No se pudo eliminar'
         Swal.fire('No se pudo eliminar', msg, 'error')

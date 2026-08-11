@@ -20,10 +20,10 @@
 
       <v-spacer />
 
-      <!-- "+ Factura" solo cuando NO hay selección: es la subida INDEPENDIENTE.
-           En modo selección, crear/sin-factura viven en la barra flotante, y el
-           header no muta de tamaño. -->
-      <v-btn v-if="!modo_seleccion" color="primary" variant="flat" size="small" class="mr-1" @click="abrirCrearSuelta">
+      <!-- "+ Factura" crea una factura suelta (independiente). Se oculta con un
+           filtro activo: la suelta no coincidiría con el filtro y "desaparece",
+           confundiendo al usuario (cree que se enlaza sola). -->
+      <v-btn v-if="!modo_seleccion && !search_query && !foco_order_number" color="primary" variant="flat" size="small" class="mr-1" @click="abrirCrearSuelta">
         <v-icon start size="16">mdi-plus</v-icon> Factura
       </v-btn>
 
@@ -78,12 +78,14 @@
 
     <v-divider />
 
-    <div class="lista-scroll flex-grow-1">
-      <div v-if="loading" class="d-flex justify-center align-center py-8">
-        <v-progress-circular indeterminate color="primary" size="28" />
-      </div>
-
-      <div v-else-if="facturas.length === 0" class="text-center text-caption text-medium-emphasis py-8">
+    <table-loading-overlay
+      :loading="loading"
+      :isEmpty="facturas.length === 0"
+      text="Cargando facturas..."
+      :offset="300"
+      class="lista-scroll flex-grow-1"
+    >
+      <div v-if="facturas.length === 0" class="text-center text-caption text-medium-emphasis py-8">
         No hay facturas con estos filtros.
       </div>
 
@@ -104,7 +106,7 @@
         </div>
 
         <div
-          v-for="inv in facturas"
+          v-for="inv in facturas_mostradas"
           :key="inv.id"
           class="factura-row-exp d-flex align-center px-3"
           :class="{
@@ -168,7 +170,7 @@
                 </v-btn>
               </template>
               <v-list density="compact" min-width="210">
-                <template v-if="inv.ordenes_vinculadas.length">
+                <template v-if="inv.es_fiscal && inv.ordenes_vinculadas.length">
                   <v-list-subheader class="text-caption">Desvincular orden</v-list-subheader>
                   <v-list-item v-for="o in inv.ordenes_vinculadas" :key="o.order_id" @click="desvincularOrden(inv, o)">
                     <template v-slot:prepend><v-icon size="18" color="grey-darken-1">mdi-link-off</v-icon></template>
@@ -189,7 +191,7 @@
       <!-- ══ MODO COMPACTO: filas delgadas ══ -->
       <template v-else>
         <div
-          v-for="inv in facturas"
+          v-for="inv in facturas_mostradas"
           :key="inv.id"
           class="factura-row d-flex align-center px-3"
           :class="{
@@ -248,7 +250,7 @@
                 </v-btn>
               </template>
               <v-list density="compact" min-width="210">
-                <template v-if="inv.ordenes_vinculadas.length">
+                <template v-if="inv.es_fiscal && inv.ordenes_vinculadas.length">
                   <v-list-subheader class="text-caption">Desvincular orden</v-list-subheader>
                   <v-list-item v-for="o in inv.ordenes_vinculadas" :key="o.order_id" @click="desvincularOrden(inv, o)">
                     <template v-slot:prepend><v-icon size="18" color="grey-darken-1">mdi-link-off</v-icon></template>
@@ -265,7 +267,7 @@
           </div>
         </div>
       </template>
-    </div>
+    </table-loading-overlay>
 
     <fluent-pagination
       v-if="!loading && total_items > 0"
@@ -305,11 +307,13 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import Swal from 'sweetalert2'
 import OrderDataService from '@/services/certificates/orderDataService'
 import InvoiceMappers from '@/mappers/invoiceMappers'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
+import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import DialogFactura from './DialogFactura.vue'
 import DialogLiquidacion from './DialogLiquidacion.vue'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
@@ -346,6 +350,12 @@ const modal_abonos = ref(false)
 const factura_abonos = ref(null)
 
 const modo_seleccion = computed(() => props.ordenes_seleccionadas.length > 0)
+
+// Al vincular, las no-facturas no aplican: están atadas a su propia orden y no
+// pueden vincularse a otras. Se ocultan en modo selección.
+const facturas_mostradas = computed(() =>
+  modo_seleccion.value ? facturas.value.filter(f => f.es_fiscal) : facturas.value
+)
 
 const currency_options = [
   { title: 'Todas las monedas', value: null },
@@ -472,6 +482,7 @@ const monedaSeleccion = computed(() => {
 })
 
 const puede_vincular = (inv) => {
+  if (!inv.es_fiscal) return false  // las no-facturas no se vinculan a otras órdenes
   if (inv.order_type != null && inv.order_type !== props.order_type) return false
   if (monedaSeleccion.value === 'MIXTA') return false
   if (monedaSeleccion.value && inv.currency && inv.currency !== monedaSeleccion.value) return false
@@ -504,7 +515,7 @@ const confirmarVinculo = async (inv) => {
   if (!r.isConfirmed) return
   try {
     await OrderDataService.linkInvoice(inv.id, ordenes.map(o => o.id))
-    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Órdenes vinculadas' })
+    Toast.fire({ timer: 2200, icon: 'success', title: 'Órdenes vinculadas' })
     emit('limpiar-seleccion')
     cargar() // refresco inmediato (además del WS)
   } catch (e) {
@@ -526,7 +537,7 @@ const desvincularOrden = async (inv, orden) => {
   if (!r.isConfirmed) return
   try {
     await OrderDataService.deleteInvoice(inv.id, orden.order_id)
-    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Orden desvinculada' })
+    Toast.fire({ timer: 2200, icon: 'success', title: 'Orden desvinculada' })
     cargar()
   } catch (e) {
     const msg = e?.response?.data?.error || 'No se pudo desvincular.'
@@ -549,7 +560,7 @@ const eliminarFactura = async (inv) => {
   if (!r.isConfirmed) return
   try {
     await OrderDataService.deleteInvoice(inv.id) // sin order_id => borra la factura completa
-    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Factura eliminada' })
+    Toast.fire({ timer: 2200, icon: 'success', title: 'Factura eliminada' })
     cargar()
   } catch (e) {
     const msg = e?.response?.data?.error || 'No se pudo eliminar.'
@@ -590,7 +601,7 @@ const onFacturaCreada = () => { cerrarCrear() }
 
 // ── Drag & drop de PDF (UI en el común PdfDropZone) ──
 const pdfInvalido = () => {
-  Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2500, icon: 'info', title: 'Suelta un archivo PDF.' })
+  Toast.fire({ timer: 2500, icon: 'info', title: 'Suelta un archivo PDF.' })
 }
 // Recibe el File ya validado desde PdfDropZone: extrae datos y abre el modal
 // de crear factura pre-llenado.
@@ -608,15 +619,15 @@ const onPdfDropped = async (file) => {
     // Feedback de extracción (igual que el file-input del modal)
     const algo = res.data.invoice_number || res.data.invoice_date || res.data.amount
     if (res.data.warning) {
-      Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, icon: 'warning', title: 'Extracción parcial', text: res.data.warning })
+      Toast.fire({ timer: 5000, icon: 'warning', title: 'Extracción parcial', text: res.data.warning })
     } else if (algo) {
-      Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2500, icon: 'success', title: '¡Datos extraídos!' })
+      Toast.fire({ timer: 2500, icon: 'success', title: '¡Datos extraídos!' })
     } else {
-      Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'info', title: 'No se extrajo nada, complétalo a mano.' })
+      Toast.fire({ timer: 3000, icon: 'info', title: 'No se extrajo nada, complétalo a mano.' })
     }
   } catch (err) {
     prefill_data.value = { pdf: file }
-    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3500, icon: 'info', title: 'No se pudo leer el PDF. Complétalo a mano.' })
+    Toast.fire({ timer: 3500, icon: 'info', title: 'No se pudo leer el PDF. Complétalo a mano.' })
   }
   modal_crear.value = true
 }

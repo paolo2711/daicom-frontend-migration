@@ -46,6 +46,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, defineAsyncComponent } from 'vue'
 import Swal from 'sweetalert2'
 import ListClients from '@/views/clients/components/ListClients.vue'
@@ -67,11 +68,7 @@ const onBuscarReniec = async () => {
     documentoBuscar.value = ''
     listClients.value?.retrieveAllClients()
 
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      showConfirmButton: false,
-      timer: 3000,
+    Toast.fire({ timer: 3000,
       icon: 'success',
       title: clienteResuelto.created ? 'Nuevo cliente registrado' : 'Cliente sincronizado con RENIEC/SUNAT'
     })

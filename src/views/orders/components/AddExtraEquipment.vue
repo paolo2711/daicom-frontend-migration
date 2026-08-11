@@ -39,6 +39,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, computed, watch, getCurrentInstance } from 'vue'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
@@ -123,7 +124,7 @@ async function saveExtraEquipments() {
 
     await Promise.all(promesas)
 
-    $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: `${items_to_save.value.length} equipo(s) añadido(s)` })
+    Toast.fire({ timer: 2200, icon: 'success', title: `${items_to_save.value.length} equipo(s) añadido(s)` })
 
     const currentUser = JSON.parse(localStorage.getItem('user')) || {}
     if (window.enviarNotificacionGlobal) {

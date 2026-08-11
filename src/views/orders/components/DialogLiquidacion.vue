@@ -218,6 +218,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, reactive, watch, computed } from 'vue'
 import { useTheme } from 'vuetify'
 import Swal from 'sweetalert2'
@@ -359,7 +360,7 @@ const eliminarPago = (id) => {
   }).then((result) => {
     if (result.isConfirmed) {
       OrderDataService.deletePayment(id).then(() => {
-        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Abono eliminado' })
+        Toast.fire({ timer: 2200, icon: 'success', title: 'Abono eliminado' })
       }).catch(() => {
         Swal.fire('Error', 'No se pudo eliminar el abono.', 'error')
       })

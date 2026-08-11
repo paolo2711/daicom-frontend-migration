@@ -181,6 +181,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, reactive, computed } from 'vue'
 import { useTheme } from 'vuetify'
 import Swal from 'sweetalert2'
@@ -324,10 +325,10 @@ const save = async () => {
   try {
     if (isEditing.value) {
       await InventoryDataService.update(form.id, formData)
-      Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo actualizado' })
+      Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo actualizado' })
     } else {
       await InventoryDataService.create(formData)
-      Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo registrado' })
+      Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo registrado' })
     }
     emit('saved')
     close()

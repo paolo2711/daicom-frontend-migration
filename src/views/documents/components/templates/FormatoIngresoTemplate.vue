@@ -72,6 +72,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, reactive, inject } from 'vue'
 import ReceptionClientPanel from '../shared/ReceptionClientPanel.vue'
 import PhysicalInstrumentsTable from '../shared/PhysicalInstrumentsTable.vue'
@@ -152,7 +153,7 @@ const guardarFormato = async () => {
         ? 'Los cambios se guardaron y el PDF fue regenerado exitosamente.'
         : `El documento ${response.data.document_number} se generó exitosamente.`
 
-      swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2500, icon: 'success', title: msgSuccess, text: detailSuccess })
+      Toast.fire({ timer: 2500, icon: 'success', title: msgSuccess, text: detailSuccess })
 
       if (window.notificarActualizacionFila) {
         window.notificarActualizacionFila(null, null, docId.value || response.data.id)

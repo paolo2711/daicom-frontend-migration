@@ -59,6 +59,8 @@ export default {
       id: element.id,
       status: element.status,
       order: element.order,
+      correlative: element.correlative,
+      registry_code: element.registry_code,
       certificate_type: element.certificate_type,
       client: element.client,
       lab: element.lab,

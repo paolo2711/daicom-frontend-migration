@@ -96,6 +96,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, watch, onMounted, onUnmounted, inject } from 'vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
@@ -140,7 +141,7 @@ const anularDocumento = (doc) => {
       if (result.isConfirmed) {
         try {
           await DocumentsDataService.cancel(doc.id)
-          swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Documento anulado' })
+          Toast.fire({ timer: 2200, icon: 'success', title: 'Documento anulado' })
         } catch (error) {
           console.error(error)
           swal.fire('Error', 'Hubo un problema al anular el documento.', 'error')

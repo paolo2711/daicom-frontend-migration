@@ -66,6 +66,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, getCurrentInstance } from 'vue'
 import OrderDataService from '@/services/certificates/orderDataService'
 
@@ -119,7 +120,7 @@ async function save() {
 
     await OrderDataService.updateRentalDates(form.value.id, payload)
     
-    $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Fechas actualizadas' })
+    Toast.fire({ timer: 2200, icon: 'success', title: 'Fechas actualizadas' })
     emit('reload')
     close()
   } catch (error) {

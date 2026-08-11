@@ -67,6 +67,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, reactive } from 'vue'
 import { inject } from 'vue'
 import BillingClientPanel from '../shared/BillingClientPanel.vue'
@@ -168,7 +169,7 @@ const guardarCotizacion = async () => {
         ? 'Los cambios se guardaron y el PDF fue regenerado exitosamente.' 
         : `El documento ${response.data.document_number} se generó exitosamente.`
       
-      swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2500, icon: 'success', title: msgSuccess, text: detailSuccess })
+      Toast.fire({ timer: 2500, icon: 'success', title: msgSuccess, text: detailSuccess })
       
       // Enviamos la actualización masiva a través del WebSocket inyectado globalmente
       if (window.notificarActualizacionFila) {

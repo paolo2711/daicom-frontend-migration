@@ -351,22 +351,22 @@
       label="seleccionada(s)"
       @clear="ordenes_seleccionadas = []"
     >
-      <v-tooltip location="top" text="Crear una factura para las órdenes marcadas">
-        <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" icon="mdi-file-document-plus" variant="text" density="compact"
-                 class="text-white opacity-80 hover-opacity-100 mx-1" @click="crearFacturaParaSeleccion" />
-        </template>
-      </v-tooltip>
-      <v-tooltip location="top" :text="seleccion_sin_factura ? 'Marcar que SÍ requiere comprobante' : 'Marcar como sin comprobante'">
-        <template v-slot:activator="{ props }">
-          <v-btn v-bind="props"
-                 :icon="seleccion_sin_factura ? 'mdi-file-document-check-outline' : 'mdi-file-remove-outline'"
-                 variant="text" density="compact"
-                 :loading="marcando_sin_factura"
-                 class="text-white opacity-80 hover-opacity-100 mx-1"
-                 @click="seleccion_sin_factura ? requerirFactura() : marcarSinFactura()" />
-        </template>
-      </v-tooltip>
+      <v-btn variant="text" color="white" size="small" class="mx-1 font-weight-bold"
+             prepend-icon="mdi-file-document-plus" @click="crearFacturaParaSeleccion">
+        Facturar
+      </v-btn>
+
+      <v-btn v-if="ordenes_seleccionadas.length === 1 && !seleccion_tiene_factura_fiscal" variant="text" color="white" size="small" class="mx-1 font-weight-bold"
+             :loading="marcando_sin_factura"
+             :prepend-icon="seleccion_sin_factura ? 'mdi-file-document-check-outline' : 'mdi-file-remove-outline'"
+             @click="seleccion_sin_factura ? requerirFactura() : marcarSinFactura()">
+        {{ seleccion_sin_factura ? 'Requiere factura' : 'Sin comprobante' }}
+      </v-btn>
+
+      <v-btn v-if="hasPermission(13)" variant="text" color="red-lighten-1" size="small" class="mx-1 font-weight-bold"
+             prepend-icon="mdi-cancel" :loading="anulando" @click="anularSeleccion">
+        Anular
+      </v-btn>
     </selection-bar>
 
     <!-- MODALES -->
@@ -379,6 +379,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { Toast } from '@/plugins/alerts'
 import { useRoute } from 'vue-router'
 import { useTheme } from 'vuetify'
 import Swal from 'sweetalert2'
@@ -579,7 +580,7 @@ const getIconoSemaforoFinanciero = (o) => {
     case 3: return 'mdi-file-document-edit-outline'
     case 2: return 'mdi-file-document-alert-outline'
     case 1:
-    default: return 'mdi-file-document-plus-outline'
+    default: return 'mdi-file-document-outline'
   }
 }
 const getTextoSemaforoFinanciero = (o) => {
@@ -595,27 +596,51 @@ const getTextoSemaforoFinanciero = (o) => {
     case 3: return `Abono parcial (${cuantas})`
     case 2: return `Sin abonos / Deuda (${cuantas})`
     case 1:
-    default: return 'Libre (Sin Factura) — clic para crear/vincular'
+    default: return 'Sin factura — clic para ver'
   }
 }
 // Clic en el semáforo: enfoca el panel en las facturas de la orden; si está
 // libre, la selecciona para vincular.
 const seleccionarFacturaEnPanel = (o) => {
-  if (o.invoices && o.invoices.length > 0) {
-    // Toggle: si ya está enfocada esta orden, el segundo clic quita el filtro.
-    if (foco_order_id.value === o.id) {
-      foco_order_id.value = null
-      foco_order_number.value = ''
-    } else {
-      foco_order_id.value = o.id
-      foco_order_number.value = o.order_number
-    }
-  } else if (!ordenes_seleccionadas.value.some(sel => sel.id === o.id)) {
-    ordenes_seleccionadas.value = [o]
+  // Siempre "ver": enfoca las facturas de esta orden (toggle). Para vincular
+  // se usa el checkbox, no este botón. Al enfocar soltamos cualquier selección
+  // (ver y vincular son excluyentes) para que el panel no quede en modo vincular.
+  if (foco_order_id.value === o.id) {
+    foco_order_id.value = null
+    foco_order_number.value = ''
+  } else {
+    if (ordenes_seleccionadas.value.length > 0) ordenes_seleccionadas.value = []
+    foco_order_id.value = o.id
+    foco_order_number.value = o.order_number
   }
 }
 
 // ── Acciones ──
+const anulando = ref(false)
+const anularSeleccion = async () => {
+  const ordenes = ordenes_seleccionadas.value
+  if (ordenes.length === 0) return
+  const r = await Swal.fire({
+    title: `¿Anular ${ordenes.length} ${ordenes.length === 1 ? 'alquiler' : 'alquileres'}?`,
+    text: 'Se invalidarán las órdenes marcadas.',
+    icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, anular',
+  })
+  if (!r.isConfirmed) return
+  anulando.value = true
+  try {
+    for (const o of ordenes) {
+      await OrderDataService.patch(o.id, { status: 4 })
+    }
+    Toast.fire({ timer: 2200, icon: 'success', title: 'Órdenes anuladas' })
+    ordenes_seleccionadas.value = []
+    retrieveOrders()
+  } catch (e) {
+    Swal.fire('Error', 'No se pudieron anular todas las órdenes.', 'error')
+  } finally {
+    anulando.value = false
+  }
+}
+
 const anularOrderConfirm = (order) => {
   Swal.fire({
     title: '¿Anular Alquiler?', text: `Se invalidará la orden de alquiler ${order.order_number}`,
@@ -623,7 +648,7 @@ const anularOrderConfirm = (order) => {
   }).then((result) => {
     if (result.isConfirmed) {
       OrderDataService.patch(order.id, { status: 4 }).then(() => {
-        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Orden anulada' })
+        Toast.fire({ timer: 2200, icon: 'success', title: 'Orden anulada' })
         retrieveOrders()
       })
     }
@@ -664,10 +689,12 @@ const marcarSinFactura = async () => {
     for (const o of ordenes) {
       await OrderDataService.patch(o.id, { wants_invoice: false })
     }
-    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Marcadas sin factura' })
+    Toast.fire({ timer: 2200, icon: 'success', title: 'Marcadas sin factura' })
     ordenes_seleccionadas.value = []
   } catch (err) {
-    Swal.fire('Error', 'No se pudo marcar alguna orden.', 'error')
+    const d = err.response?.data
+    const msg = d?.wants_invoice?.[0] || d?.detail || 'No se pudo marcar alguna orden.'
+    Swal.fire('No se pudo', msg, 'error')
   } finally {
     marcando_sin_factura.value = false
   }
@@ -677,6 +704,13 @@ const marcarSinFactura = async () => {
 const seleccion_sin_factura = computed(() =>
   ordenes_seleccionadas.value.length > 0 &&
   ordenes_seleccionadas.value.every(o => o.wants_invoice === false)
+)
+
+// ¿La orden seleccionada ya tiene una factura fiscal? Entonces no se puede
+// marcar sin comprobante (el botón se oculta).
+const seleccion_tiene_factura_fiscal = computed(() =>
+  ordenes_seleccionadas.value.length === 1 &&
+  (ordenes_seleccionadas.value[0].invoices || []).some(f => f.es_fiscal)
 )
 
 // Re-activa "requiere comprobante". El backend descarta la interna vacía.
@@ -695,10 +729,12 @@ const requerirFactura = async () => {
     for (const o of ordenes) {
       await OrderDataService.patch(o.id, { wants_invoice: true })
     }
-    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Marcadas: requieren factura' })
+    Toast.fire({ timer: 2200, icon: 'success', title: 'Marcadas: requieren factura' })
     ordenes_seleccionadas.value = []
   } catch (err) {
-    Swal.fire('Error', 'No se pudo actualizar alguna orden.', 'error')
+    const d = err.response?.data
+    const msg = d?.wants_invoice?.[0] || d?.detail || 'No se pudo actualizar alguna orden.'
+    Swal.fire('No se pudo', msg, 'error')
   } finally {
     marcando_sin_factura.value = false
   }
@@ -741,9 +777,11 @@ watch(expanded, (newVal) => {
   }
 })
 
-// Al cambiar la selección de órdenes soltamos el foco de una orden en el panel.
-watch(ordenes_seleccionadas, () => {
-  if (foco_order_id.value !== null) {
+// Ver (foco) y seleccionar (vincular) son modos excluyentes. Al MARCAR órdenes
+// (selección no vacía) soltamos el foco. Si la selección quedó vacía NO tocamos
+// el foco: así no pisamos un foco recién puesto por el semáforo.
+watch(ordenes_seleccionadas, (val) => {
+  if (val.length > 0 && foco_order_id.value !== null) {
     foco_order_id.value = null
     foco_order_number.value = ''
   }

@@ -55,16 +55,23 @@
                 </v-icon>
               </v-btn>
 
-              <v-btn 
-                icon variant="text" density="comfortable" size="x-small" class="mx-1"
-                :href="getValidCloudUrl(cert)" 
-                target="_blank" 
-                :disabled="!hasValidCloud(cert)" 
-              >
-                <v-icon :color="hasValidCloud(cert) ? 'primary' : 'grey-lighten-1'">
-                  mdi-cloud-check
-                </v-icon>
-              </v-btn>
+              <v-tooltip location="bottom" :disabled="!hasValidCloud(cert)">
+                <template v-slot:activator="{ props }">
+                  <v-btn
+                    v-bind="props"
+                    icon variant="text" density="comfortable" size="x-small" class="mx-1"
+                    :href="getValidCloudUrl(cert)"
+                    target="_blank"
+                    :disabled="!hasValidCloud(cert)"
+                    @click.stop="onNubeClick($event, cert)"
+                  >
+                    <v-icon :color="hasValidCloud(cert) ? 'primary' : 'grey-lighten-1'">
+                      mdi-cloud-check
+                    </v-icon>
+                  </v-btn>
+                </template>
+                <span>Ver PDF en Nube Pública<br><small>Ctrl+clic: copiar link</small></span>
+              </v-tooltip>
             </div>
           </td>
 
@@ -132,6 +139,7 @@
 </template>
 
 <script>
+import { Toast } from '@/plugins/alerts'
 import { useTheme } from 'vuetify'
 import { computed as vueComputed } from 'vue'
 import CertificateDataService from "@/services/certificates/certificateDataService";
@@ -183,6 +191,43 @@ export default {
     getValidCloudUrl(cert) {
       return this.hasValidCloud(cert) ? `https://daicomperu.com/${cert.uuid || cert.correlative}` : undefined;
     },
+    // Copia texto al portapapeles. navigator.clipboard solo existe en contexto
+    // seguro (HTTPS/localhost); en HTTP caemos al textarea + execCommand.
+    copiarAlPortapapeles(texto) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(texto);
+      }
+      return new Promise((resolve, reject) => {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = texto;
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          ta.style.top = '0';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          const ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          ok ? resolve() : reject(new Error('execCommand copy failed'));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    },
+    // Clic normal en el botón de nube: abre el PDF (href). Ctrl/Cmd+clic: copia el link.
+    onNubeClick(event, cert) {
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        const link = this.getValidCloudUrl(cert);
+        if (!link) return;
+        this.copiarAlPortapapeles(link).then(() => {
+          Toast.fire({ timer: 1800, icon: 'success', title: 'Link copiado' });
+        }).catch(() => {
+          Toast.fire({ timer: 2200, icon: 'error', title: 'No se pudo copiar' });
+        });
+      }
+    },
     irACertificado(cert) {
       this.$router.push({ path: '/certificates', query: { correlativo: cert.correlative } }).catch(() => {});
     },
@@ -210,7 +255,7 @@ export default {
         if (result.isConfirmed) {
           // Mandamos order en null para romper la relación de llave foránea en Django
           CertificateDataService.patch(cert.id, { order: null }).then(() => {
-            this.$swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo desvinculado' });
+            Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo desvinculado' });
             
             // 1. Avisamos al padre (TabOrdersService) que recargue SOLO esta orden específica
             if (window.notificarActualizacionFila) {
@@ -235,7 +280,7 @@ export default {
       }).then((result) => {
         if (result.isConfirmed) {
           CertificateDataService.patch(cert.id, { status: 5 }).then(() => {
-            this.$swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo anulado' });
+            Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo anulado' });
             
             if (window.notificarActualizacionFila) {
               window.notificarActualizacionFila(null, this.order.id);
@@ -264,7 +309,7 @@ export default {
       }).then((result) => {
         if (result.isConfirmed) {
           CertificateDataService.patch(cert.id, { status: 1 }).then(() => {
-            this.$swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo restaurado' });
+            Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo restaurado' });
             
             if (window.notificarActualizacionFila) {
               window.notificarActualizacionFila(null, this.order.id);

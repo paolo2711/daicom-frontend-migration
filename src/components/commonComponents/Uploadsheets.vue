@@ -3,6 +3,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { onMounted, onBeforeUnmount, getCurrentInstance } from 'vue'
 import { useAppStore } from '@/stores/appStore'
 import CertificateDataService from '@/services/certificates/certificateDataService'
@@ -64,12 +65,12 @@ function handleCancelSheet(e) {
 function handleApproveSheet(e) {
   const { id, final_name, temp_url } = e.detail
 
-  $swal.fire({ ...appStore.toastGuardando, title: 'Guardando en red local...' })
+  Toast.fire({ ...appStore.toastGuardando, title: 'Guardando en red local...' })
 
   CertificateDataService.patch(id, {
     status: 2, final_name, temp_url,
   }).then(() => {
-    $swal.fire({ ...appStore.toastGuardadoExito, title: '¡Excel guardado!' })
+    Toast.fire({ ...appStore.toastGuardadoExito, title: '¡Excel guardado!' })
 
     const currentUser = JSON.parse(localStorage.getItem('user')) || {}
     if (window.enviarNotificacionGlobal) {

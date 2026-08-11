@@ -124,6 +124,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch, getCurrentInstance } from 'vue'
+import { Toast } from '@/plugins/alerts'
 import { useTheme } from 'vuetify'
 import OrderDataService from "@/services/certificates/orderDataService"
 import ClientDataService from "@/services/clients/clientDataService"
@@ -232,9 +233,9 @@ function subirDoc(tipo) {
       nuevoDoc[tipo] = { numero: '', file: null }
       cargarDocs()
       refrescarFila()
-      $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, icon: 'success', title: 'Documento subido' })
+      Toast.fire({ timer: 2000, icon: 'success', title: 'Documento subido' })
     })
-    .catch(() => $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2500, icon: 'error', title: 'No se pudo subir' }))
+    .catch(() => Toast.fire({ timer: 2500, icon: 'error', title: 'No se pudo subir' }))
     .finally(() => { subiendoDoc[tipo] = false })
 }
 
@@ -250,9 +251,9 @@ async function borrarDoc(d) {
     .then(() => {
       cargarDocs()
       refrescarFila()
-      $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, icon: 'success', title: 'Documento eliminado' })
+      Toast.fire({ timer: 2000, icon: 'success', title: 'Documento eliminado' })
     })
-    .catch(() => $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2500, icon: 'error', title: 'No se pudo eliminar' }))
+    .catch(() => Toast.fire({ timer: 2500, icon: 'error', title: 'No se pudo eliminar' }))
 }
 
 function verUrl(url) { if (url) window.open(url, '_blank') }
@@ -278,7 +279,7 @@ function guardarEdicionOrden() {
 
 function onSuccess() {
   window.dispatchEvent(new CustomEvent('wss-update-order-row', { detail: props.order.id }))
-  $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Orden actualizada' })
+  Toast.fire({ timer: 2200, icon: 'success', title: 'Orden actualizada' })
   close()
   saving_edit_order.value = false
 }

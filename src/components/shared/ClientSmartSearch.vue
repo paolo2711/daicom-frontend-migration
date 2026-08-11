@@ -49,6 +49,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, inject, watch, onMounted } from 'vue'
 import { useClientLookup } from '@/composables/useClientLookup'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
@@ -138,11 +139,7 @@ const onBuscarReniec = async () => {
     documentoBuscar.value = ''
 
     if (clienteResuelto.created && swal) {
-      swal.fire({
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 3000,
+      Toast.fire({ timer: 3000,
         icon: 'success',
         title: 'Nuevo cliente registrado'
       })

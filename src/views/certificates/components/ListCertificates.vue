@@ -140,26 +140,20 @@
       label="seleccionado(s)"
       @clear="certificados_seleccionados = []"
     >
-          <v-tooltip location="top">
-            <template v-slot:activator="{ props }">
-              <v-btn v-bind="props" icon="mdi-file-pdf-box" variant="text" density="compact" class="text-white opacity-80 hover-opacity-100 mx-1" @click="abrirModalLote('excel')" />
-            </template>
-            <span>Subir Excels</span>
-          </v-tooltip>
+      <v-btn variant="text" color="white" size="small" class="mx-1 font-weight-bold"
+             prepend-icon="mdi-file-pdf-box" @click="abrirModalLote('excel')">
+        Subir Excels
+      </v-btn>
 
-          <v-tooltip location="top" v-if="permiso_qr">
-            <template v-slot:activator="{ props }">
-              <v-btn v-bind="props" icon="mdi-qrcode-scan" variant="text" density="compact" class="text-white opacity-80 hover-opacity-100 mx-1" @click="abrirModalLote('qr')" />
-            </template>
-            <span>Firmar QR</span>
-          </v-tooltip>
+      <v-btn v-if="permiso_qr" variant="text" color="white" size="small" class="mx-1 font-weight-bold"
+             prepend-icon="mdi-qrcode-scan" @click="abrirModalLote('qr')">
+        Firmar QR
+      </v-btn>
 
-          <v-tooltip location="top" v-if="permiso_solicitar_firma">
-            <template v-slot:activator="{ props }">
-              <v-btn v-bind="props" icon="mdi-bell-ring" variant="text" density="compact" class="text-white opacity-80 hover-opacity-100 mx-1" @click="abrirModalLote('notify')" />
-            </template>
-            <span>Solicitar Firma</span>
-          </v-tooltip>
+      <v-btn v-if="permiso_solicitar_firma" variant="text" color="white" size="small" class="mx-1 font-weight-bold"
+             prepend-icon="mdi-bell-ring" @click="abrirModalLote('notify')">
+        Solicitar Firma
+      </v-btn>
     </selection-bar>
 
     <table-loading-overlay :loading="loading_list" :isEmpty="certificates.length === 0">
@@ -287,12 +281,12 @@
                   <v-btn
                     v-bind="props" icon variant="text" density="comfortable" color="primary"
                     :href="`https://daicomperu.com/${item.uuid}`" target="_blank"
-                    :disabled="item.status === 5" @click.stop
+                    :disabled="item.status === 5" @click.stop="onNubeClick($event, item)"
                   >
                     <v-icon>mdi-cloud-check</v-icon>
                   </v-btn>
                 </template>
-                <span>Ver PDF en Nube Pública</span>
+                <span>Ver PDF en Nube Pública<br><small>Ctrl+clic: copiar link</small></span>
               </v-tooltip>
               
               <v-tooltip location="bottom" v-else>
@@ -447,6 +441,11 @@
           <v-list-item-title class="font-weight-medium text-body-2">Editar Datos</v-list-item-title>
         </v-list-item>
 
+        <v-list-item v-if="contextMenu.item.uploaded" @click="copiarLinkCertificado(contextMenu.item)">
+          <template v-slot:prepend><v-icon size="small">mdi-link-variant</v-icon></template>
+          <v-list-item-title class="font-weight-medium text-body-2">Copiar link</v-list-item-title>
+        </v-list-item>
+
         <v-list-item v-if="contextMenu.item.status !== 5" @click="openUploadDialog(contextMenu.item)">
           <template v-slot:prepend><v-icon size="small">mdi-file-excel</v-icon></template>
           <v-list-item-title class="font-weight-medium text-body-2">
@@ -495,6 +494,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, getCurrentInstance, defineAsyncComponent } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/appStore'
@@ -949,7 +949,7 @@ function anularCertConfirm (cert) {
   }).then((result) => {
     if (result.isConfirmed) {
       CertificateDataService.patch(cert.id, { status: 5 }).then(() => {
-        $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo anulado' })
+        Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo anulado' })
         if (window.notificarActualizacionFila) window.notificarActualizacionFila(cert.id, null);
         const currentUser = JSON.parse(localStorage.getItem('user')) || {}
         if (window.enviarNotificacionGlobal) {
@@ -976,7 +976,7 @@ function revivirCertConfirm (cert) {
     if (result.isConfirmed) {
       CertificateDataService.patch(cert.id, { status: 1 })
         .then(() => {
-          $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo restaurado' })
+          Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo restaurado' })
           if (window.notificarActualizacionFila) window.notificarActualizacionFila(cert.id, null);
         })
         .catch(() => {
@@ -988,8 +988,7 @@ function revivirCertConfirm (cert) {
 
 function solicitarFirmaIndividual(cert) {
   CertificateDataService.requestBatchSignatures([cert.id]).then(() => {
-    $swal.fire({
-      toast: true, position: 'top-end', showConfirmButton: false, timer: 3000,
+    Toast.fire({ timer: 3000,
       icon: 'success', title: `Firma solicitada para ${cert.registry_code}`
     })
   }).catch(() => {
@@ -999,8 +998,7 @@ function solicitarFirmaIndividual(cert) {
 
 function cancelarSolicitudFirma(cert) {
   CertificateDataService.cancelSignatureRequest(cert.id).then(() => {
-    $swal.fire({
-      toast: true, position: 'top-end', showConfirmButton: false, timer: 3000,
+    Toast.fire({ timer: 3000,
       icon: 'info', title: `Solicitud cancelada para ${cert.registry_code}`
     })
   }).catch(() => {
@@ -1008,6 +1006,49 @@ function cancelarSolicitudFirma(cert) {
   })
 }
 
+
+// Copia texto al portapapeles. navigator.clipboard solo existe en contexto
+// seguro (HTTPS/localhost); en HTTP caemos al textarea + execCommand.
+function copiarAlPortapapeles(texto) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(texto)
+  }
+  return new Promise((resolve, reject) => {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = texto
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      ta.style.top = '0'
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      ok ? resolve() : reject(new Error('execCommand copy failed'))
+    } catch (e) {
+      reject(e)
+    }
+  })
+}
+
+// Copia el link público del certificado al portapapeles con un toast breve.
+function copiarLinkCertificado(cert) {
+  const link = `https://daicomperu.com/${cert.uuid}`
+  copiarAlPortapapeles(link).then(() => {
+    Toast.fire({ timer: 1800, icon: 'success', title: 'Link copiado' })
+  }).catch(() => {
+    Toast.fire({ timer: 2200, icon: 'error', title: 'No se pudo copiar' })
+  })
+}
+
+// Clic normal en el botón de nube: abre el PDF (href). Ctrl/Cmd+clic: copia el link.
+function onNubeClick(event, cert) {
+  if (event.ctrlKey || event.metaKey) {
+    event.preventDefault()
+    copiarLinkCertificado(cert)
+  }
+}
 
 function eliminarDeLaNubeConfirm(cert) {
   $swal.fire({
@@ -1026,7 +1067,7 @@ function eliminarDeLaNubeConfirm(cert) {
         if (data.warning) {
           $swal.fire('Nube Limpia', data.success, 'warning')
         } else {
-          $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: data.success || 'Documento eliminado' })
+          Toast.fire({ timer: 2200, icon: 'success', title: data.success || 'Documento eliminado' })
         }
         
         cert.uploaded = false

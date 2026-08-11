@@ -117,6 +117,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { computed, getCurrentInstance, ref } from 'vue'
 import DialogEditRentalDates from './DialogEditRentalDates.vue'
 import AddEquipment from '@/views/inventory/components/AddEquipment.vue'
@@ -221,7 +222,7 @@ function marcarDevuelto(rental) {
       if (window.notificarActualizacionFila) {
         window.notificarActualizacionFila(null, props.order.id);
       }
-      $swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Equipo devuelto' })
+      Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo devuelto' })
     }
   })
 }

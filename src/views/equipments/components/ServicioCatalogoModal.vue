@@ -68,6 +68,7 @@
 </template>
 
 <script setup>
+import { Toast } from '@/plugins/alerts'
 import { ref, reactive } from 'vue'
 import Swal from 'sweetalert2'
 import ServicioCatalogoDataService from '@/services/equipments/servicioCatalogoDataService'
@@ -123,7 +124,7 @@ const save = async () => {
     request.then(() => {
       emit('reload')
       close()
-      Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2200, icon: 'success', title: 'Servicio guardado' })
+      Toast.fire({ timer: 2200, icon: 'success', title: 'Servicio guardado' })
     }).catch(e => {
       Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo guardar. Verifica que no estés duplicando un servicio exacto.' })
     }).finally(() => { is_saving.value = false })

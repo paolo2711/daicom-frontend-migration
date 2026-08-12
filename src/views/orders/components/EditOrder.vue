@@ -3,18 +3,6 @@
     <v-card style="max-height: 90vh; display: flex; flex-direction: column;">
       <base-modal-header :title="tituloModal" icon="mdi-pencil-box-multiple" @close="close">
         <span v-if="order">Orden: <span class="font-weight-bold text-primary ml-1">{{ order.order_number }}</span></span>
-        <div class="currency-switch ml-4" v-if="edit_order_data">
-          <v-btn-toggle
-            v-model="edit_order_data.currency"
-            mandatory
-            density="compact"
-            class="currency-switch__toggle"
-            :disabled="order.total_facturado > 0 || order.total_pagado > 0"
-          >
-            <v-btn value="PEN">S/</v-btn>
-            <v-btn value="USD">$</v-btn>
-          </v-btn-toggle>
-        </div>
       </base-modal-header>
       <template v-if="edit_order_data">
 
@@ -192,7 +180,6 @@ function initFields() {
   edit_order_data.value = {
     id: props.order.id,
     client: props.order.client_data.id,
-    currency: props.order.currency || 'PEN',
     order_number: props.order.order_number
   }
 
@@ -258,12 +245,11 @@ async function borrarDoc(d) {
 
 function verUrl(url) { if (url) window.open(url, '_blank') }
 
-// ── Guardado del form (cliente, moneda, cotización, guías) ──
+// ── Guardado del form (cliente, cotización, guías) ──
 function guardarEdicionOrden() {
   saving_edit_order.value = true
   let data = new FormData()
   data.append('client', edit_order_data.value.client)
-  data.append('currency', edit_order_data.value.currency)
 
   if (props.order.order_type === 1 || !props.order.order_type) {
     data.append('sync_certificates', selected_certs_to_update.value.join(','))
@@ -311,28 +297,5 @@ function close() {
 .doc-table {
   border: 1px solid rgba(0,0,0,0.08);
   border-radius: 8px;
-}
-.currency-switch {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-.currency-switch__toggle {
-  height: 26px !important;
-  border-radius: 20px !important;
-  overflow: hidden;
-  border: 1px solid rgba(0,0,0,0.12) !important;
-}
-.currency-switch__toggle .v-btn {
-  min-width: 36px !important;
-  height: 26px !important;
-  font-size: 0.75rem !important;
-  font-weight: 700;
-  padding: 0 8px !important;
-  letter-spacing: 0;
-}
-.currency-switch__toggle .v-btn--active {
-  background-color: rgb(var(--v-theme-primary)) !important;
-  color: #fff !important;
 }
 </style>

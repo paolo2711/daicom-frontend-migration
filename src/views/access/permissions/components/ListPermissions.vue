@@ -100,11 +100,12 @@ onMounted(() => {
     name: 'Acciones del Sistema',
     id: 'sys_root', // Aislar carpeta
     children: [
-      { name: 'Firmar / Generar QR', to: 'FIRMAR_QR', id: 'sys_10', real_id: 10 },
-      { name: 'Ver Resumen de Orden', to: 'VER_RESUMEN_ORDEN', id: 'sys_11', real_id: 11 },
-      { name: 'Anular / Restaurar Certificados', to: 'ANULAR_CERTIFICADO', id: 'sys_12', real_id: 12 },
-      { name: 'Anular Órdenes', to: 'ANULAR_ORDEN', id: 'sys_13', real_id: 13 },
-      { name: 'Solicitar Firma', to: 'SOLICITAR_FIRMA', id: 'sys_14', real_id: 14 }
+      { name: 'Firmar / Generar QR', to: 'FIRMAR_QR', id: 'sys_1001', real_id: 1001 },
+      { name: 'Ver Resumen de Orden', to: 'VER_RESUMEN_ORDEN', id: 'sys_1002', real_id: 1002 },
+      { name: 'Anular / Restaurar Certificados', to: 'ANULAR_CERTIFICADO', id: 'sys_1003', real_id: 1003 },
+      { name: 'Anular Órdenes', to: 'ANULAR_ORDEN', id: 'sys_1004', real_id: 1004 },
+      { name: 'Solicitar Firma', to: 'SOLICITAR_FIRMA', id: 'sys_1005', real_id: 1005 },
+      { name: 'Elaborar Certificado (Subir Excel)', to: 'ELABORAR_CERTIFICADO', id: 'sys_1006', real_id: 1006 }
     ]
   })
   
@@ -148,8 +149,8 @@ const retrievePermissions = async (id) => {
     try {
       const response = await PermissionDataService.get(id)
       selection.value = response.data.permission_list.map(p => {
-        // Mapear los IDs numéricos de acciones del sistema a su ID virtual de interfaz
-        if ([10, 11, 12, 13, 14].includes(p.permission_id)) {
+        // Acciones del sistema viven en la banda >= 1000; el resto son vistas.
+        if (p.permission_id >= 1000) {
           return 'sys_' + p.permission_id
         }
         return p.permission_id

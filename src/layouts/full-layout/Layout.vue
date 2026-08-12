@@ -117,7 +117,7 @@ onMounted(() => {
     const permissions = userObj.action_permissions || []
     const isAdmin = userObj.kind !== undefined && userObj.kind < 1
     
-    if (isAdmin || permissions.includes(10)) {
+    if (isAdmin || permissions.includes(1001)) {
       CertificateDataService.getPendingSignaturesSummary()
         .then(response => {
           appStore.setPendingSignaturesCount(response.data.pending_signatures)

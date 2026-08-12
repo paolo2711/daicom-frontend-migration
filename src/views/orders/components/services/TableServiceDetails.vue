@@ -112,11 +112,11 @@
                 <span>Desvincular de la Orden</span>
               </v-tooltip>
 
-              <v-btn icon variant="text" density="comfortable" size="x-small" color="red" class="mx-1" @click="anularCertConfirm(cert)" v-if="cert.status !== 5 && hasPermission(12)">
+              <v-btn icon variant="text" density="comfortable" size="x-small" color="red" class="mx-1" @click="anularCertConfirm(cert)" v-if="cert.status !== 5 && hasPermission(1003)">
                 <v-icon>mdi-minus-circle-outline</v-icon>
               </v-btn>
 
-              <v-tooltip location="bottom" color="success" v-if="cert.status === 5 && hasPermission(12)">
+              <v-tooltip location="bottom" color="success" v-if="cert.status === 5 && hasPermission(1003)">
                 <template v-slot:activator="{ props }">
                   <!-- [R1] variant="text" | [R2] density="comfortable" -->
                   <v-btn icon variant="text" density="comfortable" size="x-small" color="green-darken-2" class="mx-1" v-bind="props" @click="revivirCertConfirm(cert)">

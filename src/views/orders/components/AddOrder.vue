@@ -3,12 +3,6 @@
     <v-card style="max-height: 90vh; display: flex; flex-direction: column;">
       <base-modal-header :title="`Generar Orden de ${order.order_type === 1 ? 'Servicio' : 'Alquiler'}`" icon="mdi-file-document-plus" @close="close">
         <span v-if="next_order_number">Sig. Orden: <span class="font-weight-bold text-primary ml-1">{{ next_order_number }}</span></span>
-        <div class="currency-switch ml-4">
-          <v-btn-toggle v-model="order.currency" mandatory density="compact" class="currency-switch__toggle">
-            <v-btn value="PEN">S/</v-btn>
-            <v-btn value="USD">$</v-btn>
-          </v-btn-toggle>
-        </div>
       </base-modal-header>
 
       <v-card-text class="pt-4" style="overflow-y: auto; flex-grow: 1;">
@@ -104,7 +98,7 @@ watch(items_to_save, (newVal) => {
 function open(tipo) {
   const draft = tipo === 1 ? localStorage.getItem('daicom_draft_items_1') : null
   items_to_save.value = []
-  order.value = { client: null, order_type: tipo, currency: 'PEN' }
+  order.value = { client: null, order_type: tipo }
   dialog.value = true
   retrieveClientes('')
   calculateNextNumber()
@@ -152,7 +146,7 @@ async function save() {
   is_on_sending_process.value = true
 
   try {
-    const payload_orden = { client: order.value.client, order_type: order.value.order_type, currency: order.value.currency }
+    const payload_orden = { client: order.value.client, order_type: order.value.order_type }
     if (order.value.order_type === 2 && order.value.client_order_reference) {
       payload_orden.client_order_reference = order.value.client_order_reference
     }
@@ -194,29 +188,3 @@ function close() {
 defineExpose({ open })
 </script>
 
-<style scoped>
-.currency-switch {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-.currency-switch__toggle {
-  height: 26px !important;
-  border-radius: 20px !important;
-  overflow: hidden;
-  border: 1px solid rgba(0,0,0,0.12) !important;
-}
-.currency-switch__toggle .v-btn {
-  min-width: 36px !important;
-  height: 26px !important;
-  font-size: 0.75rem !important;
-  font-weight: 700;
-  padding: 0 8px !important;
-  letter-spacing: 0;
-}
-/* Forzamos el color primario dinámico de DAICOM (el azul/tema principal) */
-.currency-switch__toggle .v-btn--active {
-  background-color: rgb(var(--v-theme-primary)) !important;
-  color: #fff !important;
-}
-</style>

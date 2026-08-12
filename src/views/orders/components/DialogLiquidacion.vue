@@ -245,7 +245,7 @@ const dialogModel = computed({
 
 // Unifica el contexto: el abono puede abrirse desde una FACTURA (caso
 // normal, panel) o desde una ORDEN (compatibilidad). La factura manda.
-const monedaActual = computed(() => props.invoice?.currency || props.order?.currency || 'PEN')
+const monedaActual = computed(() => props.invoice?.currency || 'PEN')
 const historialPagos = computed(() => props.invoice?.payments || props.order?.payments || [])
 
 const is_on_sending_process = ref(false)

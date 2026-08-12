@@ -50,10 +50,10 @@ export default [
         name: 'Inventario de Equipos',
     },
     {
-        icon: 'mdi-toolbox', 
+        icon: 'mdi-toolbox',
         title: 'Equipos',
-        to: '/equipos', 
-        id: 10, 
+        to: '/equipos',
+        id: 10,
         name: 'Catálogo Maestro de Equipos',
     },
     // ─── ZONA DE ADMINISTRACIÓN (AGRUPADA PARA EL ÁRBOL Y UX) ───

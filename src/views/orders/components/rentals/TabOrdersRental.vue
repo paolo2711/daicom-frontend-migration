@@ -304,7 +304,7 @@
             <span>Editar alquiler</span>
           </v-tooltip>
 
-          <v-tooltip location="bottom" color="error" v-if="hasPermission(13) && item.status !== 4">
+          <v-tooltip location="bottom" color="error" v-if="hasPermission(1004) && item.status !== 4">
             <template v-slot:activator="{ props }">
               <v-btn v-bind="props" icon variant="text" density="comfortable" @click="anularOrderConfirm(item)">
                 <v-icon>mdi-delete-outline</v-icon>
@@ -363,7 +363,7 @@
         {{ seleccion_sin_factura ? 'Requiere factura' : 'Sin comprobante' }}
       </v-btn>
 
-      <v-btn v-if="hasPermission(13)" variant="text" color="error" size="small" class="mx-1 font-weight-bold"
+      <v-btn v-if="hasPermission(1004)" variant="text" color="error" size="small" class="mx-1 font-weight-bold"
              prepend-icon="mdi-cancel" :loading="anulando" @click="anularSeleccion">
         Anular
       </v-btn>
@@ -659,15 +659,11 @@ const prepareExtraEquipment = (o) => { selected_order.value = o; dialog_extra.va
 const hasPermission = (id) => (is_admin.value ? true : user_permissions.value.includes(id))
 
 // ── Panel de facturas: crear por selección / sin factura ──
-// "CREAR FACTURA": una sola factura para TODAS las órdenes marcadas (misma moneda).
+// "CREAR FACTURA": una sola factura para TODAS las órdenes marcadas. La moneda
+// se elige en el diálogo de la factura (la orden ya no tiene moneda propia).
 const crearFacturaParaSeleccion = () => {
   const ordenes = ordenes_seleccionadas.value
   if (ordenes.length === 0) return
-  const monedas = new Set(ordenes.map(o => o.currency))
-  if (monedas.size > 1) {
-    Swal.fire('Monedas distintas', 'Solo puedes crear una factura para órdenes de la misma moneda. Desmarca las que no coincidan.', 'warning')
-    return
-  }
   selected_order.value = null
   ordenes_factura_multi.value = [...ordenes]
   factura_modal.value = true
@@ -679,15 +675,20 @@ const marcarSinFactura = async () => {
   if (ordenes.length === 0) return
   const r = await Swal.fire({
     title: '¿Sin comprobante?',
-    html: `Se marcarán <b>${ordenes.length}</b> ${ordenes.length === 1 ? 'orden' : 'órdenes'} como "no requiere factura". Podrás registrarles abonos igual.`,
-    icon: 'question', showCancelButton: true,
+    html: `Se marcarán <b>${ordenes.length}</b> ${ordenes.length === 1 ? 'orden' : 'órdenes'} como "no requiere factura". Elige la moneda de su registro interno de abonos:`,
+    icon: 'question',
+    input: 'select',
+    inputOptions: { PEN: 'Soles (S/)', USD: 'Dólares ($)' },
+    inputValue: 'PEN',
+    showCancelButton: true,
     confirmButtonText: 'Sí, sin factura', cancelButtonText: 'Cancelar',
   })
   if (!r.isConfirmed) return
+  const currency = r.value || 'PEN'
   marcando_sin_factura.value = true
   try {
     for (const o of ordenes) {
-      await OrderDataService.patch(o.id, { wants_invoice: false })
+      await OrderDataService.patch(o.id, { wants_invoice: false, currency })
     }
     Toast.fire({ timer: 2200, icon: 'success', title: 'Marcadas sin factura' })
     ordenes_seleccionadas.value = []

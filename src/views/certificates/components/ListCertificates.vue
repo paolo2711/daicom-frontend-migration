@@ -140,7 +140,7 @@
       label="seleccionado(s)"
       @clear="certificados_seleccionados = []"
     >
-      <v-btn variant="text" size="small" class="mx-1 font-weight-bold"
+      <v-btn v-if="permiso_elaborar" variant="text" size="small" class="mx-1 font-weight-bold"
              prepend-icon="mdi-file-pdf-box" @click="abrirModalLote('excel')">
         Subir Excels
       </v-btn>
@@ -263,7 +263,7 @@
               <v-btn
                 v-else
                 v-bind="props" icon variant="text" density="comfortable" color="grey"
-                :disabled="item.status === 5" @click.stop="openUploadDialog(item)"
+                :disabled="item.status === 5 || !permiso_elaborar" @click.stop="openUploadDialog(item)"
               >
                 <v-icon>mdi-file-pdf-box</v-icon>
               </v-btn>
@@ -446,7 +446,7 @@
           <v-list-item-title class="font-weight-medium text-body-2">Copiar link</v-list-item-title>
         </v-list-item>
 
-        <v-list-item v-if="contextMenu.item.status !== 5" @click="openUploadDialog(contextMenu.item)">
+        <v-list-item v-if="permiso_elaborar && contextMenu.item.status !== 5" @click="openUploadDialog(contextMenu.item)">
           <template v-slot:prepend><v-icon size="small">mdi-file-excel</v-icon></template>
           <v-list-item-title class="font-weight-medium text-body-2">
             {{ (contextMenu.item.uploaded_xls && contextMenu.item.uploaded_xls !== '0' && contextMenu.item.uploaded_xls !== 'False') ? 'Reemplazar Excel' : 'Subir Excel' }}
@@ -614,9 +614,10 @@ const permiso_qr              = ref(false)
 const permiso_resumen         = ref(false)
 const permiso_anular          = ref(false)
 const permiso_solicitar_firma = ref(false)
+const permiso_elaborar        = ref(false)  // 15: subir Excel base (metrólogo)
 //permisos pildora
 const ver_bandeja_firmas = computed(() => {
-  return is_admin.value || user_permissions.value.includes(10) || user_permissions.value.includes(14)
+  return is_admin.value || user_permissions.value.includes(1001) || user_permissions.value.includes(1005)
 })
 
 // ─── Headers de la tabla ──────────────────────────────────────────────────────
@@ -685,10 +686,11 @@ onMounted(() => {
   
   is_admin.value         = user.kind !== undefined && user.kind < 1
   user_permissions.value = user.action_permissions || []
-  permiso_qr.value              = is_admin.value || user_permissions.value.includes(10)
-  permiso_resumen.value         = is_admin.value || user_permissions.value.includes(11)
-  permiso_anular.value          = is_admin.value || user_permissions.value.includes(12)
-  permiso_solicitar_firma.value = is_admin.value || user_permissions.value.includes(14)
+  permiso_qr.value              = is_admin.value || user_permissions.value.includes(1001)
+  permiso_resumen.value         = is_admin.value || user_permissions.value.includes(1002)
+  permiso_anular.value          = is_admin.value || user_permissions.value.includes(1003)
+  permiso_solicitar_firma.value = is_admin.value || user_permissions.value.includes(1005)
+  permiso_elaborar.value        = is_admin.value || user_permissions.value.includes(1006)
 
   if (route.query.correlativo) {
     correlative.value = route.query.correlativo

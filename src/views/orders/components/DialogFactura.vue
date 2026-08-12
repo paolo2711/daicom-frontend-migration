@@ -87,9 +87,9 @@
             </v-col>
           </v-row>
 
-          <!-- Moneda: solo al crear factura SUELTA independiente. Con orden(es)
-               la factura hereda la moneda de la(s) orden(es). -->
-          <div v-if="!order && !editando && !esMulti" class="mt-3">
+          <!-- Moneda: se elige SIEMPRE al crear (la orden ya no tiene moneda;
+               cada factura maneja la suya). Al editar se conserva la de la factura. -->
+          <div v-if="!editando" class="mt-3">
             <div class="text-caption text-medium-emphasis mb-1">Moneda de la factura</div>
             <v-btn-toggle v-model="monedaSuelta" mandatory density="compact" color="primary" variant="outlined">
               <v-btn value="PEN" size="small">Soles (S/)</v-btn>
@@ -169,12 +169,10 @@ const editando = computed(() => !!props.invoiceToEdit)
 // barra de selección). Se crea suelta y se vinculan todas de una.
 const esMulti = computed(() => !!(props.orders && props.orders.length))
 
-// Moneda efectiva: si hay orden(es), la de la(s) orden(es) (todas comparten
-// moneda); si edito, la de la factura; si es suelta, la elegida en el toggle.
+// Moneda efectiva: al editar, la de la factura; al crear (orden, multi o
+// suelta) la elegida en el toggle del diálogo.
 const monedaActual = computed(() => {
   if (props.invoiceToEdit) return props.invoiceToEdit.currency || 'PEN'
-  if (props.order) return props.order.currency || 'PEN'
-  if (esMulti.value) return props.orders[0].currency || 'PEN'
   return monedaSuelta.value
 })
 const esUSD = computed(() => monedaActual.value === 'USD')

@@ -229,7 +229,7 @@ const permiso_solicitar_firma = computed(() => {
   const user = JSON.parse(localStorage.getItem('user')) || {}
   const isAdmin = user.kind !== undefined && user.kind < 1
   const permissions = user.action_permissions || []
-  return isAdmin || permissions.includes(14) || permissions.includes(10)
+  return isAdmin || permissions.includes(1005) || permissions.includes(1001)
 })
 
 const certificate_client_rules = CertificatesRules.client_rules()

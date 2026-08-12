@@ -473,19 +473,11 @@ watch(search_query, () => {
 const onPage = (p) => { page.value = p; cargar() }
 const onPageSize = (n) => { page_size.value = n; page.value = 1; cargar() }
 
-// Moneda de la selección: una sola moneda si todas coinciden, 'MIXTA' si no,
-// null si no hay selección. Para compartir una factura deben ser la misma.
-const monedaSeleccion = computed(() => {
-  const set = new Set(props.ordenes_seleccionadas.map(o => o.currency))
-  if (set.size === 0) return null
-  return set.size === 1 ? [...set][0] : 'MIXTA'
-})
-
 const puede_vincular = (inv) => {
   if (!inv.es_fiscal) return false  // las no-facturas no se vinculan a otras órdenes
   if (inv.order_type != null && inv.order_type !== props.order_type) return false
-  if (monedaSeleccion.value === 'MIXTA') return false
-  if (monedaSeleccion.value && inv.currency && inv.currency !== monedaSeleccion.value) return false
+  // La moneda ya NO se valida: cada factura tiene la suya y una orden puede
+  // tener facturas en distintas monedas.
   const ids = props.ordenes_seleccionadas.map(o => o.id)
   if (inv.ordenes_vinculadas.some(o => ids.includes(o.order_id))) return false
   return true
@@ -494,8 +486,6 @@ const puede_vincular = (inv) => {
 // Motivo por el que NO se puede vincular (tooltip nativo en la fila deshabilitada).
 const motivoNoVincular = (inv) => {
   if (inv.order_type != null && inv.order_type !== props.order_type) return 'Factura de otro tipo de orden'
-  if (monedaSeleccion.value === 'MIXTA') return 'Las órdenes marcadas tienen monedas distintas'
-  if (monedaSeleccion.value && inv.currency && inv.currency !== monedaSeleccion.value) return `Factura en ${inv.currency}: no coincide con la selección`
   const ids = props.ordenes_seleccionadas.map(o => o.id)
   if (inv.ordenes_vinculadas.some(o => ids.includes(o.order_id))) return 'Ya vinculada a una orden marcada'
   return ''

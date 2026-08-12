@@ -11,9 +11,9 @@ export default {
       sent: element.sent,
       
       // ─── ESTADO FINANCIERO (reflejo del estado de las facturas) ───
-      currency: element.currency || 'PEN',
+      // La orden ya no tiene moneda: cada factura maneja la suya.
       wants_invoice: element.wants_invoice,
-      detraccion: element.detraccion || null, // { afecto, tasa, monto } o null (suma de facturas)
+      detraccion: element.detraccion || null, // { afecto, tasa, monto, moneda } o null (suma de facturas)
       estado_financiero: element.estado_financiero ?? element.status,
       
       // ─── CLIENTE ───

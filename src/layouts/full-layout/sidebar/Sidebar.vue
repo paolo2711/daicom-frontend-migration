@@ -1,10 +1,10 @@
 <template>
   <v-navigation-drawer
     permanent
-    expand-on-hover
+    :expand-on-hover="!notifStore.panelOpen"
     :color="appStore.sidebarColorEffective"
     :theme="appStore.darkStatus ? 'dark' : 'light'"
-    :rail="isRail && !isMenuOpen"
+    :rail="(isRail && !isMenuOpen) || notifStore.panelOpen"
     rail-width="70"
     id="main-sidebar"
     class="office-sidebar"
@@ -33,6 +33,24 @@
     <v-divider></v-divider>
 
     <v-list class="mt-1" nav density="compact">
+      <!-- Campana de notificaciones (panel estilo IG) -->
+      <v-list-item
+        title="Notificaciones"
+        rounded="lg"
+        class="font-weight-medium"
+        @click="notifStore.toggle()"
+      >
+        <template v-slot:prepend>
+          <v-badge
+            :model-value="notifStore.unreadCount > 0"
+            :content="notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount"
+            color="error" offset-x="2" offset-y="2"
+          >
+            <v-icon :class="{ 'bell-shake': bellShake }">mdi-bell-outline</v-icon>
+          </v-badge>
+        </template>
+      </v-list-item>
+
       <template v-for="(item, i) in mainItems" :key="i">
         
         <v-row v-if="item.header" align="center">
@@ -126,23 +144,60 @@
       </v-list>
     </template>
   </v-navigation-drawer>
+
+  <notifications-panel />
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/appStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useNotificationStore } from '@/stores/notificationStore'
 
 import SidebarItems from '@/layouts/full-layout/sidebar/SidebarItems'
 import BaseItem from '@/components/commonComponents/BaseItem.vue'
 import BaseItemGroup from '@/components/commonComponents/BaseItemGroup.vue'
+import NotificationsPanel from '@/components/commonComponents/NotificationsPanel.vue'
 
 const appStore  = useAppStore()
 const authStore = useAuthStore()
 const theme     = useTheme()
 const router    = useRouter()
+const notifStore = useNotificationStore()
+
+// ── Campanazo: al llegar una notificación nueva, la campana se sacude y suena. ──
+const bellShake = ref(false)
+
+const sonarCampana = () => {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext
+    if (!AudioCtx) return
+    const ctx = new AudioCtx()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(880, ctx.currentTime)          // La6, un "ding" suave
+    osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.18)
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.09, ctx.currentTime + 0.02)  // volumen bajo
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35)
+    osc.connect(gain); gain.connect(ctx.destination)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.36)
+    osc.onended = () => { try { ctx.close() } catch (e) { /* noop */ } }
+  } catch (e) { /* audio bloqueado hasta 1ra interacción: no pasa nada */ }
+}
+
+watch(() => notifStore.pulse, () => {
+  bellShake.value = false
+  requestAnimationFrame(() => { bellShake.value = true })
+  setTimeout(() => { bellShake.value = false }, 900)
+  sonarCampana()
+})
+
+onMounted(() => { notifStore.fetchUnread() })
 
 const isRail = ref(localStorage.getItem('sidebarPinned') !== 'false')
 const isMenuOpen = ref(false)
@@ -219,5 +274,26 @@ const filterGroupPermission = (item) => {
   left: 0;
   z-index: 1000;
   transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Campanazo: sacudida tipo "toque de campana" al llegar una notificación. */
+.bell-shake {
+  transform-origin: 50% 0;
+  animation: bell-shake 0.9s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes bell-shake {
+  0%   { transform: rotate(0); }
+  10%  { transform: rotate(22deg); }
+  20%  { transform: rotate(-18deg); }
+  30%  { transform: rotate(15deg); }
+  40%  { transform: rotate(-12deg); }
+  50%  { transform: rotate(9deg); }
+  60%  { transform: rotate(-6deg); }
+  70%  { transform: rotate(4deg); }
+  80%  { transform: rotate(-2deg); }
+  100% { transform: rotate(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bell-shake { animation: none; }
 }
 </style>

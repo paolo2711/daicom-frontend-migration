@@ -83,6 +83,11 @@ const routes = [
         name: "Users",
         path: "users",
         component: () => import("@/views/access/users/Users.vue"),
+      },
+      {
+        name: "Maintenance",
+        path: "mantenimiento",
+        component: () => import("@/views/access/maintenance/Maintenance.vue"),
       }
     ]
   },

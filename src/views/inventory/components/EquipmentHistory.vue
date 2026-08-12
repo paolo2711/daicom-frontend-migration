@@ -21,7 +21,7 @@
               <th class="text-center font-weight-bold text-uppercase">Salida</th>
               <th class="text-center font-weight-bold text-uppercase">Retorno Real</th>
               <th class="text-center font-weight-bold text-uppercase">Estado Viaje</th>
-              <th class="text-center font-weight-bold text-uppercase">Orden</th>
+              <th v-if="puedeVerOrdenes" class="text-center font-weight-bold text-uppercase">Orden</th>
             </tr>
           </thead>
           <tbody>
@@ -35,7 +35,7 @@
                   {{ h.return_status === 2 ? 'DEVUELTO' : 'EN OBRA' }}
                 </v-chip>
               </td>
-              <td class="text-center">
+              <td v-if="puedeVerOrdenes" class="text-center">
                 <v-tooltip location="top" text="Ver en Alquileres">
                   <template v-slot:activator="{ props }">
                     <v-btn v-bind="props" icon variant="text" size="x-small" color="primary" @click="irAOrden(h)">
@@ -46,7 +46,7 @@
               </td>
             </tr>
             <tr v-if="!equipment.rental_history || equipment.rental_history.length === 0">
-              <td colspan="6" class="text-center py-8 text-grey">
+              <td :colspan="puedeVerOrdenes ? 6 : 5" class="text-center py-8 text-grey">
                 <v-icon size="large" color="grey-lighten-2">mdi-history</v-icon><br>
                 El equipo no registra movimientos históricos.
               </td>
@@ -69,6 +69,14 @@ const router = useRouter()
 
 const dialog = ref(false)
 const equipment = ref(null)
+
+// El link a Alquileres solo aparece si el usuario tiene acceso a la vista Órdenes (id 2).
+const puedeVerOrdenes = computed(() => {
+  const user = JSON.parse(localStorage.getItem('user')) || {}
+  if (user.kind !== undefined && user.kind < 1) return true
+  const perms = JSON.parse(localStorage.getItem('permissions')) || []
+  return perms.some(p => p.id == 2)
+})
 
 const open = (item) => {
   equipment.value = item

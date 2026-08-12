@@ -1,5 +1,6 @@
 import { Toast } from '@/plugins/alerts'
 import CertificateDataService from '@/services/certificates/certificateDataService'
+import { useNotificationStore } from '@/stores/notificationStore'
 
 // Versión al cargar la pestaña; si el back reporta otra al reconectar, hubo deploy.
 let bootVersion = null
@@ -18,6 +19,31 @@ export default {
                 } else if (v !== bootVersion) {
                     appStore.updateAvailable = true; // cambió = hubo deploy
                 }
+            }
+            return;
+        }
+
+        // Cierre de sesión forzado por el admin (tras cambios de roles/permisos).
+        // El token ya fue invalidado en el server; aquí limpiamos y vamos a login.
+        if (data.message && data.message.action === 'FORCE_LOGOUT') {
+            const sameCompany = data.message.company == null || data.message.company == currentUser.company;
+            const isExcepted = data.message.except_user && data.message.except_user === currentUser.username;
+            if (sameCompany && !isExcepted) {
+                try {
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('permissions');
+                } catch (e) { /* noop */ }
+                window.location.href = '/login';
+            }
+            return;
+        }
+
+        // Recarga forzada de TODA la página (no las tablas) pedida por el admin.
+        if (data.message && data.message.action === 'FORCE_RELOAD') {
+            const sameCompany = data.message.company == null || data.message.company == currentUser.company;
+            const isExcepted = data.message.except_user && data.message.except_user === currentUser.username;
+            if (sameCompany && !isExcepted) {
+                window.location.reload();
             }
             return;
         }
@@ -63,6 +89,38 @@ export default {
 
         if (data.message === 'RELOAD_INVENTORY') {
             window.dispatchEvent(new CustomEvent('wss-reload-inventory'));
+            return;
+        }
+
+        // Liviano (como UPDATE_ROW): solo re-lee EL NÚMERO de la campana. Al marcar leído.
+        if (data.message && data.message.action === 'UPDATE_NOTIF_COUNT') {
+            const sameCompany = data.message.company == null || data.message.company == currentUser.company;
+            if (sameCompany) {
+                try { useNotificationStore().fetchUnread(); } catch (e) { /* store aún no listo */ }
+            }
+            return;
+        }
+
+        // Pesado (como RELOAD_CERTIFICATES): recarga la LISTA del panel (+ número).
+        // La lista solo se recarga si el panel está abierto. Ej. "Borrar notificaciones".
+        if (data.message && data.message.action === 'RELOAD_NOTIFICATIONS') {
+            const sameCompany = data.message.company == null || data.message.company == currentUser.company;
+            if (sameCompany) {
+                try { useNotificationStore().resync(); } catch (e) { /* store aún no listo */ }
+            }
+            return;
+        }
+
+        // Notificación persistente nueva (campana): sube el badge y avisa con toast.
+        if (data.message && data.message.action === 'NEW_NOTIFICATION') {
+            try { useNotificationStore().onNew(); } catch (e) { /* store aún no listo */ }
+            if (appStore) {
+                Toast.fire({
+                    ...appStore.toastBase,
+                    icon: data.message.level === 'critical' ? 'error' : (data.message.level === 'warning' ? 'warning' : 'info'),
+                    title: data.message.title || 'Nueva notificación',
+                });
+            }
             return;
         }
         

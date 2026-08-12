@@ -83,6 +83,14 @@ export default [
                 to: '/company',
                 id: 113,
                 name: 'Datos de la Empresa',
+            },
+            {
+                // id 114 no es un permiso otorgable → solo lo ven los admins (acceso total).
+                icon: 'mdi-tools',
+                title: 'Mantenimiento',
+                to: '/mantenimiento',
+                id: 114,
+                name: 'Mantenimiento',
             }
         ]
     }

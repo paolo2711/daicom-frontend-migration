@@ -161,7 +161,7 @@
             <span>Historial de Viajes</span>
           </v-tooltip>
 
-          <v-tooltip location="top">
+          <v-tooltip v-if="puedeEliminar" location="top">
             <template v-slot:activator="{ props }">
               <v-btn icon variant="text" size="small" color="error" v-bind="props" @click="deleteItem(item)">
                 <v-icon size="small">mdi-delete-outline</v-icon>
@@ -188,6 +188,7 @@ const emit = defineEmits(['edit-item', 'view-history'])
 
 const search = ref('')
 const loading = ref(false)
+const puedeEliminar = ref(false)   // permiso 1007 (Eliminar Equipos) o admin
 const equipos = ref([])
 const total = ref(0)
 const options = ref({ page: 1, itemsPerPage: 30 })
@@ -336,6 +337,9 @@ const addRow = () => { options.value.page = 1; loadItems() }
 const onWsReloadInventory = () => { loadItems() }
 
 onMounted(() => {
+  const user = JSON.parse(localStorage.getItem('user')) || {}
+  const isAdmin = user.kind !== undefined && user.kind < 1
+  puedeEliminar.value = isAdmin || (user.action_permissions || []).includes(1007)
   loadItems()
   window.addEventListener('wss-reload-inventory', onWsReloadInventory)
 })

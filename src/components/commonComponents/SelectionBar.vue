@@ -6,11 +6,11 @@
         <v-tooltip location="top" text="Desmarcar todo">
           <template v-slot:activator="{ props }">
             <v-btn v-bind="props" icon="mdi-close" variant="text" density="comfortable" size="small"
-                   class="text-white" @click="emit('clear')" />
+                   @click="emit('clear')" />
           </template>
         </v-tooltip>
 
-        <span class="text-body-2 font-weight-bold mx-1 text-white">
+        <span class="text-body-2 font-weight-bold mx-1">
           {{ count }} {{ label }}
         </span>
 
@@ -24,11 +24,20 @@
 </template>
 
 <script setup>
-defineProps({
+import { watch, onUnmounted } from 'vue'
+import { useAppStore } from '@/stores/appStore'
+
+const props = defineProps({
   count: { type: Number, required: true },
   label: { type: String, default: 'seleccionado(s)' },
 })
 const emit = defineEmits(['clear'])
+
+// Avisa al ecosistema que hay una barra de selección activa (para que el Upload
+// Manager se aparte en ventanas angostas). Se apaga al vaciar o desmontar.
+const appStore = useAppStore()
+watch(() => props.count, (v) => { appStore.selectionActive = v > 0 }, { immediate: true })
+onUnmounted(() => { appStore.selectionActive = false })
 </script>
 
 <style scoped>
@@ -40,17 +49,20 @@ const emit = defineEmits(['clear'])
   z-index: 999;
   border-radius: 16px !important;
   max-width: 94vw;
-  /* Oscura para flotar sobre las tablas (que son claras). */
-  background: #23232b !important;
-  border: 1px solid rgba(255, 255, 255, 0.10) !important;
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38), 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  /* Tema-aware: claro = azul-gris suave; oscuro = mica (familia del fondo app). */
+  background: #dce4f0 !important;
+  border: 1px solid rgba(0, 0, 0, 0.10) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.22) !important;
 }
 .v-theme--dark .selection-bar {
-  background: #34343f !important;
-  border-color: rgba(255, 255, 255, 0.14) !important;
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.7), 0 0 1px rgba(255, 255, 255, 0.25) !important;
+  background: #2c3849 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.60) !important;
 }
 .selection-bar__divider {
-  border-color: rgba(255, 255, 255, 0.30) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+.v-theme--dark .selection-bar__divider {
+  border-color: rgba(255, 255, 255, 0.18) !important;
 }
 </style>

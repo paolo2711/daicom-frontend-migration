@@ -351,19 +351,19 @@
       label="seleccionada(s)"
       @clear="ordenes_seleccionadas = []"
     >
-      <v-btn variant="text" color="white" size="small" class="mx-1 font-weight-bold"
+      <v-btn variant="text" size="small" class="mx-1 font-weight-bold"
              prepend-icon="mdi-file-document-plus" @click="crearFacturaParaSeleccion">
         Facturar
       </v-btn>
 
-      <v-btn v-if="ordenes_seleccionadas.length === 1 && !seleccion_tiene_factura_fiscal" variant="text" color="white" size="small" class="mx-1 font-weight-bold"
+      <v-btn v-if="ordenes_seleccionadas.length === 1 && !seleccion_tiene_factura_fiscal" variant="text" size="small" class="mx-1 font-weight-bold"
              :loading="marcando_sin_factura"
              :prepend-icon="seleccion_sin_factura ? 'mdi-file-document-check-outline' : 'mdi-file-remove-outline'"
              @click="seleccion_sin_factura ? requerirFactura() : marcarSinFactura()">
         {{ seleccion_sin_factura ? 'Requiere factura' : 'Sin comprobante' }}
       </v-btn>
 
-      <v-btn v-if="hasPermission(13)" variant="text" color="red-lighten-1" size="small" class="mx-1 font-weight-bold"
+      <v-btn v-if="hasPermission(13)" variant="text" color="error" size="small" class="mx-1 font-weight-bold"
              prepend-icon="mdi-cancel" :loading="anulando" @click="anularSeleccion">
         Anular
       </v-btn>

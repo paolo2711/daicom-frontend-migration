@@ -140,17 +140,17 @@
       label="seleccionado(s)"
       @clear="certificados_seleccionados = []"
     >
-      <v-btn variant="text" color="white" size="small" class="mx-1 font-weight-bold"
+      <v-btn variant="text" size="small" class="mx-1 font-weight-bold"
              prepend-icon="mdi-file-pdf-box" @click="abrirModalLote('excel')">
         Subir Excels
       </v-btn>
 
-      <v-btn v-if="permiso_qr" variant="text" color="white" size="small" class="mx-1 font-weight-bold"
+      <v-btn v-if="permiso_qr" variant="text" size="small" class="mx-1 font-weight-bold"
              prepend-icon="mdi-qrcode-scan" @click="abrirModalLote('qr')">
         Firmar QR
       </v-btn>
 
-      <v-btn v-if="permiso_solicitar_firma" variant="text" color="white" size="small" class="mx-1 font-weight-bold"
+      <v-btn v-if="permiso_solicitar_firma" variant="text" size="small" class="mx-1 font-weight-bold"
              prepend-icon="mdi-bell-ring" @click="abrirModalLote('notify')">
         Solicitar Firma
       </v-btn>

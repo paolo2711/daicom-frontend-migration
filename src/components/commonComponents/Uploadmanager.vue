@@ -2,22 +2,41 @@
   <div>
     <v-slide-y-reverse-transition>
       <v-card v-if="tasks.length > 0"
-              class="upload-manager-card elevation-10 rounded-lg overflow-hidden"
-              :color="isDark ? 'grey-darken-4' : 'white'"
-              width="345">
+              class="upload-manager-card overflow-hidden"
+              :class="{ raised: selectionActive }">
 
+        <!-- Header tema-aware: muestra el fondo del card (mica oscuro / azul-gris claro) -->
         <v-toolbar density="compact" flat
-                   :color="isDark ? 'grey-darken-3' : 'grey-lighten-3'"
+                   color="transparent"
                    @click="minimized = !minimized"
-                   style="cursor: pointer;" class="pl-3 pr-0">
+                   style="cursor: pointer;" class="upload-manager-header pl-3 pr-0">
           <v-progress-circular v-if="activeTasksCount > 0" indeterminate size="18" width="2" color="primary" class="mr-3"/>
           <v-icon v-else-if="errorTasksCount === tasks.length" color="error" class="mr-3">mdi-close-circle</v-icon>
           <v-icon v-else-if="successTasksCount === tasks.length" color="success" class="mr-3">mdi-check-circle</v-icon>
           <v-icon v-else color="warning" class="mr-3">mdi-alert-circle</v-icon>
-          
-          <span class="text-subtitle-2 font-weight-bold text-medium-emphasis">{{ headerText }}</span>
+
+          <span class="text-subtitle-2 font-weight-bold text-medium-emphasis text-truncate">{{ headerText }}</span>
           <v-spacer/>
-          
+
+          <!-- Acciones de lote: reintentar fallidos / limpiar completadas -->
+          <v-menu location="top end" :z-index="100000" v-if="failedRetryableCount > 0 || completedCount > 0">
+            <template v-slot:activator="{ props: mprops }">
+              <v-btn v-bind="mprops" icon variant="text" size="small" @click.stop>
+                <v-icon>mdi-dots-vertical</v-icon>
+              </v-btn>
+            </template>
+            <v-list density="compact" min-width="220">
+              <v-list-item v-if="failedRetryableCount > 0" @click="retryAllFailed">
+                <template v-slot:prepend><v-icon size="small" color="error">mdi-refresh</v-icon></template>
+                <v-list-item-title class="text-body-2">Reintentar fallidos ({{ failedRetryableCount }})</v-list-item-title>
+              </v-list-item>
+              <v-list-item v-if="completedCount > 0" @click="clearCompleted">
+                <template v-slot:prepend><v-icon size="small">mdi-broom</v-icon></template>
+                <v-list-item-title class="text-body-2">Limpiar completadas ({{ completedCount }})</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+
           <v-btn icon variant="text" size="small" @click.stop="minimized = !minimized" class="mr-1">
             <v-icon>{{ minimized ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
           </v-btn>
@@ -206,15 +225,22 @@ const preview_id         = ref(null)
 const preview_final_name = ref('')
 const preview_raw_url    = ref('')
 
-const tasks = computed(() => {
-  return appStore.uploadTasks
-})
+const tasks = computed(() => appStore.uploadTasks)
+
+// ¿Barra de selección activa? Para apartarse de ella en ventanas angostas.
+const selectionActive = computed(() => appStore.selectionActive)
+
+const ACTIVE = ['generating', 'uploading', 'retrying']
 
 const activeTasksCount = computed(() =>
-  tasks.value.filter(t => ['generating', 'uploading', 'retrying'].includes(t.status)).length
+  tasks.value.filter(t => ACTIVE.includes(t.status)).length
 )
+// Cancelado NO es error: se cuenta aparte para no ensuciar el header.
 const errorTasksCount = computed(() =>
-  tasks.value.filter(t => ['error', 'cloud_error', 'canceled'].includes(t.status)).length
+  tasks.value.filter(t => ['error', 'cloud_error'].includes(t.status)).length
+)
+const canceledTasksCount = computed(() =>
+  tasks.value.filter(t => t.status === 'canceled').length
 )
 const successTasksCount = computed(() =>
   tasks.value.filter(t => t.status === 'success').length
@@ -222,13 +248,24 @@ const successTasksCount = computed(() =>
 const warningTasksCount = computed(() =>
   tasks.value.filter(t => t.status === 'warning').length
 )
+// Tareas terminadas (todo lo que no está activo) → se pueden limpiar.
+const completedCount = computed(() =>
+  tasks.value.filter(t => !ACTIVE.includes(t.status)).length
+)
+// Fallidas que SÍ se pueden reintentar (solo QR; sheet/manual no).
+const failedRetryableCount = computed(() =>
+  tasks.value.filter(t => ['error', 'cloud_error'].includes(t.status) && t.type !== 'sheet' && t.source !== 'manual').length
+)
+
+// Header por segmentos: informa cada estado sin frases ambiguas.
 const headerText = computed(() => {
-  const total = tasks.value.length
-  if (activeTasksCount.value > 0)           return `Procesando ${activeTasksCount.value}...`
-  if (successTasksCount.value === total)     return 'Tareas completadas con éxito'
-  if (errorTasksCount.value   === total)     return 'Error en todas las tareas.'
-  if (warningTasksCount.value > 0)           return 'Completado (con advertencias)'
-  return `Fallaron ${errorTasksCount.value} tareas de ${total}.`
+  const parts = []
+  if (activeTasksCount.value)   parts.push(`${activeTasksCount.value} en proceso`)
+  if (successTasksCount.value)  parts.push(`${successTasksCount.value} ${successTasksCount.value === 1 ? 'lista' : 'listas'}`)
+  if (warningTasksCount.value)  parts.push(`${warningTasksCount.value} con aviso`)
+  if (errorTasksCount.value)    parts.push(`${errorTasksCount.value} ${errorTasksCount.value === 1 ? 'fallo' : 'fallos'}`)
+  if (canceledTasksCount.value) parts.push(`${canceledTasksCount.value} cancelada${canceledTasksCount.value === 1 ? '' : 's'}`)
+  return parts.join(' · ') || 'Sin tareas'
 })
 
 function getStatusText(task) {
@@ -246,7 +283,7 @@ function getStatusText(task) {
       retrying: `Reintentando (${task.attempts || 0}/3)...`, 
       success: '¡Completado!', 
       canceled: 'Cancelado por usuario.',
-      warning: 'Nube OK. Fallo Local(Archivo abieto)'
+      warning: 'Subido a la nube. Falló la copia local (archivo abierto).'
     }
   };
   return maps[task.type]?.[task.status] || '';
@@ -291,14 +328,26 @@ function cancelSheet(task) {
   appStore.updateUploadTask(task.id, 'sheet', { status: 'canceled' })
 }
 
-function closePanel() {
-  const done = tasks.value.filter(t => !['generating', 'uploading', 'retrying'].includes(t.status))
+// Quita las tareas terminadas (deja las activas). Sirve para el botón X y para
+// "Limpiar completadas" del menú (este último funciona aunque haya activas).
+function clearCompleted() {
+  const done = tasks.value.filter(t => !ACTIVE.includes(t.status))
   done.forEach(t => appStore.removeUploadTask(t.id, t.type))
-  
-  // Enviamos una única orden maestra para que las otras pantallas limpien todo
+  // Orden maestra para que las otras pantallas limpien lo terminado también.
   if (window.enviarProgresoWebSocket) {
     window.enviarProgresoWebSocket('all', 0, 'dismiss_all_done', 'all', 0, 'all')
   }
+}
+
+// Reintenta de una todas las fallidas reintentables (solo QR).
+function retryAllFailed() {
+  tasks.value
+    .filter(t => ['error', 'cloud_error'].includes(t.status) && t.type !== 'sheet' && t.source !== 'manual')
+    .forEach(t => window.dispatchEvent(new CustomEvent('wss-qr-retry', { detail: { id: t.id } })))
+}
+
+function closePanel() {
+  clearCompleted()
   minimized.value = false
 }
 
@@ -335,8 +384,33 @@ function approveSheet() {
   bottom: 24px;
   right: 24px;
   z-index: 9999;
-  border-radius: 8px !important;
+  /* Mismo material que el SelectionBar: tema-aware, radio 16, borde y sombra */
+  border-radius: 16px !important;
+  width: min(345px, calc(100vw - 32px));
+  background: #dce4f0 !important;
+  border: 1px solid rgba(0, 0, 0, 0.10) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.22) !important;
   overflow: hidden;
+  transition: bottom 0.2s ease;
+}
+.v-theme--dark .upload-manager-card {
+  background: #2c3849 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.60) !important;
+}
+/* Header apenas separado del listado (tema-aware) */
+.upload-manager-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+}
+.v-theme--dark .upload-manager-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+/* En ventanas angostas, si hay barra de selección activa, se sube para no
+   pisarla (la barra vive centrada abajo a ~32px + su alto). */
+@media (max-width: 1264px) {
+  .upload-manager-card.raised {
+    bottom: 104px;
+  }
 }
 
 .task-list-scroll {

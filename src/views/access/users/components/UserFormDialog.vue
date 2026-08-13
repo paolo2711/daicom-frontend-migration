@@ -98,6 +98,44 @@
             </v-col>
           </v-row>
         </v-form>
+
+        <!-- Reset de contraseña (solo al editar): su propio form y botón, aparte del guardado normal. -->
+        <div v-if="user" class="mt-2">
+          <v-divider class="mb-4" />
+          <div class="d-flex align-center mb-1">
+            <v-icon start color="primary" size="20">mdi-lock-reset</v-icon>
+            <span class="text-subtitle-2 font-weight-medium">Restablecer contraseña</span>
+          </div>
+          <p class="text-caption text-medium-emphasis mb-3">
+            Asigna una nueva contraseña a este usuario (por si la olvidó). Cerrará sus sesiones abiertas.
+          </p>
+          <v-form ref="resetFormRef" @submit.prevent v-model="resetValid">
+            <v-row>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="resetPw.next" label="Nueva contraseña" density="compact" counter
+                  :type="showResetPw ? 'text' : 'password'"
+                  :append-inner-icon="showResetPw ? 'mdi-eye' : 'mdi-eye-off'" @click:append-inner="showResetPw = !showResetPw"
+                  variant="outlined" hide-details="auto" @keydown.space.prevent :rules="password_rules"
+                  @keypress="isValidPassword" prepend-inner-icon="mdi-lock-outline"
+                />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="resetPw.confirm" label="Confirmar contraseña" density="compact"
+                  :type="showResetPw ? 'text' : 'password'"
+                  variant="outlined" hide-details="auto" @keydown.space.prevent :rules="[resetConfirmRule]"
+                  prepend-inner-icon="mdi-lock-check-outline"
+                />
+              </v-col>
+            </v-row>
+          </v-form>
+          <div class="d-flex justify-end mt-3">
+            <v-btn color="primary" variant="tonal" class="font-weight-bold" :loading="resettingPw" :disabled="!resetValid" @click="doResetPassword">
+              <v-icon start size="small">mdi-lock-reset</v-icon> Restablecer contraseña
+            </v-btn>
+          </div>
+        </div>
       </v-card-text>
 
       <v-card-actions class="px-6 pb-4 pt-2">
@@ -112,7 +150,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import Swal from 'sweetalert2'
 import UserDataService from '@/services/users/userDataService'
 import RoleDataService from '@/services/roles/roleDataService'
@@ -141,6 +179,14 @@ const isSending = ref(false)
 const isValid = ref(false)
 const roles = ref([])
 const loadingRoles = ref(false)
+
+// Reset de contraseña (solo al editar)
+const resetFormRef = ref(null)
+const resetValid = ref(false)
+const resettingPw = ref(false)
+const showResetPw = ref(false)
+const resetPw = reactive({ next: '', confirm: '' })
+const resetConfirmRule = computed(() => () => (resetPw.next === resetPw.confirm) || 'Las contraseñas no coinciden.')
 
 const formData = reactive({
   id: null,
@@ -176,6 +222,8 @@ const loadRoles = async () => {
 
 watch(() => props.modelValue, (val) => {
   if (val) {
+    resetPw.next = ''
+    resetPw.confirm = ''
     loadRoles()
     if (props.user) {
       const mapped = UserMappers.putMap(props.user)
@@ -232,8 +280,33 @@ const save = async () => {
   }
 }
 
+const doResetPassword = async () => {
+  const { valid } = await resetFormRef.value.validate()
+  if (!valid) return
+  resettingPw.value = true
+  try {
+    const { data } = await UserDataService.resetPassword(formData.id, resetPw.next)
+    Swal.fire({ ...appStore.successSavedOptions, title: data?.success || 'Contraseña restablecida.' })
+    resetPw.next = ''
+    resetPw.confirm = ''
+    await nextTick()
+    resetFormRef.value?.resetValidation()
+  } catch (e) {
+    const d = e.response?.data
+    const msg = d?.detail || (d?.new_password ? d.new_password.join(', ') : null) || 'No se pudo restablecer la contraseña.'
+    Swal.fire({ ...appStore.errorSavedOptions, html: msg })
+  } finally {
+    resettingPw.value = false
+  }
+}
+
 const closeDialog = () => {
-  formRef.value?.reset()
+  // resetValidation (no reset): limpia errores sin re-validar → sin parpadeo rojo
+  // al cerrar. Los valores se reinician al abrir (watch de modelValue).
+  formRef.value?.resetValidation()
+  resetFormRef.value?.resetValidation()
+  resetPw.next = ''
+  resetPw.confirm = ''
   emit('update:modelValue', false)
 }
 

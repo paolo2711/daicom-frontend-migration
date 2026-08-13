@@ -312,6 +312,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import Swal from 'sweetalert2'
 import OrderDataService from '@/services/certificates/orderDataService'
 import InvoiceMappers from '@/mappers/invoiceMappers'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import DialogFactura from './DialogFactura.vue'
@@ -401,8 +402,10 @@ const saldoInfo = (inv) => {
 }
 
 let searchTimeout = null
+const { begin: beginLoad, isLatest: isLatestLoad } = useLatestRequest()
 const cargar = async () => {
   loading.value = true
+  const token = beginLoad()   // guard de secuencia: gana la carga más reciente
   try {
     const res = await OrderDataService.listInvoices({
       order_type: props.order_type,
@@ -414,13 +417,15 @@ const cargar = async () => {
       page: page.value,
       page_size: page_size.value,
     })
+    if (!isLatestLoad(token)) return
     facturas.value = (res.data.results || []).map(f => InvoiceMappers.getMap(f))
     total_items.value = res.data.count ?? facturas.value.length
   } catch (e) {
+    if (!isLatestLoad(token)) return
     facturas.value = []
     total_items.value = 0
   } finally {
-    loading.value = false
+    if (isLatestLoad(token)) loading.value = false
   }
 }
 

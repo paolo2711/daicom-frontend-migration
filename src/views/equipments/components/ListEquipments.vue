@@ -157,6 +157,7 @@ import EquipoMaestroModal from './EquipoMaestroModal.vue'
 import ServicioCatalogoModal from './ServicioCatalogoModal.vue'
 
 import EquipmentDataService from '@/services/equipments/equipmentDataService'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import ServicioCatalogoDataService from '@/services/equipments/servicioCatalogoDataService'
 
 const search = ref('')
@@ -184,15 +185,19 @@ const formatMoney = (val) => {
 
 // Server-side: pide solo la pagina actual, filtrando por 'search' en el backend
 // (mismo endpoint/parametros que EquipmentDataService.getFiltered ya usa en los autocompletes)
+const { begin: beginLoad, isLatest: isLatestLoad } = useLatestRequest()
+
 const retrieveAll = () => {
   loading.value = true
+  const token = beginLoad()   // guard de secuencia: gana la carga más reciente
   EquipmentDataService.getFiltered(options.value.page, options.value.itemsPerPage, search.value).then(res => {
+    if (!isLatestLoad(token)) return
     equipos.value = res.data.results
     total_equipos.value = res.data.count
   }).catch(e => {
     Swal.fire('Error', 'Fallo al conectar con la base de datos.', 'error')
   }).finally(() => {
-    loading.value = false
+    if (isLatestLoad(token)) loading.value = false
   })
 }
 

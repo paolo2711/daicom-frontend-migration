@@ -64,10 +64,13 @@ export default [
         name: 'Administración',
         children: [
             {
+                // Página de admin: una sola llave, la ACCIÓN Gestionar Usuarios (1008),
+                // gobierna menú + ruta + acciones. No usa permiso de vista aparte.
                 icon: 'mdi-account-multiple',
                 title: 'Usuarios',
                 to: '/users',
                 id: 111,
+                action: 1008,
                 name: 'Usuarios',
             },
             {
@@ -75,6 +78,7 @@ export default [
                 title: 'Permisos',
                 to: '/permissions',
                 id: 112,
+                action: 1009,   // Gestionar Roles y Permisos
                 name: 'Permisos'
             },
             {
@@ -85,11 +89,12 @@ export default [
                 name: 'Datos de la Empresa',
             },
             {
-                // id 114 no es un permiso otorgable → solo lo ven los admins (acceso total).
+                // superAdmin: solo el super-admin (kind<1). No es un permiso otorgable.
                 icon: 'mdi-tools',
                 title: 'Mantenimiento',
                 to: '/mantenimiento',
                 id: 114,
+                superAdmin: true,
                 name: 'Mantenimiento',
             }
         ]

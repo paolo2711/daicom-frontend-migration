@@ -14,8 +14,8 @@
           <v-row dense>
             <v-col cols="12" md="12">
               <v-file-input v-model="workbook.file" hide-details="auto" density="compact" show-size ref="file"
-                            :accept="mode === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel'"
-                            :placeholder="mode === 'pdf' ? 'Seleccione su PDF offline' : 'Seleccione su documento XLSX'"
+                            :accept="mode === 'pdf' ? 'application/pdf' : '.xls,.xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.ms-excel.sheet.macroEnabled.12'"
+                            :placeholder="mode === 'pdf' ? 'Seleccione su PDF offline' : 'Seleccione su documento Excel (.xls, .xlsx, .xlsm)'"
                             :label="mode === 'pdf' ? 'Documento PDF' : 'Documento de excel'"/>
             </v-col>
             <v-col cols="12" md="12" class="mt-2" v-if="mode === 'excel'">

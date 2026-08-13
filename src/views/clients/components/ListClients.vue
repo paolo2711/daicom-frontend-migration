@@ -92,6 +92,7 @@ import { ref, watch, onMounted, getCurrentInstance, defineAsyncComponent } from 
 import Swal from 'sweetalert2'
 import ClientDataService from '@/services/clients/clientDataService'
 import ClientMappers from '@/mappers/clientMappers'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import { useAppStore } from '@/stores/appStore'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
@@ -121,36 +122,36 @@ const filterNeedsReview = ref(false)
 const dialogOpen = ref(false)
 const selectedClient = ref(null)
 
+const { begin: beginLoad, isLatest: isLatestLoad } = useLatestRequest()
+
 const retrieveAllClients = () => {
-  if (loading_list.value) return
   loading_list.value = true
+  const token = beginLoad()   // guard de secuencia: gana la carga más reciente
   const pageSize = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
-  
+
   const reviewParam = filterNeedsReview.value ? 'true' : ''
-  
+
   ClientDataService.getFiltered(options.value.page, pageSize, search.value || '', reviewParam)
     .then((response) => {
+      if (!isLatestLoad(token)) return
       clients.value = response.data.results.map(ClientMappers.getMap)
       total_clients.value = response.data.count
     })
     .finally(() => {
-      loading_list.value = false
+      if (isLatestLoad(token)) loading_list.value = false
     })
 }
 
 const applyFilters = () => {
-  if (loading_list.value) return
   options.value.page = 1
   retrieveAllClients()
 }
 const onPageChange = (newPage) => {
-  if (loading_list.value) return
   options.value.page = newPage
   retrieveAllClients()
 }
 
 const onItemsPerPageChange = (newItemsPerPage) => {
-  if (loading_list.value) return
   options.value.itemsPerPage = newItemsPerPage
   options.value.page = 1
   retrieveAllClients()

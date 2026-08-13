@@ -1,359 +1,267 @@
 <template>
-  <v-card variant="flat" class="border rounded-lg bg-surface elevation-0" :loading="is_loading">
-    <div class="d-flex align-center pa-4" style="border-bottom: 1px solid var(--v-border-color, rgba(0,0,0,0.12));">
-      <v-icon start color="primary" size="28" class="mr-2">mdi-badge-account-horizontal</v-icon>
-      <h3 class="text-h6 font-weight mb-0">Información de la cuenta</h3>
-      <v-spacer></v-spacer>
-      <v-btn 
-        v-if="!isEditing" 
-        color="primary" 
-        variant="flat" 
-        prepend-icon="mdi-pencil" 
-        @click="isEditing = true"
-      >
-        Editar Perfil
-      </v-btn>
-    </div>
+  <div class="d-flex flex-column" style="gap: 24px;">
 
-    <v-card-text class="pt-6">
-      <v-alert variant="tonal" type="info" density="compact" class="mb-6 rounded-lg font-weight-medium">
-        Rol en el sistema: <strong>{{ userRole }}</strong>
-      </v-alert>
+    <!-- ─────────────── Datos de la cuenta (siempre editable) ─────────────── -->
+    <v-card variant="flat" class="border rounded-lg bg-surface elevation-0" :loading="is_loading">
+      <div class="d-flex align-center pa-4" style="border-bottom: 1px solid var(--v-border-color, rgba(0,0,0,0.12));">
+        <v-icon start color="primary" size="28" class="mr-2">mdi-badge-account-horizontal</v-icon>
+        <h3 class="text-h6 font-weight mb-0">Información de la cuenta</h3>
+        <v-spacer></v-spacer>
+        <v-chip color="primary" variant="tonal" size="small" class="font-weight-medium">
+          <v-icon start size="16">mdi-shield-account</v-icon>{{ userRole }}
+        </v-chip>
+      </div>
 
-      <v-form ref="editForm" @submit.prevent v-model="is_valid">
-        <v-row>
-          <v-col cols="12" md="6">
-            <v-text-field 
-              v-model="profile.username" 
-              label="Usuario (*)"
-              density="compact" 
-              counter="120" 
-              variant="outlined" 
-              hide-details="auto" 
-              :disabled="!isEditing"
-              @keydown.space.prevent 
-              :rules="user_name_rules"
-              @keypress="isLetterOrDigit"
-              prepend-inner-icon="mdi-account"
-            />
-          </v-col>
-
-          <v-col cols="12" md="6">
-            <v-text-field 
-              v-model="profile.email" 
-              label="Correo Electrónico" 
-              density="compact" 
-              :disabled="!isEditing"
-              variant="outlined" 
-              hide-details="auto" 
-              :rules="email_rules"
-              prepend-inner-icon="mdi-email"
-            />
-          </v-col>
-
-          <v-col cols="12" md="6">
-            <v-text-field 
-              v-model="profile.first_name" 
-              label="Nombre (*)" 
-              density="compact" 
-              counter="120"
-              variant="outlined" 
-              hide-details="auto" 
-              :rules="first_name_rules" 
-              :disabled="!isEditing"
-              @keypress="isLetterOrSpace"
-            />
-          </v-col>
-
-          <v-col cols="12" md="6">
-            <v-text-field 
-              v-model="profile.last_name" 
-              label="Apellidos (*)" 
-              density="compact" 
-              counter="120"
-              variant="outlined" 
-              hide-details="auto" 
-              :rules="first_name_rules" 
-              :disabled="!isEditing"
-              @keypress="isLetterOrSpace"
-            />
-          </v-col>
-
-          <v-col cols="12" md="12">
-            <v-file-input 
-              v-model="uploadSignature" 
-              label="Firma Digital (Imagen)" 
-              accept="image/png, image/jpeg" 
-              prepend-inner-icon="mdi-draw-pen" 
-              density="compact" 
-              variant="outlined" 
-              hide-details="auto" 
-              :disabled="!isEditing" 
-              @change="onSignatureChange"
-            />
-
-            <div class="d-flex align-center mt-3" style="gap: 16px;" v-if="signaturePreviewUrl || profile.signature_image">
-              <div>
-                <div class="text-caption text-medium-emphasis mb-1">
-                  {{ signaturePreviewUrl ? 'Nueva firma (sin guardar):' : 'Firma actual guardada:' }}
+      <v-card-text class="pt-6">
+        <v-form ref="infoForm" @submit.prevent v-model="info_valid">
+          <v-row>
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="profile.username" label="Usuario (*)" density="compact" counter="120"
+                variant="outlined" hide-details="auto" @keydown.space.prevent :rules="user_name_rules"
+                @keypress="isLetterOrDigit" prepend-inner-icon="mdi-account"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="profile.email" label="Correo Electrónico" density="compact"
+                variant="outlined" hide-details="auto" :rules="email_rules" prepend-inner-icon="mdi-email"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="profile.first_name" label="Nombre (*)" density="compact" counter="120"
+                variant="outlined" hide-details="auto" :rules="first_name_rules" @keypress="isLetterOrSpace"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="profile.last_name" label="Apellidos (*)" density="compact" counter="120"
+                variant="outlined" hide-details="auto" :rules="last_name_rules" @keypress="isLetterOrSpace"
+              />
+            </v-col>
+            <v-col cols="12">
+              <v-file-input
+                v-model="uploadSignature" label="Firma Digital (Imagen)" accept="image/png, image/jpeg"
+                prepend-inner-icon="mdi-draw-pen" density="compact" variant="outlined" hide-details="auto"
+                @change="onSignatureChange"
+              />
+              <div class="d-flex align-center mt-3" style="gap: 16px;" v-if="signaturePreviewUrl || profile.signature_image">
+                <div>
+                  <div class="text-caption text-medium-emphasis mb-1">
+                    {{ signaturePreviewUrl ? 'Nueva firma (sin guardar):' : 'Firma actual guardada:' }}
+                  </div>
+                  <v-img :src="signaturePreviewUrl || profile.signature_image" max-width="180" max-height="90" contain class="border rounded" />
                 </div>
-                <v-img
-                  :src="signaturePreviewUrl || profile.signature_image"
-                  max-width="180"
-                  max-height="90"
-                  contain
-                  class="border rounded"
-                />
               </div>
-            </div>
-          </v-col>
-        </v-row>
+            </v-col>
+          </v-row>
+        </v-form>
+      </v-card-text>
 
-        <div class="mt-8 mb-4">
-          <v-divider></v-divider>
-        </div>
+      <v-divider></v-divider>
+      <v-card-actions class="px-6 py-3">
+        <v-spacer></v-spacer>
+        <v-btn variant="text" class="mr-2" @click="resetInfo" :disabled="saving_info">Deshacer</v-btn>
+        <v-btn color="primary" variant="flat" class="font-weight-bold px-6 rounded-lg" :loading="saving_info" :disabled="!info_valid" @click="saveInfo">
+          <v-icon start size="small">mdi-content-save</v-icon> Guardar cambios
+        </v-btn>
+      </v-card-actions>
+    </v-card>
 
-        <div class="d-flex align-center mb-4">
-          <h4 class="text-subtitle-1 font-weight">Seguridad y Acceso</h4>
-          <v-spacer></v-spacer>
-          <v-switch 
-            v-model="edit_password" 
-            color="primary"
-            :disabled="!isEditing"
-            :label="edit_password ? 'Actualizar contraseña' : 'Mantener contraseña actual'" 
-            hide-details
-            inset
-          ></v-switch>
-        </div>
+    <!-- ─────────────────── Contraseña (tarjeta aparte) ─────────────────── -->
+    <v-card variant="flat" class="border rounded-lg bg-surface elevation-0">
+      <div class="d-flex align-center pa-4" style="border-bottom: 1px solid var(--v-border-color, rgba(0,0,0,0.12));">
+        <v-icon start color="primary" size="28" class="mr-2">mdi-lock-reset</v-icon>
+        <h3 class="text-h6 font-weight mb-0">Contraseña</h3>
+      </div>
 
-        <v-expand-transition>
-          <v-card v-if="edit_password" variant="outlined" class="pa-4 rounded-lg bg-grey-lighten-4" :class="isDark ? 'bg-grey-darken-4' : ''" style="border-style: dashed !important; border-width: 2px !important;">
-            <v-row>
-              <v-col cols="12" md="4">
-                <v-text-field 
-                  v-model="profile.current_password" 
-                  label="Contraseña Actual (*)" 
-                  density="compact" 
-                  type="password"
-                  variant="outlined" 
-                  hide-details="auto" 
-                  bg-color="surface"
-                  @keydown.space.prevent 
-                  :rules="password_rules" 
-                  :disabled="!isEditing"
-                />
-              </v-col>
+      <v-card-text class="pt-6">
+        <p class="text-body-2 text-medium-emphasis mb-4">
+          Para cambiarla, confirma tu contraseña actual y escribe la nueva (mínimo 8 caracteres).
+        </p>
+        <v-form ref="passwordForm" @submit.prevent v-model="password_valid">
+          <v-row>
+            <v-col cols="12" md="4">
+              <v-text-field
+                v-model="pw.current" label="Contraseña Actual (*)" density="compact"
+                :type="showCurrent ? 'text' : 'password'"
+                :append-inner-icon="showCurrent ? 'mdi-eye' : 'mdi-eye-off'" @click:append-inner="showCurrent = !showCurrent"
+                variant="outlined" hide-details="auto" @keydown.space.prevent :rules="current_password_rules"
+              />
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-text-field
+                v-model="pw.next" label="Nueva Contraseña (*)" density="compact" counter
+                :type="showNew ? 'text' : 'password'"
+                :append-inner-icon="showNew ? 'mdi-eye' : 'mdi-eye-off'" @click:append-inner="showNew = !showNew"
+                variant="outlined" hide-details="auto" @keydown.space.prevent :rules="password_rules" @keypress="isValidPassword"
+              />
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-text-field
+                v-model="pw.confirm" label="Confirmar Nueva (*)" density="compact"
+                :type="showConfirm ? 'text' : 'password'"
+                :append-inner-icon="showConfirm ? 'mdi-eye' : 'mdi-eye-off'" @click:append-inner="showConfirm = !showConfirm"
+                variant="outlined" hide-details="auto" @keydown.space.prevent :rules="[confirmPasswordRule]"
+              />
+            </v-col>
+          </v-row>
+        </v-form>
+      </v-card-text>
 
-              <v-col cols="12" md="4">
-                <v-text-field 
-                  v-model="profile.password" 
-                  label="Nueva Contraseña (*)" 
-                  density="compact" 
-                  type="password"
-                  variant="outlined" 
-                  hide-details="auto" 
-                  bg-color="surface"
-                  @keydown.space.prevent 
-                  :rules="password_rules" 
-                  :disabled="!isEditing"
-                  @keypress="isValidPassword"
-                />
-              </v-col>
+      <v-divider></v-divider>
+      <v-card-actions class="px-6 py-3">
+        <v-spacer></v-spacer>
+        <v-btn color="primary" variant="flat" class="font-weight-bold px-6 rounded-lg" :loading="saving_pw" :disabled="!password_valid" @click="changePassword">
+          <v-icon start size="small">mdi-lock-check</v-icon> Cambiar contraseña
+        </v-btn>
+      </v-card-actions>
+    </v-card>
 
-              <v-col cols="12" md="4">
-                <v-text-field 
-                  v-model="profile.confirm_password" 
-                  label="Confirmar Nueva (*)" 
-                  density="compact" 
-                  type="password"
-                  variant="outlined" 
-                  hide-details="auto" 
-                  bg-color="surface"
-                  @keydown.space.prevent 
-                  :rules="[confirmPasswordRule]" 
-                  :disabled="!isEditing"
-                />
-              </v-col>
-            </v-row>
-          </v-card>
-        </v-expand-transition>
-      </v-form>
-    </v-card-text>
-    
-    <v-divider v-if="isEditing"></v-divider>
-    
-    <v-card-actions v-if="isEditing" class="px-6 py-4 bg-grey-lighten-5" :class="isDark ? 'bg-grey-darken-4' : ''">
-      <v-spacer></v-spacer>
-      <v-btn variant="flat" class="font-weight-bold mr-3 px-6 rounded-lg" @click="cancelEdit">
-        Cancelar
-      </v-btn>
-      <v-btn 
-        color="primary" 
-        variant="flat" 
-        class="font-weight-bold px-6 rounded-lg"
-        :loading="is_on_sending_process" 
-        :disabled="!is_valid"
-        @click="save"
-      >
-        <v-icon start size="small">mdi-content-save</v-icon> Guardar Cambios
-      </v-btn>
-    </v-card-actions>
-  </v-card>
+  </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
-import { useTheme } from 'vuetify'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import Swal from 'sweetalert2'
+import { Toast } from '@/plugins/alerts'
 import { useAppStore } from '@/stores/appStore'
 import UsersRules from '@/validators/rules/usersRules'
 import ProfileDataService from '@/services/profile/profileDataService'
 import ProfileMappers from '@/mappers/profileMappers'
 import Characters from '@/validators/commonValidators/characters'
 
-const theme = useTheme()
 const appStore = useAppStore()
 
-const isDark = computed(() => theme.global.current.value.dark)
-
-const editForm = ref(null)
-const isEditing = ref(false)
+const infoForm = ref(null)
+const passwordForm = ref(null)
 const is_loading = ref(false)
-const edit_password = ref(false)
+const info_valid = ref(false)
+const password_valid = ref(false)
+const saving_info = ref(false)
+const saving_pw = ref(false)
 const userRole = ref('')
-const is_valid = ref(false)
-const is_on_sending_process = ref(false)
 const uploadSignature = ref([])
 const signaturePreviewUrl = ref(null)
+const showCurrent = ref(false)
+const showNew = ref(false)
+const showConfirm = ref(false)
 
 const profile = reactive({
-  username: '',
-  first_name: '',
-  last_name: '',
-  email: '',
-  signature_image: null,
-  current_password: '',
-  password: '',
-  confirm_password: '',
+  username: '', first_name: '', last_name: '', email: '', signature_image: null,
 })
+const pw = reactive({ current: '', next: '', confirm: '' })
 
 const user_name_rules = UsersRules.user_name_rules()
 const first_name_rules = UsersRules.first_name_rules()
 const last_name_rules = UsersRules.last_name_rules()
 const password_rules = UsersRules.password_rules()
+const current_password_rules = UsersRules.current_password_rules()
 const email_rules = UsersRules.email_rules()
 
-const confirmPasswordRule = computed(() => {
-  return () => (profile.password === profile.confirm_password) || 'Las contraseñas no coinciden.'
-})
+const confirmPasswordRule = computed(() => () => (pw.next === pw.confirm) || 'Las contraseñas no coinciden.')
 
 const getProfile = () => {
   is_loading.value = true
   ProfileDataService.get().then((response) => {
-    let mappedProfile = ProfileMappers.putMap(response.data)
-    Object.assign(profile, mappedProfile)
-    profile.current_password = ''
-    profile.password = ''
-    profile.confirm_password = ''
+    const mapped = ProfileMappers.putMap(response.data)
+    profile.username = mapped.username ?? ''
+    profile.first_name = mapped.first_name ?? ''
+    profile.last_name = mapped.last_name ?? ''
+    profile.email = mapped.email ?? ''
+    profile.signature_image = mapped.signature_image ?? null
   }).catch(() => {
     Swal.fire('Error', 'No se pudo cargar la información del perfil.', 'error')
-  }).finally(() => {
-    is_loading.value = false
-  })
+  }).finally(() => { is_loading.value = false })
 }
 
-const initProfile = () => {
-  getProfile()
-  uploadSignature.value = []
+const clearSignaturePreview = () => {
   if (signaturePreviewUrl.value) {
     URL.revokeObjectURL(signaturePreviewUrl.value)
     signaturePreviewUrl.value = null
   }
-  edit_password.value = false
-  isEditing.value = false
-  if (editForm.value) editForm.value.resetValidation()
+  uploadSignature.value = []
 }
 
-// Muestra un preview inmediato del archivo elegido, ANTES de guardar,
-// para confirmar visualmente que sí se seleccionó la imagen correcta.
+const resetInfo = () => {
+  clearSignaturePreview()
+  getProfile()
+  if (infoForm.value) infoForm.value.resetValidation()
+}
+
 const onSignatureChange = () => {
   if (signaturePreviewUrl.value) {
     URL.revokeObjectURL(signaturePreviewUrl.value)
     signaturePreviewUrl.value = null
   }
   const file = Array.isArray(uploadSignature.value) ? uploadSignature.value[0] : uploadSignature.value
-  if (file instanceof File) {
-    signaturePreviewUrl.value = URL.createObjectURL(file)
-  }
+  if (file instanceof File) signaturePreviewUrl.value = URL.createObjectURL(file)
 }
 
-const cancelEdit = () => {
-  initProfile()
+const showApiError = (e, fallback) => {
+  let html = ''
+  const fieldNames = { email: 'Email', username: 'Usuario', password: 'Contraseña', current_password: 'Contraseña Actual' }
+  if (e.response?.data) {
+    for (const key in e.response.data) {
+      const field = fieldNames[key] || key
+      const errs = e.response.data[key]
+      html += `<b>${field}:</b> ${Array.isArray(errs) ? errs.join(', ') : errs}<br>`
+    }
+  }
+  Swal.fire({ ...appStore.errorSavedOptions, html: html || fallback })
 }
 
-const saveProfile = async (profileData) => {
-  let payload = { ...profileData }
-
-  if (!edit_password.value) {
-    delete payload['current_password']
-    delete payload['password']
-    delete payload['confirm_password']
-  } else {
-    delete payload['confirm_password']
-  }
-
-  is_on_sending_process.value = true
-  is_loading.value = true
-
+// Guarda SOLO los datos de la cuenta (sin tocar la contraseña).
+const saveInfo = async () => {
+  const { valid } = await infoForm.value.validate()
+  if (!valid) return
+  saving_info.value = true
   try {
-    let formData = new FormData()
-    for (let key in payload) {
-      // Evitamos enviar la cadena de texto (URL) de la firma actual al backend
-      if (key === 'signature_image') continue;
-      
-      formData.append(key, payload[key] === null ? '' : payload[key])
-    }
-    
-    // Evaluamos si hay un archivo sin depender de .length
-    if (uploadSignature.value) {
-      let file = Array.isArray(uploadSignature.value) ? uploadSignature.value[0] : uploadSignature.value
-      if (file instanceof File) {
-        formData.append('signature_image', file)
-      }
-    }
+    const formData = new FormData()
+    formData.append('username', profile.username)
+    formData.append('email', profile.email ?? '')
+    formData.append('first_name', profile.first_name)
+    formData.append('last_name', profile.last_name)
+    const file = Array.isArray(uploadSignature.value) ? uploadSignature.value[0] : uploadSignature.value
+    if (file instanceof File) formData.append('signature_image', file)
 
-    const response = await ProfileDataService.update(formData)
-    if (response.status === 200 || response.status === 204) {
-      Swal.fire(appStore.successSavedOptions)
-      initProfile()
+    const r = await ProfileDataService.update(formData)
+    if (r.status === 200 || r.status === 204) {
+      Toast.fire({ icon: 'success', title: 'Datos actualizados.' })
+      clearSignaturePreview()
+      getProfile()
     }
   } catch (e) {
-    let errorText = ''
-    const fieldNames = { email: 'Email', username: 'Usuario', password: 'Contraseña', current_password: 'Contraseña Actual' }
-    
-    if (e.response?.data) {
-      for (const key in e.response.data) {
-        const field = fieldNames[key] || key
-        const errors = e.response.data[key]
-        const errorMsg = Array.isArray(errors) ? errors.join(', ') : errors
-        errorText += `<b>${field}:</b> ${errorMsg}<br>`
-      }
-    }
-
-    Swal.fire({
-      ...appStore.errorSavedOptions,
-      html: errorText || 'Error al procesar la solicitud.'
-    })
+    showApiError(e, 'No se pudieron guardar los datos.')
   } finally {
-    is_on_sending_process.value = false
-    is_loading.value = false
+    saving_info.value = false
   }
 }
 
-const save = async () => {
-  const { valid } = await editForm.value.validate()
-  if (valid) {
-    await saveProfile(profile)
+// Cambia SOLO la contraseña (endpoint valida la actual contra la BD).
+const changePassword = async () => {
+  const { valid } = await passwordForm.value.validate()
+  if (!valid) return
+  saving_pw.value = true
+  try {
+    const formData = new FormData()
+    formData.append('current_password', pw.current)
+    formData.append('password', pw.next)
+
+    const r = await ProfileDataService.update(formData)
+    if (r.status === 200 || r.status === 204) {
+      Toast.fire({ icon: 'success', title: 'Contraseña actualizada.' })
+      pw.current = ''; pw.next = ''; pw.confirm = ''
+      // Limpiar los valores re-dispara las reglas (required); esperamos a que se
+      // asiente y recién ahí limpiamos la validación → sin parpadeo rojo.
+      await nextTick()
+      passwordForm.value?.resetValidation()
+    }
+  } catch (e) {
+    showApiError(e, 'No se pudo cambiar la contraseña.')
+  } finally {
+    saving_pw.value = false
   }
 }
 
@@ -362,13 +270,10 @@ const isLetterOrSpace = (e) => Characters.checkCharacter(e, true)
 const isValidPassword = (e) => Characters.checkCharacterDigitsAndSymbols(e, false)
 
 onMounted(() => {
-  const userStr = localStorage.getItem('user')
   try {
-    const user = userStr ? JSON.parse(userStr) : {}
+    const user = JSON.parse(localStorage.getItem('user')) || {}
     userRole.value = user.kind_description || 'Rol no especificado'
-  } catch (e) {
-    userRole.value = 'Rol no especificado'
-  }
-  initProfile()
+  } catch (e) { userRole.value = 'Rol no especificado' }
+  getProfile()
 })
 </script>

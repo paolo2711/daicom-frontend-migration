@@ -177,10 +177,12 @@
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { Toast } from '@/plugins/alerts'
 
 import Swal from 'sweetalert2'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 
@@ -229,8 +231,11 @@ const statusOptions = [
 ]
 
 // ── Carga server-side (paginación + búsqueda en el backend) ──
+const { begin: beginLoad, isLatest: isLatestLoad } = useLatestRequest()
+
 const loadItems = () => {
   loading.value = true
+  const token = beginLoad()   // guard de secuencia: gana la carga más reciente
   InventoryDataService.getAll({
     page: options.value.page,
     page_size: options.value.itemsPerPage,
@@ -239,11 +244,12 @@ const loadItems = () => {
     expediente: expedienteFilter.value || undefined,
     vencido: vencidoFilter.value ? 1 : undefined,
   }).then(response => {
+    if (!isLatestLoad(token)) return
     equipos.value = response.data.results ?? response.data ?? []
     total.value = response.data.count ?? equipos.value.length
   }).catch(() => {
     Swal.fire('Error', 'No se pudieron cargar los equipos.', 'error')
-  }).finally(() => { loading.value = false })
+  }).finally(() => { if (isLatestLoad(token)) loading.value = false })
 }
 
 const onPageChange = (nuevaPagina) => {
@@ -336,10 +342,17 @@ const addRow = () => { options.value.page = 1; loadItems() }
 // dispara RELOAD_INVENTORY al crear/editar/eliminar equipos y al alquilar/devolver.
 const onWsReloadInventory = () => { loadItems() }
 
+// Búsqueda enlazada: al hacer clic en una notificación de expediente, la ruta
+// trae ?buscar=<id interno> → lo ponemos en la búsqueda (aquí y si cambia estando
+// ya en la pestaña). El watch(search) recarga la tabla.
+const route = useRoute()
+watch(() => route.query.buscar, (v) => { if (v) search.value = String(v) })
+
 onMounted(() => {
   const user = JSON.parse(localStorage.getItem('user')) || {}
   const isAdmin = user.kind !== undefined && user.kind < 1
   puedeEliminar.value = isAdmin || (user.action_permissions || []).includes(1007)
+  if (route.query.buscar) search.value = String(route.query.buscar)
   loadItems()
   window.addEventListener('wss-reload-inventory', onWsReloadInventory)
 })

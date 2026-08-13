@@ -16,6 +16,15 @@
           </v-btn>
         </header>
 
+        <!-- Píldoras de filtro (estilo IG) -->
+        <div class="notif-pills">
+          <button
+            v-for="p in pildorasVisibles" :key="p.value"
+            class="notif-pill" :class="{ 'notif-pill--active': store.filter === p.value }"
+            @click="store.setFilter(p.value)"
+          >{{ p.label }}</button>
+        </div>
+
         <div v-if="store.unreadCount > 0" class="notif-actions">
           <button class="notif-markall" @click="store.markAll()">Marcar todo como leído</button>
         </div>
@@ -28,13 +37,14 @@
               class="notif-item" :class="{ 'notif-item--unread': !n.read }"
               @click="abrir(n)"
             >
-              <v-avatar size="44" :color="colorNivel(n.level)" class="flex-shrink-0">
-                <v-icon color="white" size="22">{{ iconoCategoria(n.category) }}</v-icon>
-              </v-avatar>
+              <span class="notif-avatar" :class="'lvl-' + (n.level || 'info')">
+                <v-icon size="20">{{ iconoCategoria(n.category) }}</v-icon>
+              </span>
               <div class="notif-text">
-                <strong>{{ n.title }}</strong><template v-if="n.body"> {{ n.body }}</template>
-                <span class="notif-time"> · {{ tiempoRelativo(n.created_at) }}</span>
+                <div class="notif-title">{{ n.title }}</div>
+                <div class="notif-sub"><template v-if="n.body">{{ n.body }} · </template>{{ tiempoRelativo(n.created_at) }}</div>
               </div>
+              <span v-if="!n.read" class="notif-dot" aria-label="No leída"></span>
             </button>
           </template>
 
@@ -73,21 +83,36 @@ const ICONOS = {
   qr_subido: 'mdi-cloud-check',
 }
 const iconoCategoria = (c) => ICONOS[c] || 'mdi-bell'
-const colorNivel = (lvl) => (lvl === 'critical' ? 'error' : lvl === 'warning' ? 'amber-darken-2' : 'primary')
 
-// Agrupación como IG: Hoy / Este mes / Anteriores
+// Píldoras de filtro. 'Todas' y 'No leídos' siempre; las de categoría solo se
+// muestran si el usuario realmente recibe ese grupo (store.availableGroups).
+const PILDORAS = [
+  { value: 'todas',        label: 'Todas',        always: true },
+  { value: 'no_leidos',    label: 'No leídos',    always: true },
+  { value: 'certificados', label: 'Certificados', grupo: 'certificados' },
+  { value: 'firmas',       label: 'Firmas',       grupo: 'firmas' },
+  { value: 'vencimientos', label: 'Vencimientos', grupo: 'vencimientos' },
+]
+const pildorasVisibles = computed(() =>
+  PILDORAS.filter(p => p.always || store.availableGroups.includes(p.grupo))
+)
+
+// Agrupación como IG: Hoy / Ayer / Este mes / Anteriores
 const grupos = computed(() => {
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+  const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1)
   const mes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
-  const g = { hoy: [], mes: [], antes: [] }
+  const g = { hoy: [], ayer: [], mes: [], antes: [] }
   for (const n of store.items) {
     const f = new Date(n.created_at)
     if (f >= hoy) g.hoy.push(n)
+    else if (f >= ayer) g.ayer.push(n)
     else if (f >= mes) g.mes.push(n)
     else g.antes.push(n)
   }
   return [
     { label: 'Hoy', items: g.hoy },
+    { label: 'Ayer', items: g.ayer },
     { label: 'Este mes', items: g.mes },
     { label: 'Anteriores', items: g.antes },
   ]
@@ -111,7 +136,7 @@ const onScroll = () => {
 
 const RUTAS = {
   certificate: (id) => ({ path: '/certificates', query: { correlativo: id } }),
-  inventory_item: () => ({ path: '/inventario' }),
+  inventory_item: (id) => ({ path: '/inventario', query: { buscar: id } }),
   order: () => ({ path: '/orders/servicios' }),
 }
 const abrir = (n) => {
@@ -181,12 +206,37 @@ const abrir = (n) => {
   font-weight: 700;
   padding: 14px 22px 6px;
 }
+/* Píldoras de filtro: hacen wrap a otra línea si no caben (ninguna se oculta) */
+.notif-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 16px 10px 22px;
+}
+.notif-pill {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: inherit;
+  background: rgba(128, 128, 128, 0.14);
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.notif-pill:hover { background: rgba(128, 128, 128, 0.22); }
+.notif-pill--active {
+  background: rgb(var(--v-theme-primary));
+  color: #fff;
+}
+
 .notif-item {
   width: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
-  padding: 10px 20px 10px 22px;
+  padding: 11px 20px 11px 22px;
   text-align: left;
   background: transparent;
   border: none;
@@ -195,16 +245,44 @@ const abrir = (n) => {
 }
 .notif-item:hover { background: rgba(128, 128, 128, 0.10); }
 .notif-item--unread { background: rgba(var(--v-theme-primary), 0.07); }
+
+/* Ícono en círculo suave (fondo tintado + ícono del color), no un círculo sólido feo */
+.notif-avatar {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.notif-avatar.lvl-info    { background: rgba(var(--v-theme-primary), 0.14); color: rgb(var(--v-theme-primary)); }
+.notif-avatar.lvl-warning { background: rgba(245, 158, 11, 0.16);           color: #d97706; }
+.notif-avatar.lvl-critical{ background: rgba(239, 68, 68, 0.16);            color: #dc2626; }
+
 .notif-text {
   min-width: 0;
   flex: 1;
-  font-size: 0.9rem;
   line-height: 1.35;
 }
-.notif-text strong { font-weight: 700; }
-.notif-time {
-  color: rgba(128, 128, 128, 0.9);
-  font-weight: 500;
+.notif-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.notif-sub {
+  font-size: 0.84rem;
+  color: rgba(128, 128, 128, 0.95);
+  margin-top: 1px;
+}
+
+/* Punto de "no leída" (estilo IG) */
+.notif-dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgb(var(--v-theme-primary));
+  margin-top: 8px;
 }
 .notif-state {
   display: flex; flex-direction: column; align-items: center;

@@ -20,9 +20,9 @@
                 </div>
               </div>
             </v-col>
-            <v-col lg="5">
+            <v-col cols="12" lg="5">
               <div class="pa-7 pa-sm-12">
-                <img src="@/assets/images/logo-icon.png" alt="Logo Daicom" />
+                <img src="@/assets/images/logo-icon.png" alt="Logo Daicom" class="login-logo" />
                 <h2 class="font-weight-bold mt-4 text-grey-darken-2">Inicio de sesión</h2>
                 <h6 class="text-subtitle-1">Ingrese sus credenciales de usuario</h6>
 
@@ -86,14 +86,13 @@ const showPassword = ref(false)
 const username = ref("")
 const password = ref("")
 
-// Reglas de validación
+// Reglas de validación (en login solo exigimos que estén escritos; la política
+// de longitud/complejidad se valida al crear/cambiar la contraseña, no al entrar).
 const usernameRules = [
-  v => !!v || "Nombre de usuario es requerido",
-  v => (v && v.length >= 6) || "El usuario es de al menos 6 caracteres"
+  v => !!v || "Ingresa tu usuario"
 ]
 const passwordRules = [
-  v => !!v || "Contraseña es requerida",
-  v => (v && v.length >= 6) || "La contraseña es de al menos 6 caracteres"
+  v => !!v || "Ingresa tu contraseña"
 ]
 
 // Comprobar sesión activa al montar el componente
@@ -130,6 +129,15 @@ const submit = async () => {
 </script>
 
 <style scoped>
+/* El logo se dibujaba a tamaño natural y deformaba la tarjeta: lo acotamos. */
+.login-logo {
+  display: block;
+  width: auto;
+  height: 56px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
 /* Los estilos CSS originales de animación se mantienen intactos */
 .theme--light.v-application, .theme--dark.v-application  {
   background: rgba(255, 255, 255, 0);

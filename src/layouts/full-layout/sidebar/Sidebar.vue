@@ -69,7 +69,7 @@
         <BaseItem
           v-else
           :item="item"
-          v-show="checkItemPermission(item.id)"
+          v-show="checkItemPermission(item)"
         />
       </template>
     </v-list>
@@ -98,7 +98,7 @@
                 
                 <template v-for="child in adminGroup.children" :key="child.id">
                   <v-list-item
-                    v-if="checkItemPermission(child.id)"
+                    v-if="checkItemPermission(child)"
                     :prepend-icon="child.icon"
                     :title="child.title"
                     :to="child.to"
@@ -239,26 +239,31 @@ const logOut = async () => {
 }
 
 const getPermissions = () => JSON.parse(localStorage.getItem('permissions')) || []
+const getActionPermissions = () => (JSON.parse(localStorage.getItem('user')) || {}).action_permissions || []
 
-const checkItemPermission = (id) => {
+// Una entrada se muestra según su tipo:
+//  - superAdmin: solo el super-admin (kind<1).
+//  - action: por permiso de ACCIÓN (páginas de admin, una sola llave).
+//  - resto: por permiso de VISTA (páginas operativas).
+const checkItemPermission = (item) => {
+  if (!item) return false
   if (hasTotalAccess.value) return true
-  return getPermissions().some(p => p.id == id)
+  if (item.superAdmin) return false
+  if (item.action) return getActionPermissions().includes(item.action)
+  return getPermissions().some(p => p.id == item.id)
 }
 
 // Verifica si el usuario tiene acceso a alguna opción de administración
 const hasAdminAccess = computed(() => {
   if (!adminGroup.value || !adminGroup.value.children) return false;
-  return adminGroup.value.children.some(child => checkItemPermission(child.id));
+  return adminGroup.value.children.some(child => checkItemPermission(child));
 });
 
 const filterGroupPermission = (item) => {
   if (!item) return null
-  const permSet = getPermissions()
   const copy = JSON.parse(JSON.stringify(item))
   if (!hasTotalAccess.value) {
-    copy.children = copy.children.filter(
-      child => child.locked === true || permSet.some(p => p.id == child.id)
-    )
+    copy.children = copy.children.filter(child => child.locked === true || checkItemPermission(child))
     if (copy.children.length === 0) return null
   }
   return copy

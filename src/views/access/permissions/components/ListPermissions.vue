@@ -93,23 +93,59 @@ const selected_role = ref(null)
 const is_on_sending_process = ref(false)
 const is_loading = ref(false)
 
+// Catálogo de acciones del sistema, agrupadas por dominio. Para agregar una acción
+// nueva: una línea aquí (id = permission_id del backend). `soloSuperAdmin` oculta la
+// categoría a quien no es super-admin (los meta-permisos no se otorgan a la ligera).
+const ACCIONES_CATEGORIAS = [
+  { name: 'Certificados', acciones: [
+    { id: 1001, name: 'Firmar / Generar QR', endpoint: 'FIRMAR_QR' },
+    { id: 1003, name: 'Anular / Restaurar Certificados', endpoint: 'ANULAR_CERTIFICADO' },
+    { id: 1005, name: 'Solicitar Firma', endpoint: 'SOLICITAR_FIRMA' },
+    { id: 1006, name: 'Elaborar Certificado (Subir Excel)', endpoint: 'ELABORAR_CERTIFICADO' },
+  ]},
+  { name: 'Órdenes', acciones: [
+    { id: 1002, name: 'Ver Resumen de Orden', endpoint: 'VER_RESUMEN_ORDEN' },
+    { id: 1004, name: 'Anular Órdenes', endpoint: 'ANULAR_ORDEN' },
+  ]},
+  { name: 'Inventario', acciones: [
+    { id: 1007, name: 'Eliminar Equipos', endpoint: 'ELIMINAR_EQUIPO' },
+  ]},
+  { name: 'Administración', soloSuperAdmin: true, acciones: [
+    { id: 1008, name: 'Gestionar Usuarios', endpoint: 'GESTIONAR_USUARIOS' },
+    { id: 1009, name: 'Gestionar Roles y Permisos', endpoint: 'GESTIONAR_ROLES' },
+  ]},
+]
+
 onMounted(() => {
-  let menuItems = JSON.parse(JSON.stringify(SidebarItems))
-  
-  menuItems.push({
-    name: 'Acciones del Sistema',
-    id: 'sys_root', // Aislar carpeta
-    children: [
-      { name: 'Firmar / Generar QR', to: 'FIRMAR_QR', id: 'sys_1001', real_id: 1001 },
-      { name: 'Ver Resumen de Orden', to: 'VER_RESUMEN_ORDEN', id: 'sys_1002', real_id: 1002 },
-      { name: 'Anular / Restaurar Certificados', to: 'ANULAR_CERTIFICADO', id: 'sys_1003', real_id: 1003 },
-      { name: 'Anular Órdenes', to: 'ANULAR_ORDEN', id: 'sys_1004', real_id: 1004 },
-      { name: 'Solicitar Firma', to: 'SOLICITAR_FIRMA', id: 'sys_1005', real_id: 1005 },
-      { name: 'Elaborar Certificado (Subir Excel)', to: 'ELABORAR_CERTIFICADO', id: 'sys_1006', real_id: 1006 }
-    ]
+  const user = JSON.parse(localStorage.getItem('user')) || {}
+  const isSuperAdmin = user.kind !== undefined && user.kind < 1
+
+  // 1) Vistas / módulos (el árbol del menú). Se excluyen las páginas de admin que
+  // se gobiernan por su ACCIÓN (Usuarios→1008, Permisos→1009) y las solo-super-admin
+  // (Mantenimiento): esas no son permisos de vista otorgables.
+  const soloVistas = (nodes) => nodes
+    .filter(n => !n.action && !n.superAdmin)
+    .map(n => (n.children ? { ...n, children: soloVistas(n.children) } : n))
+
+  const vistasRoot = {
+    name: 'Vistas / Módulos', id: 'views_root',
+    children: soloVistas(JSON.parse(JSON.stringify(SidebarItems))),
+  }
+
+  // 2) Acciones del sistema, agrupadas por categoría.
+  const accionesRoot = { name: 'Acciones del Sistema', id: 'sys_root', children: [] }
+  ACCIONES_CATEGORIAS.forEach(cat => {
+    if (cat.soloSuperAdmin && !isSuperAdmin) return   // meta-permisos: solo super-admin
+    accionesRoot.children.push({
+      name: cat.name,
+      id: 'sys_cat_' + cat.name,
+      children: cat.acciones.map(a => ({
+        name: a.name, to: a.endpoint, id: 'sys_' + a.id, real_id: a.id,
+      })),
+    })
   })
-  
-  items.value = menuItems
+
+  items.value = [vistasRoot, accionesRoot]
 })
 
 const flattenItems = (nodes) => {

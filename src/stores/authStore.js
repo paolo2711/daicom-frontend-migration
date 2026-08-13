@@ -21,16 +21,19 @@ export const useAuthStore = defineStore('auth', {
       } catch (error) {
         this.status.loggedIn = false;
         this.user = null;
-        
-        const errorMessage = error.response?.data?.non_field_errors 
-          ? error.response.data.non_field_errors.toString() 
-          : 'Error de autenticación';
+
+        const data = error.response?.data;
+        const errorMessage =
+          data?.detail
+          || (data?.non_field_errors ? data.non_field_errors.toString() : null)
+          || (error.response ? 'No se pudo iniciar sesión. Intenta de nuevo.' : 'Sin conexión con el servidor.');
 
         Swal.fire({
           icon: 'warning',
-          title: errorMessage,
+          title: 'No se pudo iniciar sesión',
+          text: errorMessage,
           showConfirmButton: true,
-          confirmButtonColor: 'red',
+          confirmButtonColor: '#1976d2',
           backdrop: true,
         });
         

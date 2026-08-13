@@ -78,16 +78,19 @@ const routes = [
         name: "Permissions",
         path: "permissions",
         component: () => import("@/views/access/permissions/Permissions.vue"),
+        meta: { requiredAction: 1009 },   // Gestionar Roles y Permisos
       },
       {
         name: "Users",
         path: "users",
         component: () => import("@/views/access/users/Users.vue"),
+        meta: { requiredAction: 1008 },   // Gestionar Usuarios
       },
       {
         name: "Maintenance",
         path: "mantenimiento",
         component: () => import("@/views/access/maintenance/Maintenance.vue"),
+        meta: { superAdmin: true },        // Zona Peligrosa: solo super-admin
       }
     ]
   },
@@ -138,8 +141,20 @@ router.beforeEach((to) => {
   const authStore = useAuthStore();
 
   if (to.name === 'Login') return true;
-  if (authStore.status.loggedIn) return true;
-  return { name: 'Login' };
+  if (!authStore.status.loggedIn) return { name: 'Login' };
+
+  // Guard por permiso: páginas de admin protegidas por su acción (o super-admin).
+  // El backend igual bloquea; esto evita llegar a una página que no puedes usar.
+  const req = to.meta?.requiredAction;
+  const soloSuper = to.meta?.superAdmin;
+  if (req || soloSuper) {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const isSuperAdmin = user.kind !== undefined && user.kind < 1;
+    if (isSuperAdmin) return true;
+    if (soloSuper) return { name: 'home' };
+    if (!(user.action_permissions || []).includes(req)) return { name: 'home' };
+  }
+  return true;
 });
 
 router.afterEach(() => {

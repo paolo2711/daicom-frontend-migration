@@ -392,6 +392,7 @@ import ClientDataService from '@/services/clients/clientDataService'
 import ClientMappers from '@/mappers/clientMappers'
 import OrderMappers from '@/mappers/orderMappers'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
@@ -543,13 +544,12 @@ const user = JSON.parse(localStorage.getItem('user')) || {}
 const is_admin = user.kind !== undefined && user.kind < 1
 const user_permissions = user.action_permissions || []
 
-// Control de peticiones y Anti-DDoS para Resúmenes
-const pendingRequest = ref(false)
+// Guard de secuencia (solo aplica la carga más reciente) + debounce de filtros.
+const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestRequest()
 let debounceTimeout = null
 
 // Funciones de filtro
 const applyFilters = () => {
-  if (pendingRequest.value) return
   // Si el panel de facturas está maximizado, tapa la tabla: al filtrar lo
   // achicamos para que se vean los resultados.
   panel_expandido.value = false
@@ -590,9 +590,8 @@ const limpiarFechas = () => {
 
 // Obtener órdenes
 const retrieveOrders = () => {
-  if (pendingRequest.value) return
-  pendingRequest.value = true
   loading_list.value = true
+  const token = beginOrdersLoad()   // guard de secuencia: gana la carga más reciente
   const limite = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
   OrderDataService.getFiltered(
     options.value.page,
@@ -610,13 +609,13 @@ const retrieveOrders = () => {
     filter_invoice.value
   )
       .then((res) => {
+        if (!isLatestOrdersLoad(token)) return   // llegó una carga más nueva → no pisar
         orders.value = res.data.results.map(orden => OrderMappers.getMap(orden))
         total_orders.value = res.data.count
       })
       .finally(() => {
-      loading_list.value = false
-      pendingRequest.value = false
-    })
+        if (isLatestOrdersLoad(token)) loading_list.value = false
+      })
 }
 
 // Manejador centralizado de clics en la fila (UX de Expansión)
@@ -957,8 +956,10 @@ const handleWssReload = () => {
 watch(options, () => { retrieveOrders() }, { deep: true })
 
 // Quitamos filter_date_gt y filter_date_lt para que solo se apliquen con el botón "Aplicar"
+// Debounce: espera a que el usuario deje de teclear antes de pegarle al backend.
 watch([filter_order, filter_correlative, filter_invoice, filter_client_id, filter_status], () => {
-  applyFilters()
+  clearTimeout(debounceTimeout)
+  debounceTimeout = setTimeout(applyFilters, 350)
 })
 
 // Ciclo de vida

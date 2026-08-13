@@ -117,6 +117,7 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import QuoteTemplate from './templates/QuoteTemplate.vue'
 import DocumentsDataService from '@/services/documents/documentsDataService'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 
 const search = ref('')
 const loading = ref(false)
@@ -172,11 +173,13 @@ const anularDocumento = (doc) => {
 // cada una debe vivir en su propio componente de lista pasando su propio
 // document_type aquí (FOI, GUS, ACT), para que nunca se mezclen.
 const DOCUMENT_TYPE = 'COT'
+const { begin: beginLoad, isLatest: isLatestLoad } = useLatestRequest()
 
 let searchTimeout = null
 
 const fetchDocuments = async () => {
   loading.value = true
+  const token = beginLoad()   // guard de secuencia: gana la carga más reciente
   try {
     const response = await DocumentsDataService.getAll({
       document_type: DOCUMENT_TYPE,
@@ -184,14 +187,16 @@ const fetchDocuments = async () => {
       page: page.value,
       itemsPerPage: itemsPerPage.value
     })
+    if (!isLatestLoad(token)) return
     documents.value = response.data.results
     totalItems.value = response.data.totalItems
   } catch (error) {
+    if (!isLatestLoad(token)) return
     console.error('Error al obtener documentos:', error)
     documents.value = []
     totalItems.value = 0
   } finally {
-    loading.value = false
+    if (isLatestLoad(token)) loading.value = false
   }
 }
 

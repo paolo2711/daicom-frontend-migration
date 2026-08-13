@@ -391,6 +391,7 @@ import ClientDataService from '@/services/clients/clientDataService'
 import ClientMappers from '@/mappers/clientMappers'
 import OrderMappers from '@/mappers/orderMappers'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useAppStore } from '@/stores/appStore'
 import DialogFactura from '../DialogFactura.vue'
 import EditOrder from '../EditOrder.vue'
@@ -489,8 +490,11 @@ const textoRangoFechas = computed(() => {
 })
 
 // ── Data ──
+const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestRequest()
+
 const retrieveOrders = () => {
   loading_list.value = true
+  const token = beginOrdersLoad()   // guard de secuencia: gana la carga más reciente
   const limite = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
   OrderDataService.getFiltered(
     options.value.page, limite, filter_client_id.value, filter_order.value,
@@ -498,9 +502,12 @@ const retrieveOrders = () => {
     filter_status.value, 2, filtro_falta_pago.value, filtro_sin_factura.value, false,
     filter_invoice.value
   ).then(res => {
+    if (!isLatestOrdersLoad(token)) return   // llegó una carga más nueva → no pisar
     orders.value = res.data.results.map(orden => OrderMappers.getMap(orden))
     total_orders.value = res.data.count
-  }).finally(() => { loading_list.value = false })
+  }).finally(() => {
+    if (isLatestOrdersLoad(token)) loading_list.value = false
+  })
 }
 
 const cargarResumenes = () => {

@@ -68,6 +68,7 @@ import { ref, onMounted, defineAsyncComponent } from 'vue'
 import Swal from 'sweetalert2'
 import LabDataService from '@/services/labs/labDataService'
 import LabMappers from '@/mappers/labMappers'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import { useAppStore } from '@/stores/appStore'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
@@ -93,35 +94,35 @@ const search = ref('')
 const dialogOpen = ref(false)
 const selectedLab = ref(null)
 
+const { begin: beginLoad, isLatest: isLatestLoad } = useLatestRequest()
+
 const retrieveAllLabs = () => {
-  if (loading_list.value) return
   loading_list.value = true
+  const token = beginLoad()   // guard de secuencia: gana la carga más reciente
   const pageSize = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
   LabDataService.getFiltered(options.value.page, pageSize, search.value || '')
     .then((response) => {
+      if (!isLatestLoad(token)) return
       labs.value = response.data.results.map(LabMappers.getMap)
       total_labs.value = response.data.count
     })
     .catch(() => {})
     .finally(() => {
-      loading_list.value = false
+      if (isLatestLoad(token)) loading_list.value = false
     })
 }
 
 const applyFilters = () => {
-  if (loading_list.value) return
   options.value.page = 1
   retrieveAllLabs()
 }
 
 const onPageChange = (newPage) => {
-  if (loading_list.value) return
   options.value.page = newPage
   retrieveAllLabs()
 }
 
 const onItemsPerPageChange = (newItemsPerPage) => {
-  if (loading_list.value) return
   options.value.itemsPerPage = newItemsPerPage
   options.value.page = 1
   retrieveAllLabs()

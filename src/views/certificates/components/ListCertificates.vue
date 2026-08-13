@@ -503,6 +503,7 @@ import FluentPagination    from '@/components/commonComponents/FluentPagination.
 import SelectionBar         from '@/components/commonComponents/SelectionBar.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import OrderDataService    from '@/services/certificates/orderDataService.js'
 import CertificateMappers  from '@/mappers/certificateMappers'
 import CertificateModal    from '@/views/certificates/components/CertificateModal.vue'
@@ -660,8 +661,16 @@ function isCertUploading(certId) {
   return task && ['generating', 'uploading', 'retrying'].includes(task.status)
 }
 
+// Guard de secuencia: si dos cargas se solapan, solo se aplica la más reciente
+// (evita que la carga sin filtro pise la búsqueda enlazada).
+const { begin: beginCertLoad, isLatest: isLatestCertLoad } = useLatestRequest()
+
 // ─── Watchers ─────────────────────────────────────────────────────────────────
 watch(options, () => retrieveAllCertificates(), { deep: true })
+
+// Búsqueda enlazada: si llega/cambia ?correlativo (incluso ya estando en la
+// pestaña), lo aplicamos y el watch de `correlative` dispara la búsqueda.
+watch(() => route.query.correlativo, (v) => { correlative.value = v || '' })
 
 watch(correlative,       () => { options.value.page = 1; retrieveAllCertificates() })
 watch(certificate_type,  () => { options.value.page = 1; retrieveAllCertificates() })
@@ -866,9 +875,10 @@ function getCertCodesByOrder (orderNum) {
 
 function retrieveAllCertificates () {
   // AL RECARGAR DATOS: Reiniciamos las selecciones para evitar filas fantasma (filtros o paginación)
-  certificados_seleccionados.value = [] 
-  
+  certificados_seleccionados.value = []
+
   loading_list.value = true
+  const token = beginCertLoad()   // guard de secuencia: solo aplica la carga más reciente
   const itemsPerPage       = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
   const correlativeNumber  = correlative.value > 0 ? Number(correlative.value) : ''
 
@@ -886,6 +896,7 @@ function retrieveAllCertificates () {
     filtro_excel_pendiente.value,
     filtro_antapacay.value // TEMPORAL Antapacay — borrar al terminar contrato
   ).then((response) => {
+    if (!isLatestCertLoad(token)) return   // llegó una carga más nueva → no pisar
     certificates.value = response.data.results.map(cert => CertificateMappers.getMap(cert))
     total_certificates.value = response.data.count
   }).catch((e) => {
@@ -894,7 +905,7 @@ function retrieveAllCertificates () {
       router.replace('/login')
     }
   }).finally(() => {
-    loading_list.value = false
+    if (isLatestCertLoad(token)) loading_list.value = false
   })
 }
 

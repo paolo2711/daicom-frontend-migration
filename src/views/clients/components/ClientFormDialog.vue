@@ -163,7 +163,9 @@ const save = async () => {
 }
 
 const closeDialog = () => {
-  formRef.value?.reset()
+  // resetValidation (no reset): limpia los errores sin re-validar, así los campos
+  // no parpadean en rojo mientras el modal se cierra. Los valores se reinician al abrir.
+  formRef.value?.resetValidation()
   emit('update:modelValue', false)
 }
 

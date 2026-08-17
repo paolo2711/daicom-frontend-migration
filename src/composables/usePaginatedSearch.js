@@ -11,15 +11,16 @@ export function usePaginatedSearch(apiServiceCall, mapperFunction, getActiveId =
   const items = ref([])
   const loading = ref(false)
   const searchQuery = ref(null)
+  const total = ref(0)   // total de coincidencias en el server (para avisar "hay más")
 
   const retrieveData = async (query = '') => {
     loading.value = true
     try {
       // Llamada estándar a tus servicios paginados
       const response = await apiServiceCall(1, 10, query)
+      total.value = response.data.count ?? response.data.results.length
       const fetched = response.data.results.map(mapperFunction)
       
-      // SOLUCIÓN DE RAÍZ CENTRALIZADA
       const activeId = getActiveId()
       if (activeId) {
         // Buscamos si el objeto activo ya estaba en la lista anterior
@@ -47,6 +48,7 @@ export function usePaginatedSearch(apiServiceCall, mapperFunction, getActiveId =
     items,
     loading,
     searchQuery,
-    retrieveData
+    retrieveData,
+    total
   }
 }

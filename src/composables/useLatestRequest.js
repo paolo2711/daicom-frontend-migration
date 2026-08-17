@@ -1,18 +1,15 @@
 // src/composables/useLatestRequest.js
 /**
- * Guard de secuencia para cargas que se solapan (race condition).
+ * Para cuando se solapan varias cargas de una tabla (montaje + filtro + recarga
+ * por WS + busqueda enlazada). Sin esto la respuesta que llega ultima gana aunque
+ * sea la mas vieja, y te pisa el resultado bueno. Aca solo se aplica la mas reciente.
  *
- * Cuando una tabla dispara varias cargas casi a la vez (montaje + filtro +
- * recarga por WebSocket + búsqueda enlazada), la respuesta que llega ÚLTIMA gana,
- * aunque sea la más vieja — y pisa el resultado bueno. Este guard hace que solo
- * se aplique la respuesta de la carga MÁS RECIENTE; las viejas se descartan.
- *
- * Uso (sirve con async/await o con .then):
+ * Uso (sirve con async o con .then):
  *   const { begin, isLatest } = useLatestRequest()
  *   const cargar = async () => {
  *     const token = begin()
  *     const res = await Servicio.getAll(...)
- *     if (!isLatest(token)) return          // llegó una carga más nueva → descartar
+ *     if (!isLatest(token)) return          // llego una mas nueva, descartar
  *     items.value = res.data.results
  *   }
  */

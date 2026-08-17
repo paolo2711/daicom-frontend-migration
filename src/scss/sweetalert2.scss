@@ -10,6 +10,10 @@
   border-radius: 12px !important;
 }
 
+/* Los toasts de EVENTO ya no usan SweetAlert: se renderizan en su propia pila
+   (<EventToastStack>). Aquí solo quedan los estilos de los diálogos y de los
+   toasts de FEEDBACK ("guardado", "eliminado"). */
+
 .swal2-confirm {
   background-color: $primary !important;
   color: #ffffff !important;

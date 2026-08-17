@@ -126,15 +126,6 @@ async function saveExtraEquipments() {
 
     Toast.fire({ timer: 2200, icon: 'success', title: `${items_to_save.value.length} equipo(s) añadido(s)` })
 
-    const currentUser = JSON.parse(localStorage.getItem('user')) || {}
-    if (window.enviarNotificacionGlobal) {
-      window.enviarNotificacionGlobal(
-        currentUser.username, 
-        'info', 
-        'Equipos Extra', 
-        `Se añadieron ${items_to_save.value.length} equipo(s) a una orden existente.`
-      )
-    }
 
     // Notificamos a TODO el sistema vía WebSocket
     if (window.notificarActualizacionFila) {

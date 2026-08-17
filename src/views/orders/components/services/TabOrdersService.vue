@@ -141,6 +141,7 @@
                 item-value="id"
                 placeholder="Buscar cliente..."
                 no-data-text="No se encontraron clientes"
+                no-filter
                 clearable
                 variant="outlined"
                 density="compact"
@@ -544,7 +545,7 @@ const user = JSON.parse(localStorage.getItem('user')) || {}
 const is_admin = user.kind !== undefined && user.kind < 1
 const user_permissions = user.action_permissions || []
 
-// Guard de secuencia (solo aplica la carga más reciente) + debounce de filtros.
+// Guard de secuencia (solo aplica la carga mas reciente) + debounce de filtros.
 const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestRequest()
 let debounceTimeout = null
 
@@ -739,7 +740,7 @@ const seleccionarFacturaEnPanel = (o) => {
 const crearFacturaParaSeleccion = () => {
   const ordenes = ordenes_seleccionadas.value
   if (ordenes.length === 0) return
-  // La moneda ya no depende de la orden: se elige en el diálogo de la factura.
+  // La moneda ya no depende de la orden: se elige en el dialogo de la factura.
   selected_order.value = null
   ordenes_factura_multi.value = [...ordenes]
   factura_modal.value = true

@@ -90,7 +90,7 @@ export const useAppStore = defineStore('app', {
       title: 'Error de red o servidor'
     },
 
-    // ¿Hay una barra de selección activa? La enciende SelectionBar. La usa el
+    // ¿Hay una barra de seleccion activa? La enciende SelectionBar. La usa el
     // Upload Manager para no solaparse con ella en ventanas angostas.
     selectionActive: false,
 

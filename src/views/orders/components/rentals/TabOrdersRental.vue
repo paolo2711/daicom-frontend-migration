@@ -141,6 +141,7 @@
                 item-value="id"
                 placeholder="Buscar cliente..."
                 no-data-text="No se encontraron clientes"
+                no-filter
                 clearable
                 variant="outlined"
                 density="compact"
@@ -666,8 +667,8 @@ const prepareExtraEquipment = (o) => { selected_order.value = o; dialog_extra.va
 const hasPermission = (id) => (is_admin.value ? true : user_permissions.value.includes(id))
 
 // ── Panel de facturas: crear por selección / sin factura ──
-// "CREAR FACTURA": una sola factura para TODAS las órdenes marcadas. La moneda
-// se elige en el diálogo de la factura (la orden ya no tiene moneda propia).
+// "CREAR FACTURA": una sola factura para TODAS las ordenes marcadas. La moneda
+// se elige en el dialogo de la factura (la orden ya no tiene moneda propia).
 const crearFacturaParaSeleccion = () => {
   const ordenes = ordenes_seleccionadas.value
   if (ordenes.length === 0) return

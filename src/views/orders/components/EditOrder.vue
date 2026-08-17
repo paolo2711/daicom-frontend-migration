@@ -20,6 +20,7 @@
               hide-details="auto"
               :loading="loading_clients"
               v-model:search="search_client"
+              no-filter
             />
           </v-col>
         </v-row>
@@ -245,7 +246,7 @@ async function borrarDoc(d) {
 
 function verUrl(url) { if (url) window.open(url, '_blank') }
 
-// ── Guardado del form (cliente, cotización, guías) ──
+//  Guardado del form (cliente, cotizacion, guias)
 function guardarEdicionOrden() {
   saving_edit_order.value = true
   let data = new FormData()

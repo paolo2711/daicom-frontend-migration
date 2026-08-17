@@ -15,7 +15,8 @@
         hide-details="auto"
         clearable
         label="Buscar cliente registrado (nombre o documento)"
-        no-data-text="Introduzca la busqueda. Puede buscar por RUC/DNI en SUNAT/RENIEC →"
+        no-data-text="Sin coincidencias. Puede buscar por RUC/DNI en SUNAT/RENIEC →"
+        no-filter
         @click:clear="onClear"
       >
         <template v-slot:item="{ props, item }">
@@ -24,6 +25,13 @@
               {{ item.raw.documentType_name }}: {{ item.raw.document || '---' }}
             </v-list-item-subtitle>
           </v-list-item>
+        </template>
+        <!-- Aviso generico: hay mas coincidencias de las mostradas. -->
+        <template v-if="hayMasClientes" v-slot:append-item>
+          <div class="px-4 py-2 text-caption text-medium-emphasis">
+            <v-icon size="14" class="mr-1">mdi-magnify</v-icon>
+            Hay más resultados — escribe para afinar la búsqueda.
+          </div>
         </template>
       </v-autocomplete>
     </v-col>
@@ -50,7 +58,7 @@
 
 <script setup>
 import { Toast } from '@/plugins/alerts'
-import { ref, inject, watch, onMounted } from 'vue'
+import { ref, computed, inject, watch, onMounted } from 'vue'
 import { useClientLookup } from '@/composables/useClientLookup'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import ClientDataService from '@/services/clients/clientDataService'
@@ -79,11 +87,15 @@ const {
   loading: loadingLocal,
   searchQuery,
   retrieveData,
+  total: totalClientes,
 } = usePaginatedSearch(
   ClientDataService.getFiltered,
   ClientMappers.getMap,
   () => props.modelValue
 )
+
+// ¿El server tiene mas coincidencias que las mostradas? -> aviso "escribe para afinar".
+const hayMasClientes = computed(() => totalClientes.value > localResults.value.length)
 
 // Carga inicial: si el componente se abre en modo edición, usePaginatedSearch
 // no puede "adivinar" el cliente porque nunca estuvo en `items`, así que lo
@@ -101,6 +113,9 @@ const loadInitialClient = async (id) => {
 }
 
 onMounted(() => {
+  // Carga inicial: los primeros 10 clientes (mismo patron que el resto de
+  // comboboxes) para que el desplegable NUNCA abra vacio. Al teclear, re-busca.
+  retrieveData('')
   if (props.modelValue) loadInitialClient(props.modelValue)
 })
 

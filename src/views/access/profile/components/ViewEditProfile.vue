@@ -1,7 +1,7 @@
 <template>
   <div class="d-flex flex-column" style="gap: 24px;">
 
-    <!-- ─────────────── Datos de la cuenta (siempre editable) ─────────────── -->
+    <!--  Datos de la cuenta (siempre editable)  -->
     <v-card variant="flat" class="border rounded-lg bg-surface elevation-0" :loading="is_loading">
       <div class="d-flex align-center pa-4" style="border-bottom: 1px solid var(--v-border-color, rgba(0,0,0,0.12));">
         <v-icon start color="primary" size="28" class="mr-2">mdi-badge-account-horizontal</v-icon>
@@ -69,7 +69,7 @@
       </v-card-actions>
     </v-card>
 
-    <!-- ─────────────────── Contraseña (tarjeta aparte) ─────────────────── -->
+    <!--  Contrasena (tarjeta aparte)  -->
     <v-card variant="flat" class="border rounded-lg bg-surface elevation-0">
       <div class="d-flex align-center pa-4" style="border-bottom: 1px solid var(--v-border-color, rgba(0,0,0,0.12));">
         <v-icon start color="primary" size="28" class="mr-2">mdi-lock-reset</v-icon>
@@ -212,7 +212,7 @@ const showApiError = (e, fallback) => {
   Swal.fire({ ...appStore.errorSavedOptions, html: html || fallback })
 }
 
-// Guarda SOLO los datos de la cuenta (sin tocar la contraseña).
+// Guarda SOLO los datos de la cuenta (sin tocar la contrasena).
 const saveInfo = async () => {
   const { valid } = await infoForm.value.validate()
   if (!valid) return
@@ -239,7 +239,7 @@ const saveInfo = async () => {
   }
 }
 
-// Cambia SOLO la contraseña (endpoint valida la actual contra la BD).
+// Cambia SOLO la contrasena (endpoint valida la actual contra la BD).
 const changePassword = async () => {
   const { valid } = await passwordForm.value.validate()
   if (!valid) return
@@ -254,7 +254,7 @@ const changePassword = async () => {
       Toast.fire({ icon: 'success', title: 'Contraseña actualizada.' })
       pw.current = ''; pw.next = ''; pw.confirm = ''
       // Limpiar los valores re-dispara las reglas (required); esperamos a que se
-      // asiente y recién ahí limpiamos la validación → sin parpadeo rojo.
+      // asiente y recien ahi limpiamos la validacion -> sin parpadeo rojo.
       await nextTick()
       passwordForm.value?.resetValidation()
     }

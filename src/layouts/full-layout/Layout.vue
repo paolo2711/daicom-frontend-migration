@@ -14,7 +14,11 @@
     <upload-sheets />
     <upload-q-r />
 
-    <update-available-overlay />
+    <!-- Condiciones persistentes (WS caido, version nueva). No bloquean. -->
+    <status-banners />
+
+    <!-- Toasts de evento (pila propia: permite varios a la vez sin pisarse). -->
+    <event-toast-stack />
   </v-app>
 </template>
 
@@ -29,11 +33,15 @@ import Footer from './footer/Footer.vue'
 import UploadManager from '@/components/commonComponents/UploadManager.vue'
 import UploadSheets from '@/components/commonComponents/UploadSheets.vue'
 import UploadQR from '@/components/commonComponents/UploadQR.vue'
-import UpdateAvailableOverlay from '@/components/commonComponents/UpdateAvailableOverlay.vue'
+import StatusBanners from '@/components/commonComponents/StatusBanners.vue'
+import EventToastStack from '@/components/commonComponents/EventToastStack.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
+import { useStatusStore } from '@/stores/statusStore'
+import { flushQueuedToast } from '@/services/notifications/eventToasts'
 
 let socket = null
 const appStore = useAppStore()
+const statusStore = useStatusStore()
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
 
@@ -52,7 +60,14 @@ const conectarWebSocket = () => {
   const wsUrl = `${wsProtocol}//${urlObj.host}/ws/notificaciones/${tokenParam}`
   socket = new WebSocket(wsUrl)
 
-  socket.onopen = () => {}
+  // Conexion recuperada -> quitamos el banner y refrescamos: mientras estuvo
+  // caida se perdieron eventos, asi que la pantalla quedo desactualizada.
+  socket.onopen = () => {
+    if (statusStore.active.includes('ws_down')) {
+      statusStore.clear('ws_down')
+      window.dispatchEvent(new CustomEvent('wss-reload-tables'))
+    }
+  }
 
   socket.onmessage = (event) => {
     const data = JSON.parse(event.data)
@@ -94,13 +109,10 @@ const conectarWebSocket = () => {
     }
   }
 
-  window.enviarNotificacionGlobal = (sender, msg_type, title, body) => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ action: 'GLOBAL_NOTIFY', sender, msg_type, title, body }))
-    }
-  }
-
+  // Conexion perdida -> banner persistente: el usuario sabe que NO le llegaran
+  // los cambios en vivo. Se limpia solo al reconectar (onopen).
   socket.onclose = () => {
+    statusStore.raise('ws_down')
     setTimeout(() => conectarWebSocket(), 5000)
   }
 
@@ -109,7 +121,10 @@ const conectarWebSocket = () => {
 
 onMounted(() => {
   conectarWebSocket()
-  
+
+  // Si veniamos de una recarga forzada por el admin, ahora si mostramos el aviso.
+  flushQueuedToast()
+
   // Consultar métricas iniciales si el usuario tiene permiso de firmar (Permiso 10)
   const userStr = localStorage.getItem('user')
   if (userStr) {

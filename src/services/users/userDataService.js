@@ -33,7 +33,7 @@ class UserDataService {
         });
     }
 
-    // El admin restablece la contraseña de un usuario (la olvidó).
+    // El admin restablece la contrasena de un usuario (la olvido).
     resetPassword(id, new_password) {
         return axios.post(`users/${id}/reset-password`, { new_password }, {
             headers: authHeader()

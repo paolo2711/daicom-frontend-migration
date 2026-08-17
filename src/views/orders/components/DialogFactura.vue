@@ -170,7 +170,7 @@ const editando = computed(() => !!props.invoiceToEdit)
 const esMulti = computed(() => !!(props.orders && props.orders.length))
 
 // Moneda efectiva: al editar, la de la factura; al crear (orden, multi o
-// suelta) la elegida en el toggle del diálogo.
+// suelta) la elegida en el toggle del dialogo.
 const monedaActual = computed(() => {
   if (props.invoiceToEdit) return props.invoiceToEdit.currency || 'PEN'
   return monedaSuelta.value

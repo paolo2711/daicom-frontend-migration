@@ -70,7 +70,7 @@ const router = useRouter()
 const dialog = ref(false)
 const equipment = ref(null)
 
-// El link a Alquileres solo aparece si el usuario tiene acceso a la vista Órdenes (id 2).
+// El link a Alquileres solo aparece si el usuario tiene acceso a la vista Ordenes (id 2).
 const puedeVerOrdenes = computed(() => {
   const user = JSON.parse(localStorage.getItem('user')) || {}
   if (user.kind !== undefined && user.kind < 1) return true
@@ -83,8 +83,8 @@ const open = (item) => {
   dialog.value = true
 }
 
-// Lleva a la pestaña Alquileres con esa orden ya filtrada (mismo patrón que
-// "ir al certificado" en órdenes de servicio).
+// Lleva a la pestana Alquileres con esa orden ya filtrada (mismo patron que
+// "ir al certificado" en ordenes de servicio).
 const irAOrden = (h) => {
   if (!h.order_number) return
   dialog.value = false

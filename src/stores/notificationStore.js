@@ -48,14 +48,14 @@ export const useNotificationStore = defineStore('notifications', {
       }
     },
 
-    // Cambia la píldora activa y recarga desde la primera página.
+    // Cambia la pildora activa y recarga desde la primera pagina.
     setFilter(grupo) {
       if (this.filter === grupo) return
       this.filter = grupo
       this.fetchFirst()
     },
 
-    // Qué píldoras de categoría mostrar (las que el usuario realmente recibe).
+    // Que pildoras de categoria mostrar (las que el usuario realmente recibe).
     async fetchFacets() {
       try {
         const r = await NotificationDataService.facets()
@@ -85,15 +85,15 @@ export const useNotificationStore = defineStore('notifications', {
       try { await NotificationDataService.markAll() } catch (e) { /* silencioso */ }
     },
 
-    // WS  al llegar una notificación nueva.
+    // WS  al llegar una notificacion nueva.
     onNew() {
       this.pulse++            // campanazo instantáneo (local, sin consulta)
       this.fetchUnread()      // el número, en UNA sola consulta (como la píldora)
       if (this.panelOpen) this.fetchFirst()   // la lista solo si la estás mirando
     },
 
-    // WS  RELOAD_NOTIFICATIONS: número + lista, pero la lista SOLO si el panel
-    // está abierto (si está cerrado, es solo el número — como la píldora).
+    // WS  RELOAD_NOTIFICATIONS: numero + lista, pero la lista SOLO si el panel
+    // esta abierto (si esta cerrado, es solo el numero - como la pildora).
     async resync() {
       await this.fetchUnread()
       if (this.panelOpen) await this.fetchFirst()

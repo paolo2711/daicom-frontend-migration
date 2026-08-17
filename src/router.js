@@ -143,8 +143,8 @@ router.beforeEach((to) => {
   if (to.name === 'Login') return true;
   if (!authStore.status.loggedIn) return { name: 'Login' };
 
-  // Guard por permiso: páginas de admin protegidas por su acción (o super-admin).
-  // El backend igual bloquea; esto evita llegar a una página que no puedes usar.
+  // Guard por permiso: paginas de admin protegidas por su accion (o super-admin).
+  // El backend igual bloquea; esto evita llegar a una pagina que no puedes usar.
   const req = to.meta?.requiredAction;
   const soloSuper = to.meta?.superAdmin;
   if (req || soloSuper) {

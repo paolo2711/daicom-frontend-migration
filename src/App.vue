@@ -5,11 +5,19 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
 import { useTheme, useDisplay } from 'vuetify'
 
 const theme = useTheme()
 const display = useDisplay()
+
+// Marca el tema en <html> para que los tokens CSS lleguen tambien a lo que vive
+// FUERA de .v-application (panel de notificaciones teleported a body, toasts).
+watch(
+  () => theme.global.current.value.dark,
+  (isDark) => document.documentElement.classList.toggle('app-dark', isDark),
+  { immediate: true }
+)
 
 onMounted(() => {
   const VERSION_CSS = 'v3_dark_mode_update'

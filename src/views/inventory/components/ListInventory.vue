@@ -1,6 +1,6 @@
 <template>
   <v-container fluid class="down-top-padding pa-0">
-    <!-- FILTROS (misma estructura que Órdenes/Certificados) -->
+    <!-- FILTROS (misma estructura que Ordenes/Certificados) -->
     <v-card variant="flat" class="border rounded-lg mb-4 pa-4 bg-surface">
       <div class="d-flex flex-wrap align-center" style="gap: 16px;">
         <v-text-field
@@ -16,7 +16,7 @@
 
         <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
 
-        <!-- Píldoras rápidas (mismo patrón que "Sin factura" / "Falta pago" en Órdenes) -->
+        <!-- Pildoras rapidas (mismo patron que "Sin factura" / "Falta pago" en Ordenes) -->
         <v-chip
           :color="expedienteFilter === 'sin' ? 'warning' : 'grey-darken-1'"
           class="font-weight-bold cursor-pointer transition-swing"
@@ -131,7 +131,7 @@
             @click="item.status === 2 ? $emit('view-history', item) : null"
           >
             {{ getStatusText(item.status) }}
-            <!-- Alquilado: el chip abre el historial de viajes; hover muestra empresa · orden -->
+            <!-- Alquilado: el chip abre el historial de viajes; hover muestra empresa orden -->
             <template v-if="item.status === 2">
               <v-icon end size="14">mdi-account-arrow-right</v-icon>
               <v-tooltip activator="parent" location="top">
@@ -207,7 +207,7 @@ const headers = [
   { title: 'Acciones', key: 'actions', sortable: false, align: 'end' },
 ]
 
-// Filtros (estilo Órdenes: 2 píldoras rápidas + Estado en avanzados)
+// Filtros (estilo Ordenes: 2 pildoras rapidas + Estado en avanzados)
 const mostrarFiltrosAvanzados = ref(false)
 const estadoFilter = ref(null)          // null | 1..4
 const expedienteFilter = ref(null)      // null | 'sin'
@@ -272,7 +272,7 @@ watch(search, () => {
   }, 350)
 })
 
-// Cualquier filtro recarga de inmediato (vuelve a página 1)
+// Cualquier filtro recarga de inmediato (vuelve a pagina 1)
 watch([estadoFilter, expedienteFilter, vencidoFilter], () => {
   options.value.page = 1
   loadItems()
@@ -288,7 +288,7 @@ const getStatusColor = (val) => {
   return status ? status.color : 'grey'
 }
 
-// Info del expediente para el ícono + tooltip (vence = emisión + 1 año).
+// Info del expediente para el icono + tooltip (vence = emision + 1 ano).
 const certInfo = (item) => {
   const c = item.latest_certificate
   if (!c || !c.registry_code) return { has: false }
@@ -309,7 +309,7 @@ const certInfo = (item) => {
   return info
 }
 
-// tab: 0 = Datos y Fotos, 1 = Certificado. viewer: abrir el visor de imágenes.
+// tab: 0 = Datos y Fotos, 1 = Certificado. viewer: abrir el visor de imagenes.
 const editItem = (item, tab = 0, viewer = false) => {
   emit('edit-item', item, tab, viewer)
 }
@@ -342,9 +342,9 @@ const addRow = () => { options.value.page = 1; loadItems() }
 // dispara RELOAD_INVENTORY al crear/editar/eliminar equipos y al alquilar/devolver.
 const onWsReloadInventory = () => { loadItems() }
 
-// Búsqueda enlazada: al hacer clic en una notificación de expediente, la ruta
-// trae ?buscar=<id interno> → lo ponemos en la búsqueda (aquí y si cambia estando
-// ya en la pestaña). El watch(search) recarga la tabla.
+// Busqueda enlazada: al hacer clic en una notificacion de expediente, la ruta
+// trae ?buscar=<id interno> -> lo ponemos en la busqueda (aqui y si cambia estando
+// ya en la pestana). El watch(search) recarga la tabla.
 const route = useRoute()
 watch(() => route.query.buscar, (v) => { if (v) search.value = String(v) })
 

@@ -99,7 +99,7 @@
           </v-row>
         </v-form>
 
-        <!-- Reset de contraseña (solo al editar): su propio form y botón, aparte del guardado normal. -->
+        <!-- Reset de contrasena (solo al editar): su propio form y boton, aparte del guardado normal. -->
         <div v-if="user" class="mt-2">
           <v-divider class="mb-4" />
           <div class="d-flex align-center mb-1">
@@ -180,7 +180,7 @@ const isValid = ref(false)
 const roles = ref([])
 const loadingRoles = ref(false)
 
-// Reset de contraseña (solo al editar)
+// Reset de contrasena (solo al editar)
 const resetFormRef = ref(null)
 const resetValid = ref(false)
 const resettingPw = ref(false)
@@ -301,7 +301,7 @@ const doResetPassword = async () => {
 }
 
 const closeDialog = () => {
-  // resetValidation (no reset): limpia errores sin re-validar → sin parpadeo rojo
+  // resetValidation (no reset): limpia errores sin re-validar -> sin parpadeo rojo
   // al cerrar. Los valores se reinician al abrir (watch de modelValue).
   formRef.value?.resetValidation()
   resetFormRef.value?.resetValidation()

@@ -1,0 +1,10 @@
+/* Tonos de notificacion. Los valores estan en variables.scss (con su version
+   para modo oscuro), aca solo se mapea el tono a las dos variables. Va en global
+   y no en cada componente porque el scoped no deja compartir clases.
+   Se usa poniendo la clase ntone-X y leyendo var(--ntone-bg) / var(--ntone-fg). */
+.ntone-blue   { --ntone-bg: var(--notif-blue-bg);   --ntone-fg: var(--notif-blue-fg); }
+.ntone-indigo { --ntone-bg: var(--notif-indigo-bg); --ntone-fg: var(--notif-indigo-fg); }
+.ntone-teal   { --ntone-bg: var(--notif-teal-bg);   --ntone-fg: var(--notif-teal-fg); }
+.ntone-purple { --ntone-bg: var(--notif-purple-bg); --ntone-fg: var(--notif-purple-fg); }
+.ntone-warn   { --ntone-bg: var(--notif-warn-bg);   --ntone-fg: var(--notif-warn-fg); }
+.ntone-crit   { --ntone-bg: var(--notif-crit-bg);   --ntone-fg: var(--notif-crit-fg); }

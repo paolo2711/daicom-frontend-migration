@@ -119,11 +119,11 @@
             </v-col>
 
             <v-col cols="12" md="3">
-              <v-autocomplete v-model="client_id" v-model:search="search_client" hide-details="auto" density="compact" :loading="loading_clients" prepend-inner-icon="mdi-account-group" :items="clients" item-title="name" item-value="id" placeholder="Buscar cliente..." clearable variant="outlined" label="Cliente" />
+              <v-autocomplete v-model="client_id" v-model:search="search_client" hide-details="auto" density="compact" :loading="loading_clients" prepend-inner-icon="mdi-account-group" :items="clients" item-title="name" item-value="id" placeholder="Buscar cliente..." clearable variant="outlined" label="Cliente" no-filter />
             </v-col>
 
             <v-col cols="12" md="3">
-              <v-autocomplete v-model="lab_id" v-model:search="search_lab" hide-details="auto" density="compact" :loading="loading_labs" prepend-inner-icon="mdi-factory" :items="labs" item-title="name" item-value="id" placeholder="Buscar laboratorio..." clearable variant="outlined" label="Laboratorio" />
+              <v-autocomplete v-model="lab_id" v-model:search="search_lab" hide-details="auto" density="compact" :loading="loading_labs" prepend-inner-icon="mdi-factory" :items="labs" item-title="name" item-value="id" placeholder="Buscar laboratorio..." clearable variant="outlined" label="Laboratorio" no-filter />
             </v-col>
 
             <v-col cols="12" md="2">
@@ -661,16 +661,21 @@ function isCertUploading(certId) {
   return task && ['generating', 'uploading', 'retrying'].includes(task.status)
 }
 
-// Guard de secuencia: si dos cargas se solapan, solo se aplica la más reciente
-// (evita que la carga sin filtro pise la búsqueda enlazada).
+// Guard de secuencia: si dos cargas se solapan, solo se aplica la mas reciente
+// (evita que la carga sin filtro pise la busqueda enlazada).
 const { begin: beginCertLoad, isLatest: isLatestCertLoad } = useLatestRequest()
 
 // ─── Watchers ─────────────────────────────────────────────────────────────────
 watch(options, () => retrieveAllCertificates(), { deep: true })
 
-// Búsqueda enlazada: si llega/cambia ?correlativo (incluso ya estando en la
-// pestaña), lo aplicamos y el watch de `correlative` dispara la búsqueda.
+// Busqueda enlazada: si llega/cambia ?correlativo (incluso ya estando en la
+// pestana), lo aplicamos y el watch de `correlative` dispara la busqueda.
 watch(() => route.query.correlativo, (v) => { correlative.value = v || '' })
+
+// Igual para ?firma_pendiente (notificacion de firma solicitada): activa el filtro.
+watch(() => route.query.firma_pendiente, (v) => {
+  if (v) { filtro_firma_pendiente.value = true; options.value.page = 1; retrieveAllCertificates() }
+})
 
 watch(correlative,       () => { options.value.page = 1; retrieveAllCertificates() })
 watch(certificate_type,  () => { options.value.page = 1; retrieveAllCertificates() })
@@ -703,6 +708,15 @@ onMounted(() => {
 
   if (route.query.correlativo) {
     correlative.value = route.query.correlativo
+  }
+
+  // Desde la notificacion de "firma solicitada": llega ?firma_pendiente=1 -> activa
+  // el filtro de la pildora de pendientes de firma (el guard de secuencia evita
+  // que la carga sin filtro pise este resultado).
+  if (route.query.firma_pendiente) {
+    filtro_firma_pendiente.value = true
+    options.value.page = 1
+    retrieveAllCertificates()
   }
 
   retrieveClientes()
@@ -964,14 +978,7 @@ function anularCertConfirm (cert) {
       CertificateDataService.patch(cert.id, { status: 5 }).then(() => {
         Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo anulado' })
         if (window.notificarActualizacionFila) window.notificarActualizacionFila(cert.id, null);
-        const currentUser = JSON.parse(localStorage.getItem('user')) || {}
-        if (window.enviarNotificacionGlobal) {
-          window.enviarNotificacionGlobal(
-            currentUser.username, 'error',
-            'Certificado Anulado',
-            `El certificado ${cert.registry_code} fue anulado.`
-          )
-        }
+        // El aviso a los demas lo da la notificacion `cert_anulado` (dirigida, persistente).
       })
     }
   })

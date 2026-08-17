@@ -167,7 +167,7 @@ const theme     = useTheme()
 const router    = useRouter()
 const notifStore = useNotificationStore()
 
-// ── Campanazo: al llegar una notificación nueva, la campana se sacude y suena. ──
+//  Campanazo: al llegar una notificacion nueva, la campana se sacude y suena.
 const bellShake = ref(false)
 
 const sonarCampana = () => {
@@ -241,10 +241,10 @@ const logOut = async () => {
 const getPermissions = () => JSON.parse(localStorage.getItem('permissions')) || []
 const getActionPermissions = () => (JSON.parse(localStorage.getItem('user')) || {}).action_permissions || []
 
-// Una entrada se muestra según su tipo:
+// Una entrada se muestra segun su tipo:
 //  - superAdmin: solo el super-admin (kind<1).
-//  - action: por permiso de ACCIÓN (páginas de admin, una sola llave).
-//  - resto: por permiso de VISTA (páginas operativas).
+//  - action: por permiso de ACCION (paginas de admin, una sola llave).
+//  - resto: por permiso de VISTA (paginas operativas).
 const checkItemPermission = (item) => {
   if (!item) return false
   if (hasTotalAccess.value) return true
@@ -281,7 +281,7 @@ const filterGroupPermission = (item) => {
   transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Campanazo: sacudida tipo "toque de campana" al llegar una notificación. */
+/* Campanazo: sacudida tipo "toque de campana" al llegar una notificacion. */
 .bell-shake {
   transform-origin: 50% 0;
   animation: bell-shake 0.9s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;

@@ -71,11 +71,6 @@ function handleApproveSheet(e) {
     status: 2, final_name, temp_url,
   }).then(() => {
     Toast.fire({ ...appStore.toastGuardadoExito, title: '¡Excel guardado!' })
-
-    const currentUser = JSON.parse(localStorage.getItem('user')) || {}
-    if (window.enviarNotificacionGlobal) {
-      window.enviarNotificacionGlobal(currentUser.username, 'success', 'Excel Procesado', `El archivo ${final_name} se guardó en red.`)
-    }
   }).catch((error) => {
     let errorMsg = 'No se pudo guardar en el disco de red.'
     if (error.response?.data?.error) {

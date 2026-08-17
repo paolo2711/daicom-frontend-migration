@@ -64,8 +64,8 @@ export default [
         name: 'Administración',
         children: [
             {
-                // Página de admin: una sola llave, la ACCIÓN Gestionar Usuarios (1008),
-                // gobierna menú + ruta + acciones. No usa permiso de vista aparte.
+                // Pagina de admin: una sola llave, la ACCION Gestionar Usuarios (1008),
+                // gobierna menu + ruta + acciones. No usa permiso de vista aparte.
                 icon: 'mdi-account-multiple',
                 title: 'Usuarios',
                 to: '/users',

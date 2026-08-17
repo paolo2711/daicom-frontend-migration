@@ -17,12 +17,10 @@
       <template v-if="temp_eq.modo === 'nuevo'">
             <v-row dense>
               <v-col cols="12" md="9">
-                <v-autocomplete v-model="temp_eq.name" :items="equipments_catalog" :loading="loading_equipments"
-                                v-model:search="search_equipment" item-title="name" item-value="id"
-                                label="Equipo" density="compact" variant="outlined" hide-details="auto"
-                                prepend-inner-icon="mdi-toolbox-outline"
-                                :custom-filter="filtroSinTildes"
-                                clearable />
+                <paginated-autocomplete ref="equipCatalogRef" v-model="temp_eq.name" :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
+                                label="Equipo" :return-object="false" item-title="name" item-value="id"
+                                density="compact" variant="outlined" hide-details="auto"
+                                prepend-inner-icon="mdi-toolbox-outline" clearable />
               </v-col>
               <v-col cols="12" md="3" class="ml-auto">
                 <v-btn color="primary" variant="flat" block class="font-weight-bold" style="height: 40px;" @click="equipoMaestroModalRef?.open()">
@@ -34,9 +32,10 @@
 
         <v-row dense class="mt-2">
           <v-col cols="12" md="5">
-            <v-autocomplete v-model="temp_eq.lab" :items="labs" density="compact" variant="outlined" hide-details="auto"
-                            label="Laboratorio" item-title="name" item-value="id"
-                            :loading="loading_labs" v-model:search="search_lab" />
+            <paginated-autocomplete v-model="temp_eq.lab" :fetch="fetchLabs" :mapper="LabMappers.getMap"
+                            @selected="l => labSeleccionado = l"
+                            label="Laboratorio" :return-object="false" item-title="name" item-value="id"
+                            density="compact" variant="outlined" hide-details="auto" />
           </v-col>
           <v-col cols="12" md="4">
             <v-select v-model="temp_eq.certificate_type" :items="cert_types" density="compact" variant="outlined"
@@ -113,7 +112,7 @@
     </v-table>
 
     
-  <equipo-maestro-modal ref="equipoMaestroModalRef" @reload="retrieveEquipmentsCatalog('')" />
+  <equipo-maestro-modal ref="equipoMaestroModalRef" @reload="equipCatalogRef?.reload()" />
   </div>
 </template>
 
@@ -121,7 +120,7 @@
 import { ref, computed, watch, nextTick, onMounted, getCurrentInstance } from 'vue'
 import { useTheme } from 'vuetify'
 import LabDataService from '@/services/labs/labDataService'
-import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import LabMappers from '@/mappers/labMappers'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import EquipmentDataService from '@/services/equipments/equipmentDataService'
@@ -155,30 +154,11 @@ const filtroSinTildes = (itemTitle, queryText, item) => {
   return normalizar(itemTitle).includes(normalizar(queryText))
 }
 
-// Instancia del buscador de Laboratorios usando el Composable global
-const { 
-  items: labs, 
-  loading: loading_labs, 
-  searchQuery: search_lab, 
-  retrieveData: retrieveLabs 
-} = usePaginatedSearch(
-  (page, size, query) => LabDataService.getFiltered(page, size, query),
-  LabMappers.getMap,
-  () => temp_eq.value.lab
-)
-
-// Instancia del buscador de Equipos usando el mismo Composable global
-// (antes traia los 250+ equipos de golpe con page_size=1000000000)
-const { 
-  items: equipments_catalog, 
-  loading: loading_equipments, 
-  searchQuery: search_equipment, 
-  retrieveData: retrieveEquipmentsCatalog 
-} = usePaginatedSearch(
-  (page, size, query) => EquipmentDataService.getFiltered(page, size, query),
-  EquipmentMappers.getMap,
-  () => temp_eq.value.name
-)
+// Comboboxes server-side
+const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)
+const fetchEquipments = (page, size, query) => EquipmentDataService.getFiltered(page, size, query)
+const equipCatalogRef = ref(null)      // para recargar el catálogo tras crear un equipo
+const labSeleccionado = ref(null)      // objeto del lab elegido (para el lab_name)
 const equipoMaestroModalRef = ref(null)
 
 
@@ -195,9 +175,7 @@ watch(equipments, (val) => { emit('update-list', val) }, { deep: true })
 
 
 onMounted(() => {
-  retrieveLabs('')
-  retrieveEquipmentsCatalog('')
-  initCorrelatives()
+  initCorrelatives()   // los comboboxes se auto-cargan solos
 })
 
 function inyectarBorrador(datosRecuperados) {
@@ -253,13 +231,12 @@ function getCalculatedCorrelative(index) {
 function addEquipmentToBatch() {
   if (temp_eq.value.modo === 'nuevo') {
     if (!temp_eq.value.name || !temp_eq.value.lab || !temp_eq.value.certificate_type) return
-    const labObj  = labs.value.find(l => l.id === temp_eq.value.lab)
     const typeObj = cert_types.find(t => t.value === temp_eq.value.certificate_type)
     equipments.value.push({
       modo:             'nuevo',
       name:             temp_eq.value.name,
       lab:              temp_eq.value.lab,
-      lab_name:         labObj ? labObj.name : 'No asignado',
+      lab_name:         labSeleccionado.value?.name || 'No asignado',
       certificate_type: temp_eq.value.certificate_type,
       type_label:       typeObj ? typeObj.title : 'ACREDITADO',
     })

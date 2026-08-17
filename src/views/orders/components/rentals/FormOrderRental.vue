@@ -10,30 +10,27 @@
 
       <v-row dense align="center">
         <v-col cols="12" md="6" class="d-flex align-center">
-          <v-autocomplete
+          <paginated-autocomplete
+            ref="equipComboRef"
             v-model="temp_rental.equipment"
-            :items="inventory_items"
-            :loading="loading_items"
-            v-model:search="search_item"
-            item-title="name"
-            item-value="id"
+            :fetch="fetchEquipos"
+            :exclude-ids="rentals.map(r => r.equipment_id)"
+            label="Buscar Equipo* (ID, Nombre, Marca o Serie)"
+            placeholder="Ej: DAI-017, Manómetro o N° serie"
             variant="outlined"
             density="compact"
             hide-details
-            label="Buscar Equipo* (Nombre, ID o Serie)"
-            placeholder="Ej: INV-PR-001 o Manómetro"
-            return-object
           >
-            <template v-slot:selection="{ item }">
+            <template #selection="{ item }">
               <strong>{{ item.raw.internal_id }}</strong>&nbsp;-&nbsp;{{ item.raw.name }}&nbsp;(Serie: {{ item.raw.series || 'N/A' }})
             </template>
-            <template v-slot:item="{ item, props }">
+            <template #item="{ item, props }">
               <v-list-item v-bind="props" :title="null">
                 <v-list-item-title><strong>{{ item.raw.name }}</strong> - Serie: {{ item.raw.series || 'N/A' }} </v-list-item-title>
                 <v-list-item-subtitle>{{ item.raw.brand }} | ID: {{ item.raw.internal_id }}</v-list-item-subtitle>
               </v-list-item>
             </template>
-          </v-autocomplete>
+          </paginated-autocomplete>
           
           <v-btn icon size="small" color="primary" variant="tonal" class="ml-2 flex-shrink-0" @click="addEquipmentModalRef?.open()">
             <v-icon>mdi-plus</v-icon>
@@ -94,7 +91,7 @@
         </tr>
       </tbody>
     </v-table>
-  <add-equipment ref="addEquipmentModalRef" @saved="fetchInitialInventory" />
+  <add-equipment ref="addEquipmentModalRef" @saved="equipComboRef?.reload()" />
   </div>
 </template>
 
@@ -102,6 +99,7 @@
 import { ref, computed, watch, onMounted, getCurrentInstance, defineAsyncComponent } from 'vue'
 import { useTheme } from 'vuetify'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
+import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 
 const AddEquipment = defineAsyncComponent(() => import('@/views/inventory/components/AddEquipment.vue'))
 const addEquipmentModalRef = ref(null)
@@ -121,45 +119,13 @@ const temp_rental = ref({
 })
 const rentals        = ref([])
 
-const all_inventory_items = ref([])
-const loading_items  = ref(false)
-const search_item    = ref(null)
-
 watch(rentals, (val) => { emit('update-list', val) }, { deep: true })
 
-const inventory_items = computed(() => {
-  const query = (search_item.value || '').toLowerCase()
-  
-  return all_inventory_items.value.filter(item => {
-    const isAlreadyAdded = rentals.value.some(r => r.equipment_id === item.id)
-    if (isAlreadyAdded) return false
-
-    if (!query) return true
-
-    const safeName       = item.name ? item.name.toLowerCase() : ''
-    const safeInternalId = item.internal_id ? item.internal_id.toLowerCase() : ''
-    const safeSeries     = item.series ? item.series.toLowerCase() : ''
-    
-    return safeName.includes(query) || safeInternalId.includes(query) || safeSeries.includes(query)
-  })
-})
-
-onMounted(() => {
-  fetchInitialInventory()
-})
-
-async function fetchInitialInventory() {
-  loading_items.value = true
-  try {
-    const response = await InventoryDataService.getAll({ status: 1 })
-    const all_items = response.data.results ? response.data.results : response.data
-    all_inventory_items.value = all_items
-  } catch (error) {
-    console.error('Error cargando inventario', error)
-  } finally {
-    loading_items.value = false
-  }
-}
+// combobox (equipos disponibles, por id/nombre/…).
+// (traer 10, buscar al teclear, aviso "hay mas", preservar seleccion) lo
+const fetchEquipos = (page, size, query) =>
+  InventoryDataService.getAll({ status: 1, search: query || '', page, page_size: size })
+const equipComboRef = ref(null)   // recargar la lista tras crear un equipo nuevo
 
 function addRentalToBatch() {
   if (!temp_rental.value.equipment) return
@@ -178,9 +144,8 @@ function addRentalToBatch() {
     delivery_notes:        temp_rental.value.delivery_notes,
   })
   
-  temp_rental.value.equipment       = null
+  temp_rental.value.equipment       = null   // limpia la selección del combobox
   temp_rental.value.delivery_notes  = ''
   temp_rental.value.expected_return_date = ''
-  search_item.value                 = ''
 }
 </script>

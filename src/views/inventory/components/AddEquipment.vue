@@ -29,7 +29,7 @@
 
                   <input type="file" ref="fileInput" multiple accept="image/*" style="display: none" @change="onFileChange">
 
-                  <!-- Zona clic + arrastrar (mismo componente común PdfDropZone, en modo imagen) -->
+                  <!-- Zona clic + arrastrar (mismo componente comun PdfDropZone, en modo imagen) -->
                   <pdf-drop-zone accept="image/*" multiple label="Suelta las fotos aquí" icon="mdi-image-plus" @files="onFilesDropped">
                     <v-card
                       variant="outlined"
@@ -61,7 +61,7 @@
 
                       <!-- Etiqueta "Principal" en la 1ra -->
                       <div v-if="i === 0" class="foto-principal-badge">Principal</div>
-                      <!-- Estrella para marcar principal en las demás -->
+                      <!-- Estrella para marcar principal en las demas -->
                       <v-btn v-else icon variant="flat" size="x-small" color="amber-darken-2"
                              style="position: absolute; bottom: -4px; left: -4px; height: 20px; width: 20px; z-index: 2;"
                              @click.stop="setPrincipal(i)">
@@ -95,7 +95,7 @@
                       ></v-text-field>
                     </v-col>
                     <v-col cols="12" sm="6">
-                      <!-- Combobox: sugiere nombres del catálogo de equipos, pero
+                      <!-- Combobox: sugiere nombres del catalogo de equipos, pero
                            deja escribir libre (inventario más flexible que órdenes). -->
                       <v-combobox
                         v-model="form.name"
@@ -279,7 +279,7 @@ const searchingCert = ref(false)
 const foundCert = ref(null)
 const linkingCert = ref(false)
 
-// Sugerencias de nombre (catálogo de equipos maestro), editable.
+// Sugerencias de nombre (catalogo de equipos maestro), editable.
 const nameSuggestions = ref([])
 const nameSearch = ref('')
 const loadingNames = ref(false)
@@ -307,14 +307,14 @@ const form = reactive({
   latest_certificate: null
 })
 
-// "Alquilado" (2) no está: lo gestiona el flujo de alquiler, no se pone a mano.
+// "Alquilado" (2) no esta: lo gestiona el flujo de alquiler, no se pone a mano.
 const statusOptions = [
   { text: 'Disponible', value: 1 },
   { text: 'Mantenimiento', value: 3 },
   { text: 'Baja', value: 4 },
 ]
 
-// Vigencia del expediente: emisión + 1 año vs hoy → vigente / por vencer / vencido.
+// Vigencia del expediente: emision + 1 ano vs hoy -> vigente / por vencer / vencido.
 const certVigencia = computed(() => {
   const r = { vence: '', chipColor: 'success', icon: 'mdi-check-decagram', headline: 'EQUIPO CERTIFICADO' }
   const cert = form.latest_certificate
@@ -360,10 +360,10 @@ const open = (item = null, targetTab = 0, openViewerImage = false) => {
       .then(r => { nextId.value = r.data.next_id })
       .catch(() => { nextId.value = '' })
   }
-  // Pestaña con la que abre: 0 = Datos y Fotos, 1 = Certificado.
+  // Pestana con la que abre: 0 = Datos y Fotos, 1 = Certificado.
   tab.value = targetTab
   dialog.value = true
-  // Clic en la foto de la tabla: abrimos el visor en la principal (índice 0).
+  // Clic en la foto de la tabla: abrimos el visor en la principal (indice 0).
   if (openViewerImage && existingImages.value.length) {
     nextTick(() => openViewer(0))
   }

@@ -33,7 +33,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['clear'])
 
-// Avisa al ecosistema que hay una barra de selección activa (para que el Upload
+// Avisa al ecosistema que hay una barra de seleccion activa (para que el Upload
 // Manager se aparte en ventanas angostas). Se apaga al vaciar o desmontar.
 const appStore = useAppStore()
 watch(() => props.count, (v) => { appStore.selectionActive = v > 0 }, { immediate: true })

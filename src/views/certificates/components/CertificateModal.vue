@@ -23,17 +23,16 @@
 
               <v-row align="center">
                 <v-col cols="12" md="8">
-                  <v-autocomplete 
-                    v-model="certificate.equipment" 
-                    :items="equipments_catalog" 
-                    :loading="loading_equipments"
-                    v-model:search="search_equipment"
-                    item-title="name" item-value="id"
+                  <paginated-autocomplete
+                    ref="equipCatalogRef"
+                    v-model="certificate.equipment"
+                    :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
+                    :return-object="false" item-title="name" item-value="id"
+                    :seed="equipSeed"
                     label="Equipo"
-                    density="compact" variant="outlined" hide-details="auto" 
+                    density="compact" variant="outlined" hide-details="auto"
                     prepend-inner-icon="mdi-toolbox-outline"
                     placeholder="Seleccione un equipo..."
-                    :custom-filter="filtroSinTildes"
                     clearable
                   />
                 </v-col>            
@@ -57,9 +56,11 @@
 
               <v-row align="center">
                 <v-col cols="12" md="9">
-                  <v-autocomplete v-model="certificate.lab" density="compact" hide-details="auto"
-                                  :loading="loading_labs" :items="labs" v-model:search="search_lab"
-                                  item-title="name" item-value="id" clearable variant="outlined" label="Laboratorio"/>
+                  <paginated-autocomplete ref="labComboRef" v-model="certificate.lab"
+                                  :fetch="fetchLabs" :mapper="LabMappers.getMap" :seed="labSeed"
+                                  :return-object="false" item-title="name" item-value="id"
+                                  density="compact" hide-details="auto"
+                                  clearable variant="outlined" label="Laboratorio"/>
                 </v-col>
                 <v-col cols="12" md="3">
                   <v-btn color="primary" variant="flat" block height="40" @click="labDialogOpen = true">
@@ -169,10 +170,10 @@
     </v-card>
 
 
-    <client-form-dialog v-model="clientDialogOpen" @reloadListComponent="retrieveClientes('')" />
-    <lab-form-dialog v-model="labDialogOpen" @reloadListComponent="retrieveLabs('')" />
+    <client-form-dialog v-model="clientDialogOpen" />
+    <lab-form-dialog v-model="labDialogOpen" @reloadListComponent="labComboRef?.reload()" />
     
-    <equipo-maestro-modal ref="equipoMaestroModalRef" @reload="retrieveEquipmentsCatalog('')" />
+    <equipo-maestro-modal ref="equipoMaestroModalRef" @reload="equipCatalogRef?.reload()" />
   </v-dialog>
 </template>
 
@@ -200,7 +201,7 @@ import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal
 
 import { useAppStore } from '@/stores/appStore'
 import { defineAsyncComponent } from 'vue'
-import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 
 const ClientFormDialog = defineAsyncComponent(() => import('@/views/clients/components/ClientFormDialog.vue'))
 const LabFormDialog = defineAsyncComponent(() => import('@/views/labs/components/LabFormDialog.vue'))
@@ -235,41 +236,14 @@ const permiso_solicitar_firma = computed(() => {
 const certificate_client_rules = CertificatesRules.client_rules()
 
 // Instancia del buscador de Clientes usando el Composable global
-const { 
-  items: clients, 
-  loading: loading_clients, 
-  searchQuery: search_client, 
-  retrieveData: retrieveClientes 
-} = usePaginatedSearch(
-  (page, size, query) => ClientDataService.getFiltered(page, size, query),
-  ClientMappers.getMap,
-  () => certificate.value.client
-)
-
-// Instancia del buscador de Laboratorios usando el Composable global
-const { 
-  items: labs, 
-  loading: loading_labs, 
-  searchQuery: search_lab, 
-  retrieveData: retrieveLabs 
-} = usePaginatedSearch(
-  (page, size, query) => LabDataService.getFiltered(page, size, query),
-  LabMappers.getMap,
-  () => certificate.value.lab
-)
-
-// Instancia del buscador de Equipos usando el mismo Composable global
-// (antes traia los 250+ equipos de golpe con page_size=1000000000)
-const { 
-  items: equipments_catalog, 
-  loading: loading_equipments, 
-  searchQuery: search_equipment, 
-  retrieveData: retrieveEquipmentsCatalog 
-} = usePaginatedSearch(
-  (page, size, query) => EquipmentDataService.getFiltered(page, size, query),
-  EquipmentMappers.getMap,
-  () => certificate.value.equipment
-)
+// Comboboxes server-side: solo definimos QUE busca cada uno; el COMO lo hace
+// <paginated-autocomplete>. (El cliente usa ClientSmartSearch, componente aparte.)
+const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)
+const fetchEquipments = (page, size, query) => EquipmentDataService.getFiltered(page, size, query)
+const labComboRef = ref(null)       // recargar labs tras crear uno
+const equipCatalogRef = ref(null)   // recargar catálogo tras crear un equipo
+const labSeed = ref(null)           // lab actual, para mostrarlo al editar
+const equipSeed = ref(null)         // equipo actual (texto plano), idem
 
 // Filtro personalizado
 const filtroSinTildes = (itemTitle, queryText, item) => {
@@ -290,9 +264,7 @@ const correlative_preview = computed(() => {
 
 
 
-onMounted(() => {
-  retrieveEquipmentsCatalog('')
-})
+// (Los comboboxes se auto-cargan solos al montarse.)
 
 const open = (item = null) => {
   if (item) {
@@ -305,12 +277,11 @@ const open = (item = null) => {
     certificate.value.signed_pdf = null
     certificate.value.signature_requested = item.signature_requested === true
     
-    if (item.client_data) clients.value = [item.client_data]
-    if (item.lab_data) labs.value = [item.lab_data]
-    // 'equipment' es texto plano (no FK), asi que armamos el item nosotros
-    // para que el autocomplete muestre el valor actual aunque no este en la
-    // primera pagina de resultados del buscador.
-    if (item.equipment) equipments_catalog.value = [{ id: item.equipment, name: item.equipment }]
+    // Sembramos el valor actual para que el combobox lo muestre aunque no venga
+    // en la primera tanda del buscador.
+    labSeed.value = item.lab_data || null
+    // 'equipment' es texto plano (no FK), asi que armamos el item nosotros.
+    equipSeed.value = item.equipment ? { id: item.equipment, name: item.equipment } : null
   } else {
     isEdit.value = false
     let today = (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().substr(0, 10)
@@ -320,8 +291,8 @@ const open = (item = null) => {
       calibration_date: today, emission_date: today, signed_pdf: null, uploaded_xls: '', observations: '',
       signature_requested: false
     }
-    retrieveClientes('')
-    retrieveLabs('')
+    labSeed.value = null
+    equipSeed.value = null
     retrieveCorrelative()
   }
   dialog.value = true

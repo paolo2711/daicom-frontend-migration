@@ -22,16 +22,16 @@ export default {
             v => (v && v.trim().length !== 0) || "Ingrese Apellido válido",
         ]
     },
-    // Política para contraseñas NUEVAS (crear usuario / cambiar / resetear).
+    // Politica para contrasenas NUEVAS (crear usuario / cambiar / resetear).
     password_rules() {
         return [
             v => !!v || "Contraseña es requerida",
             v => (v && v.length >= 8) || "La contraseña es de al menos 8 caracteres"
         ]
     },
-    // Para la contraseña ACTUAL: solo exigir que se escriba. Su validez la decide
-    // el backend (que coincida); NO le aplicamos la política de longitud, porque
-    // puede ser una clave vieja más corta y bloquearía el cambio.
+    // Para la contrasena ACTUAL: solo exigir que se escriba. Su validez la decide
+    // el backend (que coincida); NO le aplicamos la politica de longitud, porque
+    // puede ser una clave vieja mas corta y bloquearia el cambio.
     current_password_rules() {
         return [
             v => !!v || "Ingresa tu contraseña actual"

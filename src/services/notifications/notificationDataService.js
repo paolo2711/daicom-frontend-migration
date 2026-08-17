@@ -3,7 +3,7 @@ import authHeader from "@/services/auth-header";
 
 class NotificationDataService {
     list(page = 1, filtro = 'todas') {
-        const params = { page };
+        const params = { page, page_size: 30 };   // el default del back es 10 → cargamos más de una tanda
         if (filtro === 'no_leidos') params.no_leidas = true;
         else if (filtro && filtro !== 'todas') params.grupo = filtro;
         return axios.get("notifications", { headers: authHeader(), params });
@@ -11,7 +11,7 @@ class NotificationDataService {
     unreadCount() {
         return axios.get("notifications/unread-count", { headers: authHeader() });
     }
-    // Grupos de píldora en los que el usuario tiene notificaciones (para ocultar el resto).
+    // Grupos de pildora en los que el usuario tiene notificaciones (para ocultar el resto).
     facets() {
         return axios.get("notifications/facets", { headers: authHeader() });
     }

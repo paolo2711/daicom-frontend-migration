@@ -227,7 +227,7 @@ const preview_raw_url    = ref('')
 
 const tasks = computed(() => appStore.uploadTasks)
 
-// ¿Barra de selección activa? Para apartarse de ella en ventanas angostas.
+// ¿Barra de seleccion activa? Para apartarse de ella en ventanas angostas.
 const selectionActive = computed(() => appStore.selectionActive)
 
 const ACTIVE = ['generating', 'uploading', 'retrying']
@@ -248,11 +248,11 @@ const successTasksCount = computed(() =>
 const warningTasksCount = computed(() =>
   tasks.value.filter(t => t.status === 'warning').length
 )
-// Tareas terminadas (todo lo que no está activo) → se pueden limpiar.
+// Tareas terminadas (todo lo que no esta activo) -> se pueden limpiar.
 const completedCount = computed(() =>
   tasks.value.filter(t => !ACTIVE.includes(t.status)).length
 )
-// Fallidas que SÍ se pueden reintentar (solo QR; sheet/manual no).
+// Fallidas que SI se pueden reintentar (solo QR; sheet/manual no).
 const failedRetryableCount = computed(() =>
   tasks.value.filter(t => ['error', 'cloud_error'].includes(t.status) && t.type !== 'sheet' && t.source !== 'manual').length
 )
@@ -328,12 +328,12 @@ function cancelSheet(task) {
   appStore.updateUploadTask(task.id, 'sheet', { status: 'canceled' })
 }
 
-// Quita las tareas terminadas (deja las activas). Sirve para el botón X y para
-// "Limpiar completadas" del menú (este último funciona aunque haya activas).
+// Quita las tareas terminadas (deja las activas). Sirve para el boton X y para
+// "Limpiar completadas" del menu (este ultimo funciona aunque haya activas).
 function clearCompleted() {
   const done = tasks.value.filter(t => !ACTIVE.includes(t.status))
   done.forEach(t => appStore.removeUploadTask(t.id, t.type))
-  // Orden maestra para que las otras pantallas limpien lo terminado también.
+  // Orden maestra para que las otras pantallas limpien lo terminado tambien.
   if (window.enviarProgresoWebSocket) {
     window.enviarProgresoWebSocket('all', 0, 'dismiss_all_done', 'all', 0, 'all')
   }
@@ -405,7 +405,7 @@ function approveSheet() {
 .v-theme--dark .upload-manager-header {
   border-bottom-color: rgba(255, 255, 255, 0.08);
 }
-/* En ventanas angostas, si hay barra de selección activa, se sube para no
+/* En ventanas angostas, si hay barra de seleccion activa, se sube para no
    pisarla (la barra vive centrada abajo a ~32px + su alto). */
 @media (max-width: 1264px) {
   .upload-manager-card.raised {

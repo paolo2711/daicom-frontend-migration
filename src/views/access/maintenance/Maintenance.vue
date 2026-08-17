@@ -10,7 +10,7 @@
           Acciones de administrador. Son operaciones sensibles: se aplican a toda tu empresa.
         </p>
 
-        <!-- Acción segura: forzar escaneo de expedientes -->
+        <!-- Accion segura: forzar escaneo de expedientes -->
         <v-card variant="outlined" rounded="lg" max-width="720" class="mb-6">
           <div class="pa-4 d-flex flex-wrap align-center ga-4">
             <div style="flex: 1 1 320px; min-width: 260px;">
@@ -32,7 +32,7 @@
           </div>
         </v-card>
 
-        <!-- Acción disruptiva (no destructiva): recargar página de todos -->
+        <!-- Accion disruptiva (no destructiva): recargar pagina de todos -->
         <v-card variant="outlined" rounded="lg" max-width="720" class="mb-6">
           <div class="pa-4 d-flex flex-wrap align-center ga-4">
             <div style="flex: 1 1 320px; min-width: 260px;">
@@ -51,6 +51,47 @@
             >
               Recargar todo
             </v-btn>
+          </div>
+        </v-card>
+
+        <!-- Area de PRUEBAS (testing de toasts y notificaciones) -->
+        <v-card variant="outlined" rounded="lg" max-width="720" class="mb-6">
+          <div class="pa-4 pb-1 d-flex align-center">
+            <v-icon size="small" color="primary" class="mr-2">mdi-flask-outline</v-icon>
+            <span class="text-subtitle-1 font-weight-medium">Pruebas (testing)</span>
+          </div>
+          <div class="px-4 text-body-2 text-medium-emphasis mb-3">
+            Dispara toasts y notificaciones a voluntad para ver cómo se ven, sin esperar un evento real.
+          </div>
+
+          <div class="px-4 pb-1 text-caption font-weight-bold text-uppercase text-medium-emphasis">Toast de evento</div>
+          <div class="px-4 pb-3 d-flex flex-wrap ga-2">
+            <v-btn v-for="p in PRUEBAS" :key="p.category" size="small" variant="tonal" @click="probarToast(p)">{{ p.text }}</v-btn>
+            <v-btn size="small" variant="tonal" color="error" prepend-icon="mdi-lightning-bolt" @click="probarRafaga">Ráfaga ×5</v-btn>
+            <v-btn size="small" variant="tonal" prepend-icon="mdi-layers-triple" @click="probarVariosTipos">Varios tipos a la vez</v-btn>
+            <v-btn size="small" variant="tonal" prepend-icon="mdi-refresh" @click="probarAvisoTrasRecarga">
+              Aviso tras recargar (recarga esta pestaña)
+            </v-btn>
+          </div>
+
+          <div class="px-4 pb-1 text-caption font-weight-bold text-uppercase text-medium-emphasis">Otros toasts</div>
+          <div class="px-4 pb-3 d-flex flex-wrap ga-2">
+            <v-btn size="small" variant="tonal" @click="probarFeedback">Feedback</v-btn>
+          </div>
+
+          <div class="px-4 pb-1 text-caption font-weight-bold text-uppercase text-medium-emphasis">Banners de estado (persistentes)</div>
+          <div class="px-4 pb-4 d-flex flex-wrap ga-2">
+            <v-btn size="small" variant="tonal" @click="statusStore.raise('ws_down')">Sin conexión</v-btn>
+            <v-btn size="small" variant="tonal" @click="statusStore.raise('update_available')">Nueva versión</v-btn>
+            <v-btn size="small" variant="text" @click="statusStore.active = []">Limpiar banners</v-btn>
+          </div>
+
+          <div class="px-4 pb-1 text-caption font-weight-bold text-uppercase text-medium-emphasis">Notificación real (aparece en tu panel)</div>
+          <div class="px-4 pb-4 d-flex flex-wrap ga-2 align-center">
+            <v-btn size="small" variant="flat" color="primary" prepend-icon="mdi-bell-plus-outline" :loading="loadingTest" @click="crearNotifReal('cert_subido')">
+              Crear notificación de prueba
+            </v-btn>
+            <span class="text-caption text-medium-emphasis">Se limpia con "Borrar notificaciones".</span>
           </div>
         </v-card>
 
@@ -119,12 +160,69 @@
 import { ref } from 'vue'
 import Swal from 'sweetalert2'
 import { Toast } from '@/plugins/alerts'
+import { useAppStore } from '@/stores/appStore'
+import { useStatusStore } from '@/stores/statusStore'
 import MaintenanceDataService from '@/services/maintenance/maintenanceDataService'
+import { showEventToast, queueToastForNextLoad } from '@/services/notifications/eventToasts'
+
+const appStore = useAppStore()
+const statusStore = useStatusStore()
 
 const loadingLogout = ref(false)
 const loadingNotif = ref(false)
 const loadingReload = ref(false)
 const loadingScan = ref(false)
+const loadingTest = ref(false)
+
+//  Area de pruebas
+const PRUEBAS = [
+  { category: 'cert_subido',      level: 'info',     ref: '008159',        text: 'Cert. elaborado' },
+  { category: 'qr_subido',        level: 'info',     ref: '008159',        text: 'Cert. firmado' },
+  { category: 'firma_solicitada', level: 'info',     ref: '',              text: 'Firma solicitada' },
+  { category: 'cert_por_vencer',  level: 'warning',  ref: 'DAI-017',       text: 'Por vencer' },
+  { category: 'cert_vencido',     level: 'critical', ref: 'DAI-017',       text: 'Vencido' },
+  { category: 'orden_creada',     level: 'info',     ref: 'OS-2026-00042', text: 'Orden creada' },
+  { category: 'cert_anulado',     level: 'warning',  ref: '008159',        text: 'Cert. anulado' },
+  { category: 'orden_anulada',    level: 'warning',  ref: 'OS-2026-00042', text: 'Orden anulada' },
+  { category: 'app_recargada',    level: 'info',     ref: '',              text: 'App recargada' },
+]
+
+const probarToast = (p) => showEventToast({ category: p.category, level: p.level, ref: p.ref })
+
+// Dispara 5 seguidas para ver la AGREGACION ("5 expedientes vencidos").
+const probarRafaga = () => {
+  for (let i = 1; i <= 5; i++) {
+    showEventToast({ category: 'cert_vencido', level: 'critical', ref: `DAI-0${i}` })
+  }
+}
+
+// 3 tipos distintos a la vez: se APILAN (antes se pisaban).
+const probarVariosTipos = () => {
+  showEventToast({ category: 'cert_subido', level: 'info', ref: '008159' })
+  showEventToast({ category: 'firma_solicitada', level: 'info', ref: '' })
+  showEventToast({ category: 'cert_vencido', level: 'critical', ref: 'DAI-017' })
+}
+
+// Prueba del flujo REAL de la recarga forzada: encola el aviso y recarga esta
+// pestana. El toast debe aparecer DESPUES de que la pagina vuelva a cargar.
+const probarAvisoTrasRecarga = () => {
+  queueToastForNextLoad('app_recargada')
+  window.location.reload()
+}
+
+const probarFeedback = () => Toast.fire({ icon: 'success', title: 'Guardado (prueba)' })
+
+const crearNotifReal = async (category) => {
+  loadingTest.value = true
+  try {
+    const { data } = await MaintenanceDataService.testNotification(category)
+    Toast.fire({ icon: 'success', title: data?.success || 'Notificación de prueba creada.' })
+  } catch (e) {
+    Swal.fire('Error', e.response?.data?.detail || 'No se pudo crear la notificación.', 'error')
+  } finally {
+    loadingTest.value = false
+  }
+}
 
 const confirmar = (opts) => Swal.fire({
   showCancelButton: true,
@@ -134,7 +232,7 @@ const confirmar = (opts) => Swal.fire({
 })
 
 const escanearExpedientes = async () => {
-  // Acción segura e idempotente: no pide confirmación.
+  // Accion segura e idempotente: no pide confirmacion.
   loadingScan.value = true
   try {
     const { data } = await MaintenanceDataService.scanExpiries()

@@ -31,4 +31,47 @@ $default: #563dea;
 
 :root {
   --v-font-family: "Poppins", sans-serif !important;
+
+  /* Tonos de notificacion - FUENTE UNICA, compartida por el panel (.notif-avatar)
+     y el toast de evento (.evt-*). El nivel manda en warn/crit; el resto son
+     tonos por categoría (identidad visual escaneable). No duplicar valores. */
+  --notif-warn-bg: #{rgba(245, 158, 11, 0.18)};
+  --notif-warn-fg: #b45309;
+  --notif-crit-bg: #{rgba(239, 68, 68, 0.18)};
+  --notif-crit-fg: #b91c1c;
+
+  --notif-blue-bg:   #{rgba($primary, 0.16)};
+  --notif-blue-fg:   #{$primary};
+  --notif-indigo-bg: rgba(99, 102, 241, 0.18);
+  --notif-indigo-fg: #4338ca;
+  --notif-teal-bg:   rgba(13, 148, 136, 0.18);
+  --notif-teal-fg:   #0f766e;
+  --notif-purple-bg: rgba(168, 85, 247, 0.18);
+  --notif-purple-fg: #7e22ce;
+
+  /* Superficie SOLIDA para banners de estado (viven fuera de .v-application,
+     así que no pueden usar los tokens de tema de Vuetify). */
+  --notif-surface: #ffffff;
+  --notif-on-surface: #1f2937;
+}
+
+/* MODO OSCURO: el fondo del circulo es oscuro, asi que el icono debe ser CLARO
+   (si no, se pierde). Mismos tonos, versión luminosa + fondo un poco más denso. */
+html.app-dark {
+  --notif-warn-bg: #{rgba(245, 158, 11, 0.22)};
+  --notif-warn-fg: #fbbf24;
+  --notif-crit-bg: #{rgba(239, 68, 68, 0.22)};
+  --notif-crit-fg: #f87171;
+
+  --notif-blue-bg:   rgba(96, 165, 250, 0.22);
+  --notif-blue-fg:   #93c5fd;
+  --notif-indigo-bg: rgba(129, 140, 248, 0.22);
+  --notif-indigo-fg: #a5b4fc;
+  --notif-teal-bg:   rgba(45, 212, 191, 0.22);
+  --notif-teal-fg:   #5eead4;
+  --notif-purple-bg: rgba(192, 132, 252, 0.22);
+  --notif-purple-fg: #d8b4fe;
+
+  --notif-surface: #262b33;
+  --notif-on-surface: #e5e7eb;
 }

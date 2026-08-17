@@ -11,7 +11,8 @@ import registerAlerts from './plugins/alerts'
 
 // 2. Variables SCSS
 import '@/scss/variables.scss'
-import '@/scss/vuetify/overrides.scss' 
+import '@/scss/notifications.scss'   // tonos de notificación (cableado único)
+import '@/scss/vuetify/overrides.scss'
 import 'animate.css'
 
 // 3. Configuración de Axios

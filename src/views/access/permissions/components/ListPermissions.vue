@@ -93,9 +93,9 @@ const selected_role = ref(null)
 const is_on_sending_process = ref(false)
 const is_loading = ref(false)
 
-// Catálogo de acciones del sistema, agrupadas por dominio. Para agregar una acción
-// nueva: una línea aquí (id = permission_id del backend). `soloSuperAdmin` oculta la
-// categoría a quien no es super-admin (los meta-permisos no se otorgan a la ligera).
+// Catalogo de acciones del sistema, agrupadas por dominio. Para agregar una accion
+// nueva: una linea aqui (id = permission_id del backend). `soloSuperAdmin` oculta la
+// categoria a quien no es super-admin (los meta-permisos no se otorgan a la ligera).
 const ACCIONES_CATEGORIAS = [
   { name: 'Certificados', acciones: [
     { id: 1001, name: 'Firmar / Generar QR', endpoint: 'FIRMAR_QR' },
@@ -120,8 +120,8 @@ onMounted(() => {
   const user = JSON.parse(localStorage.getItem('user')) || {}
   const isSuperAdmin = user.kind !== undefined && user.kind < 1
 
-  // 1) Vistas / módulos (el árbol del menú). Se excluyen las páginas de admin que
-  // se gobiernan por su ACCIÓN (Usuarios→1008, Permisos→1009) y las solo-super-admin
+  // 1) Vistas / modulos (el arbol del menu). Se excluyen las paginas de admin que
+  // se gobiernan por su ACCION (Usuarios -> 1008, Permisos -> 1009) y las solo-super-admin
   // (Mantenimiento): esas no son permisos de vista otorgables.
   const soloVistas = (nodes) => nodes
     .filter(n => !n.action && !n.superAdmin)
@@ -132,7 +132,7 @@ onMounted(() => {
     children: soloVistas(JSON.parse(JSON.stringify(SidebarItems))),
   }
 
-  // 2) Acciones del sistema, agrupadas por categoría.
+  // 2) Acciones del sistema, agrupadas por categoria.
   const accionesRoot = { name: 'Acciones del Sistema', id: 'sys_root', children: [] }
   ACCIONES_CATEGORIAS.forEach(cat => {
     if (cat.soloSuperAdmin && !isSuperAdmin) return   // meta-permisos: solo super-admin

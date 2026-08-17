@@ -86,8 +86,8 @@ const showPassword = ref(false)
 const username = ref("")
 const password = ref("")
 
-// Reglas de validación (en login solo exigimos que estén escritos; la política
-// de longitud/complejidad se valida al crear/cambiar la contraseña, no al entrar).
+// Reglas de validacion (en login solo exigimos que esten escritos; la politica
+// de longitud/complejidad se valida al crear/cambiar la contrasena, no al entrar).
 const usernameRules = [
   v => !!v || "Ingresa tu usuario"
 ]
@@ -129,7 +129,7 @@ const submit = async () => {
 </script>
 
 <style scoped>
-/* El logo se dibujaba a tamaño natural y deformaba la tarjeta: lo acotamos. */
+/* El logo se dibujaba a tamano natural y deformaba la tarjeta: lo acotamos. */
 .login-logo {
   display: block;
   width: auto;

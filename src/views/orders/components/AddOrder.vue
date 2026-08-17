@@ -30,7 +30,7 @@
         </v-form>
       </v-card-text>
 
-      <client-form-dialog v-model="clientDialogOpen" @reloadListComponent="retrieveClientes('')" />
+      <client-form-dialog v-model="clientDialogOpen" />
 
       <!-- Agregamos un borde superior para delimitar los botones cuando el contenido hace scroll -->
       <v-card-actions class="px-6 pb-4 pt-2" style="border-top: 1px solid rgba(0,0,0,0.1);">
@@ -49,9 +49,6 @@ import { Toast } from '@/plugins/alerts'
 import ClientSmartSearch from '@/components/shared/ClientSmartSearch.vue'
 import { ref, watch, nextTick, defineAsyncComponent, getCurrentInstance } from 'vue'
 import { useAppStore } from '@/stores/appStore'
-import ClientDataService from '@/services/clients/clientDataService'
-import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
-import ClientMappers from '@/mappers/clientMappers'
 import OrderDataService from '@/services/certificates/orderDataService'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
@@ -72,17 +69,6 @@ const order                 = ref({ client: null, order_type: 1 })
 const items_to_save         = ref([])
 const addOrderForm          = ref(null)
 
-// Instancia del buscador de Clientes usando el Composable global
-const { 
-  items: clients, 
-  loading: loading_clients, 
-  searchQuery: search_client, 
-  retrieveData: retrieveClientes 
-} = usePaginatedSearch(
-  (page, size, query) => ClientDataService.getFiltered(page, size, query),
-  ClientMappers.getMap,
-  () => order.value.client
-)
 const formServicio          = ref(null)
 
 const clientDialogOpen      = ref(false)
@@ -100,7 +86,6 @@ function open(tipo) {
   items_to_save.value = []
   order.value = { client: null, order_type: tipo }
   dialog.value = true
-  retrieveClientes('')
   calculateNextNumber()
 
   if (draft) {
@@ -156,15 +141,6 @@ async function save() {
     // Los documentos del alquiler (cotización, OC, guías, valorizaciones) se
     // suben luego desde Editar. Crear solo registra la orden.
 
-    const currentUser = JSON.parse(localStorage.getItem('user')) || {}
-    if (window.enviarNotificacionGlobal) {
-      window.enviarNotificacionGlobal(
-        currentUser.username,
-        'info',
-        order.value.order_type === 1 ? 'Nueva Orden de Servicio' : 'Nueva Orden de Alquiler',
-        `Se registró una orden con ${items_to_save.value.length} equipos.`
-      )
-    }
     close()
     Toast.fire(appStore.successSavedOptions)
   } catch (error) {

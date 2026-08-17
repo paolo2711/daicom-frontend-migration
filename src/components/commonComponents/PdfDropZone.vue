@@ -23,13 +23,13 @@ import { ref } from 'vue'
 const props = defineProps({
   // Texto del overlay mientras se arrastra.
   label:    { type: String,  default: 'Suelta el PDF aquí' },
-  // Mime aceptado: exacto ('application/pdf') o comodín ('image/*'). '*' = todo.
+  // Mime aceptado: exacto ('application/pdf') o comodin ('image/*'). '*' = todo.
   accept:   { type: String,  default: 'application/pdf' },
   // Permite soltar varios archivos.
   multiple: { type: Boolean, default: false },
   icon:     { type: String,  default: 'mdi-file-upload-outline' },
 })
-// 'file' = primer archivo válido (compat); 'files' = todos los válidos; 'invalid' = nada válido.
+// 'file' = primer archivo valido (compat); 'files' = todos los validos; 'invalid' = nada valido.
 const emit = defineEmits(['file', 'files', 'invalid'])
 
 const arrastrando = ref(false)

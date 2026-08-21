@@ -8,9 +8,10 @@ class MaintenanceDataService {
     return axios.post('administration/force-logout-all', {}, { headers: authHeader() })
   }
 
-  // Borra todas las notificaciones de la empresa.
-  clearNotifications() {
-    return axios.post('administration/clear-notifications', {}, { headers: authHeader() })
+  // Sin grupo borra todas las de la empresa; con grupo ('Patrones', 'Expedientes')
+  // solo las de ese grupo del catalogo de notificaciones.
+  clearNotifications(grupo = null) {
+    return axios.post('administration/clear-notifications', grupo ? { grupo } : {}, { headers: authHeader() })
   }
 
   // Pide a todos los clientes recargar TODA la pagina (no las tablas).
@@ -18,9 +19,14 @@ class MaintenanceDataService {
     return axios.post('administration/reload-all-tabs', {}, { headers: authHeader() })
   }
 
-  // Fuerza el escaneo de expedientes por vencer/vencidos (idempotente).
-  scanExpiries() {
-    return axios.post('administration/scan-expiries', {}, { headers: authHeader() })
+  // Cuando corrio el escaneo de vencimientos por ultima vez.
+  scanStatus() {
+    return axios.get('administration/scan-status', { headers: authHeader() })
+  }
+
+  // Fuerza el escaneo de vencimientos (patrones + inventario).
+  scan() {
+    return axios.post('administration/scan', {}, { headers: authHeader() })
   }
 
   // Crea una notificacion de prueba para mi (testing del panel + toast real).

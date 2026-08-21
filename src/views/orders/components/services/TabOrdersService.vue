@@ -972,6 +972,15 @@ watch(() => route.query.buscar_factura, (val) => {
   if (val) filter_invoice.value = val
 })
 
+// Desde Inicio ("Ver los N") llegan las pildoras ya activadas.
+const aplicarPildorasDeRuta = () => {
+  let cambio = false
+  if (route.query.sin_factura) { filtro_sin_factura.value = true; cambio = true }
+  if (route.query.falta_pago)  { filtro_falta_pago.value = true;  cambio = true }
+  if (cambio) applyFilters()
+}
+watch(() => [route.query.sin_factura, route.query.falta_pago], aplicarPildorasDeRuta)
+
 onMounted(() => {
   if (route.query.buscar_orden) {
     filter_order.value = route.query.buscar_orden
@@ -979,7 +988,8 @@ onMounted(() => {
   if (route.query.buscar_factura) {
     filter_invoice.value = route.query.buscar_factura
   }
-  
+  aplicarPildorasDeRuta()
+
   cargarResumenes() // Cargamos el número para el badge rojo
   retrieveClientes()
   retrieveOrders()

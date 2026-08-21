@@ -10,8 +10,9 @@ export const useNotificationStore = defineStore('notifications', {
     loading: false,
     panelOpen: false,
     pulse: 0,          // sube en cada notificación nueva → dispara el "campanazo"
-    filter: 'todas',   // píldora activa (todas | no_leidos | certificados | firmas | vencimientos)
-    availableGroups: [], // grupos donde el usuario TIENE notifs → qué píldoras mostrar
+    soloNoLeidas: false,  // pildora "No leidos"
+    tipos: [],            // categorias marcadas en el menu Tipo (vacio = todas)
+    tiposDisponibles: [], // [{grupo, items:[{key,label}]}] segun lo que recibe el usuario
   }),
 
   getters: {
@@ -38,7 +39,10 @@ export const useNotificationStore = defineStore('notifications', {
       if (this.loading) return
       this.loading = true
       try {
-        const r = await NotificationDataService.list(this.page, this.filter)
+        const r = await NotificationDataService.list(this.page, {
+          noLeidas: this.soloNoLeidas,
+          tipos: this.tipos,
+        })
         const results = r.data.results ?? r.data ?? []
         this.items.push(...results)
         this.total = r.data.count ?? this.items.length
@@ -48,19 +52,31 @@ export const useNotificationStore = defineStore('notifications', {
       }
     },
 
-    // Cambia la pildora activa y recarga desde la primera pagina.
-    setFilter(grupo) {
-      if (this.filter === grupo) return
-      this.filter = grupo
+    setNoLeidas(valor) {
+      if (this.soloNoLeidas === valor) return
+      this.soloNoLeidas = valor
       this.fetchFirst()
     },
 
-    // Que pildoras de categoria mostrar (las que el usuario realmente recibe).
+    toggleTipo(key) {
+      const i = this.tipos.indexOf(key)
+      if (i >= 0) this.tipos.splice(i, 1)
+      else this.tipos.push(key)
+      this.fetchFirst()
+    },
+
+    limpiarTipos() {
+      if (!this.tipos.length) return
+      this.tipos = []
+      this.fetchFirst()
+    },
+
+    // Que opciones mostrar en el menu Tipo (las que el usuario realmente recibe).
     async fetchFacets() {
       try {
         const r = await NotificationDataService.facets()
-        this.availableGroups = r.data.groups || []
-      } catch (e) { this.availableGroups = [] }
+        this.tiposDisponibles = r.data.grupos || []
+      } catch (e) { this.tiposDisponibles = [] }
     },
 
     open() {

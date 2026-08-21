@@ -5,8 +5,6 @@
 // (escaneable de un vistazo), pero el NIVEL manda siempre en warning/critical, para
 // que lo urgente rompa el patron y salte a la vista.
 export const CATEGORY_ICONS = {
-  cert_por_vencer:  'mdi-calendar-alert',
-  cert_vencido:     'mdi-alert-decagram',
   firma_solicitada: 'mdi-draw',
   cert_subido:      'mdi-file-document-edit-outline',
   qr_subido:        'mdi-cloud-check',

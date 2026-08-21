@@ -1,39 +1,24 @@
 <template>
-  <v-container class="pa-0">
-    <v-timeline class="pt-4 px-4">
-      <v-timeline-item
-        v-for="(log, i) in logs"
-        :key="i"
-        :dot-color="getActionColor(log.action)"
-        size="small"
-        fill-dot
-        :icon="getActionIcon(log.action)"
-        icon-color="white"
-      >
-        <template v-slot:opposite>
-          <span class="text-subtitle-2 text-medium-emphasis font-weight-medium">
-            <v-icon size="small" class="me-2" color="grey">mdi-clock-outline</v-icon>
-            {{ log.log_date }} &bull; {{ log.log_time }}
-          </span>
-        </template>
+  <div>
+    <div v-for="(log, i) in logs" :key="i" class="log-row">
+      <span class="log-ic" :class="'ntone-' + tono(log.action)">
+        <v-icon size="16">{{ icono(log.action) }}</v-icon>
+      </span>
+      <div class="log-body">
+        <div class="log-text">
+          <strong>{{ log.user_data.username }}</strong> {{ log.description }}
+        </div>
+        <div class="log-time">{{ log.log_date }} · {{ log.log_time }}</div>
+      </div>
+    </div>
 
-        <v-card variant="flat" class="border rounded-lg elevation-0 pa-4">
-          <div class="d-flex align-center mb-2">
-            <v-icon size="small" start color="primary">mdi-account</v-icon>
-            <span class="text-subtitle-1 font-weight-bold text-uppercase text-high-emphasis" style="letter-spacing: 0.5px;">
-              {{ log.user_data.username }}
-            </span>
-          </div>
-          
-          <div class="text-body-1 text-high-emphasis" style="line-height: 1.5;">
-            {{ log.description }}
-          </div>
-        </v-card>
-      </v-timeline-item>
-    </v-timeline>
+    <div v-if="logs.length === 0" class="text-center py-8 text-medium-emphasis">
+      <v-icon size="36" color="grey">mdi-history</v-icon>
+      <div class="mt-2 text-body-2">Todavia no hay actividad</div>
+    </div>
 
-    <v-divider class="mt-4 mb-3"></v-divider>
-    <div class="px-4 pb-2">
+    <v-divider v-if="logs.length" />
+    <div v-if="logs.length" class="px-3 py-2">
       <fluent-pagination
         :page="page"
         :itemsPerPage="page_size"
@@ -42,7 +27,7 @@
         @update:itemsPerPage="onItemsPerPageChange"
       />
     </div>
-  </v-container>
+  </div>
 </template>
 
 <script setup>
@@ -69,20 +54,20 @@ const retrieveLogs = () => {
   })
 }
 
-const getActionIcon = (action) => {
+const icono = (action) => {
   if (action.includes('POST')) return 'mdi-plus'
   if (action.includes('PUT') || action.includes('PATCH')) return 'mdi-pencil'
   if (action.includes('DELETE')) return 'mdi-delete-outline'
-  if (action.includes('GET')) return 'mdi-eye'
-  return 'mdi-check'
+  return 'mdi-eye'
 }
 
-const getActionColor = (action) => {
-  if (action.includes('POST')) return 'blue-darken-1' 
-  if (action.includes('PUT') || action.includes('PATCH')) return 'teal-darken-1' 
-  if (action.includes('DELETE')) return 'red-darken-1' 
-  if (action.includes('GET')) return 'blue-grey-lighten-1' 
-  return 'grey'
+// Reusa los tonos del sistema (scss/notifications.scss) para que la actividad
+// se vea de la misma familia que las notificaciones.
+const tono = (action) => {
+  if (action.includes('POST')) return 'blue'
+  if (action.includes('PUT') || action.includes('PATCH')) return 'teal'
+  if (action.includes('DELETE')) return 'crit'
+  return 'indigo'
 }
 
 const onPageChange = (nuevaPagina) => {
@@ -102,8 +87,33 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Sin sombra en los puntos del timeline */
-:deep(.v-timeline-item__dot) {
-  box-shadow: none !important;
+/* Lista densa: antes era un v-timeline con tarjetas alternadas que dejaba
+   huecos enormes y se veia mal en una columna. */
+.log-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.12);
+}
+.log-row:last-of-type { border-bottom: none; }
+.log-ic {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ntone-bg);
+  color: var(--ntone-fg);
+  margin-top: 0.1rem;
+}
+.log-body { min-width: 0; flex: 1; }
+.log-text { font-size: 0.85rem; line-height: 1.35; }
+.log-time {
+  font-size: 0.72rem;
+  color: rgba(128, 128, 128, 0.95);
+  margin-top: 0.1rem;
 }
 </style>

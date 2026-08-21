@@ -10,8 +10,6 @@ export const TOAST_CATALOG = {
   cert_subido:      { single: (r) => `Certificado ${r} elaborado`,   many: (n) => `${n} certificados elaborados` },
   qr_subido:        { single: (r) => `Certificado ${r} firmado`,     many: (n) => `${n} certificados firmados` },
   firma_solicitada: { single: () => 'Te solicitaron una firma',      many: (n) => `Te solicitaron ${n} firmas` },
-  cert_por_vencer:  { single: (r) => `Expediente ${r} por vencer`,    many: (n) => `${n} expedientes por vencer` },
-  cert_vencido:     { single: (r) => `Expediente ${r} vencido`,       many: (n) => `${n} expedientes vencidos` },
   orden_creada:     { single: (r) => `Nueva orden ${r} · certs por elaborar`, many: (n) => `${n} órdenes nuevas` },
   app_recargada:    { single: () => 'La aplicación fue actualizada por el developer', many: () => 'La aplicación fue actualizada por el developer' },
   cert_anulado:     { single: (r) => `Certificado ${r} anulado`,      many: (n) => `${n} certificados anulados` },

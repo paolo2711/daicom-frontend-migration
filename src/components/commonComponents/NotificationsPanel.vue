@@ -17,12 +17,44 @@
         </header>
 
         <!-- Pildoras de filtro (estilo IG) -->
+        <!-- Dos pildoras fijas y el menu de tipo, que es lo que crece -->
         <div class="notif-pills">
-          <button
-            v-for="p in pildorasVisibles" :key="p.value"
-            class="notif-pill" :class="{ 'notif-pill--active': store.filter === p.value }"
-            @click="store.setFilter(p.value)"
-          >{{ p.label }}</button>
+          <button class="notif-pill" :class="{ 'notif-pill--active': !store.soloNoLeidas }"
+                  @click="store.setNoLeidas(false)">Todas</button>
+          <button class="notif-pill" :class="{ 'notif-pill--active': store.soloNoLeidas }"
+                  @click="store.setNoLeidas(true)">No leidos</button>
+
+          <!-- Etiqueta fija: si mostrara el nombre del tipo, el boton cambiaria
+               de ancho al filtrar y la fila se reacomodaria sola. -->
+          <v-menu v-if="store.tiposDisponibles.length" location="bottom start" :close-on-content-click="false">
+            <template #activator="{ props }">
+              <button v-bind="props" class="notif-pill notif-pill--menu"
+                      :class="{ 'notif-pill--active': store.tipos.length }">
+                Tipo<span v-if="store.tipos.length" class="notif-cuenta">{{ store.tipos.length }}</span>
+                <v-icon size="14" class="ms-1">mdi-chevron-down</v-icon>
+              </button>
+            </template>
+            <v-list density="compact" min-width="230">
+              <template v-for="g in store.tiposDisponibles" :key="g.grupo">
+                <v-list-subheader class="text-caption font-weight-bold">{{ g.grupo }}</v-list-subheader>
+                <v-list-item v-for="it in g.items" :key="it.key" @click="store.toggleTipo(it.key)">
+                  <template #prepend>
+                    <v-icon size="18" :color="store.tipos.includes(it.key) ? 'primary' : 'grey'">
+                      {{ store.tipos.includes(it.key) ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline' }}
+                    </v-icon>
+                  </template>
+                  <v-list-item-title class="text-body-2">{{ it.label }}</v-list-item-title>
+                </v-list-item>
+              </template>
+              <template v-if="store.tipos.length">
+                <v-divider class="my-1" />
+                <v-list-item @click="store.limpiarTipos()">
+                  <template #prepend><v-icon size="18" color="grey">mdi-filter-remove-outline</v-icon></template>
+                  <v-list-item-title class="text-body-2">Quitar filtros</v-list-item-title>
+                </v-list-item>
+              </template>
+            </v-list>
+          </v-menu>
         </div>
 
         <div v-if="store.unreadCount > 0" class="notif-actions">
@@ -79,18 +111,6 @@ const listEl = ref(null)
 // (Los iconos de categoria viven en services/notifications/categoryIcons.js,
 //  compartidos con el toast de evento -> misma familia visual.)
 
-// Pildoras de filtro. 'Todas' y 'No leidos' siempre; las de categoria solo se
-// muestran si el usuario realmente recibe ese grupo (store.availableGroups).
-const PILDORAS = [
-  { value: 'todas',        label: 'Todas',        always: true },
-  { value: 'no_leidos',    label: 'No leídos',    always: true },
-  { value: 'certificados', label: 'Certificados', grupo: 'certificados' },
-  { value: 'firmas',       label: 'Firmas',       grupo: 'firmas' },
-  { value: 'vencimientos', label: 'Vencimientos', grupo: 'vencimientos' },
-]
-const pildorasVisibles = computed(() =>
-  PILDORAS.filter(p => p.always || store.availableGroups.includes(p.grupo))
-)
 
 // Agrupacion como IG: Hoy / Ayer / Este mes / Anteriores
 const grupos = computed(() => {
@@ -247,6 +267,24 @@ const abrir = (n) => {
 .notif-pill--active {
   background: rgb(var(--v-theme-primary));
   color: #fff;
+}
+/* Misma forma que las pildoras para que la fila se lea pareja; el chevron es
+   lo unico que avisa que abre un menu. */
+.notif-pill--menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+.notif-cuenta {
+  margin-left: 0.35rem;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  font-size: 0.68rem;
+  line-height: 1.05rem;
+  text-align: center;
 }
 
 .notif-item {

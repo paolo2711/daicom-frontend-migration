@@ -114,11 +114,9 @@ const submit = async () => {
         password: password.value 
       })
       
-      if (authStore.user?.kind < 1) {
-        router.push({ path: "/home" })
-      } else {
-        router.push({ path: "/profile" })
-      }
+      // Todos entran al Inicio. Antes los que no eran admin caian en Mi Perfil,
+      // que no es una pantalla de trabajo.
+      router.push({ path: "/home" })
     } catch (error) {
       // El error visual ya lo maneja SweetAlert en el authStore.
     } finally {

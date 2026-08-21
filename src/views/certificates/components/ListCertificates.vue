@@ -677,6 +677,11 @@ watch(() => route.query.firma_pendiente, (v) => {
   if (v) { filtro_firma_pendiente.value = true; options.value.page = 1; retrieveAllCertificates() }
 })
 
+// Desde Inicio ("Ver los N" de por elaborar) llega ?excel_pendiente=1.
+watch(() => route.query.excel_pendiente, (v) => {
+  if (v) { filtro_excel_pendiente.value = true; options.value.page = 1; retrieveAllCertificates() }
+})
+
 watch(correlative,       () => { options.value.page = 1; retrieveAllCertificates() })
 watch(certificate_type,  () => { options.value.page = 1; retrieveAllCertificates() })
 watch(client_id,         () => { options.value.page = 1; retrieveAllCertificates() })
@@ -715,6 +720,12 @@ onMounted(() => {
   // que la carga sin filtro pise este resultado).
   if (route.query.firma_pendiente) {
     filtro_firma_pendiente.value = true
+    options.value.page = 1
+    retrieveAllCertificates()
+  }
+
+  if (route.query.excel_pendiente) {
+    filtro_excel_pendiente.value = true
     options.value.page = 1
     retrieveAllCertificates()
   }

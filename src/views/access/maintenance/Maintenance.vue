@@ -10,23 +10,35 @@
           Acciones de administrador. Son operaciones sensibles: se aplican a toda tu empresa.
         </p>
 
-        <!-- Accion segura: forzar escaneo de expedientes -->
+        <!-- Escaneos de vencimientos. La lista la arma el back: escaneo nuevo alla
+             = fila nueva aca, sin tocar este archivo. -->
         <v-card variant="outlined" rounded="lg" max-width="720" class="mb-6">
-          <div class="pa-4 d-flex flex-wrap align-center ga-4">
-            <div style="flex: 1 1 320px; min-width: 260px;">
-              <div class="text-subtitle-1 font-weight-medium">Escanear expedientes ahora</div>
-              <div class="text-body-2 text-medium-emphasis">
-                Revisa el inventario y genera los avisos de expedientes <strong>por vencer</strong> (30/15/7 días)
-                o <strong>vencidos</strong>. Es seguro repetirlo: no duplica avisos ya existentes.
+          <div class="pa-4 pb-2 d-flex align-center">
+            <v-icon size="small" color="teal-darken-1" class="mr-2">mdi-radar</v-icon>
+            <span class="text-subtitle-1 font-weight-medium">Escaneo de vencimientos</span>
+            <v-spacer />
+            <span class="text-caption text-medium-emphasis">automático</span>
+          </div>
+          <div class="px-4 pb-3 text-body-2 text-medium-emphasis">
+            Relee el listado de patrones del laboratorio y los expedientes del inventario,
+            y actualiza el bloque de <strong>Vencimientos</strong> de Inicio. Se hace solo
+            cuando el primero entra cada día; el botón es para no esperar.
+          </div>
+
+          <v-divider />
+          <div class="pa-4 d-flex flex-wrap align-center ga-3">
+            <div style="flex: 1 1 300px; min-width: 240px;">
+              <div class="text-caption" :class="ultima && ultima.error ? 'text-error' : 'text-medium-emphasis'">
+                <v-icon size="12" class="mr-1">
+                  {{ ultima && ultima.error ? 'mdi-alert-circle-outline' : 'mdi-clock-outline' }}
+                </v-icon>
+                <template v-if="ultima">{{ ultima.fecha }} {{ ultima.hora }} · {{ detalleCorto(ultima.detalle) }}</template>
+                <template v-else-if="cargandoScan">Cargando…</template>
+                <template v-else>Todavía no se ha ejecutado</template>
               </div>
             </div>
-            <v-btn
-              color="teal-darken-1"
-              variant="flat"
-              prepend-icon="mdi-radar"
-              :loading="loadingScan"
-              @click="escanearExpedientes"
-            >
+            <v-btn size="small" color="teal-darken-1" variant="flat" prepend-icon="mdi-radar"
+                   :loading="corriendo" @click="correrScan">
               Escanear ahora
             </v-btn>
           </div>
@@ -157,7 +169,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import Swal from 'sweetalert2'
 import { Toast } from '@/plugins/alerts'
 import { useAppStore } from '@/stores/appStore'
@@ -171,16 +183,35 @@ const statusStore = useStatusStore()
 const loadingLogout = ref(false)
 const loadingNotif = ref(false)
 const loadingReload = ref(false)
-const loadingScan = ref(false)
 const loadingTest = ref(false)
+
+//  Escaneo de vencimientos: cuando corrio la ultima vez
+const ultima = ref(null)
+const cargandoScan = ref(true)
+const corriendo = ref(false)
+
+// El detalle del log viene con el nombre del comando adelante
+// ("scan_vencimientos: 53 patrones leidos..."). En pantalla ya se sabe cual es.
+const detalleCorto = (d) => (d || '').replace(/^scan_\w+:\s*/, '')
+
+const cargarScan = async () => {
+  try {
+    const { data } = await MaintenanceDataService.scanStatus()
+    ultima.value = data?.ultima || null
+  } catch (e) {
+    ultima.value = null
+  } finally {
+    cargandoScan.value = false
+  }
+}
+
+onMounted(cargarScan)
 
 //  Area de pruebas
 const PRUEBAS = [
   { category: 'cert_subido',      level: 'info',     ref: '008159',        text: 'Cert. elaborado' },
   { category: 'qr_subido',        level: 'info',     ref: '008159',        text: 'Cert. firmado' },
   { category: 'firma_solicitada', level: 'info',     ref: '',              text: 'Firma solicitada' },
-  { category: 'cert_por_vencer',  level: 'warning',  ref: 'DAI-017',       text: 'Por vencer' },
-  { category: 'cert_vencido',     level: 'critical', ref: 'DAI-017',       text: 'Vencido' },
   { category: 'orden_creada',     level: 'info',     ref: 'OS-2026-00042', text: 'Orden creada' },
   { category: 'cert_anulado',     level: 'warning',  ref: '008159',        text: 'Cert. anulado' },
   { category: 'orden_anulada',    level: 'warning',  ref: 'OS-2026-00042', text: 'Orden anulada' },
@@ -189,10 +220,10 @@ const PRUEBAS = [
 
 const probarToast = (p) => showEventToast({ category: p.category, level: p.level, ref: p.ref })
 
-// Dispara 5 seguidas para ver la AGREGACION ("5 expedientes vencidos").
+// Dispara 5 seguidas para ver la AGREGACION ("5 certificados anulados").
 const probarRafaga = () => {
   for (let i = 1; i <= 5; i++) {
-    showEventToast({ category: 'cert_vencido', level: 'critical', ref: `DAI-0${i}` })
+    showEventToast({ category: 'cert_anulado', level: 'warning', ref: `00815${i}` })
   }
 }
 
@@ -200,7 +231,7 @@ const probarRafaga = () => {
 const probarVariosTipos = () => {
   showEventToast({ category: 'cert_subido', level: 'info', ref: '008159' })
   showEventToast({ category: 'firma_solicitada', level: 'info', ref: '' })
-  showEventToast({ category: 'cert_vencido', level: 'critical', ref: 'DAI-017' })
+  showEventToast({ category: 'orden_anulada', level: 'warning', ref: 'OS-2026-00042' })
 }
 
 // Prueba del flujo REAL de la recarga forzada: encola el aviso y recarga esta
@@ -231,16 +262,18 @@ const confirmar = (opts) => Swal.fire({
   ...opts,
 })
 
-const escanearExpedientes = async () => {
-  // Accion segura e idempotente: no pide confirmacion.
-  loadingScan.value = true
+const correrScan = async () => {
+  // Accion segura: solo relee y reescribe el resumen. No pide confirmacion.
+  corriendo.value = true
   try {
-    const { data } = await MaintenanceDataService.scanExpiries()
+    const { data } = await MaintenanceDataService.scan()
     Toast.fire({ icon: 'success', title: data?.success || 'Escaneo listo.' })
   } catch (e) {
-    Swal.fire('Error', e.response?.data?.detail || 'No se pudo escanear.', 'error')
+    const msg = e.response?.data?.error || e.response?.data?.detail
+    Swal.fire('Error', msg || 'No se pudo escanear.', 'error')
   } finally {
-    loadingScan.value = false
+    corriendo.value = false
+    await cargarScan()   // el error tambien queda registrado, que se vea
   }
 }
 

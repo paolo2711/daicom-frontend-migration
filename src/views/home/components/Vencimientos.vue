@@ -110,17 +110,19 @@ const modal = ref(false)
 const detalle = ref(null)
 
 // Las dos columnas salen del mismo escaneo, asi que alcanza con decirlo una vez.
+// Un solo escaneo lee las dos fuentes, asi que la hora vale para las dos. Se
+// nombran igual para que no haya que adivinar a cual se refiere.
 const origen = computed(() => {
   const cuando = datos.value?.escaneado
-  if (!cuando) return 'Patrones e inventario. Todavia no se ha revisado.'
+  if (!cuando) return 'Patrones e inventario sin revisar todavia'
   const f = new Date(cuando)
-  if (isNaN(f)) return `Patrones e inventario. Ultima revision: ${cuando}`
+  if (isNaN(f)) return `Patrones e inventario, revisados ${cuando}`
   // 24h, igual que la hora que muestra Mantenimiento. Con 12h el locale mete su
   // propio punto final ("05:21 p. m.") y quedaban dos.
   const hora = f.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false })
   const mismoDia = new Date().toDateString() === f.toDateString()
-  const cuandoTexto = mismoDia ? `hoy ${hora}` : `${f.toLocaleDateString('es-PE')} ${hora}`
-  return `Patrones e inventario. Ultima revision: ${cuandoTexto}`
+  const cuandoTexto = mismoDia ? `hoy ${hora}` : `el ${f.toLocaleDateString('es-PE')} ${hora}`
+  return `Patrones e inventario, revisados ${cuandoTexto}`
 })
 
 const grupos = computed(() => {

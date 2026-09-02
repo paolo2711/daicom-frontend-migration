@@ -383,7 +383,7 @@ const hay_filtros = computed(() => !!(currency_filter.value || estado_filter.val
 // distinto del gris de "En proceso"), 5 Pagado (verde), 6 Excedido (azul).
 const ESTADO_COLORS = { 1: '#9e9e9e', 2: '#e53935', 3: '#fb8c00', 4: '#546e7a', 5: '#43a047', 6: '#1e88e5' }
 const estado_color = (s) => ESTADO_COLORS[s] || ESTADO_COLORS[2]
-const ESTADO_TEXTOS = { 1: 'En proceso', 2: 'Deuda', 3: 'Abonado', 4: 'Anulada', 5: 'Pagado', 6: 'Excedido' }
+const ESTADO_TEXTOS = { 1: 'En proceso', 2: 'Deuda', 3: 'Abonado', 4: 'Anulada', 5: 'Pagado', 6: 'Excedido', 7: 'Sin cargo' }
 const estado_texto = (s) => ESTADO_TEXTOS[s] || 'Deuda'
 const simbolo = (c) => (c === 'USD' ? '$' : 'S/')
 const money = (v) => Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

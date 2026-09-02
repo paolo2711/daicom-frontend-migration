@@ -375,8 +375,11 @@ const openViewer = (index) => {
 }
 
 const close = () => {
+  // Solo se limpian los errores, NO los valores: vaciar los campos requeridos
+  // los vuelve a marcar en rojo, y como el modal todavia se esta cerrando se ve
+  // el parpadeo. Los valores ya los reinicia open() antes de cargar el equipo.
+  formRef.value?.resetValidation()
   dialog.value = false
-  resetForm()
 }
 
 const resetForm = () => {

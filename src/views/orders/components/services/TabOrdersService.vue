@@ -357,12 +357,8 @@
         Facturar
       </v-btn>
 
-      <v-btn v-if="ordenes_seleccionadas.length === 1 && !seleccion_tiene_factura_fiscal" variant="text" size="small" class="mx-1 font-weight-bold"
-             :loading="marcando_sin_factura"
-             :prepend-icon="seleccion_sin_factura ? 'mdi-file-document-check-outline' : 'mdi-file-remove-outline'"
-             @click="seleccion_sin_factura ? requerirFactura() : marcarSinFactura()">
-        {{ seleccion_sin_factura ? 'Requiere factura' : 'Sin comprobante' }}
-      </v-btn>
+      <menu-sin-factura :orders="ordenes_seleccionadas"
+                        @aplicado="ordenes_seleccionadas = []" />
 
       <v-btn v-if="hasPermission(1004)" variant="text" color="error" size="small" class="mx-1 font-weight-bold"
              prepend-icon="mdi-cancel" :loading="anulando" @click="anularSeleccion">
@@ -392,6 +388,7 @@ import CertificateDataService from '@/services/certificates/certificateDataServi
 import ClientDataService from '@/services/clients/clientDataService'
 import ClientMappers from '@/mappers/clientMappers'
 import OrderMappers from '@/mappers/orderMappers'
+import MenuSinFactura from '@/views/orders/components/MenuSinFactura.vue'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
@@ -435,7 +432,6 @@ const edit_order_modal = ref(false)
 const dialog_extra = ref(false)
 const factura_modal = ref(false)
 const ordenes_factura_multi = ref(null) // órdenes para crear UNA factura por selección
-const marcando_sin_factura = ref(false)
 const selected_order = ref(null)
 const certificateModalRef = ref(null)
 const batchActionModalRef = ref(null)
@@ -664,6 +660,9 @@ const getCurrencySymbol = (currency) => {
 // ya NO existen en la orden — usarlos daba siempre "pagado" por undefined.
 // estado_financiero: 1=En Proceso, 2=Deuda, 3=Abonado, 4=Anulada, 5=Pagado, 6=Excedido
 const getColorSemaforoFinanciero = (o) => {
+  // Sin cargo va primero: esas ordenes tambien tienen wants_invoice en false y
+  // caerian en la rama de abajo, que habla de abonos que nunca van a existir.
+  if (o.requiere_pago === false) return 'grey-darken-2'
   if (o.wants_invoice === false) {
     // Sin comprobante: verde si ya tiene abono (pagado), gris si aún no.
     return o.estado_financiero === 5 ? 'success' : 'grey-darken-2'
@@ -681,6 +680,7 @@ const getColorSemaforoFinanciero = (o) => {
 
 const getIconoSemaforoFinanciero = (o) => {
   // Ícono único de trazo fino, adaptado al estado financiero
+  if (o.requiere_pago === false) return 'mdi-cash-off'
   if (o.wants_invoice === false) {
     return o.estado_financiero === 5 ? 'mdi-file-document-check-outline' : 'mdi-file-document-remove-outline'
   }
@@ -696,6 +696,7 @@ const getIconoSemaforoFinanciero = (o) => {
 }
 
 const getTextoSemaforoFinanciero = (o) => {
+  if (o.requiere_pago === false) return 'Sin cargo, no se cobra'
   if (o.wants_invoice === false) {
     return o.estado_financiero === 5 ? 'Sin comprobante · Pagado' : 'Sin comprobante · Sin abono aún'
   }
@@ -744,82 +745,6 @@ const crearFacturaParaSeleccion = () => {
   selected_order.value = null
   ordenes_factura_multi.value = [...ordenes]
   factura_modal.value = true
-}
-
-// Marca las órdenes seleccionadas como "no requiere comprobante". Vive en la
-// barra (antes estaba en el header del panel, que mutaba de tamaño).
-const marcarSinFactura = async () => {
-  const ordenes = ordenes_seleccionadas.value
-  if (ordenes.length === 0) return
-  const r = await Swal.fire({
-    title: '¿Sin comprobante?',
-    html: `Se marcarán <b>${ordenes.length}</b> ${ordenes.length === 1 ? 'orden' : 'órdenes'} como "no requiere factura". Elige la moneda de su registro interno de abonos:`,
-    icon: 'question',
-    input: 'select',
-    inputOptions: { PEN: 'Soles (S/)', USD: 'Dólares ($)' },
-    inputValue: 'PEN',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, sin factura', cancelButtonText: 'Cancelar',
-  })
-  if (!r.isConfirmed) return
-  const currency = r.value || 'PEN'
-  marcando_sin_factura.value = true
-  try {
-    for (const o of ordenes) {
-      await OrderDataService.patch(o.id, { wants_invoice: false, currency })
-    }
-    Toast.fire({ timer: 2200, icon: 'success', title: 'Marcadas sin factura' })
-    ordenes_seleccionadas.value = []
-    // El WS refresca las filas de las órdenes afectadas.
-  } catch (err) {
-    const d = err.response?.data
-    const msg = d?.wants_invoice?.[0] || d?.detail || 'No se pudo marcar alguna orden.'
-    Swal.fire('No se pudo', msg, 'error')
-  } finally {
-    marcando_sin_factura.value = false
-  }
-}
-
-// El botón de la barra es contextual: si TODAS las órdenes marcadas ya están
-// "sin comprobante", ofrece re-activar; si no, ofrece marcarlas sin comprobante.
-const seleccion_sin_factura = computed(() =>
-  ordenes_seleccionadas.value.length > 0 &&
-  ordenes_seleccionadas.value.every(o => o.wants_invoice === false)
-)
-
-// ¿La orden seleccionada ya tiene una factura fiscal? Entonces no se puede
-// marcar sin comprobante (el botón se oculta).
-const seleccion_tiene_factura_fiscal = computed(() =>
-  ordenes_seleccionadas.value.length === 1 &&
-  (ordenes_seleccionadas.value[0].invoices || []).some(f => f.es_fiscal)
-)
-
-// Re-activa "requiere comprobante". El backend (perform_update) descarta la
-// factura interna vacía al pasar wants_invoice a true.
-const requerirFactura = async () => {
-  const ordenes = ordenes_seleccionadas.value
-  if (ordenes.length === 0) return
-  const r = await Swal.fire({
-    title: '¿Requiere comprobante?',
-    html: `Se marcarán <b>${ordenes.length}</b> ${ordenes.length === 1 ? 'orden' : 'órdenes'} como que SÍ requieren factura. Si tenían un contenedor de abonos vacío, se descarta.`,
-    icon: 'question', showCancelButton: true,
-    confirmButtonText: 'Sí, requiere factura', cancelButtonText: 'Cancelar',
-  })
-  if (!r.isConfirmed) return
-  marcando_sin_factura.value = true
-  try {
-    for (const o of ordenes) {
-      await OrderDataService.patch(o.id, { wants_invoice: true })
-    }
-    Toast.fire({ timer: 2200, icon: 'success', title: 'Marcadas: requieren factura' })
-    ordenes_seleccionadas.value = []
-  } catch (err) {
-    const d = err.response?.data
-    const msg = d?.wants_invoice?.[0] || d?.detail || 'No se pudo actualizar alguna orden.'
-    Swal.fire('No se pudo', msg, 'error')
-  } finally {
-    marcando_sin_factura.value = false
-  }
 }
 
 // ------------------------------------------------

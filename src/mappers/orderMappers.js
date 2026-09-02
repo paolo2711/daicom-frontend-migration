@@ -13,6 +13,7 @@ export default {
       // ─── ESTADO FINANCIERO (reflejo del estado de las facturas) ───
       // La orden ya no tiene moneda: cada factura maneja la suya.
       wants_invoice: element.wants_invoice,
+      requiere_pago: element.requiere_pago ?? true,   // false = sin cargo (interno o cortesia)
       detraccion: element.detraccion || null, // { afecto, tasa, monto, moneda } o null (suma de facturas)
       estado_financiero: element.estado_financiero ?? element.status,
       
@@ -49,6 +50,7 @@ export default {
       order_type: element.order_type,
       client: element.client,
       wants_invoice: element.wants_invoice,
+      requiere_pago: element.requiere_pago ?? true,
       client_order_reference: element.client_order_reference,
       sent: element.sent
     };

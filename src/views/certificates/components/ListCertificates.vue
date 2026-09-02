@@ -252,10 +252,13 @@
         <template v-slot:item.uploaded_xls="{ item }">
           <v-tooltip location="bottom">
             <template v-slot:activator="{ props }">
+              <!-- El link sale del back ya armado. Los certificados viejos tienen
+                   el Excel marcado pero sin ruta, y antes se les armaba /media/1
+                   que no existe: ahora sin url, no hay boton de ver. -->
               <v-btn
-                v-if="item.uploaded_xls && item.uploaded_xls !== '0' && item.uploaded_xls !== 'False'"
+                v-if="item.uploaded_xls_url"
                 v-bind="props" icon variant="text" density="comfortable" color="primary"
-                :href="`/media/${item.uploaded_xls}`" target="_blank"
+                :href="item.uploaded_xls_url" target="_blank"
                 :disabled="item.status === 5" @click.stop
               >
                 <v-icon>mdi-file-pdf-box</v-icon>
@@ -268,7 +271,7 @@
                 <v-icon>mdi-file-pdf-box</v-icon>
               </v-btn>
             </template>
-            <span>{{ (item.uploaded_xls && item.uploaded_xls !== '0' && item.uploaded_xls !== 'False') ? 'Ver PDF Base Local' : 'Subir Excel' }}</span>
+            <span>{{ item.uploaded_xls_url ? 'Ver PDF Base Local' : 'Subir Excel' }}</span>
           </v-tooltip>
         </template>
 
@@ -803,7 +806,10 @@ const tieneExcelBase = (item) => item.uploaded_xls && item.uploaded_xls !== '0' 
 
 const getSemaforoColor = (item) => {
   if (item.order_status === 4) return 'grey-darken-3' // Anulada
-  
+  // Sin cargo va en verde: no hay nada que facturar ni cobrar, o sea que por el
+  // lado del dinero esta cerrado igual que una pagada.
+  if (item.order_requiere_pago === false) return 'success'
+
   const hasInv = item.order_has_invoices
   const hasPay = item.order_has_payments
 
@@ -817,7 +823,8 @@ const getSemaforoColor = (item) => {
 
 const getSemaforoText = (item) => {
   if (item.order_status === 4) return 'Orden Anulada'
-  
+  if (item.order_requiere_pago === false) return 'Sin cargo, no se cobra'
+
   const hasInv = item.order_has_invoices
   const hasPay = item.order_has_payments
 

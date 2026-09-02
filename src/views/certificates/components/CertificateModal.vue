@@ -131,9 +131,9 @@
                   <date-picker label="Fecha de calibración" :date="certificate.calibration_date" @setPickedDate="(value) => certificate.calibration_date = value" />
                 </v-col>
                 <v-col cols="12" md="4" class="d-flex align-center">
-                  <v-btn v-if="certificate.uploaded_xls && certificate.uploaded_xls !== '0' && certificate.uploaded_xls !== 'False' && certificate.uploaded_xls !== 'false'" 
+                  <v-btn v-if="certificate.uploaded_xls_url"
                          color="success" variant="outlined" block class="font-weight-bold" style="height: 40px;"
-                         :href="`/media/${certificate.uploaded_xls}`" target="_blank">
+                         :href="certificate.uploaded_xls_url" target="_blank">
                     <v-icon start>mdi-eye</v-icon> Ver PDF Base
                   </v-btn>
                   <div v-else class="text-grey text-center text-subtitle-2 font-weight-bold d-flex align-center justify-center" style="width: 100%; height: 40px; border: 1px dashed #9e9e9e; border-radius: 4px;">

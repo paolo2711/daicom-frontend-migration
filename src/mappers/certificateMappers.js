@@ -10,6 +10,7 @@ export default {
       // Semaforo Inteligente de Órdenes
       order_number: element.order_number,
       order_status: element.order_status,
+      order_requiere_pago: element.order_requiere_pago,
       order_has_invoices: element.order_has_invoices,
       order_has_payments: element.order_has_payments,
       
@@ -41,6 +42,7 @@ export default {
       
       // Archivos y Nube
       uploaded_xls: element.uploaded_xls,
+      uploaded_xls_url: element.uploaded_xls_url,
       signed_pdf: element.signed_pdf,
       attached_pdf: element.attached_pdf,
       uploaded: element.uploaded,
@@ -73,6 +75,7 @@ export default {
       calibration_date: element.calibration_date,
       emission_date: element.emission_date,
       uploaded_xls: element.uploaded_xls,
+      uploaded_xls_url: element.uploaded_xls_url,
       signed_pdf: element.signed_pdf,
       signature_requested: element.signature_requested,
       sent: element.sent,

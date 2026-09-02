@@ -33,7 +33,13 @@
           <span class="text-caption font-weight-bold text-uppercase text-medium-emphasis">Comprobantes</span>
         </div>
         
-        <v-alert v-if="orderData.wants_invoice === false" density="compact" variant="tonal" color="info" class="mb-0 text-caption font-weight-bold">
+        <!-- Sin cargo va primero: si no, una orden interna dice "el cliente no
+             requiere comprobante", que es falso: el cliente somos nosotros. -->
+        <v-alert v-if="orderData.requiere_pago === false" density="compact" variant="tonal" color="success" class="mb-0 text-caption font-weight-bold">
+          <v-icon start size="small">mdi-cash-off</v-icon> Sin cargo, no se cobra
+        </v-alert>
+
+        <v-alert v-else-if="orderData.wants_invoice === false" density="compact" variant="tonal" color="info" class="mb-0 text-caption font-weight-bold">
           <v-icon start size="small">mdi-file-cancel</v-icon> Cliente no requiere comprobante
         </v-alert>
 
@@ -62,9 +68,12 @@
         </v-alert>
       </div>
 
-      <v-divider class="mb-4 border-opacity-25"></v-divider>
+      <!-- Si no se cobra, "Abonos y Liquidacion" no tiene sentido: sin esto la
+           seccion cae en "Pendiente de pago" y marca en naranja algo que no se
+           va a cobrar nunca. -->
+      <v-divider v-if="orderData.requiere_pago !== false" class="mb-4 border-opacity-25"></v-divider>
 
-      <div>
+      <div v-if="orderData.requiere_pago !== false">
         <div class="d-flex align-center mb-2">
           <v-icon size="small" color="success" class="mr-1">mdi-cash-register</v-icon>
           <span class="text-caption font-weight-bold text-uppercase text-medium-emphasis">Abonos y Liquidación</span>

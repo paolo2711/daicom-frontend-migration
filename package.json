@@ -1,6 +1,6 @@
 {
   "name": "daicom-backend-migration",
-  "version": "3.3.0.1",
+  "version": "3.7.0.1",
   "private": true,
   "type": "module",
   "scripts": {

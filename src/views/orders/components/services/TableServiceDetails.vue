@@ -170,18 +170,14 @@ export default {
     this.user_permissions = user.action_permissions || [];
   },
   methods: {
+    // El back manda uploaded_xls_url ya armada, o null si ese certificado no
+    // tiene PDF base. Antes habia que adivinar aca si el campo traia una ruta o
+    // el flag viejo ("1", "0", "False"...).
     hasValidPdf(cert) {
-      const val = cert.uploaded_xls;
-      
-      // 1. Escudo de tipos: Si el backend envía un booleano en el primer renderizado (Listado),
-      // asumimos 'false' para evitar el parpadeo hasta que llegue la ruta string (Detalle).
-      if (typeof val === 'boolean') return false;
-
-      // 2. Validación estricta para la ruta final
-      return Boolean(val && val !== '0' && val !== 'False' && val !== 'null' && val !== 'undefined');
+      return Boolean(cert.uploaded_xls_url);
     },
     getValidPdfUrl(cert) {
-      return this.hasValidPdf(cert) ? `/media/${cert.uploaded_xls}` : undefined;
+      return cert.uploaded_xls_url || undefined;
     },
     hasValidCloud(cert) {
       const val = cert.uploaded;

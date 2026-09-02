@@ -61,6 +61,7 @@ import ClientDataService from '@/services/clients/clientDataService'
 import ClientRules from '@/validators/rules/clientRules'
 import Characters from '@/validators/commonValidators/characters'
 import ClientMappers from '@/mappers/clientMappers'
+import { DOCUMENT_TYPE, DOCUMENT_LENGTH } from '@/utils/clients/documentTypes'
 import { useAppStore } from '@/stores/appStore'
 
 const props = defineProps({
@@ -110,8 +111,12 @@ const dynamicDocumentRules = computed(() => {
   const baseRules = [...(client_document_rules || []), v => !!v || 'El documento es obligatorio']
   const lengthRule = v => {
     if (!v) return true
-    if (formData.documentType === 1) return v.length === 8 || 'El DNI debe tener exactamente 8 dígitos'
-    if (formData.documentType === 2) return v.length === 11 || 'El RUC debe tener exactamente 11 dígitos'
+    if (formData.documentType === DOCUMENT_TYPE.DNI) {
+      return v.length === DOCUMENT_LENGTH[DOCUMENT_TYPE.DNI] || 'El DNI debe tener exactamente 8 dígitos'
+    }
+    if (formData.documentType === DOCUMENT_TYPE.RUC) {
+      return v.length === DOCUMENT_LENGTH[DOCUMENT_TYPE.RUC] || 'El RUC debe tener exactamente 11 dígitos'
+    }
     return true
   }
   return [...baseRules, lengthRule]
@@ -144,7 +149,9 @@ const save = async () => {
       : await ClientDataService.create(payload)
     if (response.status === 200 || response.status === 201) {
       closeDialog()
-      emit('reloadListComponent')
+      // El cliente guardado va como payload para que quien lo abrio pueda
+      // seleccionarlo sin tener que buscarlo de nuevo.
+      emit('reloadListComponent', ClientMappers.getMap(response.data))
       Swal.fire(appStore.successSavedOptions)
     }
   } catch (e) {

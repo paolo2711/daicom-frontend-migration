@@ -9,13 +9,8 @@
         <v-form ref="addOrderForm" v-model="is_valid" @submit.prevent>
 
           <v-row align="start" dense>
-            <v-col cols="12" md="9">
-              <ClientSmartSearch v-model="order.client" />
-            </v-col>
-            <v-col cols="12" md="3" class="pt-1">
-              <v-btn color="primary" variant="flat" block height="40" @click="clientDialogOpen = true">
-                <v-icon start>mdi-plus</v-icon> NUEVO
-              </v-btn>
+            <v-col cols="12">
+              <ClientSmartSearch v-model="order.client" creatable />
             </v-col>
           </v-row>
 
@@ -29,8 +24,6 @@
 
         </v-form>
       </v-card-text>
-
-      <client-form-dialog v-model="clientDialogOpen" />
 
       <!-- Agregamos un borde superior para delimitar los botones cuando el contenido hace scroll -->
       <v-card-actions class="px-6 pb-4 pt-2" style="border-top: 1px solid rgba(0,0,0,0.1);">
@@ -47,13 +40,11 @@
 <script setup>
 import { Toast } from '@/plugins/alerts'
 import ClientSmartSearch from '@/components/shared/ClientSmartSearch.vue'
-import { ref, watch, nextTick, defineAsyncComponent, getCurrentInstance } from 'vue'
+import { ref, watch, nextTick, getCurrentInstance } from 'vue'
 import { useAppStore } from '@/stores/appStore'
 import OrderDataService from '@/services/certificates/orderDataService'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
-
-const ClientFormDialog = defineAsyncComponent(() => import('@/views/clients/components/ClientFormDialog.vue'))
 
 const emit = defineEmits(['reloadListComponent'])
 
@@ -70,8 +61,6 @@ const items_to_save         = ref([])
 const addOrderForm          = ref(null)
 
 const formServicio          = ref(null)
-
-const clientDialogOpen      = ref(false)
 
 watch(() => order.value.order_type, () => { calculateNextNumber() })
 

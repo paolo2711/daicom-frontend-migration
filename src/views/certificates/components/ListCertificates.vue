@@ -517,6 +517,7 @@ import LabMappers          from '@/mappers/labMappers'
 
 import OrderSummaryCard    from './OrderSummaryCard.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
+import { copiarConAviso } from '@/utils/clipboard'
 
 // Componentes async (lazy-loading igual que en Vue 2)
 const DatePicker  = defineAsyncComponent(() => import('@/components/commonComponents/DatePicker.vue'))
@@ -1045,39 +1046,9 @@ function cancelarSolicitudFirma(cert) {
 }
 
 
-// Copia texto al portapapeles. navigator.clipboard solo existe en contexto
-// seguro (HTTPS/localhost); en HTTP caemos al textarea + execCommand.
-function copiarAlPortapapeles(texto) {
-  if (navigator.clipboard && window.isSecureContext) {
-    return navigator.clipboard.writeText(texto)
-  }
-  return new Promise((resolve, reject) => {
-    try {
-      const ta = document.createElement('textarea')
-      ta.value = texto
-      ta.style.position = 'fixed'
-      ta.style.left = '-9999px'
-      ta.style.top = '0'
-      document.body.appendChild(ta)
-      ta.focus()
-      ta.select()
-      const ok = document.execCommand('copy')
-      document.body.removeChild(ta)
-      ok ? resolve() : reject(new Error('execCommand copy failed'))
-    } catch (e) {
-      reject(e)
-    }
-  })
-}
-
 // Copia el link público del certificado al portapapeles con un toast breve.
 function copiarLinkCertificado(cert) {
-  const link = `https://daicomperu.com/${cert.uuid}`
-  copiarAlPortapapeles(link).then(() => {
-    Toast.fire({ timer: 1800, icon: 'success', title: 'Link copiado' })
-  }).catch(() => {
-    Toast.fire({ timer: 2200, icon: 'error', title: 'No se pudo copiar' })
-  })
+  copiarConAviso(`https://daicomperu.com/${cert.uuid}`, 'Link copiado')
 }
 
 // Clic normal en el botón de nube: abre el PDF (href). Ctrl/Cmd+clic: copia el link.

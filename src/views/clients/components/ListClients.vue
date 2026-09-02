@@ -17,7 +17,7 @@
         <v-switch
           v-model="filterNeedsReview"
           label="Solo posibles duplicados"
-          color="error"
+          color="warning"
           hide-details
           density="compact"
           @update:model-value="applyFilters"
@@ -34,7 +34,6 @@
         item-value="id"
         :hover="false"
         class="elevation-0 rounded-lg tabla-mejorada bg-surface"
-        style="border: 1px solid rgba(0,0,0,0.12);"
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
@@ -50,15 +49,28 @@
         </template>
 
         <template v-slot:item.name="{ item }">
-          <div class="d-flex align-center">
-            <span class="font-weight-bold">{{ item.name }}</span>
-            <v-chip v-if="item.needs_review" size="x-small" color="error" variant="flat" class="ml-2 font-weight-bold">
-              <v-icon start size="x-small">mdi-alert</v-icon> Revisar
-            </v-chip>
-          </div>
+          <copyable-text :texto="item.name" etiqueta="razón social" ancho="340px" class="font-weight-bold" />
+        </template>
+
+        <template v-slot:item.document="{ item }">
+          <copyable-text :texto="item.document" etiqueta="documento" />
+        </template>
+
+        <template v-slot:item.address="{ item }">
+          <copyable-text :texto="item.address" etiqueta="dirección" ancho="320px" />
         </template>
 
         <template v-slot:item.actions="{ item }">
+          <v-tooltip v-if="item.needs_review" location="bottom">
+            <template v-slot:activator="{ props }">
+              <v-btn v-bind="props" icon variant="text" color="warning" density="comfortable"
+                     :loading="revisando === item.id" @click="marcarRevisado(item)">
+                <v-icon>mdi-account-question-outline</v-icon>
+              </v-btn>
+            </template>
+            <span>Posible duplicado. Marcar como revisado</span>
+          </v-tooltip>
+
           <v-tooltip location="bottom">
             <template v-slot:activator="{ props }">
               <v-btn v-bind="props" icon variant="text" density="comfortable" @click="openEditDialog(item)">
@@ -96,6 +108,7 @@ import { useLatestRequest } from '@/composables/useLatestRequest'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import { useAppStore } from '@/stores/appStore'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
+import CopyableText from '@/components/shared/CopyableText.vue'
 
 const ClientFormDialog = defineAsyncComponent(() => import('@/views/clients/components/ClientFormDialog.vue'))
 
@@ -108,9 +121,8 @@ const headers = [
   { title: 'Razón social', key: 'name', align: 'start' },
   { title: 'Tipo Doc.', key: 'documentType_name', sortable: false },
   { title: 'N° Documento', key: 'document', sortable: false },
-  { title: 'Teléfono', key: 'phone', sortable: false },
-  { title: 'Email', key: 'email', sortable: false },
-  { title: 'Opciones', key: 'actions', sortable: false },
+  { title: 'Dirección', key: 'address', sortable: false },
+  { title: 'Opciones', key: 'actions', sortable: false, align: 'end' },
 ]
 
 const clients = ref([])
@@ -121,6 +133,7 @@ const search = ref('')
 const filterNeedsReview = ref(false)
 const dialogOpen = ref(false)
 const selectedClient = ref(null)
+const revisando = ref(null)
 
 const { begin: beginLoad, isLatest: isLatestLoad } = useLatestRequest()
 
@@ -173,6 +186,32 @@ const deleteClient = (client) => {
 const openEditDialog = (client) => {
   selectedClient.value = client
   dialogOpen.value = true
+}
+
+const marcarRevisado = (client) => {
+  Swal.fire(appStore.reviewConfirmOptions).then((result) => {
+    if (!result.isConfirmed) return
+
+    revisando.value = client.id
+    ClientDataService.setNeedsReview(client.id, false)
+      .then(() => {
+        Swal.fire(appStore.successReviewedOptions)
+        // Si el filtro de posibles duplicados esta puesto, la fila deja de
+        // pertenecer a la lista: se recarga en vez de tocarla en su lugar.
+        if (filterNeedsReview.value) {
+          retrieveAllClients()
+          return
+        }
+        const encontrado = clients.value.find(c => c.id === client.id)
+        if (encontrado) encontrado.needs_review = false
+      })
+      .catch(() => {
+        Swal.fire(appStore.errorSavedOptions)
+      })
+      .finally(() => {
+        revisando.value = null
+      })
+  })
 }
 
 const deleteClientConfirm = (client) => {

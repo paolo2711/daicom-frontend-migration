@@ -1,7 +1,7 @@
 <template>
   <v-row dense align="center">
     <!-- Buscador Local -->
-    <v-col cols="12" md="7">
+    <v-col cols="12" :md="creatable ? 5 : 7">
       <v-autocomplete
         :model-value="modelValue"
         @update:model-value="onPickLocal"
@@ -37,7 +37,7 @@
     </v-col>
 
     <!-- La Lupita (SUNAT/RENIEC) -->
-    <v-col cols="12" md="5">
+    <v-col cols="12" :md="creatable ? 4 : 5">
       <v-text-field
         v-model="documentoBuscar"
         label="Buscar RUC/DNI en SUNAT/RENIEC"
@@ -53,30 +53,42 @@
         </template>
       </v-text-field>
     </v-col>
+
+    <!-- Alta manual, para cuando no esta en la base ni en SUNAT/RENIEC -->
+    <v-col v-if="creatable" cols="12" md="3">
+      <v-btn color="primary" variant="flat" block height="40" @click="dialogAbierto = true">
+        <v-icon start>mdi-plus</v-icon> NUEVO
+      </v-btn>
+    </v-col>
+
+    <!-- Dentro de la fila a proposito: con dos nodos raiz el componente deja de
+         heredar la clase que le pasa el padre (los paneles le mandan mb-4). -->
+    <client-form-dialog v-if="creatable" v-model="dialogAbierto" @reloadListComponent="onClienteCreado" />
   </v-row>
 </template>
 
 <script setup>
-import { Toast } from '@/plugins/alerts'
-import { ref, computed, inject, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, defineAsyncComponent } from 'vue'
 import { useClientLookup } from '@/composables/useClientLookup'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import ClientDataService from '@/services/clients/clientDataService'
 import ClientMappers from '@/mappers/clientMappers'
 
+const ClientFormDialog = defineAsyncComponent(() => import('@/views/clients/components/ClientFormDialog.vue'))
+
 const props = defineProps({
   modelValue: { type: [Number, String], default: null }, // Recibe el ID vinculado
+  creatable: { type: Boolean, default: false },          // Muestra el boton de alta manual
 })
 
 const emit = defineEmits(['update:modelValue', 'client-selected'])
-const swal = inject('$swal')
 
 const documentoBuscar = ref('')
+const dialogAbierto = ref(false)
 
 // RENIEC/SUNAT y resolución contra BD (sin cambios)
 const {
-  loadingExternal, loadingResolve,
-  buscarReniec, resolverContraBaseDeDatos,
+  loadingExternal, loadingResolve, buscarYResolver,
 } = useClientLookup()
 
 // SOLUCIÓN DE RAÍZ: búsqueda local vía usePaginatedSearch, que preserva el
@@ -137,32 +149,28 @@ const onClear = () => {
   emit('update:modelValue', null)
 }
 
+// Recien creado a mano: lo sembramos en la lista y lo dejamos seleccionado, si
+// no habria que salir a buscarlo otra vez.
+const onClienteCreado = (cliente) => {
+  if (!cliente?.id) return
+  localResults.value = [cliente]
+  emit('update:modelValue', cliente.id)
+  emit('client-selected', cliente)
+}
+
 const onBuscarReniec = async () => {
   const doc = documentoBuscar.value.trim()
   if (!doc) return
 
-  try {
-    const resultadoReniec = await buscarReniec(doc)
-    const clienteResuelto = await resolverContraBaseDeDatos(resultadoReniec)
+  const clienteResuelto = await buscarYResolver(doc)
+  if (!clienteResuelto) return
 
-    // Inyectamos el cliente en la lista para que Vuetify mapee el ID al Nombre
-    localResults.value = [clienteResuelto]
+  // Inyectamos el cliente en la lista para que Vuetify mapee el ID al Nombre
+  localResults.value = [clienteResuelto]
 
-    emit('update:modelValue', clienteResuelto.id)
-    emit('client-selected', clienteResuelto)
+  emit('update:modelValue', clienteResuelto.id)
+  emit('client-selected', clienteResuelto)
 
-    documentoBuscar.value = ''
-
-    if (clienteResuelto.created && swal) {
-      Toast.fire({ timer: 3000,
-        icon: 'success',
-        title: 'Nuevo cliente registrado'
-      })
-    }
-  } catch (error) {
-    if (swal) {
-      swal.fire('No encontrado', 'El documento no existe en SUNAT/RENIEC o hubo un error.', 'warning')
-    }
-  }
+  documentoBuscar.value = ''
 }
 </script>

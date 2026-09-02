@@ -44,13 +44,8 @@
               </v-row>
 
               <v-row align="center" class="mt-2">
-                <v-col cols="12" md="9">
-                  <ClientSmartSearch v-model="certificate.client" />
-                </v-col>
-                <v-col cols="12" md="3">
-                  <v-btn color="primary" variant="flat" block height="40" @click="clientDialogOpen = true">
-                    <v-icon start>mdi-plus</v-icon> NUEVO
-                  </v-btn>
+                <v-col cols="12">
+                  <ClientSmartSearch v-model="certificate.client" creatable />
                 </v-col>
               </v-row>
 
@@ -170,7 +165,6 @@
     </v-card>
 
 
-    <client-form-dialog v-model="clientDialogOpen" />
     <lab-form-dialog v-model="labDialogOpen" @reloadListComponent="labComboRef?.reload()" />
     
     <equipo-maestro-modal ref="equipoMaestroModalRef" @reload="equipCatalogRef?.reload()" />
@@ -203,7 +197,6 @@ import { useAppStore } from '@/stores/appStore'
 import { defineAsyncComponent } from 'vue'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 
-const ClientFormDialog = defineAsyncComponent(() => import('@/views/clients/components/ClientFormDialog.vue'))
 const LabFormDialog = defineAsyncComponent(() => import('@/views/labs/components/LabFormDialog.vue'))
 
 const emit = defineEmits(['updateCertificate', 'reloadListComponent'])
@@ -217,7 +210,6 @@ const smartForm = ref(null)
 const equipoMaestroModalRef = ref(null)
 
 const dialog = ref(false)
-const clientDialogOpen = ref(false)
 const labDialogOpen = ref(false)
 const isEdit = ref(false)
 const window_step = ref(1)

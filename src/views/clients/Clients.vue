@@ -46,34 +46,23 @@
 </template>
 
 <script setup>
-import { Toast } from '@/plugins/alerts'
-import { ref, defineAsyncComponent } from 'vue'
-import Swal from 'sweetalert2'
+import { ref } from 'vue'
 import ListClients from '@/views/clients/components/ListClients.vue'
 import { useClientLookup } from '@/composables/useClientLookup'
 
 const listClients = ref(null)
 
 const documentoBuscar = ref('')
-const { loadingExternal, loadingResolve, buscarReniec, resolverContraBaseDeDatos } = useClientLookup()
+const { loadingExternal, loadingResolve, buscarYResolver } = useClientLookup()
 
 const onBuscarReniec = async () => {
   const doc = documentoBuscar.value.trim()
   if (!doc) return
 
-  try {
-    const resultadoReniec = await buscarReniec(doc)
-    const clienteResuelto = await resolverContraBaseDeDatos(resultadoReniec)
+  const clienteResuelto = await buscarYResolver(doc)
+  if (!clienteResuelto) return
 
-    documentoBuscar.value = ''
-    listClients.value?.retrieveAllClients()
-
-    Toast.fire({ timer: 3000,
-      icon: 'success',
-      title: clienteResuelto.created ? 'Nuevo cliente registrado' : 'Cliente sincronizado con RENIEC/SUNAT'
-    })
-  } catch (error) {
-    Swal.fire('No encontrado', 'El documento no existe en SUNAT/RENIEC o hubo un error.', 'warning')
-  }
+  documentoBuscar.value = ''
+  listClients.value?.retrieveAllClients()
 }
 </script>

@@ -94,9 +94,8 @@ const isLocked = computed(() => {
 })
 
 const aplicarCliente = (c) => {
-  const DOC_TYPE_LABEL = { 1: 'DNI', 2: 'RUC', 3: 'SIN DOCUMENTO' }
   props.billing.business_name = c.name
-  props.billing.doc_type = DOC_TYPE_LABEL[c.documentType] || 'SIN DOCUMENTO'
+  props.billing.doc_type = c.documentType_name || 'SIN DOCUMENTO'
   props.billing.doc_number = c.document || ''
   props.billing.address = c.address || ''
   props.billing.phone = c.phone || ''

@@ -75,6 +75,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import ClientSmartSearch from '@/components/shared/ClientSmartSearch.vue'
+import { DOCUMENT_TYPE } from '@/utils/clients/documentTypes'
 
 const props = defineProps({
   formato: Object,
@@ -84,8 +85,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:clientId'])
 
-// Tipo de documento del último cliente vinculado: 1 = DNI, 2 = RUC, 3 = Sin Documento
-// (ajustar el valor "3" si ClientSmartSearch usa otro código para "sin documento")
+// Tipo de documento del último cliente vinculado.
 const selectedDocType = ref(null)
 
 // Modo edición: si el formato ya trae un cliente vinculado (guía existente),
@@ -95,11 +95,11 @@ const selectedDocType = ref(null)
 onMounted(() => {
   if (!props.clientId) return
   if (props.cliente?.ruc && props.cliente.ruc.trim() !== '') {
-    selectedDocType.value = 2
+    selectedDocType.value = DOCUMENT_TYPE.RUC
   } else if (props.cliente?.dni && props.cliente.dni.trim() !== '') {
-    selectedDocType.value = 1
+    selectedDocType.value = DOCUMENT_TYPE.DNI
   } else {
-    selectedDocType.value = 3
+    selectedDocType.value = DOCUMENT_TYPE.SIN_DOCUMENTO
   }
 })
 
@@ -114,14 +114,14 @@ const isLocked = computed(() => !props.clientId)
 // vinculado es efectivamente una empresa (RUC), ya que la dirección está asociada
 // al RUC, no al DNI. Si es persona o sin documento, esta sección permanece
 // bloqueada y vacía porque no existe empresa asociada.
-const isEmpresaLocked = computed(() => isLocked.value || selectedDocType.value !== 2)
+const isEmpresaLocked = computed(() => isLocked.value || selectedDocType.value !== DOCUMENT_TYPE.RUC)
 
 // Alerta de "cliente incompleto": solo debe salir si el cliente vinculado NO tiene
 // RUC ni DNI registrado en BD por falta de datos, no cuando es intencionalmente
 // "Sin Documento" (tipo 3), caso en el que no aplica.
 const showIncompleteAlert = computed(() => {
   if (!props.clientId) return false
-  if (selectedDocType.value === 3) return false
+  if (selectedDocType.value === DOCUMENT_TYPE.SIN_DOCUMENTO) return false
   const hasDoc = (props.cliente?.ruc && props.cliente.ruc.trim() !== '') ||
                  (props.cliente?.dni && props.cliente.dni.trim() !== '')
   return !hasDoc
@@ -140,10 +140,10 @@ const onClientIdChanged = (id) => {
 }
 
 const aplicarCliente = (c) => {
-  if (c.documentType === 2) {
+  if (c.documentType === DOCUMENT_TYPE.RUC) {
     // Empresa (RUC) — La prioridad siempre la tiene la empresa: ese es el
     // cliente real, sin importar qué había seleccionado antes.
-    selectedDocType.value = 2
+    selectedDocType.value = DOCUMENT_TYPE.RUC
     emit('update:clientId', c.id)
     props.cliente.business_name = c.name
     props.cliente.ruc = c.document
@@ -155,12 +155,12 @@ const aplicarCliente = (c) => {
     return
   }
 
-  if (selectedDocType.value === 2) {
+  if (selectedDocType.value === DOCUMENT_TYPE.RUC) {
     // Ya hay una EMPRESA vinculada como cliente real (RUC gana).
     // Esta persona/DNI que acabas de buscar NO reemplaza al cliente real;
     // solo se usa para identificar a quien entrega el equipo físicamente.
     props.cliente.full_name = c.name
-    props.cliente.dni = c.documentType === 1 ? c.document : ''
+    props.cliente.dni = c.documentType === DOCUMENT_TYPE.DNI ? c.document : ''
     // No tocamos clientId, business_name, ruc, address ni phone.
     return
   }
@@ -170,7 +170,7 @@ const aplicarCliente = (c) => {
   selectedDocType.value = c.documentType
   emit('update:clientId', c.id)
   props.cliente.full_name = c.name
-  props.cliente.dni = c.documentType === 1 ? c.document : ''
+  props.cliente.dni = c.documentType === DOCUMENT_TYPE.DNI ? c.document : ''
   props.cliente.business_name = ''
   props.cliente.ruc = ''
   props.cliente.address = ''

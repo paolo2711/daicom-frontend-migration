@@ -9,15 +9,15 @@
     <!-- Las anteriores quedan para consultar, cerradas. -->
     <template v-if="anteriores.length">
       <v-divider class="my-3" />
-      <div v-for="v in anteriores" :key="v.version">
-        <button type="button" class="nov-vieja" @click="abierta = abierta === v.version ? null : v.version">
-          <v-icon size="14">{{ abierta === v.version ? 'mdi-chevron-down' : 'mdi-chevron-right' }}</v-icon>
-          <span class="nov-vers">v{{ v.version }}</span>
+      <div v-for="v in anteriores" :key="v.clave">
+        <button type="button" class="nov-vieja" @click="abierta = abierta === v.clave ? null : v.clave">
+          <v-icon size="14">{{ abierta === v.clave ? 'mdi-chevron-down' : 'mdi-chevron-right' }}</v-icon>
+          <span class="nov-vers">v{{ v.etiqueta }}</span>
           <span class="nov-fecha">{{ v.fecha }}</span>
         </button>
 
         <v-expand-transition>
-          <div v-show="abierta === v.version" class="nov-lista-vieja">
+          <div v-show="abierta === v.clave" class="nov-lista-vieja">
             <div v-for="(it, i) in v.items" :key="i" class="nov-item">
               <v-icon size="16" color="grey">{{ it.icon }}</v-icon>
               <span class="nov-texto nov-texto--vieja">{{ it.text }}</span>
@@ -33,9 +33,38 @@
 import { ref, computed } from 'vue'
 import { CHANGELOG } from '@/data/changelog'
 
-// El changelog viene ordenado de mas nuevo a mas viejo.
-const actual = computed(() => CHANGELOG[0])
-const anteriores = computed(() => CHANGELOG.slice(1))
+// Un release y todos sus parches se muestran juntos: 3.7.1.0 a 3.7.1.5 son un
+// solo bloque "v3.7.1". Si no, un dia de seis despliegues deja seis
+// desplegables de un renglon cada uno.
+//
+// El agrupado se hace aca y no al escribir el archivo: asi changelog.js lleva
+// una entrada por despliegue con su numero exacto, sin que nadie tenga que
+// acordarse de meterla dentro de otra.
+const grupos = computed(() => {
+  const salida = []
+  // El changelog viene ordenado de mas nuevo a mas viejo, asi que la primera
+  // entrada de cada grupo es la ultima que salio: esa da la etiqueta y la fecha.
+  // Se muestra el numero completo y no la clave recortada, si no seis parches
+  // sobre la 3.7.1 se verian como "v3.7.1" y pareceria que no cambio nada.
+  for (const entrada of CHANGELOG) {
+    const clave = entrada.version.split('.').slice(0, 3).join('.')
+    const ultimo = salida[salida.length - 1]
+    if (ultimo && ultimo.clave === clave) {
+      ultimo.items.push(...entrada.items)
+    } else {
+      salida.push({
+        clave,
+        etiqueta: entrada.version,
+        fecha: entrada.fecha,
+        items: [...entrada.items],
+      })
+    }
+  }
+  return salida
+})
+
+const actual = computed(() => grupos.value[0] ?? { items: [] })
+const anteriores = computed(() => grupos.value.slice(1))
 
 const abierta = ref(null)
 </script>

@@ -1,6 +1,7 @@
 // src/services/external/apiPeruService.js
 import axios from "axios";
 import authHeader from "@/services/auth-header";
+import { DOCUMENT_TYPE, DOCUMENT_LENGTH } from "@/utils/clients/documentTypes";
 
 /**
  * Por dentro, ya NO llama directo a api.apis.net.pe vía corsproxy.io (eso
@@ -11,7 +12,7 @@ import authHeader from "@/services/auth-header";
  */
 class ApiPeruService {
     async consultaDNI(dni) {
-        if (!dni || dni.length !== 8) return "";
+        if (!dni || dni.length !== DOCUMENT_LENGTH[DOCUMENT_TYPE.DNI]) return "";
 
         try {
             const response = await axios.get(`clients/lookup/dni/${dni}`, {
@@ -25,7 +26,7 @@ class ApiPeruService {
     }
 
     async consultaRUC(ruc) {
-        if (!ruc || ruc.length !== 11) return { compania: "", direccion: "" };
+        if (!ruc || ruc.length !== DOCUMENT_LENGTH[DOCUMENT_TYPE.RUC]) return { compania: "", direccion: "" };
 
         try {
             const response = await axios.get(`clients/lookup/ruc/${ruc}`, {

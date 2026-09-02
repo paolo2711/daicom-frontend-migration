@@ -1,15 +1,29 @@
-// Novedades que se muestran en Inicio. La primera entrada es la mas nueva; las
-// de abajo quedan para consultar.
+// Novedades que se muestran en Inicio. La primera entrada es la mas nueva.
 //
-// Modulo o arreglo grande: entrada nueva ARRIBA, y esa etiqueta ya no se toca.
-// Arreglo chico: se le suma un item a la entrada de patches de arriba y se le
-// actualiza el numero. Nunca una entrada por cada fix, si no queda una lista de
-// tarjetas de un renglon que nadie despliega.
+// Una entrada por despliegue, arriba, con su numero exacto. No se renombra ni
+// se toca una entrada vieja: Novedades.vue agrupa por los tres primeros
+// segmentos, asi que 3.7.1.0 a 3.7.1.5 se ven como un bloque, rotulado con la
+// mas nueva del grupo (v3.7.1.5).
+//
+// Aca va solo lo que el usuario nota. El detalle tecnico va a _docs/cambios.md.
 //
 // APP_VERSION en api/settings.py sube en cada despliegue, sin excepcion.
 //
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
+  {
+    version: '3.7.1.0',
+    fecha: '2026-09-02',
+    items: [
+      { icon: 'mdi-content-copy', text: 'En Clientes se puede copiar la razon social, el documento y la direccion con un boton, sin seleccionar el texto a mano.' },
+      { icon: 'mdi-map-marker', text: 'La tabla de Clientes muestra la direccion. Antes habia que abrir el cliente para verla.' },
+      { icon: 'mdi-office-building-marker', text: 'La direccion que trae SUNAT ya no pierde el interior, la oficina ni el piso: solo se saca la referencia de como llegar.' },
+      { icon: 'mdi-account-multiple-remove', text: 'Buscar un cliente por RUC ya no crea uno repetido cuando en el sistema estaba con el nombre largo y SUNAT devuelve el corto.' },
+      { icon: 'mdi-bell-check', text: 'Al buscar por documento el aviso dice que paso: si se creo, si se actualizo uno que ya estaba, o si hay otros con nombre parecido y conviene revisarlo.' },
+      { icon: 'mdi-check-decagram', text: 'La marca de revisar de un cliente se saca desde la misma tabla, con un boton en la fila.' },
+      { icon: 'mdi-account-plus', text: 'Al crear un cliente desde una orden o un certificado queda seleccionado solo, sin tener que buscarlo despues.' },
+    ],
+  },
   {
     version: '3.7.0.1',
     fecha: '2026-08-21',

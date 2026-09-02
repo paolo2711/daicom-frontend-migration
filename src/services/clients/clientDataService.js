@@ -37,6 +37,12 @@ class ClientDataService {
         });
     }
 
+    setNeedsReview(id, needs_review) {
+        return axios.patch(`clients/${id}`, { needs_review }, {
+            headers: authHeader()
+        });
+    }
+
     delete(id) {
         return axios.delete(`clients/${id}`, {
             headers: authHeader()

@@ -10,6 +10,9 @@ export default {
       phone: element.phone,
       email: element.email,
       needs_review: element.needs_review,
+      // Solo vienen en la respuesta de /clients/resolve.
+      created: element.created,
+      ambiguous: element.ambiguous,
     };
   },
   putMap(element) {

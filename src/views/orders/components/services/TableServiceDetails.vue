@@ -143,6 +143,7 @@ import { Toast } from '@/plugins/alerts'
 import { useTheme } from 'vuetify'
 import { computed as vueComputed } from 'vue'
 import CertificateDataService from "@/services/certificates/certificateDataService";
+import { copiarConAviso } from "@/utils/clipboard";
 
 export default {
   name: "TableServiceDetails",
@@ -187,41 +188,13 @@ export default {
     getValidCloudUrl(cert) {
       return this.hasValidCloud(cert) ? `https://daicomperu.com/${cert.uuid || cert.correlative}` : undefined;
     },
-    // Copia texto al portapapeles. navigator.clipboard solo existe en contexto
-    // seguro (HTTPS/localhost); en HTTP caemos al textarea + execCommand.
-    copiarAlPortapapeles(texto) {
-      if (navigator.clipboard && window.isSecureContext) {
-        return navigator.clipboard.writeText(texto);
-      }
-      return new Promise((resolve, reject) => {
-        try {
-          const ta = document.createElement('textarea');
-          ta.value = texto;
-          ta.style.position = 'fixed';
-          ta.style.left = '-9999px';
-          ta.style.top = '0';
-          document.body.appendChild(ta);
-          ta.focus();
-          ta.select();
-          const ok = document.execCommand('copy');
-          document.body.removeChild(ta);
-          ok ? resolve() : reject(new Error('execCommand copy failed'));
-        } catch (e) {
-          reject(e);
-        }
-      });
-    },
     // Clic normal en el botón de nube: abre el PDF (href). Ctrl/Cmd+clic: copia el link.
     onNubeClick(event, cert) {
       if (event.ctrlKey || event.metaKey) {
         event.preventDefault();
         const link = this.getValidCloudUrl(cert);
         if (!link) return;
-        this.copiarAlPortapapeles(link).then(() => {
-          Toast.fire({ timer: 1800, icon: 'success', title: 'Link copiado' });
-        }).catch(() => {
-          Toast.fire({ timer: 2200, icon: 'error', title: 'No se pudo copiar' });
-        });
+        copiarConAviso(link, 'Link copiado');
       }
     },
     irACertificado(cert) {

@@ -23,37 +23,25 @@
 
         <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
 
-        <v-badge
+        <filter-pill
           v-if="ver_bandeja_firmas"
-          :model-value="appStore.pendingSignaturesCount > 0"
-          :content="appStore.pendingSignaturesCount"
-          color="error"
-          offset-x="4"
-          offset-y="4"
-        >
-          <v-chip
-            :color="(appStore.pendingSignaturesCount > 0 && !filtro_firma_pendiente) ? 'grey-darken-1' : (filtro_firma_pendiente ? 'primary' : 'grey-darken-1')"
-           
-            
-            class="font-weight-bold cursor-pointer transition-swing"
-            @click="toggleFiltroFirma"
-          >
-            <v-icon start size="small">mdi-draw</v-icon>
-            Pendientes de Firma
-            <v-tooltip activator="parent" location="top">Filtrar certificados que requieren atención</v-tooltip>
-          </v-chip>
-        </v-badge>
+          :active="filtro_firma_pendiente"
+          :count="appStore.pendingSignaturesCount"
+          color="primary"
+          badge-color="error"
+          icon="mdi-draw"
+          tooltip="Filtrar certificados que requieren atención"
+          @click="toggleFiltroFirma"
+        >Pendientes de Firma</filter-pill>
 
-        <v-chip
-          :color="filtro_excel_pendiente ? 'orange-darken-2' : 'grey-darken-1'"
+        <filter-pill
+          :active="filtro_excel_pendiente"
           :variant="filtro_excel_pendiente ? 'elevated' : 'tonal'"
-          class="font-weight-bold cursor-pointer transition-swing"
+          color="orange-darken-2"
+          icon="mdi-file-excel-outline"
+          tooltip="Filtrar certificados que aún no tienen archivo base"
           @click="toggleFiltroExcel"
-        >
-          <v-icon start size="small">mdi-file-excel-outline</v-icon>
-          Pendientes de Excel
-          <v-tooltip activator="parent" location="top">Filtrar certificados que aún no tienen archivo base</v-tooltip>
-        </v-chip>
+        >Pendientes de Excel</filter-pill>
 
         <!-- ── TEMPORAL Antapacay — borrar esta píldora al terminar contrato (~ago 2026) ── -->
         <v-chip
@@ -86,40 +74,16 @@
           <v-row dense>
             
             <v-col cols="12" md="3">
-              <v-menu v-model="menu_fechas" :close-on-content-click="false" location="bottom">
-                <template v-slot:activator="{ props }">
-                  <v-text-field
-                    v-bind="props"
-                    :model-value="textoRangoFechas"
-                    label="Rango de Emisión"
-                    prepend-inner-icon="mdi-calendar-range"
-                    variant="outlined"
-                    density="compact"
-                    readonly
-                    hide-details="auto"
-                    class="cursor-pointer"
-                  ></v-text-field>
-                </template>
-                
-                <v-card class="pa-4 elevation-4 border rounded-lg" min-width="320">
-                  <div class="text-caption font-weight-bold text-medium-emphasis mb-3">Seleccione el periodo:</div>
-                  <v-row dense>
-                    <v-col cols="12" sm="6">
-                      <date-picker :date="emission_date__gt" label="Desde:" @setPickedDate="(value) => emission_date__gt = value" />
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <date-picker :date="emission_date__lt" label="Hasta:" @setPickedDate="(value) => emission_date__lt = value" />
-                    </v-col>
-                  </v-row>
-                  <div class="d-flex justify-end mt-4">
-                    <v-btn color="primary" variant="tonal" size="small" class="font-weight-bold" @click="aplicarFiltroFechas">Aplicar</v-btn>
-                  </div>
-                </v-card>
-              </v-menu>
+              <date-range-filter
+                v-model:desde="emission_date__gt"
+                v-model:hasta="emission_date__lt"
+                label="Rango de Emisión"
+                @apply="aplicarFiltroFechas"
+              />
             </v-col>
 
             <v-col cols="12" md="3">
-              <v-autocomplete v-model="client_id" v-model:search="search_client" hide-details="auto" density="compact" :loading="loading_clients" prepend-inner-icon="mdi-account-group" :items="clients" item-title="name" item-value="id" placeholder="Buscar cliente..." clearable variant="outlined" label="Cliente" no-filter />
+              <client-select v-model="client_id" />
             </v-col>
 
             <v-col cols="12" md="3">
@@ -250,40 +214,84 @@
         </template>
 
         <template v-slot:item.uploaded_xls="{ item }">
-          <v-tooltip location="bottom">
-            <template v-slot:activator="{ props }">
-              <!-- El link sale del back ya armado. Los certificados viejos tienen
-                   el Excel marcado pero sin ruta, y antes se les armaba /media/1
-                   que no existe: ahora sin url, no hay boton de ver. -->
-              <v-btn
-                v-if="item.uploaded_xls_url"
-                v-bind="props" icon variant="text" density="comfortable" color="primary"
-                :href="item.uploaded_xls_url" target="_blank"
-                :disabled="item.status === 5" @click.stop
-              >
-                <v-icon>mdi-file-pdf-box</v-icon>
-              </v-btn>
-              <v-btn
-                v-else
-                v-bind="props" icon variant="text" density="comfortable" color="grey"
-                :disabled="item.status === 5 || !permiso_elaborar" @click.stop="openUploadDialog(item)"
-              >
-                <v-icon>mdi-file-pdf-box</v-icon>
-              </v-btn>
-            </template>
-            <span>{{ item.uploaded_xls_url ? 'Ver PDF Base Local' : 'Subir Excel' }}</span>
-          </v-tooltip>
+          <div class="d-flex align-center justify-center">
+            <v-progress-circular v-if="estadoSubida(item.id, 'sheet') === 'subiendo'"
+                                 indeterminate color="primary" size="24" width="3" />
+
+            <!-- El manager solo deja descartar un Excel fallido, porque reintentar
+                 el mismo archivo vuelve a fallar. Lo que resuelve es subir otro,
+                 y eso se hace desde aca. -->
+            <v-tooltip v-else-if="estadoSubida(item.id, 'sheet') === 'fallo'" location="bottom">
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  v-bind="props" icon variant="text" density="comfortable" color="error"
+                  :disabled="!puedeSubirExcel(item)" @click.stop="openUploadDialog(item)"
+                >
+                  <v-icon>mdi-file-alert</v-icon>
+                </v-btn>
+              </template>
+              <span>Fallo la subida. Subir otro Excel</span>
+            </v-tooltip>
+
+            <v-tooltip v-else location="bottom">
+              <template v-slot:activator="{ props }">
+                <!-- El link sale del back ya armado. Los certificados viejos tienen
+                     el Excel marcado pero sin ruta, y antes se les armaba /media/1
+                     que no existe: ahora sin url, no hay boton de ver. -->
+                <v-btn
+                  v-if="item.uploaded_xls_url"
+                  v-bind="props" icon variant="text" density="comfortable" color="primary"
+                  :href="item.uploaded_xls_url" target="_blank"
+                  :disabled="item.status === 5" @click.stop
+                >
+                  <v-icon>mdi-file-pdf-box</v-icon>
+                </v-btn>
+                <!-- Termino pero la fila todavia no trae la ruta: se ve listo, sin link. -->
+                <v-btn
+                  v-else-if="estadoSubida(item.id, 'sheet') === 'logrado'"
+                  v-bind="props" icon variant="text" density="comfortable" color="primary" disabled
+                >
+                  <v-icon>mdi-file-pdf-box</v-icon>
+                </v-btn>
+                <v-btn
+                  v-else
+                  v-bind="props" icon variant="text" density="comfortable" color="grey"
+                  :disabled="!puedeSubirExcel(item)" @click.stop="openUploadDialog(item)"
+                >
+                  <v-icon>mdi-file-pdf-box</v-icon>
+                </v-btn>
+              </template>
+              <span v-if="item.uploaded_xls_url">Ver PDF Base Local</span>
+              <span v-else-if="estadoSubida(item.id, 'sheet') === 'logrado'">Listo, preparando el enlace</span>
+              <span v-else>Subir Excel</span>
+            </v-tooltip>
+          </div>
         </template>
 
         <template v-slot:item.uploaded="{ item }">
           <div class="d-flex align-center justify-center">
-            <v-progress-circular v-if="isCertUploading(item.id)" indeterminate color="primary" size="24" width="3"></v-progress-circular>
+            <v-progress-circular v-if="estadoSubida(item.id, 'qr') === 'subiendo'"
+                                 indeterminate color="primary" size="24" width="3"></v-progress-circular>
+
+            <v-tooltip v-else-if="estadoSubida(item.id, 'qr') === 'fallo'" location="bottom">
+              <template v-slot:activator="{ props }">
+                <v-btn
+                  v-bind="props" icon variant="text" density="comfortable" color="error"
+                  :disabled="!puedeGenerarQr(item)"
+                  @click.stop="openQRDialog(item)"
+                >
+                  <v-icon>mdi-cloud-alert</v-icon>
+                </v-btn>
+              </template>
+              <span>Fallo. Volver a generar</span>
+            </v-tooltip>
+
             <template v-else>
-              <v-tooltip location="bottom" v-if="item.uploaded">
+              <v-tooltip location="bottom" v-if="item.uploaded || estadoSubida(item.id, 'qr') === 'logrado'">
                 <template v-slot:activator="{ props }">
                   <v-btn
                     v-bind="props" icon variant="text" density="comfortable" color="primary"
-                    :href="`https://daicomperu.com/${item.uuid}`" target="_blank"
+                    :href="linkNube(item)" target="_blank"
                     :disabled="item.status === 5" @click.stop="onNubeClick($event, item)"
                   >
                     <v-icon>mdi-cloud-check</v-icon>
@@ -291,12 +299,12 @@
                 </template>
                 <span>Ver PDF en Nube Pública<br><small>Ctrl+clic: copiar link</small></span>
               </v-tooltip>
-              
+
               <v-tooltip location="bottom" v-else>
                 <template v-slot:activator="{ props }">
                   <v-btn
                     v-bind="props" icon variant="text" density="comfortable" color="grey"
-                    :disabled="!(item.uploaded_xls && item.uploaded_xls !== '0' && item.uploaded_xls !== 'False') || item.status === 5 || !permiso_qr"
+                    :disabled="!puedeGenerarQr(item)"
                     @click.stop="openQRDialog(item)"
                   >
                     <v-badge :model-value="item.signature_requested === true" color="warning" dot offset-x="2" offset-y="2">
@@ -415,11 +423,7 @@
     
     
     
-    <certificate-modal
-      ref="certificateModal"
-      @reloadListComponent="retrieveAllCertificates"
-      @updateCertificate="updateSingleCertificateInList"
-    />
+    <certificate-modal ref="certificateModal" />
 
     <batch-action-modal
       ref="batchActionModalRef"
@@ -449,14 +453,14 @@
           <v-list-item-title class="font-weight-medium text-body-2">Copiar link</v-list-item-title>
         </v-list-item>
 
-        <v-list-item v-if="permiso_elaborar && contextMenu.item.status !== 5" @click="openUploadDialog(contextMenu.item)">
+        <v-list-item v-if="puedeSubirExcel(contextMenu.item)" @click="openUploadDialog(contextMenu.item)">
           <template v-slot:prepend><v-icon size="small">mdi-file-excel</v-icon></template>
           <v-list-item-title class="font-weight-medium text-body-2">
-            {{ (contextMenu.item.uploaded_xls && contextMenu.item.uploaded_xls !== '0' && contextMenu.item.uploaded_xls !== 'False') ? 'Reemplazar Excel' : 'Subir Excel' }}
+            {{ tieneExcelBase(contextMenu.item) ? 'Reemplazar Excel' : 'Subir Excel' }}
           </v-list-item-title>
         </v-list-item>
 
-        <v-list-item v-if="permiso_solicitar_firma && contextMenu.item.status !== 5 && (contextMenu.item.uploaded_xls && contextMenu.item.uploaded_xls !== '0' && contextMenu.item.uploaded_xls !== 'False')" @click="contextMenu.item.signature_requested ? cancelarSolicitudFirma(contextMenu.item) : solicitarFirmaIndividual(contextMenu.item)">
+        <v-list-item v-if="permiso_solicitar_firma && contextMenu.item.status !== 5 && tieneExcelBase(contextMenu.item)" @click="contextMenu.item.signature_requested ? cancelarSolicitudFirma(contextMenu.item) : solicitarFirmaIndividual(contextMenu.item)">
           <template v-slot:prepend>
             <v-icon size="small">
               {{ contextMenu.item.signature_requested ? 'mdi-bell-cancel-outline' : 'mdi-bell-ring' }}
@@ -467,7 +471,7 @@
           </v-list-item-title>
         </v-list-item>
 
-        <v-list-item v-if="permiso_qr && contextMenu.item.status !== 5 && (contextMenu.item.uploaded_xls && contextMenu.item.uploaded_xls !== '0' && contextMenu.item.uploaded_xls !== 'False')" @click="openQRDialog(contextMenu.item)">
+        <v-list-item v-if="puedeGenerarQr(contextMenu.item)" @click="openQRDialog(contextMenu.item)">
           <template v-slot:prepend><v-icon size="small">{{ contextMenu.item.uploaded ? 'mdi-refresh' : 'mdi-qrcode-scan' }}</v-icon></template>
           <v-list-item-title class="font-weight-medium text-body-2">
             {{ contextMenu.item.uploaded ? 'Regenerar QR' : 'Generar QR y Firmar' }}
@@ -507,20 +511,22 @@ import SelectionBar         from '@/components/commonComponents/SelectionBar.vue
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { useUploadState }   from '@/composables/useUploadState'
 import OrderDataService    from '@/services/certificates/orderDataService.js'
 import CertificateMappers  from '@/mappers/certificateMappers'
 import CertificateModal    from '@/views/certificates/components/CertificateModal.vue'
-import ClientDataService   from '@/services/clients/clientDataService'
-import ClientMappers       from '@/mappers/clientMappers'
 import LabDataService      from '@/services/labs/labDataService'
 import LabMappers          from '@/mappers/labMappers'
 
 import OrderSummaryCard    from './OrderSummaryCard.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
+import ClientSelect        from '@/components/shared/ClientSelect.vue'
+import { tieneExcelBase }  from '@/utils/certificates/excelBase'
+import FilterPill          from '@/components/shared/FilterPill.vue'
+import DateRangeFilter     from '@/components/shared/DateRangeFilter.vue'
 import { copiarConAviso } from '@/utils/clipboard'
 
 // Componentes async (lazy-loading igual que en Vue 2)
-const DatePicker  = defineAsyncComponent(() => import('@/components/commonComponents/DatePicker.vue'))
 // carga diferida de LoadSheet movida a BatchActionModal
 const BatchActionModal = defineAsyncComponent(() => import('./BatchActionModal.vue'))
 
@@ -529,6 +535,7 @@ const router = useRouter()
 const route  = useRoute()
 
 const appStore = useAppStore()
+const { tareaDe, estadoSubida, confirmarFila } = useUploadState()
 
 // Acceso a $swal (registrado globalmente con vue-sweetalert2)
 const { appContext } = getCurrentInstance()
@@ -551,7 +558,6 @@ const filtro_firma_pendiente   = ref(false) // Estado del Smart Chip
 const filtro_excel_pendiente   = ref(false) // Estado del Smart Chip Excel
 const filtro_antapacay         = ref(false) // TEMPORAL Antapacay — borrar al terminar contrato (~ago 2026)
 const mostrar_filtros_avanzados = ref(false) // Toggle de la UI
-const menu_fechas              = ref(false) // Estado del menú flotante de fechas
 
 // ─── Filtros de fecha ─────────────────────────────────────────────────────────
 const emission_date__gt = ref((() => {
@@ -564,12 +570,6 @@ const emission_date__lt = ref(
     .toISOString().substring(0, 10)
 )
 
-const textoRangoFechas = computed(() => {
-  if (!emission_date__gt.value && !emission_date__lt.value) return 'Cualquier fecha'
-  if (emission_date__gt.value && !emission_date__lt.value)  return `Desde el ${emission_date__gt.value}`
-  if (!emission_date__gt.value && emission_date__lt.value)  return `Hasta el ${emission_date__lt.value}`
-  return `${emission_date__gt.value} al ${emission_date__lt.value}`
-})
 
 // ─── Laboratorios ─────────────────────────────────────────────────────────────
 const lab_id = ref(null)
@@ -587,17 +587,6 @@ const {
 
 // ─── Clientes ─────────────────────────────────────────────────────────────────
 const client_id = ref(null)
-
-const { 
-  items: clients, 
-  loading: loading_clients, 
-  searchQuery: search_client, 
-  retrieveData: retrieveClientes 
-} = usePaginatedSearch(
-  (page, size, query) => ClientDataService.getFiltered(page, size, query),
-  ClientMappers.getMap,
-  () => client_id.value
-)
 
 // ─── Tipo de certificado ──────────────────────────────────────────────────────
 const certificate_type  = ref(null)
@@ -620,6 +609,10 @@ const permiso_resumen         = ref(false)
 const permiso_anular          = ref(false)
 const permiso_solicitar_firma = ref(false)
 const permiso_elaborar        = ref(false)  // 15: subir Excel base (metrólogo)
+
+// Las mismas reglas se pedian en los botones de la fila y en el menu contextual.
+const puedeSubirExcel = (item) => item.status !== 5 && permiso_elaborar.value
+const puedeGenerarQr  = (item) => tieneExcelBase(item) && item.status !== 5 && permiso_qr.value
 //permisos pildora
 const ver_bandeja_firmas = computed(() => {
   return is_admin.value || user_permissions.value.includes(1001) || user_permissions.value.includes(1005)
@@ -659,10 +652,11 @@ function getRowProps ({ item }) {
     class: (esResonancia || esOpcionesAbiertas) ? 'resonancia-activa' : ''
   }
 }
-//funcio qr
-function isCertUploading(certId) {
-  const task = appStore.uploadTasks.find(t => String(t.id) === String(certId) && t.type === 'qr')
-  return task && ['generating', 'uploading', 'retrying'].includes(task.status)
+
+// El uuid puede venir de la tarea antes que la fila se actualice.
+function linkNube(item) {
+  const uuid = item.uuid || tareaDe(item.id, 'qr')?.uuid
+  return uuid ? `https://daicomperu.com/${uuid}` : ''
 }
 
 // Guard de secuencia: si dos cargas se solapan, solo se aplica la mas reciente
@@ -734,7 +728,6 @@ onMounted(() => {
     retrieveAllCertificates()
   }
 
-  retrieveClientes()
   retrieveLabs()
 
   window.addEventListener('wss-reload-certificates', retrieveAllCertificates)
@@ -774,7 +767,6 @@ function toggleFiltroAntapacay () {
 }
 
 function aplicarFiltroFechas () {
-  menu_fechas.value = false // Cierra el menú desplegable
   options.value.page = 1    // Reinicia la paginación a la página 1
   retrieveAllCertificates() // Dispara 1 sola búsqueda limpia al backend
 }
@@ -803,7 +795,6 @@ function getTipoAbreviado (tipoOriginal) {
 }
 
 // ---  SEMAFORO INTELIGENTE (FINANCIERO + OPERATIVO) ---
-const tieneExcelBase = (item) => item.uploaded_xls && item.uploaded_xls !== '0' && item.uploaded_xls !== 'False'
 
 const getSemaforoColor = (item) => {
   if (item.order_status === 4) return 'grey-darken-3' // Anulada
@@ -932,6 +923,8 @@ function retrieveAllCertificates () {
     if (!isLatestCertLoad(token)) return   // llegó una carga más nueva → no pisar
     certificates.value = response.data.results.map(cert => CertificateMappers.getMap(cert))
     total_certificates.value = response.data.count
+    // La lista viene del server, asi que manda ella sobre cualquier tarea terminada.
+    certificates.value.forEach(c => confirmarFila(c.id))
   }).catch((e) => {
     if (e.response?.status === 401) {
       localStorage.clear()
@@ -950,6 +943,9 @@ function fetchAndInjectSingleCert (event) {
 }
 
 function updateSingleCertificateInList (updatedCert) {
+  // Llego el dato del server: la tarea ya no tiene que suplir a la fila.
+  confirmarFila(updatedCert.id)
+
   const index = certificates.value.findIndex(c => c.id === updatedCert.id)
   if (index !== -1) {
     // Al tener el mapper actualizado, obtenemos el objeto limpio.
@@ -1048,7 +1044,8 @@ function cancelarSolicitudFirma(cert) {
 
 // Copia el link público del certificado al portapapeles con un toast breve.
 function copiarLinkCertificado(cert) {
-  copiarConAviso(`https://daicomperu.com/${cert.uuid}`, 'Link copiado')
+  const link = linkNube(cert)
+  if (link) copiarConAviso(link, 'Link copiado')
 }
 
 // Clic normal en el botón de nube: abre el PDF (href). Ctrl/Cmd+clic: copia el link.

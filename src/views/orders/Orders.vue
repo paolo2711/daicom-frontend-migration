@@ -25,7 +25,7 @@
 
         <router-view />
 
-        <add-order ref="modalAddOrder" @reloadListComponent="recargarTablaManejada" />
+        <add-order ref="modalAddOrder" />
       </v-col>
     </v-row>
   </v-container>
@@ -38,13 +38,4 @@ import AddOrder from '@/views/orders/components/AddOrder.vue'
 
 const route = useRoute()
 const modalAddOrder = ref(null)
-
-// Como ahora Servicio y Alquiler son rutas/componentes distintos (no viven los
-// dos montados a la vez con v-window), no hay ref directo al hijo activo.
-// Reusamos el mismo canal de eventos que ya usa el WebSocket para refrescar
-// la tabla — el que esté montado lo escucha, el otro simplemente no existe.
-function recargarTablaManejada() {
-  window.dispatchEvent(new CustomEvent('wss-reload-orders-service'))
-  window.dispatchEvent(new CustomEvent('wss-reload-orders-rental'))
-}
 </script>

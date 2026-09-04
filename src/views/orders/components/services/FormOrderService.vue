@@ -117,7 +117,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted, getCurrentInstance } from 'vue'
+import { ref, computed, watch, onMounted, getCurrentInstance } from 'vue'
 import { useTheme } from 'vuetify'
 import LabDataService from '@/services/labs/labDataService'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
@@ -148,11 +148,6 @@ const cert_types = [
 ]
 
 // Filtro personalizado para Vuetify: ignora tildes en el frontend para no bloquear la data de MySQL
-const filtroSinTildes = (itemTitle, queryText, item) => {
-  if (!queryText) return true
-  const normalizar = (texto) => (texto || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  return normalizar(itemTitle).includes(normalizar(queryText))
-}
 
 // Comboboxes server-side
 const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)

@@ -76,34 +76,34 @@
                     <template v-slot:append>
                       <div style="width: 72px; height: 36px; display: flex; justify-content: flex-end; align-items: center;">
 
+                        <!-- Una fila fallida se queda hasta que alguien la resuelve, asi
+                             que sus botones se ven siempre. Esconderlos tras el hover
+                             tiene sentido mientras la subida corre, no despues. -->
                         <template v-if="task.status === 'error' || task.status === 'cloud_error'">
-                          <template v-if="isHovering">
-                            <div class="d-flex align-center justify-end" style="gap: 4px;">
-                              
-                              <v-tooltip v-if="task.is_cloud_error && task.offline_url" location="bottom" z-index="100000">
-                                <template v-slot:activator="{ props: tooltipProps }">
-                                  <v-btn v-bind="tooltipProps" icon variant="text" size="small" color="info" @click.stop="downloadOfflinePdf(task)">
-                                    <v-icon>mdi-download</v-icon>
-                                  </v-btn>
-                                </template>
-                                <span>Descargar Rescate</span>
-                              </v-tooltip>
+                          <div class="d-flex align-center justify-end" style="gap: 4px;">
 
-                              <v-tooltip location="bottom" z-index="100000">
-                                <template v-slot:activator="{ props: tooltipProps }">
-                                  <v-btn v-if="task.type === 'sheet' || task.source === 'manual'" v-bind="tooltipProps" icon variant="text" size="small" color="grey" @click.stop="discardTask(task)">
-                                    <v-icon>mdi-close</v-icon>
-                                  </v-btn>
-                                  <v-btn v-else v-bind="tooltipProps" icon variant="text" size="small" color="error" @click.stop="retryQr(task)">
-                                    <v-icon>mdi-refresh</v-icon>
-                                  </v-btn>
-                                </template>
-                                <span>{{ (task.type === 'sheet' || task.source === 'manual') ? 'Descartar' : 'Reintentar' }}</span>
-                              </v-tooltip>
+                            <v-tooltip v-if="task.is_cloud_error && task.offline_url" location="bottom" z-index="100000">
+                              <template v-slot:activator="{ props: tooltipProps }">
+                                <v-btn v-bind="tooltipProps" icon variant="text" size="small" color="info" @click.stop="downloadOfflinePdf(task)">
+                                  <v-icon>mdi-download</v-icon>
+                                </v-btn>
+                              </template>
+                              <span>Descargar Rescate</span>
+                            </v-tooltip>
 
-                            </div>
-                          </template>
-                          <v-icon v-else color="error" size="24">mdi-alert-circle</v-icon>
+                            <v-tooltip location="bottom" z-index="100000">
+                              <template v-slot:activator="{ props: tooltipProps }">
+                                <v-btn v-if="task.type === 'sheet' || task.source === 'manual'" v-bind="tooltipProps" icon variant="text" size="small" color="grey" @click.stop="discardTask(task)">
+                                  <v-icon>mdi-close</v-icon>
+                                </v-btn>
+                                <v-btn v-else v-bind="tooltipProps" icon variant="text" size="small" color="error" @click.stop="retryQr(task)">
+                                  <v-icon>mdi-refresh</v-icon>
+                                </v-btn>
+                              </template>
+                              <span>{{ (task.type === 'sheet' || task.source === 'manual') ? 'Descartar' : 'Reintentar' }}</span>
+                            </v-tooltip>
+
+                          </div>
                         </template>
 
                         <template v-else-if="task.status === 'canceled'">

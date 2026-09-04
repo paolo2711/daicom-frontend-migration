@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, getCurrentInstance } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import Swal from 'sweetalert2'
 import ClientDataService from '@/services/clients/clientDataService'
 import ClientRules from '@/validators/rules/clientRules'

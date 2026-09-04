@@ -40,7 +40,7 @@
 import { computed } from 'vue'
 import { useTheme } from 'vuetify'
 
-const props = defineProps({
+defineProps({
   loading: { type: Boolean, required: true },
   isEmpty: { type: Boolean, required: true },
   text:    { type: String,  default: 'Cargando registros...' },

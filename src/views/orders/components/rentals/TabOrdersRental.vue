@@ -42,41 +42,23 @@
 
         <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
 
-        <v-badge
-          :model-value="appStore.pendingPaymentsRentalCount > 0"
-          :content="appStore.pendingPaymentsRentalCount"
+        <filter-pill
+          :active="filtro_falta_pago"
+          :count="appStore.pendingPaymentsRentalCount"
           color="error"
-          offset-x="4"
-          offset-y="4"
-        >
-          <v-chip
-            :color="(appStore.pendingPaymentsRentalCount > 0 && !filtro_falta_pago) ? 'grey-darken-1' : (filtro_falta_pago ? 'error' : 'grey-darken-1')"
-            class="font-weight-bold cursor-pointer transition-swing"
-            @click="toggleFiltroPago"
-          >
-            <v-icon start size="small">mdi-cash-remove</v-icon>
-            Falta Pago
-            <v-tooltip activator="parent" location="top">Filtrar alquileres facturados sin abonos</v-tooltip>
-          </v-chip>
-        </v-badge>
+          icon="mdi-cash-remove"
+          tooltip="Filtrar alquileres facturados sin abonos"
+          @click="toggleFiltroPago"
+        >Falta Pago</filter-pill>
 
-        <v-badge
-          :model-value="appStore.pendingInvoicesRentalCount > 0"
-          :content="appStore.pendingInvoicesRentalCount"
+        <filter-pill
+          :active="filtro_sin_factura"
+          :count="appStore.pendingInvoicesRentalCount"
           color="warning"
-          offset-x="4"
-          offset-y="4"
-        >
-          <v-chip
-            :color="(appStore.pendingInvoicesRentalCount > 0 && !filtro_sin_factura) ? 'grey-darken-1' : (filtro_sin_factura ? 'warning' : 'grey-darken-1')"
-            class="font-weight-bold cursor-pointer transition-swing"
-            @click="toggleFiltroFactura"
-          >
-            <v-icon start size="small">mdi-file-document-remove-outline</v-icon>
-            Sin Emitir Factura
-            <v-tooltip activator="parent" location="top">Filtrar alquileres abiertos pendientes de facturar</v-tooltip>
-          </v-chip>
-        </v-badge>
+          icon="mdi-file-document-remove-outline"
+          tooltip="Filtrar alquileres abiertos pendientes de facturar"
+          @click="toggleFiltroFactura"
+        >Sin Emitir Factura</filter-pill>
 
         <v-spacer></v-spacer>
 
@@ -96,58 +78,18 @@
           <v-divider class="my-4 border-opacity-25"></v-divider>
           <v-row dense>
             <v-col cols="12" md="4">
-              <v-menu v-model="menu_fechas" :close-on-content-click="false" location="bottom">
-                <template v-slot:activator="{ props }">
-                  <v-text-field
-                    v-bind="props"
-                    :model-value="textoRangoFechas"
-                    label="Rango de Fechas"
-                    prepend-inner-icon="mdi-calendar-range"
-                    variant="outlined"
-                    density="compact"
-                    readonly
-                    clearable
-                    @click:clear="limpiarFechas"
-                    hide-details="auto"
-                    class="cursor-pointer"
-                  ></v-text-field>
-                </template>
-                <v-card class="pa-4 elevation-4 border rounded-lg" min-width="320">
-                  <div class="text-caption font-weight-bold text-medium-emphasis mb-3">Seleccione el periodo:</div>
-                  <v-row dense>
-                    <v-col cols="12" sm="6">
-                      <date-picker :date="filter_date_gt" label="Desde:" @setPickedDate="(value) => filter_date_gt = value" />
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <date-picker :date="filter_date_lt" label="Hasta:" @setPickedDate="(value) => filter_date_lt = value" />
-                    </v-col>
-                  </v-row>
-                  <div class="d-flex justify-end mt-4">
-                    <v-btn color="primary" variant="tonal" size="small" class="font-weight-bold" @click="menu_fechas = false; applyFilters()">Aplicar</v-btn>
-                  </div>
-                </v-card>
-              </v-menu>
+              <date-range-filter
+                v-model:desde="filter_date_gt"
+                v-model:hasta="filter_date_lt"
+                label="Rango de Fechas"
+                clearable
+                @apply="applyFilters"
+                @clear="limpiarFechas"
+              />
             </v-col>
 
             <v-col cols="12" md="4">
-              <v-autocomplete
-                v-model="filter_client_id"
-                :loading="loading_clients"
-                prepend-inner-icon="mdi-account-group"
-                :items="clients"
-                v-model:search="search_client"
-                @update:model-value="applyFilters"
-                item-title="name"
-                item-value="id"
-                placeholder="Buscar cliente..."
-                no-data-text="No se encontraron clientes"
-                no-filter
-                clearable
-                variant="outlined"
-                density="compact"
-                hide-details="auto"
-                label="Cliente"
-              />
+              <client-select v-model="filter_client_id" @update:model-value="applyFilters" />
             </v-col>
 
             <v-col cols="12" md="4">
@@ -375,17 +317,16 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { Toast } from '@/plugins/alerts'
 import { useRoute } from 'vue-router'
-import { useTheme } from 'vuetify'
 import Swal from 'sweetalert2'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
-import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import OrderDataService from '@/services/certificates/orderDataService'
-import ClientDataService from '@/services/clients/clientDataService'
-import ClientMappers from '@/mappers/clientMappers'
+import ClientSelect from '@/components/shared/ClientSelect.vue'
+import FilterPill from '@/components/shared/FilterPill.vue'
+import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import OrderMappers from '@/mappers/orderMappers'
 import MenuSinFactura from '@/views/orders/components/MenuSinFactura.vue'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
@@ -399,22 +340,10 @@ import PanelFacturas from '../PanelFacturas.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
 
 const route = useRoute()
-const theme = useTheme()
 const appStore = useAppStore()
-const isDark = computed(() => theme.global.current.value.dark)
 
 // ── Búsqueda paginada de clientes (autocomplete del filtro) ──
 const filter_client_id = ref(null)
-const {
-  items: clients,
-  loading: loading_clients,
-  searchQuery: search_client,
-  retrieveData: retrieveClientes,
-} = usePaginatedSearch(
-  (page, size, query) => ClientDataService.getFiltered(page, size, query),
-  ClientMappers.getMap,
-  () => filter_client_id.value
-)
 
 // ── Estado UI (modales + split-screen del panel de facturas) ──
 const edit_order_modal = ref(false)
@@ -457,7 +386,6 @@ const filter_date_gt = ref('')
 const filter_date_lt = ref('')
 const filter_status = ref('')
 const mostrar_filtros_avanzados = ref(false)
-const menu_fechas = ref(false)
 const filtro_falta_pago = ref(false)
 const filtro_sin_factura = ref(false)
 
@@ -479,12 +407,6 @@ const user_permissions = ref([])
 
 let debounceTimeout = null
 
-const textoRangoFechas = computed(() => {
-  if (!filter_date_gt.value && !filter_date_lt.value) return 'Cualquier fecha'
-  if (filter_date_gt.value && !filter_date_lt.value) return `Desde el ${filter_date_gt.value}`
-  if (!filter_date_gt.value && filter_date_lt.value) return `Hasta el ${filter_date_lt.value}`
-  return `${filter_date_gt.value} al ${filter_date_lt.value}`
-})
 
 // ── Data ──
 const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestRequest()
@@ -731,7 +653,6 @@ onMounted(() => {
   user_permissions.value = user.action_permissions || []
   if (route.query.buscar_orden) filter_order.value = route.query.buscar_orden
   if (route.query.buscar_factura) filter_invoice.value = route.query.buscar_factura
-  retrieveClientes()
   retrieveOrders()
   cargarResumenes()
   window.addEventListener('wss-reload-orders-rental', handleWssReload)

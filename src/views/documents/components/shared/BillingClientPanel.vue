@@ -24,7 +24,7 @@
       <v-icon size="small" class="mr-1">mdi-domain</v-icon> Cliente a Facturar
     </div>
 
-    <ClientSmartSearch
+    <ClientLookupBar
       :model-value="clientId"
       @update:model-value="$emit('update:clientId', $event)"
       @client-selected="aplicarCliente"
@@ -75,7 +75,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import ClientSmartSearch from '@/components/shared/ClientSmartSearch.vue'
+import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 
 const props = defineProps({
   meta: Object,

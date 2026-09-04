@@ -99,7 +99,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, getCurrentInstance, defineAsyncComponent } from 'vue'
+import { ref, onMounted, defineAsyncComponent } from 'vue'
 
 import Swal from 'sweetalert2'
 import ClientDataService from '@/services/clients/clientDataService'

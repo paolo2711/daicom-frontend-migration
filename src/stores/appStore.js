@@ -1,5 +1,16 @@
 import { defineStore } from 'pinia';
 
+const FIN_DE_SUBIDA = ['success', 'warning'];
+
+// Una tarea que recien termina todavia no fue confirmada por el server: hasta que
+// llegue la fila, es ella la que manda sobre el icono de la tabla.
+// Ver composables/useUploadState.js.
+function marcarSinConfirmar(cambios, anterior) {
+  const terminaAhora = FIN_DE_SUBIDA.includes(cambios.status)
+    && !FIN_DE_SUBIDA.includes(anterior?.status);
+  return terminaAhora ? { ...cambios, confirmada: false } : cambios;
+}
+
 export const useAppStore = defineStore('app', {
   state: () => ({
     // null → Vuetify 3 lo abre automáticamente en desktop y lo cierra en mobile
@@ -139,7 +150,7 @@ export const useAppStore = defineStore('app', {
     },
 
     addUploadTask(task) {
-      this.uploadTasks.push(task);
+      this.uploadTasks.push(marcarSinConfirmar(task, null));
       this.saveUploads();
     },
     updateUploadTask(id, type, updates) {
@@ -147,7 +158,18 @@ export const useAppStore = defineStore('app', {
         t => String(t.id) === String(id) && t.type === type
       );
       if (index !== -1) {
-        this.uploadTasks[index] = { ...this.uploadTasks[index], ...updates };
+        const anterior = this.uploadTasks[index];
+        this.uploadTasks[index] = { ...anterior, ...marcarSinConfirmar(updates, anterior) };
+        this.saveUploads();
+      }
+    },
+    // La tarea deja de mandar sobre la fila una vez que llego el dato del server.
+    confirmarUploadTask(id, type) {
+      const t = this.uploadTasks.find(
+        x => String(x.id) === String(id) && x.type === type
+      );
+      if (t && !t.confirmada) {
+        t.confirmada = true;
         this.saveUploads();
       }
     },

@@ -10,7 +10,7 @@
 
           <v-row align="start" dense>
             <v-col cols="12">
-              <ClientSmartSearch v-model="order.client" creatable />
+              <ClientLookupBar v-model="order.client" creatable />
             </v-col>
           </v-row>
 
@@ -39,14 +39,13 @@
 
 <script setup>
 import { Toast } from '@/plugins/alerts'
-import ClientSmartSearch from '@/components/shared/ClientSmartSearch.vue'
+import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import { ref, watch, nextTick, getCurrentInstance } from 'vue'
 import { useAppStore } from '@/stores/appStore'
 import OrderDataService from '@/services/certificates/orderDataService'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
 
-const emit = defineEmits(['reloadListComponent'])
 
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal

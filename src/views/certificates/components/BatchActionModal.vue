@@ -156,6 +156,7 @@ import { useAppStore } from '@/stores/appStore'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
 import { defineAsyncComponent } from 'vue'
+import { tieneExcelBase } from '@/utils/certificates/excelBase'
 
 const LoadSheet = defineAsyncComponent(() => import('@/views/certificates/components/LoadSheet.vue'))
 
@@ -199,11 +200,7 @@ const configMap = {
 
 const modalConfig = computed(() => configMap[action.value] || configMap.excel)
 
-import { watch } from 'vue'
 
-const tieneExcelSubido = (cert) => {
-  return cert.uploaded_xls && cert.uploaded_xls !== '0' && cert.uploaded_xls !== 'False' && cert.uploaded_xls !== 'false'
-}
 
 // Ahora es válido simplemente si el usuario marcó al menos una fila
 const hayItemsValidos = computed(() => selected_items.value.length > 0)
@@ -239,17 +236,17 @@ const open = async (actionType, selectedCerts, forceSelect = false) => {
     let already_has_it = false
 
     if (actionType === 'excel') {
-      if (tieneExcelSubido(cert)) {
+      if (tieneExcelBase(cert)) {
         already_has_it = true // Ya tiene Excel adjuntado (chip "Tiene Excel")
       }
     } else if (actionType === 'qr') {
-      if (!tieneExcelSubido(cert)) {
+      if (!tieneExcelBase(cert)) {
         disabled = true // Le falta Excel (Bloqueado)
       } else if (cert.uploaded) {
         already_has_it = true // Ya está en Nube (Permitido pero Desmarcado)
       }
     } else if (actionType === 'notify') {
-      if (!tieneExcelSubido(cert)) {
+      if (!tieneExcelBase(cert)) {
         disabled = true // Bloqueado: Le falta el Excel base
       } else if (cert.signature_requested) {
         disabled = true // 2da: Ya notificado (Bloqueado, no se puede hacer spam)
@@ -353,7 +350,7 @@ const validarExcelsEnServidor = async () => {
         item.validation_status = 'found'
         item.native_filename = info.filename
         
-        if (tieneExcelSubido(item) && !force_select.value) {
+        if (tieneExcelBase(item) && !force_select.value) {
           item.already_has_it = true // Ya tiene Excel (Permitido pero desmarcado)
         } else {
           selected_items.value.push(item.id) // Nuevo o forzado (Marcado)

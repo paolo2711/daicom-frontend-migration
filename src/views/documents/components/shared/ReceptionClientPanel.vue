@@ -18,7 +18,7 @@
       <v-icon size="small" class="mr-1">mdi-domain</v-icon> Cliente (Propietario de los equipos)
     </div>
     
-    <ClientSmartSearch
+    <ClientLookupBar
       :model-value="clientId"
       @update:model-value="onClientIdChanged"
       @client-selected="aplicarCliente"
@@ -74,7 +74,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import ClientSmartSearch from '@/components/shared/ClientSmartSearch.vue'
+import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import { DOCUMENT_TYPE } from '@/utils/clients/documentTypes'
 
 const props = defineProps({
@@ -127,7 +127,7 @@ const showIncompleteAlert = computed(() => {
   return !hasDoc
 })
 
-// Cuando ClientSmartSearch limpia la selección (id null), sí propagamos.
+// Cuando ClientLookupBar limpia la selección (id null), sí propagamos.
 // Cuando trae un id (selección normal), NO lo propagamos aquí: la decisión de
 // si ese id se adopta como clientId real la toma aplicarCliente(), que llega
 // inmediatamente después con el objeto completo y puede aplicar la regla

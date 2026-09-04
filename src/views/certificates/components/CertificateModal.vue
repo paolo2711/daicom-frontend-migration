@@ -45,7 +45,7 @@
 
               <v-row align="center" class="mt-2">
                 <v-col cols="12">
-                  <ClientSmartSearch v-model="certificate.client" creatable />
+                  <ClientLookupBar v-model="certificate.client" creatable />
                 </v-col>
               </v-row>
 
@@ -173,13 +173,10 @@
 
 <script setup>
 import { Toast } from '@/plugins/alerts'
-import { ref, computed, watch, getCurrentInstance, onMounted, nextTick } from 'vue'
+import { ref, computed, getCurrentInstance } from 'vue'
 import DatePicker from "@/components/commonComponents/DatePicker.vue"
-import CertificatesRules from "@/validators/rules/certificatesRules.js"
 import EquipmentDataService from "@/services/equipments/equipmentDataService.js"
 import EquipmentMappers from "@/mappers/equipmentMappers.js"
-import ClientDataService from "@/services/clients/clientDataService.js"
-import ClientMappers from "@/mappers/clientMappers.js"
 import LabDataService from "@/services/labs/labDataService.js"
 import LabMappers from "@/mappers/labMappers.js"
 import CertificateDataService from "@/services/certificates/certificateDataService.js"
@@ -190,7 +187,7 @@ import CertificateMappers from "@/mappers/certificateMappers.js"
 import CorrelativeDataService from "@/services/correlative/correlativeDataService.js"
 
 
-import ClientSmartSearch from '@/components/shared/ClientSmartSearch.vue'
+import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal.vue'
 
 import { useAppStore } from '@/stores/appStore'
@@ -199,7 +196,6 @@ import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutoco
 
 const LabFormDialog = defineAsyncComponent(() => import('@/views/labs/components/LabFormDialog.vue'))
 
-const emit = defineEmits(['updateCertificate', 'reloadListComponent'])
 
 const appStore = useAppStore()
 const { appContext } = getCurrentInstance()
@@ -225,11 +221,10 @@ const permiso_solicitar_firma = computed(() => {
   return isAdmin || permissions.includes(1005) || permissions.includes(1001)
 })
 
-const certificate_client_rules = CertificatesRules.client_rules()
 
 // Instancia del buscador de Clientes usando el Composable global
 // Comboboxes server-side: solo definimos QUE busca cada uno; el COMO lo hace
-// <paginated-autocomplete>. (El cliente usa ClientSmartSearch, componente aparte.)
+// <paginated-autocomplete>. (El cliente usa ClientLookupBar, componente aparte.)
 const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)
 const fetchEquipments = (page, size, query) => EquipmentDataService.getFiltered(page, size, query)
 const labComboRef = ref(null)       // recargar labs tras crear uno
@@ -238,11 +233,6 @@ const labSeed = ref(null)           // lab actual, para mostrarlo al editar
 const equipSeed = ref(null)         // equipo actual (texto plano), idem
 
 // Filtro personalizado
-const filtroSinTildes = (itemTitle, queryText, item) => {
-  if (!queryText) return true
-  const normalizar = (texto) => (texto || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  return normalizar(itemTitle).includes(normalizar(queryText))
-}
 
 const correlative_preview = computed(() => {
   // En edición el certificado ya trae su código completo; lo usamos directo.

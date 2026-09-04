@@ -80,7 +80,7 @@
 </template>
 
 <script setup>
-const props = defineProps({
+defineProps({
   quote: Object
 })
 </script>

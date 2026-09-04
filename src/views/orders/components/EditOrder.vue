@@ -9,19 +9,7 @@
       <v-card-text class="pt-4" style="overflow-y: auto; flex-grow: 1;">
         <v-row dense class="mb-2">
           <v-col cols="12">
-            <v-autocomplete
-              v-model="edit_order_data.client"
-              :items="clients"
-              label="Cliente Asignado a la Orden"
-              variant="outlined"
-              density="compact"
-              item-title="name"
-              item-value="id"
-              hide-details="auto"
-              :loading="loading_clients"
-              v-model:search="search_client"
-              no-filter
-            />
+            <client-select v-model="edit_order_data.client" :seed="cliente_actual" label="Cliente Asignado a la Orden" />
           </v-col>
         </v-row>
 
@@ -116,9 +104,7 @@ import { ref, reactive, computed, watch, getCurrentInstance } from 'vue'
 import { Toast } from '@/plugins/alerts'
 import { useTheme } from 'vuetify'
 import OrderDataService from "@/services/certificates/orderDataService"
-import ClientDataService from "@/services/clients/clientDataService"
-import ClientMappers from "@/mappers/clientMappers"
-import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import ClientSelect from '@/components/shared/ClientSelect.vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -156,27 +142,20 @@ const docs = reactive({ 1: [], 2: [] })
 const nuevoDoc = reactive({ 1: { numero: '', file: null }, 2: { numero: '', file: null } })
 const subiendoDoc = reactive({ 1: false, 2: false })
 
+const cliente_actual = ref(null)
+
 const dialogModel = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val)
 })
-
-const {
-  items: clients,
-  loading: loading_clients,
-  searchQuery: search_client,
-} = usePaginatedSearch(
-  (page, size, query) => ClientDataService.getFiltered(page, size, query),
-  ClientMappers.getMap,
-  () => edit_order_data.value?.client
-)
 
 watch(() => props.modelValue, (val) => {
   if (val && props.order) initFields()
 })
 
 function initFields() {
-  clients.value = [{ id: props.order.client_data.id, name: props.order.client_data.name }]
+  // El cliente ya asignado se siembra para que se vea sin tener que buscarlo.
+  cliente_actual.value = props.order.client_data
 
   edit_order_data.value = {
     id: props.order.id,

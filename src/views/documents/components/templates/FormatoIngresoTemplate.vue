@@ -76,7 +76,7 @@ import { Toast } from '@/plugins/alerts'
 import { ref, reactive, inject } from 'vue'
 import ReceptionClientPanel from '../shared/ReceptionClientPanel.vue'
 import PhysicalInstrumentsTable from '../shared/PhysicalInstrumentsTable.vue'
-import { formatoIngresoDefaultJSON, emptyInstrumentRow } from '@/utils/documents/formatoIngresoDefaults'
+import { formatoIngresoDefaultJSON } from '@/utils/documents/formatoIngresoDefaults'
 import DocumentsDataService from '@/services/documents/documentsDataService'
 
 const swal = inject('$swal')

@@ -17,25 +17,21 @@
         <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
 
         <!-- Pildoras rapidas (mismo patron que "Sin factura" / "Falta pago" en Ordenes) -->
-        <v-chip
-          :color="expedienteFilter === 'sin' ? 'warning' : 'grey-darken-1'"
-          class="font-weight-bold cursor-pointer transition-swing"
+        <filter-pill
+          :active="expedienteFilter === 'sin'"
+          color="warning"
+          icon="mdi-certificate-outline"
+          tooltip="Equipos sin certificado vinculado"
           @click="toggleSinExpediente"
-        >
-          <v-icon start size="small">mdi-certificate-outline</v-icon>
-          Sin expediente
-          <v-tooltip activator="parent" location="top">Equipos sin certificado vinculado</v-tooltip>
-        </v-chip>
+        >Sin expediente</filter-pill>
 
-        <v-chip
-          :color="vencidoFilter ? 'error' : 'grey-darken-1'"
-          class="font-weight-bold cursor-pointer transition-swing"
+        <filter-pill
+          :active="vencidoFilter"
+          color="error"
+          icon="mdi-calendar-alert"
+          tooltip="Certificado con más de 1 año (necesita recalibración)"
           @click="toggleVencido"
-        >
-          <v-icon start size="small">mdi-calendar-alert</v-icon>
-          Expediente vencido
-          <v-tooltip activator="parent" location="top">Certificado con más de 1 año (necesita recalibración)</v-tooltip>
-        </v-chip>
+        >Expediente vencido</filter-pill>
 
         <v-spacer></v-spacer>
 
@@ -185,6 +181,7 @@ import InventoryDataService from '@/services/inventory/inventoryDataService'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
+import FilterPill from '@/components/shared/FilterPill.vue'
 
 const emit = defineEmits(['edit-item', 'view-history'])
 

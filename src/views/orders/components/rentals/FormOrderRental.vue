@@ -96,7 +96,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, getCurrentInstance, defineAsyncComponent } from 'vue'
+import { ref, computed, watch, getCurrentInstance, defineAsyncComponent } from 'vue'
 import { useTheme } from 'vuetify'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'

@@ -150,7 +150,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, watch, nextTick } from 'vue'
 import Swal from 'sweetalert2'
 import UserDataService from '@/services/users/userDataService'
 import RoleDataService from '@/services/roles/roleDataService'

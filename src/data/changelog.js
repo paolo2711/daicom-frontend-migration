@@ -19,6 +19,13 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.1.2',
+    fecha: '2026-09-04',
+    nuevo: [
+      'En Certificados se puede buscar por nombre del equipo, sin importar las tildes.',
+    ],
+  },
+  {
     version: '3.7.1.1',
     fecha: '2026-09-04',
     arreglo: [

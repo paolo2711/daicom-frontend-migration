@@ -489,7 +489,7 @@ const buscarCertificado = async () => {
   foundCert.value = null
 
   try {
-    const res = await CertificateDataService.getFiltered(1, 10, '', '', '', '', Number(correlative_search.value), '')
+    const res = await CertificateDataService.getFiltered({ page_size: 10, correlative: Number(correlative_search.value) })
     const validos = res.data.results.filter(c => c.status !== 5)
     if (validos.length > 0) {
       foundCert.value = validos[0]

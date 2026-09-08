@@ -200,7 +200,7 @@ async function buscarCertificadoHuerfano() {
   buscando_cert.value = true
   certificado_encontrado.value = null
   try {
-    const res = await CertificateDataService.getFiltered(1, 50, '', '', '', '', Number(temp_eq.value.correlative_busqueda), '')
+    const res = await CertificateDataService.getFiltered({ page_size: 50, correlative: Number(temp_eq.value.correlative_busqueda) })
     const validos = res.data.results.filter(c => !c.order_number && c.status !== 5)
     if (validos.length > 0) {
       certificado_encontrado.value = validos[0]

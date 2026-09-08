@@ -2,25 +2,18 @@ import axios from "axios";
 import authHeader from "@/services/auth-header";
 
 export default {
-  getFiltered(page, page_size, client, lab, emission_date__gt, emission_date__lt, correlative, certificate_type, signature_requested = false, pending_excel = false, antapacay = false) {
-    let url = `certificates?page=${page}&page_size=${page_size}&correlative=${correlative}&client=${client}&lab=${lab}&emission_date__gt=${emission_date__gt}&emission_date__lt=${emission_date__lt}&certificate_type=${certificate_type}`;
-
-    // chip de filtro de firma solicitada
-    if (signature_requested) {
-      url += `&signature_requested=true`;
+  // Filtros por nombre, no por posicion: eran once parametros y llamarlo con
+  // uno solo obligaba a pasar seis strings vacios hasta llegar al que importaba.
+  // URLSearchParams ademas escapa los valores, que hace falta desde que hay
+  // filtros de texto libre.
+  getFiltered(filtros = {}) {
+    const params = new URLSearchParams()
+    for (const [clave, valor] of Object.entries({ page: 1, page_size: 10, ...filtros })) {
+      if (valor === '' || valor === null || valor === undefined || valor === false) continue
+      params.set(clave, valor === true ? 'true' : valor)
     }
 
-    // chip de filtro de excel pendiente
-    if (pending_excel) {
-      url += `&pending_excel=true`;
-    }
-
-    // TEMPORAL Antapacay — solo certificados del cliente 60 (borrar al terminar contrato)
-    if (antapacay) {
-      url += `&antapacay=1`;
-    }
-
-    return axios.get(url, {
+    return axios.get(`certificates?${params}`, {
       headers: authHeader()
     });
   },

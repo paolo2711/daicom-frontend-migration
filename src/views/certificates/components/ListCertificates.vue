@@ -13,12 +13,23 @@
           density="compact"
           prepend-inner-icon="mdi-magnify"
           variant="outlined"
-          label="Buscar Cód. Equipo (Ej. 1024)"
+          label="Buscar Cód. Equipo"
           type="number"
           min="0"
           clearable
           max="99999999"
-          style="max-width: 300px;"
+          style="flex: 0 0 240px;"
+        />
+
+        <v-text-field
+          v-model="equipment"
+          hide-details
+          density="compact"
+          prepend-inner-icon="mdi-toolbox-outline"
+          variant="outlined"
+          label="Buscar Equipo"
+          clearable
+          style="flex: 0 0 220px;"
         />
 
         <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
@@ -512,6 +523,7 @@ import CertificateDataService from '@/services/certificates/certificateDataServi
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useUploadState }   from '@/composables/useUploadState'
+import { debounce }         from '@/utils/debounce'
 import OrderDataService    from '@/services/certificates/orderDataService.js'
 import CertificateMappers  from '@/mappers/certificateMappers'
 import CertificateModal    from '@/views/certificates/components/CertificateModal.vue'
@@ -596,6 +608,7 @@ const certificate_types = ref([
   { id: 3, name: 'OPERATIVIDAD' },
 ])
 const correlative = ref('')
+const equipment = ref('')
 
 // ─── Órdenes / menús ─────────────────────────────────────────────────────────
 const menu_abierto_id = ref(null)
@@ -681,6 +694,8 @@ watch(() => route.query.excel_pendiente, (v) => {
 })
 
 watch(correlative,       () => { options.value.page = 1; retrieveAllCertificates() })
+// Texto libre: espera a que termine de escribir en vez de consultar por letra.
+watch(equipment, debounce(() => { options.value.page = 1; retrieveAllCertificates() }))
 watch(certificate_type,  () => { options.value.page = 1; retrieveAllCertificates() })
 watch(client_id,         () => { options.value.page = 1; retrieveAllCertificates() })
 watch(lab_id,            () => { options.value.page = 1; retrieveAllCertificates() })
@@ -907,19 +922,20 @@ function retrieveAllCertificates () {
   const correlativeNumber  = correlative.value > 0 ? Number(correlative.value) : ''
 
   // Pasamos los parámetros al final
-  CertificateDataService.getFiltered(
-    options.value.page,
-    itemsPerPage,
-    client_id.value || '',
-    lab_id.value || '',
-    emission_date__gt.value,
-    emission_date__lt.value,
-    correlativeNumber,
-    certificate_type.value || '',
-    filtro_firma_pendiente.value,
-    filtro_excel_pendiente.value,
-    filtro_antapacay.value // TEMPORAL Antapacay — borrar al terminar contrato
-  ).then((response) => {
+  CertificateDataService.getFiltered({
+    page: options.value.page,
+    page_size: itemsPerPage,
+    correlative: correlativeNumber,
+    equipment: equipment.value || '',
+    client: client_id.value || '',
+    lab: lab_id.value || '',
+    emission_date__gt: emission_date__gt.value,
+    emission_date__lt: emission_date__lt.value,
+    certificate_type: certificate_type.value || '',
+    signature_requested: filtro_firma_pendiente.value,
+    pending_excel: filtro_excel_pendiente.value,
+    antapacay: filtro_antapacay.value ? 1 : '', // TEMPORAL Antapacay — borrar al terminar contrato
+  }).then((response) => {
     if (!isLatestCertLoad(token)) return   // llegó una carga más nueva → no pisar
     certificates.value = response.data.results.map(cert => CertificateMappers.getMap(cert))
     total_certificates.value = response.data.count

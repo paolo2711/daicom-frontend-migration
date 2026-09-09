@@ -3,6 +3,7 @@ import { useAppStore } from '@/stores/appStore'
 const EN_CURSO  = ['generating', 'uploading', 'retrying']
 const FALLIDA   = ['error', 'cloud_error']
 const TERMINADA = ['success', 'warning']
+const TIPOS     = ['qr', 'sheet']
 
 // El icono de la fila sale del dato del server. La tarea lo suple solo mientras
 // la accion esta en curso: apenas el server habla, la fila queda libre.
@@ -24,9 +25,16 @@ export function useUploadState() {
     return null
   }
 
-  const confirmarFila = (certId) => {
-    appStore.confirmarUploadTask(certId, 'qr')
-    appStore.confirmarUploadTask(certId, 'sheet')
+  // El server manda, pero solo si su dato es posterior a la tarea. Una carga
+  // pedida antes de que la subida terminara vuelve sin el resultado, y si igual
+  // silenciaba la tarea el icono quedaba en "no subido" aunque el panel dijera
+  // que estaba listo. Con 95 subidas eso se cruza casi siempre.
+  const confirmarFila = (certId, pedidoEn) => {
+    TIPOS.forEach((tipo) => {
+      const tarea = tareaDe(certId, tipo)
+      if (!tarea || (pedidoEn && tarea.terminadaEn && pedidoEn < tarea.terminadaEn)) return
+      appStore.confirmarUploadTask(certId, tipo)
+    })
   }
 
   return { tareaDe, estadoSubida, confirmarFila }

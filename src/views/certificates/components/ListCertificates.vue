@@ -537,6 +537,7 @@ import { tieneExcelBase }  from '@/utils/certificates/excelBase'
 import FilterPill          from '@/components/shared/FilterPill.vue'
 import DateRangeFilter     from '@/components/shared/DateRangeFilter.vue'
 import { copiarConAviso } from '@/utils/clipboard'
+import { decidirRefresco } from '@/utils/filasCambiadas'
 
 // Componentes async (lazy-loading igual que en Vue 2)
 // carga diferida de LoadSheet movida a BatchActionModal
@@ -745,14 +746,16 @@ onMounted(() => {
 
   retrieveLabs()
 
-  window.addEventListener('wss-reload-certificates', retrieveAllCertificates)
+  window.addEventListener('wss-reload-certificates', recargarPorWebSocket)
   window.addEventListener('wss-update-row',       fetchAndInjectSingleCert)
+  window.addEventListener('wss-update-rows',      aplicarFilasCambiadas)
   window.addEventListener('wss-update-order-row', fetchAndInjectOrderUpdate)
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('wss-reload-certificates', retrieveAllCertificates)
+  window.removeEventListener('wss-reload-certificates', recargarPorWebSocket)
   window.removeEventListener('wss-update-row',       fetchAndInjectSingleCert)
+  window.removeEventListener('wss-update-rows',      aplicarFilasCambiadas)
   window.removeEventListener('wss-update-order-row', fetchAndInjectOrderUpdate)
 })
 
@@ -912,12 +915,17 @@ function getCertCodesByOrder (orderNum) {
 }
 
 
-function retrieveAllCertificates () {
+// `silencioso` lo usa la recarga que llega por WebSocket: la disparo otro, el
+// usuario no esta esperando nada, y un "cargando" ahi es una interrupcion.
+function retrieveAllCertificates (opciones) {
+  const silencioso = opciones?.silencioso === true
+
   // AL RECARGAR DATOS: Reiniciamos las selecciones para evitar filas fantasma (filtros o paginación)
   certificados_seleccionados.value = []
 
-  loading_list.value = true
+  if (!silencioso) loading_list.value = true
   const token = beginCertLoad()   // guard de secuencia: solo aplica la carga más reciente
+  const pedidoEn = Date.now()     // lo que termine despues de esto, esta carga no lo vio
   const itemsPerPage       = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
   const correlativeNumber  = correlative.value > 0 ? Number(correlative.value) : ''
 
@@ -940,7 +948,7 @@ function retrieveAllCertificates () {
     certificates.value = response.data.results.map(cert => CertificateMappers.getMap(cert))
     total_certificates.value = response.data.count
     // La lista viene del server, asi que manda ella sobre cualquier tarea terminada.
-    certificates.value.forEach(c => confirmarFila(c.id))
+    certificates.value.forEach(c => confirmarFila(c.id, pedidoEn))
   }).catch((e) => {
     if (e.response?.status === 401) {
       localStorage.clear()
@@ -951,16 +959,28 @@ function retrieveAllCertificates () {
   })
 }
 
-function fetchAndInjectSingleCert (event) {
-  const certId = event.detail
+const recargarPorWebSocket = () => retrieveAllCertificates({ silencioso: true })
+
+function traerFilaCert (certId) {
+  const pedidoEn = Date.now()
   CertificateDataService.get(certId).then(response => {
-    if (response?.data) updateSingleCertificateInList(response.data)
+    if (response?.data) updateSingleCertificateInList(response.data, pedidoEn)
   }).catch(() => {})
 }
 
-function updateSingleCertificateInList (updatedCert) {
+function fetchAndInjectSingleCert (event) { traerFilaCert(event.detail) }
+
+// Cambio una tanda entera: solo se toca lo que hay en pantalla.
+function aplicarFilasCambiadas (event) {
+  const visibles = certificates.value.map(c => c.id)
+  const { accion, ids } = decidirRefresco(event.detail || [], visibles)
+  if (accion === 'parchear') ids.forEach(traerFilaCert)
+  else if (accion === 'refrescar') recargarPorWebSocket()
+}
+
+function updateSingleCertificateInList (updatedCert, pedidoEn) {
   // Llego el dato del server: la tarea ya no tiene que suplir a la fila.
-  confirmarFila(updatedCert.id)
+  confirmarFila(updatedCert.id, pedidoEn)
 
   const index = certificates.value.findIndex(c => c.id === updatedCert.id)
   if (index !== -1) {
@@ -970,19 +990,16 @@ function updateSingleCertificateInList (updatedCert) {
   }
 }
 
+// El semaforo llega ya calculado desde el back, con los mismos nombres que usa
+// la fila. Antes se recalculaba aca a partir de la orden completa, con una regla
+// propia que podia discrepar de la del serializer.
 function fetchAndInjectOrderUpdate (event) {
-  const orderId = event.detail
-  OrderDataService.get(orderId).then(response => {
-    if (!response?.data) return
-    const updatedOrder = response.data
+  OrderDataService.getEstado(event.detail).then(response => {
+    const estado = response?.data
+    if (!estado) return
     certificates.value.forEach((cert, index) => {
-      if (cert.order_number === updatedOrder.order_number) {
-        certificates.value[index] = {
-          ...certificates.value[index],
-          order_has_invoices: (updatedOrder.invoices && updatedOrder.invoices.length > 0) || updatedOrder.wants_invoice === false,
-          order_has_payments: updatedOrder.payments && updatedOrder.payments.length > 0,
-          order_status: updatedOrder.status,
-        }
+      if (cert.order_number === estado.order_number) {
+        certificates.value[index] = { ...certificates.value[index], ...estado }
       }
     })
     certificates.value = [...certificates.value]

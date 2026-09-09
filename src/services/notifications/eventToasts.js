@@ -19,6 +19,9 @@ export const TOAST_CATALOG = {
 // Punto UNICO de entrada: todo aviso de evento pasa por aqui.
 // (appStore queda como parametro opcional por compatibilidad con los llamadores.)
 export function showEventToast(message) {
+  // Un toast dura 4 segundos: si la pestaña esta oculta nadie lo ve y solo deja
+  // temporizadores corriendo. El aviso no se pierde, queda en el panel.
+  if (document.hidden) return
   try {
     useEventToastStore().push({
       category: message.category,
@@ -39,6 +42,9 @@ export function queueToastForNextLoad(category) {
 
 export function flushQueuedToast() {
   try {
+    // Si la pestaña arranca oculta el toast no se dibuja, asi que tampoco se
+    // consume: queda para el proximo intento en vez de perderse.
+    if (document.hidden) return
     const category = sessionStorage.getItem(PENDING_KEY)
     if (!category) return
     sessionStorage.removeItem(PENDING_KEY)

@@ -40,12 +40,27 @@ import { useStatusStore } from '@/stores/statusStore'
 import { flushQueuedToast } from '@/services/notifications/eventToasts'
 
 let socket = null
+let reconexion = null
+
+// Cerrar a proposito no debe reconectar. Sin esto cada logout dejaba un socket
+// vivo con su onmessage puesto, y cada mensaje llegaba una vez por socket
+// colgado: cuatro sockets, cuatro veces la misma actualizacion.
+const cerrarSocket = () => {
+  clearTimeout(reconexion)
+  if (!socket) return
+  socket.onclose = null
+  socket.close()
+  socket = null
+}
+
 const appStore = useAppStore()
 const statusStore = useStatusStore()
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
 
 const conectarWebSocket = () => {
+  cerrarSocket()
+
   const apiBase  = axios.defaults.baseURL || window.location.origin
   const urlObj   = new URL(apiBase, window.location.origin)
   const wsProtocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -113,7 +128,7 @@ const conectarWebSocket = () => {
   // los cambios en vivo. Se limpia solo al reconectar (onopen).
   socket.onclose = () => {
     statusStore.raise('ws_down')
-    setTimeout(() => conectarWebSocket(), 5000)
+    reconexion = setTimeout(conectarWebSocket, 5000)
   }
 
   socket.onerror = () => {}
@@ -142,9 +157,7 @@ onMounted(() => {
   }
 })
 
-onUnmounted(() => {
-  if (socket) socket.close()
-})
+onUnmounted(cerrarSocket)
 </script>
 
 <style scoped>

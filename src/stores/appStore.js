@@ -5,10 +5,14 @@ const FIN_DE_SUBIDA = ['success', 'warning'];
 // Una tarea que recien termina todavia no fue confirmada por el server: hasta que
 // llegue la fila, es ella la que manda sobre el icono de la tabla.
 // Ver composables/useUploadState.js.
+// `terminadaEn` sirve para saber si una carga de la tabla pudo haberla visto:
+// la que salio antes vuelve sin el resultado y no puede confirmarla.
 function marcarSinConfirmar(cambios, anterior) {
   const terminaAhora = FIN_DE_SUBIDA.includes(cambios.status)
     && !FIN_DE_SUBIDA.includes(anterior?.status);
-  return terminaAhora ? { ...cambios, confirmada: false } : cambios;
+  return terminaAhora
+    ? { ...cambios, confirmada: false, terminadaEn: Date.now() }
+    : cambios;
 }
 
 export const useAppStore = defineStore('app', {

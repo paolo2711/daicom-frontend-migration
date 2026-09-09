@@ -19,6 +19,17 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.1.6',
+    fecha: '2026-09-09',
+    cambio: [
+      'Al subir varios Excel a la vez, los que esperan turno lo dicen en el panel.',
+    ],
+    arreglo: [
+      'Subir o firmar muchos certificados a la vez ya no vuelve lenta la plataforma.',
+      'Los iconos de Certificados ya no se quedan atrasados cuando la subida termino bien.',
+    ],
+  },
+  {
     version: '3.7.1.5',
     fecha: '2026-09-08',
     cambio: [

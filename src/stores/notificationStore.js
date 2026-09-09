@@ -1,5 +1,18 @@
 import { defineStore } from 'pinia'
 import NotificationDataService from '@/services/notifications/notificationDataService'
+import { debounce } from '@/utils/debounce'
+
+// Freno para lo que llega por WS: una tanda de avisos pide el numero una vez.
+// fetchUnread y fetchFirst quedan sin freno para el arranque y para el panel,
+// donde el usuario si esta esperando.
+let destino = null
+
+const refrescarPorWs = debounce(() => {
+  const store = destino
+  if (!store) return
+  store.fetchUnread()
+  if (store.panelOpen) store.fetchFirst()
+}, 400)
 
 export const useNotificationStore = defineStore('notifications', {
   state: () => ({
@@ -104,15 +117,15 @@ export const useNotificationStore = defineStore('notifications', {
     // WS  al llegar una notificacion nueva.
     onNew() {
       this.pulse++            // campanazo instantáneo (local, sin consulta)
-      this.fetchUnread()      // el número, en UNA sola consulta (como la píldora)
-      if (this.panelOpen) this.fetchFirst()   // la lista solo si la estás mirando
+      destino = this
+      refrescarPorWs()        // el número, y la lista solo si la estás mirando
     },
 
     // WS  RELOAD_NOTIFICATIONS: numero + lista, pero la lista SOLO si el panel
     // esta abierto (si esta cerrado, es solo el numero - como la pildora).
     async resync() {
-      await this.fetchUnread()
-      if (this.panelOpen) await this.fetchFirst()
+      destino = this
+      refrescarPorWs()
     },
   },
 })

@@ -107,23 +107,6 @@ const conectarWebSocket = () => {
     }
   }
 
-  window.confirmarExcelWebSocket = (certId) => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ action: 'broadcast_update_row', cert_id: certId }))
-    }
-  }
-
-  // NUEVO PUENTE: Envía el aviso de actualización de fila directo al WebSocket
-  window.notificarActualizacionFila = (certId, orderId = null, docId = null) => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      let payload = { action: 'broadcast_update_row' };
-      if (certId) payload.cert_id = certId;
-      if (orderId) payload.order_id = orderId;
-      if (docId) payload.doc_id = docId; // Agregamos el soporte para documentos
-      socket.send(JSON.stringify(payload));
-    }
-  }
-
   // Conexion perdida -> banner persistente: el usuario sabe que NO le llegaran
   // los cambios en vivo. Se limpia solo al reconectar (onopen).
   socket.onclose = () => {

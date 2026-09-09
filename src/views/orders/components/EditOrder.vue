@@ -182,11 +182,6 @@ function cargarDocs() {
   }).catch(() => {})
 }
 
-// Refresca la fila en la tabla para que se actualicen las pastillas OC/Val.
-function refrescarFila() {
-  window.dispatchEvent(new CustomEvent('wss-update-order-row', { detail: props.order.id }))
-}
-
 function subirDoc(tipo) {
   const n = nuevoDoc[tipo]
   if (!n.file) return
@@ -199,7 +194,6 @@ function subirDoc(tipo) {
     .then(() => {
       nuevoDoc[tipo] = { numero: '', file: null }
       cargarDocs()
-      refrescarFila()
       Toast.fire({ timer: 2000, icon: 'success', title: 'Documento subido' })
     })
     .catch(() => Toast.fire({ timer: 2500, icon: 'error', title: 'No se pudo subir' }))
@@ -217,7 +211,6 @@ async function borrarDoc(d) {
   OrderDataService.deleteDocument(d.id)
     .then(() => {
       cargarDocs()
-      refrescarFila()
       Toast.fire({ timer: 2000, icon: 'success', title: 'Documento eliminado' })
     })
     .catch(() => Toast.fire({ timer: 2500, icon: 'error', title: 'No se pudo eliminar' }))
@@ -244,7 +237,6 @@ function guardarEdicionOrden() {
 }
 
 function onSuccess() {
-  window.dispatchEvent(new CustomEvent('wss-update-order-row', { detail: props.order.id }))
   Toast.fire({ timer: 2200, icon: 'success', title: 'Orden actualizada' })
   close()
   saving_edit_order.value = false

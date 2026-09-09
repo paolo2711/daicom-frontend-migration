@@ -35,6 +35,16 @@ class OrderDataService {
         return axios.get(`orders/${id}/estado`, { headers: authHeader() });
     }
 
+    // La fila de la tabla de ordenes, sin sus colecciones.
+    getFila(id) {
+        return axios.get(`orders/${id}/fila`, { headers: authHeader() });
+    }
+
+    // Los equipos de la orden con su dueño, para el modal de edicion.
+    getEquipos(id) {
+        return axios.get(`orders/${id}/equipos`, { headers: authHeader() });
+    }
+
     create(data) {
         let headers = authHeader();
         headers['Content-Type'] = "application/json";

@@ -225,13 +225,6 @@ export default {
           // Mandamos order en null para romper la relación de llave foránea en Django
           CertificateDataService.patch(cert.id, { order: null }).then(() => {
             Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo desvinculado' });
-            
-            // 1. Avisamos al padre (TabOrdersService) que recargue SOLO esta orden específica
-            if (window.notificarActualizacionFila) {
-              window.notificarActualizacionFila(null, this.order.id);
-              window.notificarActualizacionFila(cert.id, null);
-            }
-            
           }).catch(err => {
             console.error("Error al desvincular equipo:", err);
             this.$swal.fire('Error', 'No se pudo desvincular el equipo.', 'error');
@@ -250,12 +243,6 @@ export default {
         if (result.isConfirmed) {
           CertificateDataService.patch(cert.id, { status: 5 }).then(() => {
             Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo anulado' });
-            
-            if (window.notificarActualizacionFila) {
-              window.notificarActualizacionFila(null, this.order.id);
-              window.notificarActualizacionFila(cert.id, null);
-            }
-            
           }).catch(err => {
             console.error("Error al anular equipo:", err);
             this.$swal.fire('Error', 'No se pudo comunicar con el servidor.', 'error');
@@ -279,12 +266,6 @@ export default {
         if (result.isConfirmed) {
           CertificateDataService.patch(cert.id, { status: 1 }).then(() => {
             Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo restaurado' });
-            
-            if (window.notificarActualizacionFila) {
-              window.notificarActualizacionFila(null, this.order.id);
-              window.notificarActualizacionFila(cert.id, null);
-            }
-            
           }).catch(() => {
             this.$swal.fire('Error', 'No se pudo restaurar el equipo.', 'error');
           });

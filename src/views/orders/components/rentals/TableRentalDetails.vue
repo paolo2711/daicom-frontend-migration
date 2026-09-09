@@ -219,9 +219,6 @@ function marcarDevuelto(rental) {
     }
   }).then((result) => {
     if (result.isConfirmed) {
-      if (window.notificarActualizacionFila) {
-        window.notificarActualizacionFila(null, props.order.id);
-      }
       Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo devuelto' })
     }
   })

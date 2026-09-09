@@ -332,10 +332,7 @@ const save = () => {
 
     request.then((response) => {
       if (response.status === 200 || response.status === 201) {
-        if (isEdit.value) {
-          if (window.notificarActualizacionFila) window.notificarActualizacionFila(certificate.value.id, null);
-        }
-        // Nota: Si es nuevo, el backend (signals.py) ya emite el RELOAD_CERTIFICATES por WebSocket
+        // El backend avisa por WebSocket: RELOAD_CERTIFICATES si es nuevo, la fila si es edicion.
         close()
         Toast.fire(appStore.toastGuardadoExito)
       }

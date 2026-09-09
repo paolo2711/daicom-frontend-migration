@@ -455,14 +455,15 @@ const limpiarFechas = () => { filter_date_gt.value = ''; filter_date_lt.value = 
 const handleWssReload = () => { retrieveOrders(); cargarResumenes() }
 
 const fetchAndInjectSingleOrder = (event) => {
-  const orderId = event.detail
-  OrderDataService.get(orderId).then(response => {
-    if (response && response.data && response.data.order_type === 2) {
-      updateSingleOrderInList(response.data)
-      // Anti-DDoS: refresca los resúmenes con debounce de 1.5s
-      if (debounceTimeout) clearTimeout(debounceTimeout)
-      debounceTimeout = setTimeout(() => { cargarResumenes() }, 1500)
-    }
+  OrderDataService.getFila(event.detail).then(response => {
+    const fila = response?.data
+    if (!fila || fila.order_type !== 2) return
+
+    const index = orders.value.findIndex(o => o.id === fila.id)
+    if (index !== -1) Object.assign(orders.value[index], fila)
+
+    if (debounceTimeout) clearTimeout(debounceTimeout)
+    debounceTimeout = setTimeout(() => { cargarResumenes() }, 1500)
   }).catch(() => {})
 }
 

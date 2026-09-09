@@ -1009,7 +1009,6 @@ function fetchAndInjectOrderUpdate (event) {
 function checkAsDelivered (certificate) {
   if (certificate.sent !== true) {
     CertificateDataService.checkAsDelivered(certificate.id, { sent: true })
-      .then(() => { if (window.notificarActualizacionFila) window.notificarActualizacionFila(certificate.id, null); })
       .catch(e => console.error('Error al marcar como enviado', e))
   }
 }
@@ -1025,7 +1024,6 @@ function anularCertConfirm (cert) {
     if (result.isConfirmed) {
       CertificateDataService.patch(cert.id, { status: 5 }).then(() => {
         Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo anulado' })
-        if (window.notificarActualizacionFila) window.notificarActualizacionFila(cert.id, null);
         // El aviso a los demas lo da la notificacion `cert_anulado` (dirigida, persistente).
       })
     }
@@ -1045,7 +1043,6 @@ function revivirCertConfirm (cert) {
       CertificateDataService.patch(cert.id, { status: 1 })
         .then(() => {
           Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo restaurado' })
-          if (window.notificarActualizacionFila) window.notificarActualizacionFila(cert.id, null);
         })
         .catch(() => {
           $swal.fire('Error', 'No se pudo restaurar el equipo.', 'error')

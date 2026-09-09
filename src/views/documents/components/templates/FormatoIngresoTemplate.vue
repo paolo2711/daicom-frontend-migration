@@ -155,10 +155,6 @@ const guardarFormato = async () => {
 
       Toast.fire({ timer: 2500, icon: 'success', title: msgSuccess, text: detailSuccess })
 
-      if (window.notificarActualizacionFila) {
-        window.notificarActualizacionFila(null, null, docId.value || response.data.id)
-      }
-
       emit('reload')
       close()
     }

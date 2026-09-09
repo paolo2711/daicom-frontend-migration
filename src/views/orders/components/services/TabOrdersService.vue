@@ -675,10 +675,7 @@ const cerrarFacturaModal = () => {
 }
 
 const getProgreso = (o) => {
-  if (!o.certificates) return { total: 0, listos: 0 }
-  const v = o.certificates.filter(c => c.status !== 5)
-  const l = v.filter(c => c.status === 4 || c.uploaded)
-  return { total: v.length, listos: l.length }
+  return o.progreso || { total: 0, listos: 0 }
 }
 
 const hasPermission = (id) => {
@@ -727,7 +724,6 @@ const anularOrderConfirm = (order) => {
       OrderDataService.patch(order.id, { status: 4 }).then(() => {
         Promise.all(order.certificates.map(c => CertificateDataService.patch(c.id, { status: 5 }))).then(() => {
           Toast.fire({ timer: 2200, icon: 'success', title: 'Orden anulada' })
-          if (window.notificarActualizacionFila) window.notificarActualizacionFila(null, order.id);
         })
       })
     }
@@ -740,21 +736,11 @@ const prepareExtraEquipment = (o) => {
 }
 
 const abrirEditarOrden = (o) => {
-  // 1. Forzar la expansión visual de la tabla (abre TableServiceDetails)
-  if (!isOrderExpanded(o)) {
-    expanded.value = [o]
-  }
-  
-  // 2. Traer la data completa (con client_data dentro de certificates) 
-  // para que EditOrder.vue no falle al renderizar a los dueños.
-  OrderDataService.get(o.id).then(response => {
-    if (response && response.data) {
-      updateSingleOrderInList(response.data)
-      selected_order.value = response.data
-      edit_order_modal.value = true
-    }
+  // El modal solo usa los equipos con su dueño; el resto ya lo tiene la fila.
+  OrderDataService.getEquipos(o.id).then(response => {
+    selected_order.value = { ...o, certificates: response.data || [] }
+    edit_order_modal.value = true
   }).catch(() => {
-    // Fallback de seguridad en caso de error de red
     selected_order.value = o
     edit_order_modal.value = true
   })
@@ -762,18 +748,18 @@ const abrirEditarOrden = (o) => {
 
 // WebSockets
 const fetchAndInjectSingleOrder = (event) => {
-  const orderId = event.detail
-  OrderDataService.get(orderId)
+  OrderDataService.getFila(event.detail)
     .then(response => {
-      if (response && response.data) {
-        if (response.data.order_type === 1 || !response.data.order_type) {
-          updateSingleOrderInList(response.data)
-          
-          // Refrescar resúmenes agrupados (Debounce de 1.5s) para evitar DDoS
-          clearTimeout(debounceTimeout)
-          debounceTimeout = setTimeout(() => { cargarResumenes() }, 1500)
-        }
-      }
+      const fila = response?.data
+      if (!fila || (fila.order_type !== 1 && fila.order_type)) return
+
+      // Se vuelca tal cual: trae solo campos de fila, asi que no pisa los
+      // equipos ni los abonos que la lista ya tenia.
+      const index = orders.value.findIndex(o => o.id === fila.id)
+      if (index !== -1) Object.assign(orders.value[index], fila)
+
+      clearTimeout(debounceTimeout)
+      debounceTimeout = setTimeout(() => { cargarResumenes() }, 1500)
     })
     .catch(() => {})
 }

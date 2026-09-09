@@ -127,19 +127,6 @@ async function saveExtraEquipments() {
     Toast.fire({ timer: 2200, icon: 'success', title: `${items_to_save.value.length} equipo(s) añadido(s)` })
 
 
-    // Notificamos a TODO el sistema vía WebSocket
-    if (window.notificarActualizacionFila) {
-      window.notificarActualizacionFila(null, props.order.id);
-      
-      // Los equipos alquilados no usan el WebSocket de cert_id, así que lo condicionamos
-      if (!isRental.value) {
-        items_to_save.value.forEach(item => {
-          if (item.modo === 'existente' && item.cert_id) {
-            window.notificarActualizacionFila(item.cert_id, null);
-          }
-        });
-      }
-    }
     
     emit('reload') // Refrescamos el padre (muy importante)
     close()

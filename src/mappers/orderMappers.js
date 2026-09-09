@@ -21,6 +21,8 @@ export default {
       client: element.client,
       client_data: element.client_data || {},
       
+      progreso: element.progreso || { total: 0, listos: 0 },
+
       // ─── RELACIONES (Protección contra "undefined.length") ───
       certificates: element.certificates || [],
       rentals: element.rentals || [],

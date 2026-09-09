@@ -19,6 +19,17 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.1.7',
+    fecha: '2026-09-09',
+    cambio: [
+      'Al editar una orden ya no se despliega sola la fila.',
+    ],
+    arreglo: [
+      'La tabla de Ordenes se actualiza sola mucho mas rapido cuando alguien cambia algo.',
+      'Los cambios en alquileres y en las OC ahora se ven en la pantalla de todos, no solo en la de quien los hizo.',
+    ],
+  },
+  {
     version: '3.7.1.6',
     fecha: '2026-09-09',
     cambio: [

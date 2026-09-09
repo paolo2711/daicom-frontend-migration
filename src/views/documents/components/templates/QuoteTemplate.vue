@@ -171,11 +171,6 @@ const guardarCotizacion = async () => {
       
       Toast.fire({ timer: 2500, icon: 'success', title: msgSuccess, text: detailSuccess })
       
-      // Enviamos la actualización masiva a través del WebSocket inyectado globalmente
-      if (window.notificarActualizacionFila) {
-        window.notificarActualizacionFila(null, null, docId.value || response.data.id)
-      }
-      
       emit('reload') // Le avisa a ListDocuments.vue que recargue la tabla
       close()
     }

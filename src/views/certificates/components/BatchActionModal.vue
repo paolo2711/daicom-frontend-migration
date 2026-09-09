@@ -1,6 +1,6 @@
 <template>
   <v-dialog v-model="dialog" max-width="850" class="dialog-premium" persistent>
-    <v-card>
+    <v-card @keydown.enter="confirmarConEnter">
       <base-modal-header 
         :title="modalConfig.title" 
         :icon="modalConfig.icon" 
@@ -140,7 +140,7 @@
           variant="flat" 
           @click="confirmAction"
           :loading="is_processing"
-          :disabled="loading_validation || !hayItemsValidos"
+          :disabled="!puedeConfirmar"
         >
           <v-icon start>{{ modalConfig.actionIcon }}</v-icon> Continuar
         </v-btn>
@@ -157,6 +157,7 @@ import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
 import { defineAsyncComponent } from 'vue'
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
+import { alPresionarEnter } from '@/utils/keyboard'
 
 const LoadSheet = defineAsyncComponent(() => import('@/views/certificates/components/LoadSheet.vue'))
 
@@ -204,6 +205,15 @@ const modalConfig = computed(() => configMap[action.value] || configMap.excel)
 
 // Ahora es válido simplemente si el usuario marcó al menos una fila
 const hayItemsValidos = computed(() => selected_items.value.length > 0)
+
+// Una sola condición para el botón y para el Enter, así no se separan.
+const puedeConfirmar = computed(() =>
+  !loading_validation.value && !is_processing.value && hayItemsValidos.value
+)
+
+const confirmarConEnter = alPresionarEnter(() => {
+  if (puedeConfirmar.value) confirmAction()
+})
 
 const isAllSelected = computed(() => {
   const validItems = items.value.filter(i => !i.disabled)

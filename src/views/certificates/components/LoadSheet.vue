@@ -1,6 +1,6 @@
 <template>
   <v-dialog v-model="dialog" class="dialog-premium" max-width="500" width="90%" persistent>
-    <v-card v-if="certificate">
+    <v-card v-if="certificate" @keydown.enter.stop="guardarConEnter">
       <base-modal-header 
         :title="mode === 'pdf' ? 'Subir PDF Rescatado' : 'Adjuntar Excel'" 
         :icon="mode === 'pdf' ? 'mdi-file-pdf-box' : 'mdi-file-excel'" 
@@ -31,7 +31,7 @@
       <v-card-actions class="px-6 pb-4 pt-2">
         <v-spacer/>
         <v-btn variant="flat" class="font-weight-bold mr-3 px-4" @click="close">Cancelar</v-btn>
-        <v-btn color="primary" @click="generatePreview"
+        <v-btn color="primary" variant="flat" class="font-weight-bold px-4" @click="generatePreview"
                :disabled="!workbook.file">Guardar</v-btn>
       </v-card-actions>
     </v-card>
@@ -40,6 +40,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { alPresionarEnter } from '@/utils/keyboard'
 
 const dialog = ref(false)
 const certificate = ref(null)
@@ -65,6 +66,7 @@ const close = () => {
 }
 
 const generatePreview = () => {
+  if (!workbook.value.file) return
   emit('file-attached', {
     id: certificate.value.id,
     file: workbook.value.file,
@@ -72,6 +74,8 @@ const generatePreview = () => {
   })
   close()
 }
+
+const guardarConEnter = alPresionarEnter(generatePreview)
 
 defineExpose({ open, close })
 </script>

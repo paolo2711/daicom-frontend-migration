@@ -19,6 +19,17 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.1.5',
+    fecha: '2026-09-08',
+    cambio: [
+      'En los recuadros para subir el Excel, Enter confirma sin ir hasta el boton.',
+    ],
+    arreglo: [
+      'Los Excel que piden contraseña ya se pueden subir; antes la carga se quedaba a medias sin avisar.',
+      'Si falta la contraseña, la subida lo avisa enseguida en vez de intentarlo igual.',
+    ],
+  },
+  {
     version: '3.7.1.2',
     fecha: '2026-09-04',
     nuevo: [

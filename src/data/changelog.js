@@ -19,6 +19,18 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.2.0',
+    fecha: '2026-09-09',
+    nuevo: [
+      'Se puede adjuntar un certificado que ya esta en PDF: queda listo para firmar, sin pasar por el Excel.',
+      'Las ordenes se anulan con sus equipos en un solo paso, y los certificados salen tambien de la nube.',
+    ],
+    cambio: [
+      'Al adjuntar un archivo se elige si es el Excel para convertir o el PDF ya hecho.',
+      'La ventana de carga en lote dice de que carpeta se toman los Excel y que hoja se imprime.',
+    ],
+  },
+  {
     version: '3.7.1.7',
     fecha: '2026-09-09',
     cambio: [

@@ -45,6 +45,11 @@ class OrderDataService {
         return axios.get(`orders/${id}/equipos`, { headers: authHeader() });
     }
 
+    // Anula la orden y sus equipos. El back resuelve cuales son.
+    anular(id) {
+        return axios.post(`orders/${id}/anular`, {}, { headers: authHeader() });
+    }
+
     create(data) {
         let headers = authHeader();
         headers['Content-Type'] = "application/json";

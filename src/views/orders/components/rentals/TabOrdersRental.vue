@@ -560,9 +560,7 @@ const anularSeleccion = async () => {
   if (!r.isConfirmed) return
   anulando.value = true
   try {
-    for (const o of ordenes) {
-      await OrderDataService.patch(o.id, { status: 4 })
-    }
+    await Promise.all(ordenes.map(o => OrderDataService.anular(o.id)))
     Toast.fire({ timer: 2200, icon: 'success', title: 'Órdenes anuladas' })
     ordenes_seleccionadas.value = []
     retrieveOrders()
@@ -579,7 +577,7 @@ const anularOrderConfirm = (order) => {
     icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, anular'
   }).then((result) => {
     if (result.isConfirmed) {
-      OrderDataService.patch(order.id, { status: 4 }).then(() => {
+      OrderDataService.anular(order.id).then(() => {
         Toast.fire({ timer: 2200, icon: 'success', title: 'Orden anulada' })
         retrieveOrders()
       })

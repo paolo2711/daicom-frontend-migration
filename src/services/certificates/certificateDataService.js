@@ -86,6 +86,13 @@ export default {
     });
   },
 
+  // Guarda un PDF ya hecho como certificado base, sin convertir.
+  subirPdfBase(id, formData) {
+    const headers = authHeader();
+    delete headers['Content-Type'];
+    return axios.post(`certificates/${id}/pdf-base`, formData, { headers });
+  },
+
   delete(id) {
     return axios.delete(`certificates/${id}`, {
       headers: authHeader()

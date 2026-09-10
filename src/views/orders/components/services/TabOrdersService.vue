@@ -326,7 +326,6 @@ import { useTheme } from 'vuetify'
 import { useAppStore } from '@/stores/appStore'
 import Swal from 'sweetalert2'
 import OrderDataService from '@/services/certificates/orderDataService'
-import CertificateDataService from '@/services/certificates/certificateDataService'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
 import FilterPill from '@/components/shared/FilterPill.vue'
 import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
@@ -696,12 +695,7 @@ const anularSeleccion = async () => {
   if (!r.isConfirmed) return
   anulando.value = true
   try {
-    for (const o of ordenes) {
-      await OrderDataService.patch(o.id, { status: 4 })
-      if (o.certificates?.length) {
-        await Promise.all(o.certificates.map(c => CertificateDataService.patch(c.id, { status: 5 })))
-      }
-    }
+    await Promise.all(ordenes.map(o => OrderDataService.anular(o.id)))
     Toast.fire({ timer: 2200, icon: 'success', title: 'Órdenes anuladas' })
     ordenes_seleccionadas.value = []
     retrieveOrders()
@@ -721,10 +715,8 @@ const anularOrderConfirm = (order) => {
     confirmButtonText: 'Sí, anular todo'
   }).then((result) => {
     if (result.isConfirmed) {
-      OrderDataService.patch(order.id, { status: 4 }).then(() => {
-        Promise.all(order.certificates.map(c => CertificateDataService.patch(c.id, { status: 5 }))).then(() => {
-          Toast.fire({ timer: 2200, icon: 'success', title: 'Orden anulada' })
-        })
+      OrderDataService.anular(order.id).then(() => {
+        Toast.fire({ timer: 2200, icon: 'success', title: 'Orden anulada' })
       })
     }
   })

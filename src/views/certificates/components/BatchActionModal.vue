@@ -20,11 +20,25 @@
           {{ modalConfig.subtitle }}
         </h3>
         
-        <v-alert 
-          v-if="action === 'excel'" 
-          type="info" density="compact" variant="tonal" border="start" class="mb-4 rounded-lg text-caption font-weight-medium"
+        <v-alert
+          v-if="action === 'excel'"
+          type="info" density="compact" variant="tonal" class="mb-4 rounded-lg text-caption"
         >
-          NOTA: Los archivos se extraerán directamente del servidor local a no ser que se adjunten manualmente.
+          <div class="mb-1">
+            <span class="font-weight-bold">Se buscan en</span>
+            <code class="ruta">H:\Certificados Nativos\</code>
+            <span class="text-medium-emphasis">— subcarpeta Acreditados, No Acreditados u Operatividad según el tipo.</span>
+          </div>
+          <div class="mb-1">
+            <span class="font-weight-bold">Se imprime la hoja</span>
+            <code class="ruta">CERTIFICADO</code>
+            <span class="text-medium-emphasis">en los acreditados y la</span>
+            <code class="ruta">hoja 3</code>
+            <span class="text-medium-emphasis">en los demás.</span>
+          </div>
+          <div class="text-medium-emphasis">
+            Si el archivo no aparece, puede adjuntarlo: un Excel para convertir, o un PDF ya hecho.
+          </div>
         </v-alert>
 
         <v-table density="compact" class="border rounded-lg bg-surface mt-2" style="max-height: 350px; overflow-y: auto;">
@@ -54,7 +68,7 @@
                 <div class="text-caption text-medium-emphasis">Escaneando servidor local...</div>
               </td>
             </tr>
-            <tr v-else v-for="item in items" :key="item.id">
+            <tr v-else v-for="item in items" :key="item.id" :class="{ 'fila-bloqueada': item.disabled }">
               <td class="text-center">
                 <v-checkbox
                   v-model="selected_items"
@@ -65,65 +79,57 @@
                   color="primary"
                 ></v-checkbox>
               </td>
-              <td class="font-weight-medium" :class="{'text-decoration-line-through text-grey': item.disabled}">{{ item.registry_code }}</td>
-              <td class="text-caption" :class="{'text-grey': item.disabled}">{{ item.equipment }}</td>
-              
+              <td class="font-weight-medium">{{ item.registry_code }}</td>
+              <td class="text-caption">{{ item.equipment }}</td>
+
               <td class="text-center">
-                <template v-if="action === 'excel'">
-                  <v-chip v-if="item.already_has_it" color="info" size="x-small" variant="tonal">Tiene Excel</v-chip>
-                  <v-chip v-else color="grey" size="x-small" variant="tonal">Sin Excel</v-chip>
-                </template>
-                <template v-else-if="action === 'qr'">
-                  <v-chip v-if="item.disabled" color="error" size="x-small" variant="tonal">Sin Excel</v-chip>
-                  <v-chip v-else-if="item.already_has_it" color="success" size="x-small" variant="tonal">En Nube</v-chip>
-                  <v-chip v-else color="info" size="x-small" variant="tonal">Con PDF</v-chip>
-                </template>
-                <template v-else>
-                  <v-chip v-if="item.disabled && item.signature_requested" color="warning" size="x-small" variant="tonal">Notificado</v-chip>
-                  <v-chip v-else-if="item.disabled" color="error" size="x-small" variant="tonal">Sin Excel</v-chip>
-                  <v-chip v-else-if="item.already_has_it" color="success" size="x-small" variant="tonal">En Nube</v-chip>
-                  <v-chip v-else color="info" size="x-small" variant="tonal">Con PDF</v-chip>
-                </template>
+                <v-chip :color="estadoPrevio(item).color" size="x-small" variant="tonal">
+                  {{ estadoPrevio(item).texto }}
+                </v-chip>
               </td>
 
               <td class="text-center">
-                <template v-if="action === 'excel'">
-                  <div v-if="item.validation_status === 'manual'" class="d-flex align-center justify-center">
-                    <v-icon color="info" size="small" title="Adjuntado Manualmente">mdi-paperclip</v-icon>
-                    <v-btn icon variant="text" size="small" color="error" class="ml-1" title="Quitar Excel Manual" @click.stop="discardExcel(item)">
+                <div class="d-flex align-center justify-center">
+                  <v-icon :color="validacion(item).color" size="small" :title="validacion(item).titulo">
+                    {{ validacion(item).icono }}
+                  </v-icon>
+
+                  <template v-if="action === 'excel'">
+                    <v-btn v-if="estaAdjuntado(item)" icon variant="text" size="small" color="grey" class="ml-1"
+                           title="Quitar el archivo adjuntado" @click.stop="discardExcel(item)">
                       <v-icon>mdi-close</v-icon>
                     </v-btn>
-                  </div>
-                  <div v-else class="d-flex align-center justify-center">
-                    <v-icon v-if="item.validation_status === 'found'" color="success" size="small" title="Encontrado en Servidor" class="mr-2">mdi-check-circle</v-icon>
-                    <v-icon v-else color="error" size="small" title="No encontrado" class="mr-2">mdi-close-circle</v-icon>
-                    <v-btn icon variant="text" size="small" color="primary" title="Adjuntar Manualmente" @click.stop="openManualUpload(item)">
-                      <v-icon>mdi-upload</v-icon>
-                    </v-btn>
-                  </div>
-                </template>
+                    <v-menu v-else location="bottom end">
+                      <template v-slot:activator="{ props }">
+                        <v-btn v-bind="props" icon variant="text" size="small" color="primary" class="ml-1"
+                               title="Adjuntar archivo" @click.stop>
+                          <v-icon>mdi-upload</v-icon>
+                        </v-btn>
+                      </template>
+                      <v-list density="compact" class="py-1">
+                        <v-list-item prepend-icon="mdi-file-excel" @click="openManualUpload(item)">
+                          <v-list-item-title class="font-weight-medium">Adjuntar Excel</v-list-item-title>
+                          <v-list-item-subtitle class="text-caption">Se convierte a PDF</v-list-item-subtitle>
+                        </v-list-item>
+                        <v-list-item prepend-icon="mdi-file-pdf-box" @click="openPdfBaseUpload(item)">
+                          <v-list-item-title class="font-weight-medium">Adjuntar PDF ya hecho</v-list-item-title>
+                          <v-list-item-subtitle class="text-caption">Queda listo para firmar</v-list-item-subtitle>
+                        </v-list-item>
+                      </v-list>
+                    </v-menu>
+                  </template>
 
-                <template v-else-if="action === 'qr'">
-                  <div v-if="item.validation_status === 'manual_pdf'" class="d-flex align-center justify-center">
-                    <v-icon color="info" size="small" title="PDF Adjuntado Manualmente">mdi-paperclip</v-icon>
-                    <v-btn icon variant="text" size="small" color="error" class="ml-1" title="Descartar PDF" @click.stop="discardManualPdf(item)">
+                  <template v-else-if="action === 'qr'">
+                    <v-btn v-if="item.validation_status === 'manual_pdf'" icon variant="text" size="small" color="grey" class="ml-1"
+                           title="Quitar el PDF adjuntado" @click.stop="discardManualPdf(item)">
                       <v-icon>mdi-close</v-icon>
                     </v-btn>
-                  </div>
-                  <div v-else class="d-flex align-center justify-center">
-                    <v-icon v-if="!item.disabled || item.already_has_it" color="success" size="small" class="mr-2">mdi-check-circle</v-icon>
-                    <v-icon v-else color="error" size="small" title="Falta Excel" class="mr-2">mdi-close-circle</v-icon>
-                    <v-btn v-if="!item.disabled" icon variant="text" size="small" color="primary" title="Subir PDF Manual" @click.stop="openManualPdfUpload(item)">
+                    <v-btn v-else icon variant="text" size="small" color="primary" class="ml-1"
+                           title="Adjuntar PDF firmado" @click.stop="openManualPdfUpload(item)">
                       <v-icon>mdi-upload</v-icon>
                     </v-btn>
-                  </div>
-                </template>
-
-                <template v-else>
-                  <v-icon v-if="!item.disabled" color="blue-darken-1" size="small" title="Apto para notificar">mdi-bell-check</v-icon>
-                  <v-icon v-else-if="item.signature_requested" color="grey" size="small" title="Ya tiene una solicitud activa">mdi-minus-circle</v-icon>
-                  <v-icon v-else color="error" size="small" title="Falta Excel">mdi-close-circle</v-icon>
-                </template>
+                  </template>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -134,10 +140,10 @@
               <load-sheet ref="loadSheetModalRef" @file-attached="onFileAttached" />
         <v-spacer/>
         <v-btn variant="flat" class="font-weight-bold mr-3 px-4" @click="close" :disabled="is_processing">Cancelar</v-btn>
-        <v-btn 
-          :color="modalConfig.color" 
-          class="font-weight-bold px-4 text-white" 
-          variant="flat" 
+        <v-btn
+          color="primary"
+          class="font-weight-bold px-4 text-white"
+          variant="flat"
           @click="confirmAction"
           :loading="is_processing"
           :disabled="!puedeConfirmar"
@@ -292,36 +298,93 @@ const open = async (actionType, selectedCerts, forceSelect = false) => {
   }
 }
 
-const openManualUpload = (item) => {
-  if (loadSheetModalRef.value) {
-    loadSheetModalRef.value.open(item, 'excel')
+const abrirAdjuntar = (item, modo) => loadSheetModalRef.value?.open(item, modo)
+
+const openManualUpload    = (item) => abrirAdjuntar(item, 'excel')
+const openPdfBaseUpload   = (item) => abrirAdjuntar(item, 'pdf-base')
+const openManualPdfUpload = (item) => abrirAdjuntar(item, 'pdf')
+
+// En la accion Excel se puede adjuntar el Excel o el PDF ya hecho.
+const ADJUNTADO = {
+  manual:          { icono: 'mdi-file-excel',   titulo: 'Excel adjuntado, se convertirá al continuar' },
+  manual_pdf_base: { icono: 'mdi-file-pdf-box', titulo: 'PDF adjuntado, se guardará al continuar' },
+}
+const estaAdjuntado = (item) => item.validation_status in ADJUNTADO
+const iconoAdjunto  = (item) => (ADJUNTADO[item.validation_status] || {}).icono || 'mdi-paperclip'
+const tituloAdjunto = (item) => (ADJUNTADO[item.validation_status] || {}).titulo || ''
+
+// Tres colores en toda la tabla: el de la accion para lo que ya esta hecho o
+// listo, rojo solo para lo que bloquea, gris para lo demas.
+const NEUTRO = 'grey'
+
+const estadoPrevio = (item) => {
+  const hecho = modalConfig.value.color
+
+  if (action.value === 'excel') {
+    return item.already_has_it
+      ? { texto: 'Tiene Excel', color: hecho }
+      : { texto: 'Sin Excel', color: NEUTRO }
   }
+
+  if (action.value === 'qr') {
+    if (item.disabled) return { texto: 'Sin Excel', color: 'error' }
+    return item.already_has_it
+      ? { texto: 'En Nube', color: hecho }
+      : { texto: 'Con PDF', color: NEUTRO }
+  }
+
+  if (item.signature_requested) return { texto: 'Notificado', color: hecho }
+  if (item.disabled) return { texto: 'Sin Excel', color: 'error' }
+  return { texto: item.already_has_it ? 'En Nube' : 'Con PDF', color: NEUTRO }
 }
 
-const openManualPdfUpload = (item) => {
-  if (loadSheetModalRef.value) {
-    loadSheetModalRef.value.open(item, 'pdf')
+const validacion = (item) => {
+  const listo = modalConfig.value.color
+
+  if (action.value === 'excel') {
+    if (estaAdjuntado(item)) {
+      return { icono: iconoAdjunto(item), color: listo, titulo: tituloAdjunto(item) }
+    }
+    return item.validation_status === 'found'
+      ? { icono: 'mdi-check-circle', color: listo, titulo: 'Encontrado en el servidor' }
+      : { icono: 'mdi-close-circle', color: 'error', titulo: 'No está en el servidor' }
   }
+
+  if (action.value === 'qr') {
+    if (item.validation_status === 'manual_pdf') {
+      return { icono: 'mdi-file-pdf-box', color: listo, titulo: 'PDF firmado adjuntado' }
+    }
+    return item.disabled
+      ? { icono: 'mdi-close-circle', color: 'error', titulo: 'No tiene certificado base' }
+      : { icono: 'mdi-check-circle', color: listo, titulo: 'Listo para firmar' }
+  }
+
+  if (!item.disabled) return { icono: 'mdi-bell-check', color: listo, titulo: 'Apto para notificar' }
+  if (item.signature_requested) return { icono: 'mdi-minus-circle', color: NEUTRO, titulo: 'Ya tiene una solicitud activa' }
+  return { icono: 'mdi-close-circle', color: 'error', titulo: 'No tiene certificado base' }
 }
 
 const discardManualPdf = (item) => {
   item.validation_status = 'pending'
   item.file = null
+  item.disabled = !tieneExcelBase(item)
+  if (item.disabled) {
+    selected_items.value = selected_items.value.filter(id => id !== item.id)
+  }
 }
+
+// El modo lo decide el modal de adjuntar, no la accion: en Excel se puede
+// adjuntar el Excel a convertir o el PDF ya hecho.
+const ESTADO_POR_MODO = { excel: 'manual', 'pdf-base': 'manual_pdf_base', pdf: 'manual_pdf' }
 
 const onFileAttached = (payload) => {
   const item = items.value.find(i => i.id === payload.id)
   if (item) {
-    if (action.value === 'qr') {
-      item.validation_status = 'manual_pdf'
-      item.file = payload.file
-    } else {
-      item.validation_status = 'manual'
-      item.disabled = false
-      item.file = payload.file
-      item.password = payload.password
-    }
-    
+    item.validation_status = ESTADO_POR_MODO[payload.modo] || 'manual'
+    item.file = payload.file
+    item.password = payload.modo === 'excel' ? payload.password : ''
+    item.disabled = false
+
     // marca check automatico para agilizar proceso
     if (!selected_items.value.includes(item.id)) {
       selected_items.value.push(item.id)
@@ -378,6 +441,34 @@ const validarExcelsEnServidor = async () => {
   }
 }
 
+const guardarPdfsBase = async (certs) => {
+  Toast.fire({ ...appStore.toastGuardando, title: 'Guardando los PDF...' })
+
+  const fallados = []
+  for (const cert of certs) {
+    const formData = new FormData()
+    formData.append('file', cert.file)
+    try {
+      await CertificateDataService.subirPdfBase(cert.id, formData)
+    } catch (error) {
+      fallados.push(`${cert.registry_code}: ${error.response?.data?.error || 'no se pudo subir'}`)
+    }
+  }
+
+  if (fallados.length) {
+    $swal.fire({
+      icon: 'error', title: 'Algunos PDF no se guardaron',
+      html: fallados.join('<br>'), confirmButtonText: 'Entendido'
+    })
+    return
+  }
+
+  Toast.fire({
+    ...appStore.toastGuardadoExito,
+    title: certs.length === 1 ? 'PDF guardado, listo para firmar' : `${certs.length} PDF guardados, listos para firmar`
+  })
+}
+
 const confirmAction = async () => {
   if (is_processing.value) return
   is_processing.value = true
@@ -410,22 +501,31 @@ const confirmAction = async () => {
     }
 
     else if (action.value === 'excel') {
-      aptos.forEach(cert => {
+      // El PDF ya hecho no se convierte: se guarda directo y no pasa por la cola.
+      const yaHechos  = aptos.filter(c => c.validation_status === 'manual_pdf_base')
+      const aConvertir = aptos.filter(c => c.validation_status !== 'manual_pdf_base')
+
+      aConvertir.forEach(cert => {
         // soporte hibrido para carga en lote de nativos y manuales en un solo foreach
-        window.dispatchEvent(new CustomEvent('wss-sheet-start', { 
-          detail: { 
-            id: cert.id, 
+        window.dispatchEvent(new CustomEvent('wss-sheet-start', {
+          detail: {
+            id: cert.id,
             code: cert.registry_code,
             native_filename: cert.native_filename,
             file: cert.file,
             password: cert.password
-          } 
+          }
         }))
       })
 
-      Toast.fire({ timer: 3000,
-        icon: 'success', title: `Enviando ${aptos.length} archivos a procesar...`
-      })
+      if (aConvertir.length) {
+        Toast.fire({ timer: 3000,
+          icon: 'success', title: `Enviando ${aConvertir.length} archivos a procesar...`
+        })
+      }
+
+      if (yaHechos.length) await guardarPdfsBase(yaHechos)
+
       emit('clearSelection')
       close()
     }
@@ -444,3 +544,19 @@ const close = () => {
 
 defineExpose({ open })
 </script>
+
+<style scoped>
+.fila-bloqueada {
+  opacity: 0.55;
+}
+
+.ruta {
+  background: rgba(var(--v-theme-on-surface), 0.06);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin: 0 2px;
+  font-size: 0.95em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+</style>

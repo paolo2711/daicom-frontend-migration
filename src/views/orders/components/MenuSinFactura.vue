@@ -33,7 +33,7 @@
 import { ref, computed } from 'vue'
 import Swal from 'sweetalert2'
 import { Toast } from '@/plugins/alerts'
-import OrderDataService from '@/services/certificates/orderDataService'
+import OrderDataService from '@/services/orders/orderDataService'
 
 const props = defineProps({
   orders: { type: Array, default: () => [] },

@@ -44,7 +44,7 @@ import { ref, computed, watch, getCurrentInstance } from 'vue'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
 import CertificateDataService from "@/services/certificates/certificateDataService"
-import OrderDataService from "@/services/certificates/orderDataService"
+import OrderDataService from "@/services/orders/orderDataService"
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },

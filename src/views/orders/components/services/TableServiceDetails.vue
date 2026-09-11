@@ -155,7 +155,7 @@ import CertificateDataService from "@/services/certificates/certificateDataServi
 import { copiarConAviso } from "@/utils/clipboard";
 import { estaEntregado } from "@/utils/certificates/entrega";
 import { tieneExcelBase } from "@/utils/certificates/excelBase";
-import { fechaCorta } from "@/utils/fechas";
+import { fechaCorta } from "@/utils/dates";
 
 export default {
   name: "TableServiceDetails",

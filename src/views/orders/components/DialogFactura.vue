@@ -134,7 +134,7 @@
 import { ref, computed, watch } from 'vue'
 import { Toast } from '@/plugins/alerts'
 import Swal from 'sweetalert2'
-import OrderDataService from '@/services/certificates/orderDataService'
+import OrderDataService from '@/services/orders/orderDataService'
 import { useAppStore } from '@/stores/appStore'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'

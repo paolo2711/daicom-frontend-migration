@@ -177,8 +177,8 @@ import CertificateDataService from '@/services/certificates/certificateDataServi
 import { defineAsyncComponent } from 'vue'
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { alPresionarEnter } from '@/utils/keyboard'
-import { hoyISO } from '@/utils/fechas'
-import { ACCIONES, colorDe, estaAdjuntado } from './accionesDeLote'
+import { hoyISO } from '@/utils/dates'
+import { ACCIONES, colorDe, estaAdjuntado } from './batchActions'
 
 const LoadSheet = defineAsyncComponent(() => import('@/views/certificates/components/LoadSheet.vue'))
 

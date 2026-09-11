@@ -1,6 +1,6 @@
 // Recargas de tabla y actualizaciones de fila quirurgicas (RELOAD_* / UPDATE_ROW).
 import { refreshPendingSignatures } from '@/services/certificates/pendingSignatures'
-import { alVolverAVer, pestanaOculta } from '@/services/websockets/aplazado'
+import { alVolverAVer, pestanaOculta } from '@/utils/tabVisibility'
 
 const emit = (name, detail) =>
   window.dispatchEvent(detail !== undefined ? new CustomEvent(name, { detail }) : new CustomEvent(name))

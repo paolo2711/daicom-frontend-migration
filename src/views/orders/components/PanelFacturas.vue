@@ -310,7 +310,7 @@
 import { Toast } from '@/plugins/alerts'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import Swal from 'sweetalert2'
-import OrderDataService from '@/services/certificates/orderDataService'
+import OrderDataService from '@/services/orders/orderDataService'
 import InvoiceMappers from '@/mappers/invoiceMappers'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'

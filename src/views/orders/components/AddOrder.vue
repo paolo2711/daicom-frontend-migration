@@ -42,7 +42,7 @@ import { Toast } from '@/plugins/alerts'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import { ref, watch, nextTick, getCurrentInstance } from 'vue'
 import { useAppStore } from '@/stores/appStore'
-import OrderDataService from '@/services/certificates/orderDataService'
+import OrderDataService from '@/services/orders/orderDataService'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
 

@@ -548,7 +548,7 @@ import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useUploadState }   from '@/composables/useUploadState'
 import { debounce }         from '@/utils/debounce'
-import OrderDataService    from '@/services/certificates/orderDataService.js'
+import OrderDataService    from '@/services/orders/orderDataService.js'
 import CertificateMappers  from '@/mappers/certificateMappers'
 import CertificateModal    from '@/views/certificates/components/CertificateModal.vue'
 import LabDataService      from '@/services/labs/labDataService'
@@ -559,11 +559,11 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 import ClientSelect        from '@/components/shared/ClientSelect.vue'
 import { tieneExcelBase }  from '@/utils/certificates/excelBase'
 import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
-import { fechaCorta }      from '@/utils/fechas'
+import { fechaCorta }      from '@/utils/dates'
 import FilterPill          from '@/components/shared/FilterPill.vue'
 import DateRangeFilter     from '@/components/shared/DateRangeFilter.vue'
 import { copiarConAviso } from '@/utils/clipboard'
-import { decidirRefresco } from '@/utils/filasCambiadas'
+import { decidirRefresco } from '@/utils/changedRows'
 
 // Componentes async (lazy-loading igual que en Vue 2)
 // carga diferida de LoadSheet movida a BatchActionModal

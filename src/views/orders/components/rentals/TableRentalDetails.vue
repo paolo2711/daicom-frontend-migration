@@ -122,7 +122,7 @@ import { computed, getCurrentInstance, ref } from 'vue'
 import DialogEditRentalDates from './DialogEditRentalDates.vue'
 import AddEquipment from '@/views/inventory/components/AddEquipment.vue'
 import { useTheme } from 'vuetify'
-import OrderDataService from '@/services/certificates/orderDataService'
+import OrderDataService from '@/services/orders/orderDataService'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 
 const props = defineProps({

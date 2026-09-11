@@ -68,7 +68,7 @@
 <script setup>
 import { Toast } from '@/plugins/alerts'
 import { ref, getCurrentInstance } from 'vue'
-import OrderDataService from '@/services/certificates/orderDataService'
+import OrderDataService from '@/services/orders/orderDataService'
 
 const emit = defineEmits(['reload'])
 const { appContext } = getCurrentInstance()

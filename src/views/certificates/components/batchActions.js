@@ -1,6 +1,6 @@
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
-import { fechaCorta } from '@/utils/fechas'
+import { fechaCorta } from '@/utils/dates'
 
 // Cada accion del modal de lote se describe entera en su entrada de ACCIONES.
 // La fila devuelve un nivel y no un color, para que la regla de los tres

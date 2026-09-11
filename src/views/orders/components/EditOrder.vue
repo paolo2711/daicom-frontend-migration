@@ -103,7 +103,7 @@
 import { ref, reactive, computed, watch, getCurrentInstance } from 'vue'
 import { Toast } from '@/plugins/alerts'
 import { useTheme } from 'vuetify'
-import OrderDataService from "@/services/certificates/orderDataService"
+import OrderDataService from "@/services/orders/orderDataService"
 import ClientSelect from '@/components/shared/ClientSelect.vue'
 
 const props = defineProps({

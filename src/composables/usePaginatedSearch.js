@@ -1,6 +1,6 @@
 import { ref, watch } from 'vue'
 import { debounce } from '@/utils/debounce'
-import { leerCache, guardarCache, olvidarCache } from '@/utils/cacheCorta'
+import { leerCache, guardarCache, olvidarCache } from '@/utils/cache'
 
 const ESPERA_TECLEO = 300
 

@@ -407,14 +407,14 @@ const isOrderExpanded = (item) => {
   return expanded.value.some(e => getSafeId(e) === targetId)
 }
 
-// Forzar expansión única y cargar el detalle pesado (Lazy Loading)
+// Una sola orden abierta a la vez.
 watch(expanded, (newVal) => {
   if (newVal.length > 1) {
     expanded.value = [newVal[newVal.length - 1]]
   }
-  
+
   if (expanded.value.length === 1) {
-    cargarDetalleExpandido(getSafeId(expanded.value[0]))
+    cargarEquiposExpandidos(getSafeId(expanded.value[0]))
   }
 })
 const total_orders = ref(0)
@@ -728,20 +728,20 @@ const abrirEditarOrden = (o) => {
     selected_order.value = { ...o, certificates: response.data || [] }
     edit_order_modal.value = true
   }).catch(() => {
-    selected_order.value = o
+    selected_order.value = { ...o, certificates: [] }
     edit_order_modal.value = true
   })
 }
 
-// Los equipos y los abonos no vienen en la fila liviana; la orden abierta los
-// muestra, asi que ahi hace falta el detalle completo.
-const cargarDetalleExpandido = (orderId) => {
+// La fila lleva el contador de equipos, no los equipos.
+const cargarEquiposExpandidos = (orderId) => {
   if (!orderId) return
-  OrderDataService.get(orderId)
-    .then(response => {
-      if (response?.data) updateSingleOrderInList(response.data)
-    })
-    .catch(() => {})
+  const fila = orders.value.find(o => String(o.id) === String(orderId))
+  if (!fila) return
+  fila.certificates = null
+  OrderDataService.getEquipos(orderId)
+    .then(response => { fila.certificates = response.data || [] })
+    .catch(() => { fila.certificates = [] })
 }
 
 const idOrdenExpandida = () => (
@@ -760,7 +760,7 @@ const fetchAndInjectSingleOrder = (event) => {
       const index = orders.value.findIndex(o => o.id === fila.id)
       if (index !== -1) Object.assign(orders.value[index], fila)
 
-      if (String(idOrdenExpandida()) === String(fila.id)) cargarDetalleExpandido(fila.id)
+      if (String(idOrdenExpandida()) === String(fila.id)) cargarEquiposExpandidos(fila.id)
 
       clearTimeout(debounceTimeout)
       debounceTimeout = setTimeout(() => { cargarResumenes() }, 1500)

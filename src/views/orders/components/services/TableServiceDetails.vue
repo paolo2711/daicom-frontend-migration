@@ -26,8 +26,8 @@
       </v-btn>
     </v-toolbar>
 
-    <!-- circulo de carga para table orders el div -->
-    <div v-if="order.certificates && order.certificates.length > 0 && !order.certificates[0].registry_code" class="pa-6 text-center">
+    <!-- Los equipos todavia en camino: null mientras se piden. -->
+    <div v-if="!order.certificates" class="pa-6 text-center">
       <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
       <div class="text-caption mt-2 text-medium-emphasis">Cargando detalle de equipos...</div>
     </div>

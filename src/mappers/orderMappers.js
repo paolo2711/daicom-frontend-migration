@@ -26,7 +26,6 @@ export default {
       // ─── RELACIONES (Protección contra "undefined.length") ───
       certificates: element.certificates || [],
       rentals: element.rentals || [],
-      payments: element.payments || [],
       facturas: element.facturas || { cantidad: 0, numero: '', tiene_fiscal: false },
       
       // ─── DATOS EXCLUSIVOS DE ALQUILER (Order Type 2) ───

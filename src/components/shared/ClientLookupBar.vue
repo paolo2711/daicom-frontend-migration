@@ -55,6 +55,9 @@ const ClientFormDialog = defineAsyncComponent(() => import('@/views/clients/comp
 const props = defineProps({
   modelValue: { type: [Number, String], default: null }, // Recibe el ID vinculado
   creatable: { type: Boolean, default: false },          // Muestra el boton de alta manual
+  // El cliente vinculado, si quien abre el formulario ya lo tiene. Sin esto hay
+  // que ir a buscarlo por su id.
+  seed: { type: Object, default: null },
 })
 
 const emit = defineEmits(['update:modelValue', 'client-selected'])
@@ -70,6 +73,10 @@ const { loadingExternal, loadingResolve, buscarYResolver } = useClientLookup()
 
 const cargarClienteVinculado = async (id) => {
   if (!id || clienteSembrado.value?.id === id) return
+  if (props.seed?.id === id) {
+    clienteSembrado.value = props.seed
+    return
+  }
   try {
     const res = await ClientDataService.get(id)
     clienteSembrado.value = ClientMappers.getMap(res.data)

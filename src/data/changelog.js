@@ -19,10 +19,25 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.3.6',
+    fecha: '2026-09-11',
+    cambio: [
+      'Editar un certificado dejó de pedir por separado los datos del cliente ya elegido: vienen con el certificado.',
+    ],
+  },
+  {
+    version: '3.7.3.5',
+    fecha: '2026-09-11',
+    cambio: [
+      'Desplegar una orden pide entre un 63% y un 82% menos de datos: ahora trae solo sus equipos, y no la orden entera con sus facturas y cada certificado completo.',
+      'Certificados carga un 21% más liviano: los datos que solo se ven al editar un certificado se piden al abrir el formulario.',
+    ],
+  },
+  {
     version: '3.7.3.4',
     fecha: '2026-09-11',
     cambio: [
-      'Se optimizó cómo Órdenes pide sus datos: la lista carga un 32% más liviana. Cada orden dejó de arrastrar sus facturas completas —ahora solo el número y si es fiscal, un 72% menos—, y las de servicio dejaron de recibir los datos de OC y valorizaciones, que son de alquiler.',
+      'Cada orden de la lista dejó de arrastrar sus facturas completas: ahora lleva el número y si es fiscal, un 72% menos. Y las de servicio dejaron de recibir los datos de OC y valorizaciones, que son de alquiler. Entre las dos cosas la lista carga un 32% más liviana.',
     ],
   },
   {
@@ -36,8 +51,8 @@ export const CHANGELOG = [
     version: '3.7.3.1',
     fecha: '2026-09-11',
     cambio: [
-      'Órdenes carga a la mitad de peso, y con filtros puestos hasta un 80% menos: la lista dejó de arrastrar los equipos de cada orden, que ya se piden al desplegarla.',
-      'Editar un certificado pasó de 6 pedidos al servidor a 1. Las listas de clientes, laboratorios y equipos se piden al abrir el desplegable, no al entrar a la pantalla, y quedan en memoria un minuto.',
+      'La lista de Órdenes dejó de traer los equipos de cada orden, que ahora se piden al desplegarla: carga a la mitad de peso, y con filtros puestos hasta un 80% menos.',
+      'Abrir el formulario de un certificado pasó de 6 pedidos al servidor a 1. Las listas de clientes, laboratorios y equipos se piden al abrir el desplegable, no al entrar a la pantalla, y quedan en memoria un minuto.',
       'Escribir en un desplegable hace un solo pedido al terminar de teclear, en vez de uno por letra.',
     ],
     arreglo: [

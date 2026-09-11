@@ -8,7 +8,9 @@
         <span v-if="correlative_preview" class="ml-2">Correlativo: <span class="font-weight-bold text-primary">{{correlative_preview}}</span></span>
       </base-modal-header>
 
-      <v-form ref="smartForm" @submit.prevent v-model="is_valid">
+      <v-progress-linear v-if="cargando" indeterminate color="primary" height="3" />
+
+      <v-form ref="smartForm" :disabled="cargando" @submit.prevent v-model="is_valid">
         <v-window v-model="window_step">
           <v-window-item :value="1">
             <v-card-text class="pt-6">
@@ -45,7 +47,7 @@
 
               <v-row align="center" class="mt-2">
                 <v-col cols="12">
-                  <ClientLookupBar v-model="certificate.client" creatable />
+                  <ClientLookupBar v-model="certificate.client" :seed="certificate.client_data" creatable />
                 </v-col>
               </v-row>
 
@@ -157,7 +159,7 @@
         <v-spacer/> 
         <v-btn variant="flat" class="font-weight-bold rounded-lg mr-3 px-6" @click="close">Cancelar</v-btn>
         <v-btn color="primary" variant="flat" elevation="2" class="text-white font-weight-bold rounded-lg px-6" @click="save" 
-            :disabled="!certificate.client || !certificate.lab || !certificate.equipment || is_on_sending_process" 
+            :disabled="cargando || !certificate.client || !certificate.lab || !certificate.equipment || is_on_sending_process"
             :loading="is_on_sending_process">
         {{ isEdit ? 'Guardar Cambios' : 'Registrar' }}
         </v-btn>
@@ -208,6 +210,7 @@ const equipoMaestroModalRef = ref(null)
 const dialog = ref(false)
 const labDialogOpen = ref(false)
 const isEdit = ref(false)
+const cargando = ref(false)
 const window_step = ref(1)
 const is_valid = ref(false)
 const is_on_sending_process = ref(false)
@@ -248,35 +251,51 @@ const correlative_preview = computed(() => {
 
 // (Los comboboxes se auto-cargan solos al montarse.)
 
-const open = (item = null) => {
+// La fila no trae el certificado entero: se pide al abrir.
+const open = async (item = null) => {
   if (item) {
     isEdit.value = true
-    certificate.value = CertificateMappers.putMap(item)
-    const tipos = { 1: 'ACREDITADO', 2: 'NO ACREDITADO', 3: 'OPERATIVIDAD' }
-    certificate.value.certificate_type_label = tipos[certificate.value.certificate_type] || '---'
-    
-    certificate.value.signed_pdf_url = item.signed_pdf 
-    certificate.value.signed_pdf = null
-    certificate.value.signature_requested = item.signature_requested === true
-    
-    // Sembramos el valor actual para que el combobox lo muestre aunque no venga
-    // en la primera tanda del buscador.
-    labSeed.value = item.lab_data || null
-    // 'equipment' es texto plano (no FK), asi que armamos el item nosotros.
-    equipSeed.value = item.equipment ? { id: item.equipment, name: item.equipment } : null
-  } else {
-    isEdit.value = false
-    let today = (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().substr(0, 10)
-    certificate.value = {
-      certificate_type: 1, correlative: '', client: null, lab: '', equipment: '', brand: '',
-      model: '', serie: '', indication_interval: '', identification_code: '', 
-      calibration_date: today, emission_date: today, signed_pdf: null, observations: '',
-      signature_requested: false
+    dialog.value = true
+    window_step.value = 1
+    cargando.value = true
+    try {
+      const { data } = await CertificateDataService.get(item.id)
+      certificate.value = CertificateMappers.putMap(data)
+      certificate.value.certificate_type_label = data.certificate_type_label || '---'
+      // Semilla del desplegable de cliente: sin esto sale a pedirlo por su id.
+      certificate.value.client_data = data.client_data
+
+      certificate.value.signed_pdf_url = data.signed_pdf
+      certificate.value.signed_pdf = null
+      certificate.value.signature_requested = data.signature_requested === true
+
+      // Sembramos el valor actual para que el combobox lo muestre aunque no venga
+      // en la primera tanda del buscador.
+      labSeed.value = data.lab_data || null
+      // 'equipment' es texto plano (no FK), asi que armamos el item nosotros.
+      equipSeed.value = data.equipment ? { id: data.equipment, name: data.equipment } : null
+    } catch (e) {
+      dialog.value = false
+      Toast.fire({ icon: 'error', title: 'No se pudo abrir el certificado' })
+      return
+    } finally {
+      cargando.value = false
     }
-    labSeed.value = null
-    equipSeed.value = null
-    retrieveCorrelative()
+    if (smartForm.value) smartForm.value.resetValidation()
+    return
   }
+  isEdit.value = false
+  let today = (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().substr(0, 10)
+  certificate.value = {
+    certificate_type: 1, correlative: '', client: null, lab: '', equipment: '', brand: '',
+    model: '', serie: '', indication_interval: '', identification_code: '',
+    calibration_date: today, emission_date: today, signed_pdf: null, observations: '',
+    signature_requested: false
+  }
+  labSeed.value = null
+  equipSeed.value = null
+  retrieveCorrelative()
+
   dialog.value = true
   if (smartForm.value) smartForm.value.resetValidation()
   window_step.value = 1

@@ -22,21 +22,15 @@ export default {
       uuid: element.uuid,
       
       // Entidades Relacionadas
-      client: element.client,
       client_data: element.client_data,
       lab: element.lab,
       lab_data: element.lab_data,
-      
+
       // Especificaciones del Equipo
       equipment: element.equipment,
       brand: element.brand,
-      model: element.model,
-      serie: element.serie,
-      indication_interval: element.indication_interval,
-      identification_code: element.identification_code,
-      
-      // Fechas 
-      calibration_date: element.calibration_date,
+
+      // Fechas
       emission_date: element.emission_date,
       created_at: element.created_at,
       
@@ -48,9 +42,7 @@ export default {
       signature_requested: element.signature_requested,
       
       // Metadatos de envío
-      sent_to: element.sent_to,
-      sent_date: element.sent_date,
-      observations: element.observations
+      sent_date: element.sent_date
     };
   },
   

@@ -2,6 +2,7 @@
   <v-autocomplete
     :model-value="modelValue"
     @update:model-value="onSelect"
+    ref="combo"
     @update:menu="alAbrir"
     :search="textoVisible"
     @update:search="alBuscar"
@@ -100,7 +101,16 @@ const textoVisible = ref('')
 
 function alBuscar(texto) {
   textoVisible.value = texto
-  search.value = texto === tituloElegido.value ? '' : texto
+  const esEco = texto === tituloElegido.value
+  search.value = esEco ? '' : texto
+  // Vuetify escribe el nombre de lo elegido al enfocar: recien ahi hay texto
+  // que seleccionar, para que la primera tecla lo reemplace.
+  if (esEco) nextTick(seleccionarTodo)
+}
+
+function seleccionarTodo() {
+  const campo = combo.value?.$el?.querySelector('input')
+  if (campo && document.activeElement === campo) campo.select()
 }
 
 // El padre puede forzar recargar la lista (ej. tras crear un item en un modal).

@@ -2,7 +2,9 @@
   <v-autocomplete
     :model-value="modelValue"
     @update:model-value="onSelect"
-    v-model:search="search"
+    @update:menu="alAbrir"
+    :search="textoVisible"
+    @update:search="alBuscar"
     :items="visibleItems"
     :loading="loading"
     :label="label"
@@ -30,7 +32,7 @@
 // Combobox con busqueda server-side paginada. El comportamiento (traer 10, buscar
 // al teclear, aviso de "hay mas", preservar el seleccionado) esta definido aca una
 // sola vez. Cada combobox solo pasa su fetch, su label y sus slots si los necesita.
-import { computed, onMounted } from 'vue'
+import { computed, ref } from 'vue'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 
 const props = defineProps({
@@ -45,6 +47,8 @@ const props = defineProps({
   returnObject: { type: Boolean, default: true },
   excludeIds: { type: Array, default: () => [] },   // ids a ocultar (ej. ya agregados)
   seed: { default: null },   // item ya seleccionado (para que se muestre al editar, sin buscar)
+  // Nombre del recurso para la memoria corta ('clientes', 'labs'...). Vacio la apaga.
+  recurso: { type: String, default: '' },
 })
 // 'selected' emite el OBJETO elegido (util si el padre necesita otros campos, ej.
 // el nombre) sin tener que leer toda la lista.
@@ -55,7 +59,7 @@ const selectedId = () => props.returnObject
   : (props.modelValue ?? null)
 
 const { items, loading, searchQuery: search, retrieveData, total } =
-  usePaginatedSearch((page, size, q) => props.fetch(page, size, q), props.mapper, selectedId)
+  usePaginatedSearch((page, size, q) => props.fetch(page, size, q), props.mapper, selectedId, props.recurso)
 
 const visibleItems = computed(() => {
   const base = items.value.filter(it => !props.excludeIds.includes(it[props.itemValue]))
@@ -74,8 +78,30 @@ function onSelect(v) {
   emit('selected', obj ?? null)
 }
 
-onMounted(() => retrieveData(''))
+// La lista se pide al desplegar, no al dibujarse. Con `seed` el elegido ya se
+// muestra sin pedir nada.
+function alAbrir(estaAbierto) {
+  if (estaAbierto && !items.value.length) retrieveData('')
+}
+
+const tituloElegido = computed(() => {
+  const id = selectedId()
+  if (!id) return ''
+  const elegido = props.seed?.[props.itemValue] === id
+    ? props.seed
+    : items.value.find(it => it[props.itemValue] === id)
+  return elegido ? String(elegido[props.itemTitle] ?? '') : ''
+})
+
+// Lo que se ve y lo que se busca no son lo mismo: al desplegar, el combobox
+// escribe el titulo de lo ya elegido. Se muestra, pero no se busca.
+const textoVisible = ref('')
+
+function alBuscar(texto) {
+  textoVisible.value = texto
+  search.value = texto === tituloElegido.value ? '' : texto
+}
 
 // El padre puede forzar recargar la lista (ej. tras crear un item en un modal).
-defineExpose({ reload: () => retrieveData('') })
+defineExpose({ reload: () => retrieveData('', true) })
 </script>

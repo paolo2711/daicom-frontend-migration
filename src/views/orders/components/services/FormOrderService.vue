@@ -18,6 +18,7 @@
             <v-row dense>
               <v-col cols="12" md="9">
                 <paginated-autocomplete ref="equipCatalogRef" v-model="temp_eq.name" :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
+                                recurso="equipos"
                                 label="Equipo" :return-object="false" item-title="name" item-value="id"
                                 density="compact" variant="outlined" hide-details="auto"
                                 prepend-inner-icon="mdi-toolbox-outline" clearable />
@@ -33,6 +34,7 @@
         <v-row dense class="mt-2">
           <v-col cols="12" md="5">
             <paginated-autocomplete v-model="temp_eq.lab" :fetch="fetchLabs" :mapper="LabMappers.getMap"
+                            recurso="labs"
                             @selected="l => labSeleccionado = l"
                             label="Laboratorio" :return-object="false" item-title="name" item-value="id"
                             density="compact" variant="outlined" hide-details="auto" />

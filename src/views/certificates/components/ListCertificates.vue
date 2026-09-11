@@ -98,7 +98,7 @@
             </v-col>
 
             <v-col cols="12" md="3">
-              <v-autocomplete v-model="lab_id" v-model:search="search_lab" hide-details="auto" density="compact" :loading="loading_labs" prepend-inner-icon="mdi-factory" :items="labs" item-title="name" item-value="id" placeholder="Buscar laboratorio..." clearable variant="outlined" label="Laboratorio" no-filter />
+              <v-autocomplete v-model="lab_id" v-model:search="search_lab" @update:menu="cargarLabs" hide-details="auto" density="compact" :loading="loading_labs" prepend-inner-icon="mdi-factory" :items="labs" item-title="name" item-value="id" placeholder="Buscar laboratorio..." clearable variant="outlined" label="Laboratorio" no-filter />
             </v-col>
 
             <v-col cols="12" md="2">
@@ -194,7 +194,7 @@
                 ? 'green'
                 : (item.signed_pdf
                   ? 'blue'
-                  : (item.uploaded_xls ? 'orange' : 'grey')))"
+                  : (tieneExcelBase(item) ? 'orange' : 'grey')))"
             class="text-white font-weight-bold"
           >
             {{ item.registry_code }}
@@ -387,8 +387,8 @@
 
               <order-summary-card
                 v-if="menu_abierto_id === item.id"
+                :orderId="item.order"
                 :orderNumber="item.order_number"
-                :certCodes="getCertCodesByOrder(item.order_number)"
                 @cerrar-tarjeta="menu_abierto_id = null; orden_resonancia = null;"
                 @seleccionar-orden="seleccionarTodaLaOrden(item.order_number)"
               />
@@ -621,8 +621,17 @@ const {
 } = usePaginatedSearch(
   (page, size, query) => LabDataService.getFiltered(page, size, query),
   LabMappers.getMap,
-  () => lab_id.value
+  () => lab_id.value,
+  'labs'
 )
+
+// El filtro vive dentro del panel plegado: la lista se pide al desplegarlo.
+const labs_pedidos = ref(false)
+const cargarLabs = (abierto) => {
+  if (!abierto || labs_pedidos.value) return
+  labs_pedidos.value = true
+  retrieveLabs()
+}
 
 // ─── Clientes ─────────────────────────────────────────────────────────────────
 const client_id = ref(null)
@@ -795,8 +804,6 @@ onMounted(() => {
     retrieveAllCertificates()
   }
 
-  retrieveLabs()
-
   window.addEventListener('wss-reload-certificates', recargarPorWebSocket)
   window.addEventListener('wss-update-row',       fetchAndInjectSingleCert)
   window.addEventListener('wss-update-rows',      aplicarFilasCambiadas)
@@ -959,11 +966,6 @@ function handleRowClick (event, { item }) {
   }
 }
 
-function getCertCodesByOrder (orderNum) {
-  return certificates.value
-    .filter(c => c.order_number === orderNum)
-    .map(c => c.registry_code)
-}
 
 
 // `silencioso` lo usa la recarga que llega por WebSocket: la disparo otro, el

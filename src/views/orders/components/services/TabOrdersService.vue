@@ -153,7 +153,7 @@
         </template>
 
         <template v-slot:item.progress="{ item }">
-          <div v-if="item.status !== 4 && item.certificates && getProgreso(item).total > 0" class="mx-auto" style="width: 100px;">
+          <div v-if="item.status !== 4 && getProgreso(item).total > 0" class="mx-auto" style="width: 100px;">
             <div class="text-caption mb-1 font-weight-medium text-center" :class="theme.global.current.value.dark ? 'text-grey-lighten-1' : 'text-grey-darken-2'">
               {{ getProgreso(item).listos }} / {{ getProgreso(item).total }} Equipos
             </div>
@@ -527,6 +527,7 @@ const retrieveOrders = () => {
         if (!isLatestOrdersLoad(token)) return   // llegó una carga más nueva → no pisar
         orders.value = res.data.results.map(orden => OrderMappers.getMap(orden))
         total_orders.value = res.data.count
+        cargarDetalleExpandido(idOrdenExpandida())
       })
       .finally(() => {
         if (isLatestOrdersLoad(token)) loading_list.value = false

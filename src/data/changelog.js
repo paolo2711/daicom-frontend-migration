@@ -19,6 +19,17 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.3.1',
+    fecha: '2026-09-11',
+    cambio: [
+      'Certificados y Órdenes cargan hasta cinco veces más livianas, y la diferencia se nota sobre todo con los filtros puestos.',
+      'Las listas de clientes, laboratorios y equipos se piden al abrir el desplegable, no al entrar a la pantalla.',
+    ],
+    arreglo: [
+      'Catorce certificados se veían en naranja y decían "En Proceso" dentro de su orden sin tener el Excel cargado.',
+    ],
+  },
+  {
     version: '3.7.3.0',
     fecha: '2026-09-11',
     nuevo: [

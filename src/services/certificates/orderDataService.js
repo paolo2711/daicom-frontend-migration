@@ -45,6 +45,11 @@ class OrderDataService {
         return axios.get(`orders/${id}/equipos`, { headers: authHeader() });
     }
 
+    // Facturas y abonos, para la tarjeta de resumen.
+    getResumen(id) {
+        return axios.get(`orders/${id}/resumen`, { headers: authHeader() });
+    }
+
     // Anula la orden y sus equipos. El back resuelve cuales son.
     anular(id) {
         return axios.post(`orders/${id}/anular`, {}, { headers: authHeader() });

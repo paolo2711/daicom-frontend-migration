@@ -1,47 +1,82 @@
-// src/composables/usePaginatedSearch.js
 import { ref, watch } from 'vue'
+import { debounce } from '@/utils/debounce'
+import { leerCache, guardarCache, olvidarCache } from '@/utils/cacheCorta'
+
+const ESPERA_TECLEO = 300
 
 /**
- * Composable genérico para búsquedas paginadas con preservación de estado
- * * @param {Function} apiServiceCall - Función del servicio (ej. (page, size, query) => ClientDataService...)
- * @param {Function} mapperFunction - Función para mapear la respuesta
- * @param {Function} getActiveId - Getter para obtener el ID actualmente seleccionado en el v-model
+ * Búsqueda paginada con preservación del seleccionado.
+ *
+ * @param {Function} apiServiceCall - (page, size, query) => Promise
+ * @param {Function} mapperFunction - mapea cada resultado
+ * @param {Function} getActiveId - id elegido en el v-model, para no perderlo de la lista
+ * @param {String} recurso - nombre para la memoria corta ('clientes', 'labs'...). Vacío = sin memoria.
  */
-export function usePaginatedSearch(apiServiceCall, mapperFunction, getActiveId = () => null) {
+export function usePaginatedSearch(apiServiceCall, mapperFunction, getActiveId = () => null, recurso = '') {
   const items = ref([])
   const loading = ref(false)
   const searchQuery = ref(null)
   const total = ref(0)   // total de coincidencias en el server (para avisar "hay más")
 
-  const retrieveData = async (query = '') => {
+  // El seleccionado se antepone si el server no lo devolvió en esta tanda. Se
+  // hace sobre una copia: la lista guardada no se toca.
+  const aplicar = (lista, cuenta) => {
+    total.value = cuenta
+    const visibles = [...lista]
+    const activeId = getActiveId()
+    if (activeId) {
+      const activo = items.value.find(item => item.id === activeId)
+      if (activo && !visibles.some(item => item.id === activeId)) {
+        visibles.unshift(activo)
+      }
+    }
+    items.value = visibles
+  }
+
+  let ultimaConsulta = null
+  let enVuelo = null
+
+  const retrieveData = async (query = '', forzar = false) => {
+    const texto = query || ''
+    // La misma busqueda llega por dos caminos al desplegar. Se descarta si ya
+    // esta en vuelo o si es la que se acaba de traer.
+    if (!forzar && (enVuelo === texto || (ultimaConsulta === texto && items.value.length))) return
+
+    const clave = recurso ? `${recurso}|${texto}` : ''
+
+    if (forzar && recurso) olvidarCache(recurso)
+
+    if (clave && !forzar) {
+      const guardado = leerCache(clave)
+      if (guardado) {
+        ultimaConsulta = texto
+        aplicar(guardado.lista, guardado.total)
+        return
+      }
+    }
+
+    enVuelo = texto
     loading.value = true
     try {
-      // Llamada estándar a tus servicios paginados
       const response = await apiServiceCall(1, 10, query)
-      total.value = response.data.count ?? response.data.results.length
-      const fetched = response.data.results.map(mapperFunction)
-      
-      const activeId = getActiveId()
-      if (activeId) {
-        // Buscamos si el objeto activo ya estaba en la lista anterior
-        const activeObj = items.value.find(item => item.id === activeId)
-        // Si existe en memoria, pero NO vino en esta nueva página del backend, lo inyectamos
-        if (activeObj && !fetched.some(item => item.id === activeId)) {
-          fetched.unshift(activeObj)
-        }
-      }
-      
-      items.value = fetched
+      const cuenta = response.data.count ?? response.data.results.length
+      const lista = response.data.results.map(mapperFunction)
+      if (clave) guardarCache(clave, { lista, total: cuenta })
+      ultimaConsulta = texto
+      aplicar(lista, cuenta)
     } catch (error) {
       console.error("Error en la búsqueda paginada:", error)
     } finally {
+      enVuelo = null
       loading.value = false
     }
   }
 
-  // Centralizamos el watcher para no repetirlo en cada componente
+  // Espera a que el usuario deje de teclear antes de pedir.
+  const buscarConEspera = debounce((query) => retrieveData(query), ESPERA_TECLEO)
+
   watch(searchQuery, (newVal) => {
-    retrieveData(newVal)
+    buscarConEspera(newVal)
   })
 
   return {

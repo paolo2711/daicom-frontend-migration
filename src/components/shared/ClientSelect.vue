@@ -5,6 +5,7 @@
     @selected="$emit('selected', $event)"
     :fetch="fetchClientes"
     :mapper="ClientMappers.getMap"
+    recurso="clientes"
     :return-object="false"
     :seed="seed"
     :label="label"

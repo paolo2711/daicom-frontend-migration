@@ -154,6 +154,7 @@ import { computed as vueComputed } from 'vue'
 import CertificateDataService from "@/services/certificates/certificateDataService";
 import { copiarConAviso } from "@/utils/clipboard";
 import { estaEntregado } from "@/utils/certificates/entrega";
+import { tieneExcelBase } from "@/utils/certificates/excelBase";
 import { fechaCorta } from "@/utils/fechas";
 
 export default {
@@ -219,7 +220,7 @@ export default {
       if (estaEntregado(cert)) return { texto: 'Entregado', color: 'teal-darken-2' };
       if (cert.attached_pdf || cert.uploaded) return { texto: 'Listo', color: 'success' };
       if (cert.signature_requested) return { texto: 'Firma solicitada', color: 'warning' };
-      if (cert.uploaded_xls) return { texto: 'En Proceso', color: 'warning' };
+      if (tieneExcelBase(cert)) return { texto: 'En Proceso', color: 'warning' };
       return { texto: 'Borrador', color: 'grey-darken-1' };
     },
     desvincularCertificado(cert) {

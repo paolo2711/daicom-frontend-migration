@@ -124,8 +124,8 @@ import { useRouter } from 'vue-router'
 import OrderDataService from '@/services/certificates/orderDataService.js'
 
 const props = defineProps({
-  orderNumber: { type: String, required: true },
-  certCodes: { type: Array, required: true }
+  orderId: { type: Number, required: true },
+  orderNumber: { type: String, required: true }
 })
 
 const emit = defineEmits(['cerrar-tarjeta', 'seleccionar-orden'])
@@ -136,12 +136,8 @@ const orderData = ref({})
 
 const fetchOrderData = () => {
   loading.value = true
-  OrderDataService.getFiltered(1, 1, '', props.orderNumber)
-    .then(res => {
-      if (res.data.results && res.data.results.length > 0) {
-        orderData.value = res.data.results[0]
-      }
-    })
+  OrderDataService.getResumen(props.orderId)
+    .then(res => { orderData.value = res.data || {} })
     .finally(() => { loading.value = false })
 }
 
@@ -157,9 +153,8 @@ const totalPagado = computed(() => {
 
 const formatMoney = (val) => parseFloat(val || 0).toFixed(2)
 
-// Símbolo de moneda. Todas las facturas/abonos de una orden comparten su
-// moneda (el vínculo la valida), así que caemos a la moneda de la orden.
-const simbolo = (currency) => ((currency || orderData.value.currency) === 'USD' ? '$' : 'S/')
+// La moneda vive en cada factura y en cada abono; la orden no tiene.
+const simbolo = (currency) => (currency === 'USD' ? '$' : 'S/')
 
 const irAOrden = () => {
   router.push({ path: '/orders', query: { buscar_orden: props.orderNumber } }).catch(()=>{})

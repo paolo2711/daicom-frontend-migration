@@ -1,9 +1,6 @@
-// uploaded_xls guarda un flag ("1"/"0") en los certificados viejos y la ruta del
-// PDF en los nuevos. Segun de donde venga el dato, el "no tiene" llega escrito de
-// varias formas, y cada pantalla lo comprobaba a su manera: ListCertificates
-// descartaba '0' y 'False', BatchActionModal ademas 'false'. Con eso las dos
-// podian discrepar sobre el mismo certificado.
+// El certificado llega de dos endpoints con formas distintas: la lista manda la
+// ruta del PDF base (`uploaded_xls_url`) y los equipos de una orden mandan solo
+// si lo tiene (`uploaded_xls`).
 export function tieneExcelBase(cert) {
-  const valor = String(cert?.uploaded_xls ?? '').trim().toLowerCase()
-  return valor !== '' && valor !== '0' && valor !== 'false'
+  return Boolean(cert?.uploaded_xls_url || cert?.uploaded_xls)
 }

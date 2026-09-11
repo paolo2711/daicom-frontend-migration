@@ -41,7 +41,6 @@ export default {
       created_at: element.created_at,
       
       // Archivos y Nube
-      uploaded_xls: element.uploaded_xls,
       uploaded_xls_url: element.uploaded_xls_url,
       signed_pdf: element.signed_pdf,
       attached_pdf: element.attached_pdf,
@@ -73,7 +72,6 @@ export default {
       identification_code: element.identification_code,
       calibration_date: element.calibration_date,
       emission_date: element.emission_date,
-      uploaded_xls: element.uploaded_xls,
       uploaded_xls_url: element.uploaded_xls_url,
       signed_pdf: element.signed_pdf,
       signature_requested: element.signature_requested,

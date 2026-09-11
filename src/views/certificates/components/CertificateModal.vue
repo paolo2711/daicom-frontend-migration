@@ -26,7 +26,7 @@
                   <paginated-autocomplete
                     ref="equipCatalogRef"
                     v-model="certificate.equipment"
-                    :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
+                    :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap" recurso="equipos"
                     :return-object="false" item-title="name" item-value="id"
                     :seed="equipSeed"
                     label="Equipo"
@@ -52,7 +52,7 @@
               <v-row align="center">
                 <v-col cols="12" md="9">
                   <paginated-autocomplete ref="labComboRef" v-model="certificate.lab"
-                                  :fetch="fetchLabs" :mapper="LabMappers.getMap" :seed="labSeed"
+                                  :fetch="fetchLabs" :mapper="LabMappers.getMap" :seed="labSeed" recurso="labs"
                                   :return-object="false" item-title="name" item-value="id"
                                   density="compact" hide-details="auto"
                                   clearable variant="outlined" label="Laboratorio"/>
@@ -270,7 +270,7 @@ const open = (item = null) => {
     certificate.value = {
       certificate_type: 1, correlative: '', client: null, lab: '', equipment: '', brand: '',
       model: '', serie: '', indication_interval: '', identification_code: '', 
-      calibration_date: today, emission_date: today, signed_pdf: null, uploaded_xls: '', observations: '',
+      calibration_date: today, emission_date: today, signed_pdf: null, observations: '',
       signature_requested: false
     }
     labSeed.value = null

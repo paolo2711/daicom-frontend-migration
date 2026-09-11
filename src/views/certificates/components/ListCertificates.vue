@@ -129,6 +129,11 @@
              prepend-icon="mdi-bell-ring" @click="abrirModalLote('notify')">
         Solicitar Firma
       </v-btn>
+
+      <v-btn v-if="permiso_entrega" variant="text" size="small" class="mx-1 font-weight-bold"
+             prepend-icon="mdi-package-variant-closed-check" @click="abrirModalLote('entrega')">
+        Marcar Entregados
+      </v-btn>
     </selection-bar>
 
     <table-loading-overlay :loading="loading_list" :isEmpty="certificates.length === 0">
@@ -305,10 +310,14 @@
                     :href="linkNube(item)" target="_blank"
                     :disabled="item.status === 5" @click.stop="onNubeClick($event, item)"
                   >
-                    <v-icon>mdi-cloud-check</v-icon>
+                    <v-icon>{{ estaEntregado(item) ? 'mdi-cloud-check' : 'mdi-cloud' }}</v-icon>
                   </v-btn>
                 </template>
-                <span>Ver PDF en Nube Pública<br><small>Ctrl+clic: copiar link</small></span>
+                <span>
+                  Ver PDF en Nube Pública
+                  <template v-if="estaEntregado(item)"><br>Entregado el {{ fechaCorta(item.sent_date) }}</template>
+                  <br><small>Ctrl+clic: copiar link</small>
+                </span>
               </v-tooltip>
 
               <v-tooltip location="bottom" v-else>
@@ -482,6 +491,21 @@
           </v-list-item-title>
         </v-list-item>
 
+        <v-list-item v-if="permiso_entrega && (esEntregable(contextMenu.item) || estaEntregado(contextMenu.item))"
+                     @click="estaEntregado(contextMenu.item) ? quitarEntrega(contextMenu.item) : abrirEntrega(contextMenu.item)">
+          <template v-slot:prepend>
+            <v-icon size="small">
+              {{ estaEntregado(contextMenu.item) ? 'mdi-package-variant-closed-remove' : 'mdi-package-variant-closed-check' }}
+            </v-icon>
+          </template>
+          <v-list-item-title class="font-weight-medium text-body-2">
+            {{ estaEntregado(contextMenu.item) ? 'Quitar entrega' : 'Marcar como entregado' }}
+          </v-list-item-title>
+          <v-list-item-subtitle v-if="estaEntregado(contextMenu.item)" class="text-caption">
+            Entregado {{ fechaCorta(contextMenu.item.sent_date) }}
+          </v-list-item-subtitle>
+        </v-list-item>
+
         <v-list-item v-if="puedeGenerarQr(contextMenu.item)" @click="openQRDialog(contextMenu.item)">
           <template v-slot:prepend><v-icon size="small">{{ contextMenu.item.uploaded ? 'mdi-refresh' : 'mdi-qrcode-scan' }}</v-icon></template>
           <v-list-item-title class="font-weight-medium text-body-2">
@@ -534,6 +558,8 @@ import OrderSummaryCard    from './OrderSummaryCard.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import ClientSelect        from '@/components/shared/ClientSelect.vue'
 import { tieneExcelBase }  from '@/utils/certificates/excelBase'
+import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
+import { fechaCorta }      from '@/utils/fechas'
 import FilterPill          from '@/components/shared/FilterPill.vue'
 import DateRangeFilter     from '@/components/shared/DateRangeFilter.vue'
 import { copiarConAviso } from '@/utils/clipboard'
@@ -623,6 +649,7 @@ const permiso_resumen         = ref(false)
 const permiso_anular          = ref(false)
 const permiso_solicitar_firma = ref(false)
 const permiso_elaborar        = ref(false)  // 15: subir Excel base (metrólogo)
+const permiso_entrega         = ref(false)
 
 // Las mismas reglas se pedian en los botones de la fila y en el menu contextual.
 const puedeSubirExcel = (item) => item.status !== 5 && permiso_elaborar.value
@@ -707,6 +734,29 @@ function abrirModalLote (accion) {
   }
 }
 
+// Marcar pasa por el modal aunque sea uno: hay que elegir la fecha.
+function abrirEntrega (cert) {
+  batchActionModalRef.value?.open('entrega', [cert], true)
+}
+
+function quitarEntrega (cert) {
+  $swal.fire({
+    title: '¿Quitar la entrega?',
+    text: `${cert.registry_code} volverá a figurar como no entregado.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, quitar',
+    cancelButtonText: 'Cancelar',
+  }).then((result) => {
+    if (!result.isConfirmed) return
+    CertificateDataService.registrarEntrega([cert.id], null).then(() => {
+      Toast.fire({ timer: 2500, icon: 'info', title: 'Entrega quitada' })
+    }).catch(() => {
+      $swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo quitar la entrega.' })
+    })
+  })
+}
+
 // ─── Expose ───────────────────────────────────────────────────────────────────
 defineExpose({
   certificateModal,
@@ -724,6 +774,7 @@ onMounted(() => {
   permiso_anular.value          = is_admin.value || user_permissions.value.includes(1003)
   permiso_solicitar_firma.value = is_admin.value || user_permissions.value.includes(1005)
   permiso_elaborar.value        = is_admin.value || user_permissions.value.includes(1006)
+  permiso_entrega.value         = is_admin.value || user_permissions.value.includes(1010)
 
   if (route.query.correlativo) {
     correlative.value = route.query.correlativo
@@ -1004,13 +1055,6 @@ function fetchAndInjectOrderUpdate (event) {
     })
     certificates.value = [...certificates.value]
   }).catch(() => {})
-}
-
-function checkAsDelivered (certificate) {
-  if (certificate.sent !== true) {
-    CertificateDataService.checkAsDelivered(certificate.id, { sent: true })
-      .catch(e => console.error('Error al marcar como enviado', e))
-  }
 }
 
 function anularCertConfirm (cert) {

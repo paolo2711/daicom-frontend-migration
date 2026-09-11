@@ -1,9 +1,9 @@
 <template>
   <v-dialog v-model="dialog" max-width="850" class="dialog-premium" persistent>
     <v-card @keydown.enter="confirmarConEnter">
-      <base-modal-header 
-        :title="modalConfig.title" 
-        :icon="modalConfig.icon" 
+      <base-modal-header
+        :title="modalConfig.titulo"
+        :icon="modalConfig.icono"
         :iconColor="modalConfig.color"
         @close="close"
       >
@@ -17,9 +17,9 @@
 
       <v-card-text class="pt-4 pb-2">
         <h3 class="text-subtitle-1 font-weight-bold mb-2" style="line-height: 1.2;">
-          {{ modalConfig.subtitle }}
+          {{ modalConfig.subtitulo }}
         </h3>
-        
+
         <v-alert
           v-if="action === 'excel'"
           type="info" density="compact" variant="tonal" class="mb-4 rounded-lg text-caption"
@@ -40,6 +40,19 @@
             Si el archivo no aparece, puede adjuntarlo: un Excel para convertir, o un PDF ya hecho.
           </div>
         </v-alert>
+
+        <v-text-field
+          v-if="modalConfig.fecha"
+          v-model="fecha"
+          type="date"
+          :label="modalConfig.fecha.label"
+          :max="fechaMaxima"
+          density="compact"
+          variant="outlined"
+          hide-details
+          class="mb-4"
+          style="max-width: 260px;"
+        />
 
         <v-table density="compact" class="border rounded-lg bg-surface mt-2" style="max-height: 350px; overflow-y: auto;">
           <thead>
@@ -148,7 +161,7 @@
           :loading="is_processing"
           :disabled="!puedeConfirmar"
         >
-          <v-icon start>{{ modalConfig.actionIcon }}</v-icon> Continuar
+          <v-icon start>{{ modalConfig.iconoAccion }}</v-icon> Continuar
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -164,6 +177,8 @@ import CertificateDataService from '@/services/certificates/certificateDataServi
 import { defineAsyncComponent } from 'vue'
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { alPresionarEnter } from '@/utils/keyboard'
+import { hoyISO } from '@/utils/fechas'
+import { ACCIONES, colorDe, estaAdjuntado } from './accionesDeLote'
 
 const LoadSheet = defineAsyncComponent(() => import('@/views/certificates/components/LoadSheet.vue'))
 
@@ -173,48 +188,29 @@ const $swal = appContext.config.globalProperties.$swal
 const appStore = useAppStore()
 
 const dialog = ref(false)
-const action = ref('') // 'excel', 'qr', 'notify'
+const action = ref('')
 const items = ref([])
 const selected_items = ref([]) // IDs de los checkboxes marcados
 const loading_validation = ref(false)
 const is_processing = ref(false)
 const loadSheetModalRef = ref(null)
 const force_select = ref(false)
+const fecha = ref('')
 
-const configMap = {
-  excel: {
-    title: 'Auto-Carga de Excels Nativos',
-    icon: 'mdi-folder-search',
-    color: 'green-darken-2',
-    subtitle: 'Se generarán los PDFs para los siguientes certificados:',
-    actionIcon: 'mdi-server-network'
-  },
-  qr: {
-    title: 'Firma Múltiple y Código QR',
-    icon: 'mdi-qrcode-scan',
-    color: 'primary',
-    subtitle: 'Se firmarán en lote los siguientes certificados:',
-    actionIcon: 'mdi-pen'
-  },
-  notify: {
-    title: 'Solicitar Firma a Gerencia',
-    icon: 'mdi-bell-ring',
-    color: 'orange-darken-2',
-    subtitle: 'Se registrará la solicitud de firma para los siguientes equipos:',
-    actionIcon: 'mdi-send-check'
-  }
-}
-
-const modalConfig = computed(() => configMap[action.value] || configMap.excel)
-
-
+const modalConfig = computed(() => ACCIONES[action.value] || ACCIONES.excel)
 
 // Ahora es válido simplemente si el usuario marcó al menos una fila
 const hayItemsValidos = computed(() => selected_items.value.length > 0)
 
+const faltaLaFecha = computed(() => Boolean(modalConfig.value.fecha) && !fecha.value)
+
+const fechaMaxima = computed(() =>
+  modalConfig.value.fecha?.permiteFutura === false ? hoyISO() : undefined
+)
+
 // Una sola condición para el botón y para el Enter, así no se separan.
 const puedeConfirmar = computed(() =>
-  !loading_validation.value && !is_processing.value && hayItemsValidos.value
+  !loading_validation.value && !is_processing.value && hayItemsValidos.value && !faltaLaFecha.value
 )
 
 const confirmarConEnter = alPresionarEnter(() => {
@@ -243,45 +239,21 @@ const toggleSelectAll = () => {
 }
 
 const open = async (actionType, selectedCerts, forceSelect = false) => {
+  const accion = ACCIONES[actionType] || ACCIONES.excel
   action.value = actionType
   selected_items.value = []
   force_select.value = forceSelect
+  fecha.value = accion.fecha ? hoyISO() : ''
 
-  items.value = selectedCerts.map(cert => {
-    let disabled = false
-    let already_has_it = false
+  items.value = selectedCerts.map(cert => ({
+    ...cert,
+    equipment: `${cert.equipment} ${cert.brand}`.trim(),
+    validation_status: 'pending',
+    ...accion.preparar(cert),
+  }))
 
-    if (actionType === 'excel') {
-      if (tieneExcelBase(cert)) {
-        already_has_it = true // Ya tiene Excel adjuntado (chip "Tiene Excel")
-      }
-    } else if (actionType === 'qr') {
-      if (!tieneExcelBase(cert)) {
-        disabled = true // Le falta Excel (Bloqueado)
-      } else if (cert.uploaded) {
-        already_has_it = true // Ya está en Nube (Permitido pero Desmarcado)
-      }
-    } else if (actionType === 'notify') {
-      if (!tieneExcelBase(cert)) {
-        disabled = true // Bloqueado: Le falta el Excel base
-      } else if (cert.signature_requested) {
-        disabled = true // 2da: Ya notificado (Bloqueado, no se puede hacer spam)
-      } else if (cert.uploaded) {
-        already_has_it = true // 1ra: Ya está en nube, pero podría ser corrección (Permitido pero Desmarcado)
-      }
-    }
-
-    return {
-      ...cert,
-      equipment: `${cert.equipment} ${cert.brand}`.trim(),
-      validation_status: 'pending',
-      disabled,
-      already_has_it
-    }
-  })
-
-  // Preseleccionar los "Nuevos" y válidos para QR y Notify
-  if (actionType !== 'excel') {
+  // La acción que escanea el servidor marca las filas al saber qué encontró.
+  if (!accion.escaneaElServidor) {
     items.value.forEach(item => {
       // forceSelect: el usuario pidió explícitamente esta acción para este certificado puntual
       // (ej. botón "Reemplazar"), así que ignoramos already_has_it y lo marcamos igual.
@@ -293,9 +265,7 @@ const open = async (actionType, selectedCerts, forceSelect = false) => {
 
   dialog.value = true
 
-  if (actionType === 'excel') {
-    validarExcelsEnServidor()
-  }
+  if (accion.escaneaElServidor) validarExcelsEnServidor()
 }
 
 const abrirAdjuntar = (item, modo) => loadSheetModalRef.value?.open(item, modo)
@@ -304,65 +274,10 @@ const openManualUpload    = (item) => abrirAdjuntar(item, 'excel')
 const openPdfBaseUpload   = (item) => abrirAdjuntar(item, 'pdf-base')
 const openManualPdfUpload = (item) => abrirAdjuntar(item, 'pdf')
 
-// En la accion Excel se puede adjuntar el Excel o el PDF ya hecho.
-const ADJUNTADO = {
-  manual:          { icono: 'mdi-file-excel',   titulo: 'Excel adjuntado, se convertirá al continuar' },
-  manual_pdf_base: { icono: 'mdi-file-pdf-box', titulo: 'PDF adjuntado, se guardará al continuar' },
-}
-const estaAdjuntado = (item) => item.validation_status in ADJUNTADO
-const iconoAdjunto  = (item) => (ADJUNTADO[item.validation_status] || {}).icono || 'mdi-paperclip'
-const tituloAdjunto = (item) => (ADJUNTADO[item.validation_status] || {}).titulo || ''
+const pintar = (estado) => ({ ...estado, color: colorDe(estado.nivel, modalConfig.value.color) })
 
-// Tres colores en toda la tabla: el de la accion para lo que ya esta hecho o
-// listo, rojo solo para lo que bloquea, gris para lo demas.
-const NEUTRO = 'grey'
-
-const estadoPrevio = (item) => {
-  const hecho = modalConfig.value.color
-
-  if (action.value === 'excel') {
-    return item.already_has_it
-      ? { texto: 'Tiene Excel', color: hecho }
-      : { texto: 'Sin Excel', color: NEUTRO }
-  }
-
-  if (action.value === 'qr') {
-    if (item.disabled) return { texto: 'Sin Excel', color: 'error' }
-    return item.already_has_it
-      ? { texto: 'En Nube', color: hecho }
-      : { texto: 'Con PDF', color: NEUTRO }
-  }
-
-  if (item.signature_requested) return { texto: 'Notificado', color: hecho }
-  if (item.disabled) return { texto: 'Sin Excel', color: 'error' }
-  return { texto: item.already_has_it ? 'En Nube' : 'Con PDF', color: NEUTRO }
-}
-
-const validacion = (item) => {
-  const listo = modalConfig.value.color
-
-  if (action.value === 'excel') {
-    if (estaAdjuntado(item)) {
-      return { icono: iconoAdjunto(item), color: listo, titulo: tituloAdjunto(item) }
-    }
-    return item.validation_status === 'found'
-      ? { icono: 'mdi-check-circle', color: listo, titulo: 'Encontrado en el servidor' }
-      : { icono: 'mdi-close-circle', color: 'error', titulo: 'No está en el servidor' }
-  }
-
-  if (action.value === 'qr') {
-    if (item.validation_status === 'manual_pdf') {
-      return { icono: 'mdi-file-pdf-box', color: listo, titulo: 'PDF firmado adjuntado' }
-    }
-    return item.disabled
-      ? { icono: 'mdi-close-circle', color: 'error', titulo: 'No tiene certificado base' }
-      : { icono: 'mdi-check-circle', color: listo, titulo: 'Listo para firmar' }
-  }
-
-  if (!item.disabled) return { icono: 'mdi-bell-check', color: listo, titulo: 'Apto para notificar' }
-  if (item.signature_requested) return { icono: 'mdi-minus-circle', color: NEUTRO, titulo: 'Ya tiene una solicitud activa' }
-  return { icono: 'mdi-close-circle', color: 'error', titulo: 'No tiene certificado base' }
-}
+const estadoPrevio = (item) => pintar(modalConfig.value.estadoPrevio(item))
+const validacion   = (item) => pintar(modalConfig.value.validacion(item))
 
 const discardManualPdf = (item) => {
   item.validation_status = 'pending'
@@ -490,7 +405,9 @@ const confirmAction = async () => {
         if (cert.validation_status === 'manual_pdf' && cert.file) {
           window.dispatchEvent(new CustomEvent('wss-manual-pdf-upload', { detail: { certificate: cert, file: cert.file } }))
         } else {
-          window.dispatchEvent(new CustomEvent('wss-qr-start', { detail: { certificate: cert } }))
+          window.dispatchEvent(new CustomEvent('wss-qr-start', {
+            detail: { certificate: cert, fechaFirma: fecha.value }
+          }))
         }
       })
       Toast.fire({ timer: 4000,
@@ -526,6 +443,23 @@ const confirmAction = async () => {
 
       if (yaHechos.length) await guardarPdfsBase(yaHechos)
 
+      emit('clearSelection')
+      close()
+    }
+
+    else if (action.value === 'entrega') {
+      const { data } = await CertificateDataService.registrarEntrega(aptos.map(i => i.id), fecha.value)
+      const marcados = data?.certificados ?? aptos.length
+      Toast.fire({
+        ...appStore.toastGuardadoExito,
+        title: marcados === 1 ? 'Entrega registrada' : `Entrega registrada en ${marcados} certificados`
+      })
+      if (data?.omitidos) {
+        $swal.fire({
+          icon: 'info', title: 'Algunos quedaron sin marcar',
+          text: `${data.omitidos} todavía no están firmados.`, confirmButtonText: 'Entendido'
+        })
+      }
       emit('clearSelection')
       close()
     }

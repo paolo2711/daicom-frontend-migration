@@ -49,7 +49,6 @@ export default {
       signature_requested: element.signature_requested,
       
       // Metadatos de envío
-      sent: element.sent,
       sent_to: element.sent_to,
       sent_date: element.sent_date,
       observations: element.observations
@@ -78,7 +77,6 @@ export default {
       uploaded_xls_url: element.uploaded_xls_url,
       signed_pdf: element.signed_pdf,
       signature_requested: element.signature_requested,
-      sent: element.sent,
       sent_to: element.sent_to,
       sent_date: element.sent_date,
       observations: element.observations

@@ -30,18 +30,19 @@ function sendWSProgress(certId, progress, status, code, attempts) {
 }
 
 function handleQRStart(e) {
-  const { certificate } = e.detail
+  const { certificate, fechaFirma = '' } = e.detail
   const currentUser = JSON.parse(localStorage.getItem('user')) || {}
   const username = currentUser.username || 'unknown'
 
+  // Viaja en la tarea para que el reintento use la misma fecha que el original.
   const exists = getTask(certificate.id)
   if (exists) {
-    appStore.updateUploadTask(certificate.id, 'qr', { status: 'generating', progress: 5, attempts: 0, username })
+    appStore.updateUploadTask(certificate.id, 'qr', { status: 'generating', progress: 5, attempts: 0, username, fecha_firma: fechaFirma })
   } else {
     appStore.addUploadTask({
       id: certificate.id, code: certificate.registry_code,
       status: 'generating', progress: 5, attempts: 0,
-      username, type: 'qr',
+      username, type: 'qr', fecha_firma: fechaFirma,
     })
   }
 
@@ -81,7 +82,7 @@ async function processQR(certId) {
 
     // El backend ahora hace todo el trabajo pesado, incluyendo la subida.
     // Solo esperamos a que termine. Los WebSockets irán actualizando la barra.
-    const generated_qr = await certificateDataService.generateQR(certId)
+    const generated_qr = await certificateDataService.generateQR(certId, (getTask(certId) || {}).fecha_firma)
     
     if (isCancelled(certId)) return
 

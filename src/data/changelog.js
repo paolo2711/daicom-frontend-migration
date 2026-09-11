@@ -19,6 +19,23 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.3.0',
+    fecha: '2026-09-11',
+    nuevo: [
+      'Los certificados se pueden marcar como entregados, con la fecha en que se entregaron.',
+      'Desde una orden se marcan todos sus equipos de una sola vez.',
+      'Al firmar se puede elegir la fecha del sello, para los certificados viejos que se vuelven a generar.',
+    ],
+    cambio: [
+      'El estado de un equipo dentro de la orden ahora muestra si tiene firma solicitada y si ya se entregó.',
+      'En Certificados, el ícono de la nube lleva un check cuando el certificado ya se entregó.',
+    ],
+    arreglo: [
+      'Solicitar firmas desde una orden ya no permite volver a pedir la firma de un equipo que ya estaba notificado.',
+      'Con una orden desplegada, sus equipos ahora se actualizan solos cuando alguien los cambia.',
+    ],
+  },
+  {
     version: '3.7.2.0',
     fecha: '2026-09-09',
     nuevo: [

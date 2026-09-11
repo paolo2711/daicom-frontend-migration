@@ -315,7 +315,7 @@ const save = () => {
       delete certificate.value['signed_pdf']
     }
 
-    const camposObsoletos = ['signed_pdf_url', 'billed_pdf', 'billed', 'payment_proof', 'attached_pdf', 'sent', 'sent_to', 'sent_date', 'client_data', 'lab_data']
+    const camposObsoletos = ['signed_pdf_url', 'billed_pdf', 'billed', 'payment_proof', 'attached_pdf', 'sent_to', 'sent_date', 'client_data', 'lab_data']
     
     for (let key in certificate.value){
       if (!camposObsoletos.includes(key) && key !== 'signed_pdf') {

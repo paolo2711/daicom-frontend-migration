@@ -454,6 +454,21 @@ const limpiarFechas = () => { filter_date_gt.value = ''; filter_date_lt.value = 
 // ── WebSockets ──
 const handleWssReload = () => { retrieveOrders(); cargarResumenes() }
 
+// Los equipos alquilados no vienen en la fila liviana; la orden abierta los
+// muestra, asi que ahi hace falta el detalle completo.
+const cargarDetalleExpandido = (orderId) => {
+  if (!orderId) return
+  OrderDataService.get(orderId)
+    .then(response => {
+      if (response?.data) updateSingleOrderInList(response.data)
+    })
+    .catch(() => {})
+}
+
+const idOrdenExpandida = () => (
+  expanded.value.length === 1 ? getSafeId(expanded.value[0]) : null
+)
+
 const fetchAndInjectSingleOrder = (event) => {
   OrderDataService.getFila(event.detail).then(response => {
     const fila = response?.data
@@ -461,6 +476,8 @@ const fetchAndInjectSingleOrder = (event) => {
 
     const index = orders.value.findIndex(o => o.id === fila.id)
     if (index !== -1) Object.assign(orders.value[index], fila)
+
+    if (String(idOrdenExpandida()) === String(fila.id)) cargarDetalleExpandido(fila.id)
 
     if (debounceTimeout) clearTimeout(debounceTimeout)
     debounceTimeout = setTimeout(() => { cargarResumenes() }, 1500)
@@ -628,11 +645,7 @@ watch(expanded, (newVal) => {
     return
   }
   if (expanded.value.length === 1) {
-    const orderId = getSafeId(expanded.value[0])
-    if (!orderId) return
-    OrderDataService.get(orderId).then(response => {
-      if (response && response.data) updateSingleOrderInList(response.data)
-    }).catch(() => {})
+    cargarDetalleExpandido(getSafeId(expanded.value[0]))
   }
 })
 

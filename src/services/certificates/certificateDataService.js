@@ -45,11 +45,12 @@ export default {
     });
   },
 
-  async generateQR(id) {
-    let headers = authHeader();
-    return axios.post(`certificates/attach_qr/${id}`, {}, {
-      headers: headers
-    });
+  // fecha_firma mueve solo el día del sello dibujado, para los certificados
+  // viejos que se vuelven a generar.
+  async generateQR(id, fechaFirma = '') {
+    const headers = authHeader();
+    headers['Content-Type'] = "application/json";
+    return axios.post(`certificates/attach_qr/${id}`, { fecha_firma: fechaFirma }, { headers });
   },
 
   
@@ -70,20 +71,12 @@ export default {
     });
   },
 
-  async checkAsUploadedToFTP(id, data) {
-    let headers = authHeader();
+  // Registra la entrega. Sirve para uno o para varios, y con sent_date en nulo
+  // la quita.
+  registrarEntrega(certIds, sentDate) {
+    const headers = authHeader();
     headers['Content-Type'] = "application/json";
-    return axios.patch(`certificates/${id}`, data, {
-      headers: headers
-    });
-  },
-
-  async checkAsDelivered(id, data) {
-    let headers = authHeader();
-    headers['Content-Type'] = "application/json";
-    return axios.patch(`certificates/${id}`, data, {
-      headers: headers
-    });
+    return axios.post('certificates/entrega', { cert_ids: certIds, sent_date: sentDate }, { headers });
   },
 
   // Guarda un PDF ya hecho como certificado base, sin convertir.

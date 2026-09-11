@@ -257,7 +257,8 @@
                 @reload="retrieveOrders"
                 @add-extra="prepareExtraEquipment(item)"
                 @edit-certificate="openCertificateModal"
-                @request-signatures="abrirBatchModal"
+                @request-signatures="certs => abrirBatchModal('notify', certs)"
+                @registrar-entrega="certs => abrirBatchModal('entrega', certs)"
               />
             </td>
           </tr>
@@ -370,9 +371,9 @@ const selected_order = ref(null)
 const certificateModalRef = ref(null)
 const batchActionModalRef = ref(null)
 
-const abrirBatchModal = (certs) => {
+const abrirBatchModal = (accion, certs) => {
   if (batchActionModalRef.value) {
-    batchActionModalRef.value.open('notify', certs)
+    batchActionModalRef.value.open(accion, certs)
   }
 }
 
@@ -413,14 +414,7 @@ watch(expanded, (newVal) => {
   }
   
   if (expanded.value.length === 1) {
-    const orderId = getSafeId(expanded.value[0])
-    if (!orderId) return
-
-    OrderDataService.get(orderId).then(response => {
-      if (response && response.data) {
-        updateSingleOrderInList(response.data)
-      }
-    }).catch(() => {})
+    cargarDetalleExpandido(getSafeId(expanded.value[0]))
   }
 })
 const total_orders = ref(0)
@@ -738,6 +732,21 @@ const abrirEditarOrden = (o) => {
   })
 }
 
+// Los equipos y los abonos no vienen en la fila liviana; la orden abierta los
+// muestra, asi que ahi hace falta el detalle completo.
+const cargarDetalleExpandido = (orderId) => {
+  if (!orderId) return
+  OrderDataService.get(orderId)
+    .then(response => {
+      if (response?.data) updateSingleOrderInList(response.data)
+    })
+    .catch(() => {})
+}
+
+const idOrdenExpandida = () => (
+  expanded.value.length === 1 ? getSafeId(expanded.value[0]) : null
+)
+
 // WebSockets
 const fetchAndInjectSingleOrder = (event) => {
   OrderDataService.getFila(event.detail)
@@ -749,6 +758,8 @@ const fetchAndInjectSingleOrder = (event) => {
       // equipos ni los abonos que la lista ya tenia.
       const index = orders.value.findIndex(o => o.id === fila.id)
       if (index !== -1) Object.assign(orders.value[index], fila)
+
+      if (String(idOrdenExpandida()) === String(fila.id)) cargarDetalleExpandido(fila.id)
 
       clearTimeout(debounceTimeout)
       debounceTimeout = setTimeout(() => { cargarResumenes() }, 1500)

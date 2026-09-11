@@ -102,6 +102,7 @@ const ACCIONES_CATEGORIAS = [
     { id: 1003, name: 'Anular / Restaurar Certificados', endpoint: 'ANULAR_CERTIFICADO' },
     { id: 1005, name: 'Solicitar Firma', endpoint: 'SOLICITAR_FIRMA' },
     { id: 1006, name: 'Elaborar Certificado (Subir Excel)', endpoint: 'ELABORAR_CERTIFICADO' },
+    { id: 1010, name: 'Marcar Certificado como Entregado', endpoint: 'MARCAR_ENTREGADO' },
   ]},
   { name: 'Órdenes', acciones: [
     { id: 1002, name: 'Ver Resumen de Orden', endpoint: 'VER_RESUMEN_ORDEN' },

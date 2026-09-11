@@ -16,6 +16,11 @@
       <v-btn size="x-small" color="orange-darken-3" variant="flat" class="text-white mr-2" @click="$emit('request-signatures', order.certificates)" :disabled="order.status === 4 || !order.certificates || order.certificates.length === 0">
         <v-icon start size="x-small">mdi-bell-ring</v-icon> Solicitar Firmas
       </v-btn>
+      <v-btn v-if="hasPermission(1010)" size="x-small" color="teal-darken-2" variant="flat" class="text-white mr-2"
+             @click="$emit('registrar-entrega', order.certificates)"
+             :disabled="order.status === 4 || !order.certificates || order.certificates.length === 0">
+        <v-icon start size="x-small">mdi-package-variant-closed-check</v-icon> Marcar Entregados
+      </v-btn>
       <v-btn size="x-small" color="primary" variant="flat" class="text-white" @click="$emit('add-extra')" :disabled="order.status === 4">
         <v-icon start size="x-small">mdi-plus</v-icon> Añadir Equipo Extra
       </v-btn>
@@ -70,15 +75,19 @@
                     </v-icon>
                   </v-btn>
                 </template>
-                <span>Ver PDF en Nube Pública<br><small>Ctrl+clic: copiar link</small></span>
+                <span>
+                  Ver PDF en Nube Pública
+                  <template v-if="estaEntregado(cert)"><br>Entregado el {{ fechaCorta(cert.sent_date) }}</template>
+                  <br><small>Ctrl+clic: copiar link</small>
+                </span>
               </v-tooltip>
             </div>
           </td>
 
           <td class="text-center">
             <!-- v-chip x-small outlined → size="x-small" variant="outlined" -->
-            <v-chip size="x-small" :color="getStatusCertColor(cert)" variant="outlined" label>
-              {{ getStatusCertLabel(cert) }}
+            <v-chip size="x-small" :color="estadoCert(cert).color" variant="outlined" label>
+              {{ estadoCert(cert).texto }}
             </v-chip>
           </td>
 
@@ -144,6 +153,8 @@ import { useTheme } from 'vuetify'
 import { computed as vueComputed } from 'vue'
 import CertificateDataService from "@/services/certificates/certificateDataService";
 import { copiarConAviso } from "@/utils/clipboard";
+import { estaEntregado } from "@/utils/certificates/entrega";
+import { fechaCorta } from "@/utils/fechas";
 
 export default {
   name: "TableServiceDetails",
@@ -171,6 +182,8 @@ export default {
     this.user_permissions = user.action_permissions || [];
   },
   methods: {
+    estaEntregado,
+    fechaCorta,
     // El back manda uploaded_xls_url ya armada, o null si ese certificado no
     // tiene PDF base. Antes habia que adivinar aca si el campo traia una ruta o
     // el flag viejo ("1", "0", "False"...).
@@ -200,17 +213,14 @@ export default {
     irACertificado(cert) {
       this.$router.push({ path: '/certificates', query: { correlativo: cert.correlative } }).catch(() => {});
     },
-    getStatusCertLabel(cert) {
-      if (cert.status === 5) return 'ANULADO';
-      if (cert.attached_pdf || cert.uploaded) return 'Listo';
-      if (cert.uploaded_xls) return 'En Proceso';
-      return 'Borrador';
-    },
-    getStatusCertColor(cert) {
-      if (cert.status === 5) return 'red-darken-2';
-      if (cert.attached_pdf || cert.uploaded) return 'success';
-      if (cert.uploaded_xls) return 'warning';
-      return 'grey-darken-1';
+    // Texto y color juntos: son el mismo estado.
+    estadoCert(cert) {
+      if (cert.status === 5) return { texto: 'ANULADO', color: 'red-darken-2' };
+      if (estaEntregado(cert)) return { texto: 'Entregado', color: 'teal-darken-2' };
+      if (cert.attached_pdf || cert.uploaded) return { texto: 'Listo', color: 'success' };
+      if (cert.signature_requested) return { texto: 'Firma solicitada', color: 'warning' };
+      if (cert.uploaded_xls) return { texto: 'En Proceso', color: 'warning' };
+      return { texto: 'Borrador', color: 'grey-darken-1' };
     },
     desvincularCertificado(cert) {
       this.$swal.fire({

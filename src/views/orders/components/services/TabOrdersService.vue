@@ -605,8 +605,8 @@ const getTextoSemaforoFinanciero = (o) => {
   if (o.wants_invoice === false) {
     return o.estado_financiero === 5 ? 'Sin comprobante · Pagado' : 'Sin comprobante · Sin abono aún'
   }
-  const n = o.invoices ? o.invoices.length : 0
-  const cuantas = n > 1 ? `${n} facturas` : (o.invoices[0]?.invoice_number || '')
+  const { cantidad, numero } = o.facturas || { cantidad: 0, numero: '' }
+  const cuantas = cantidad > 1 ? `${cantidad} facturas` : numero
   switch (o.estado_financiero) {
     case 4: return 'Orden anulada'
     case 6: return `Excedido (${cuantas})`

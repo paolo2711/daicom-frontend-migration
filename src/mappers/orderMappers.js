@@ -27,7 +27,7 @@ export default {
       certificates: element.certificates || [],
       rentals: element.rentals || [],
       payments: element.payments || [],
-      invoices: element.invoices || [],
+      facturas: element.facturas || { cantidad: 0, numero: '', tiene_fiscal: false },
       
       // ─── DATOS EXCLUSIVOS DE ALQUILER (Order Type 2) ───
       client_order_reference: element.client_order_reference || '',

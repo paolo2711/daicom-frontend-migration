@@ -19,6 +19,13 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.3.4',
+    fecha: '2026-09-11',
+    cambio: [
+      'Se optimizó cómo Órdenes pide sus datos: la lista carga un 32% más liviana. Cada orden dejó de arrastrar sus facturas completas —ahora solo el número y si es fiscal, un 72% menos—, y las de servicio dejaron de recibir los datos de OC y valorizaciones, que son de alquiler.',
+    ],
+  },
+  {
     version: '3.7.3.2',
     fecha: '2026-09-11',
     arreglo: [
@@ -29,8 +36,9 @@ export const CHANGELOG = [
     version: '3.7.3.1',
     fecha: '2026-09-11',
     cambio: [
-      'Certificados y Órdenes cargan hasta cinco veces más livianas, y la diferencia se nota sobre todo con los filtros puestos.',
-      'Las listas de clientes, laboratorios y equipos se piden al abrir el desplegable, no al entrar a la pantalla.',
+      'Órdenes carga a la mitad de peso, y con filtros puestos hasta un 80% menos: la lista dejó de arrastrar los equipos de cada orden, que ya se piden al desplegarla.',
+      'Editar un certificado pasó de 6 pedidos al servidor a 1. Las listas de clientes, laboratorios y equipos se piden al abrir el desplegable, no al entrar a la pantalla, y quedan en memoria un minuto.',
+      'Escribir en un desplegable hace un solo pedido al terminar de teclear, en vez de uno por letra.',
     ],
     arreglo: [
       'Catorce certificados se veían en naranja y decían "En Proceso" dentro de su orden sin tener el Excel cargado.',
@@ -57,8 +65,8 @@ export const CHANGELOG = [
     version: '3.7.2.0',
     fecha: '2026-09-09',
     nuevo: [
-      'Se puede adjuntar un certificado que ya esta en PDF: queda listo para firmar, sin pasar por el Excel.',
-      'Las ordenes se anulan con sus equipos en un solo paso, y los certificados salen tambien de la nube.',
+      'Se puede adjuntar un certificado que ya está en PDF: queda listo para firmar, sin pasar por el Excel.',
+      'Las órdenes se anulan con sus equipos en un solo paso, y los certificados salen también de la nube.',
     ],
     cambio: [
       'Al adjuntar un archivo se elige si es el Excel para convertir o el PDF ya hecho.',
@@ -72,7 +80,8 @@ export const CHANGELOG = [
       'Al editar una orden ya no se despliega sola la fila.',
     ],
     arreglo: [
-      'La tabla de Ordenes se actualiza sola mucho mas rapido cuando alguien cambia algo.',
+      'La tabla de Órdenes se actualiza sola casi 9 veces más rápido cuando alguien cambia algo: refrescar una fila pasó de 1.8 segundos a 0.2.',
+      'Abrir el editor de una orden pide 11 veces menos datos.',
       'Los cambios en alquileres y en las OC ahora se ven en la pantalla de todos, no solo en la de quien los hizo.',
     ],
   },
@@ -83,8 +92,8 @@ export const CHANGELOG = [
       'Al subir varios Excel a la vez, los que esperan turno lo dicen en el panel.',
     ],
     arreglo: [
-      'Subir o firmar muchos certificados a la vez ya no vuelve lenta la plataforma.',
-      'Los iconos de Certificados ya no se quedan atrasados cuando la subida termino bien.',
+      'Subir o firmar muchos certificados a la vez ya no vuelve lenta la plataforma: una tanda de 200 avisos entre pantallas quedó en 4.',
+      'Los íconos de Certificados ya no se quedan atrasados cuando la subida terminó bien.',
     ],
   },
   {

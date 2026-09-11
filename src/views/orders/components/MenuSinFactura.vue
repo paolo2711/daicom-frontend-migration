@@ -52,7 +52,7 @@ const cargando = ref(false)
 // Una orden con factura fiscal ya emitida no se puede marcar de ninguna de las
 // dos formas: primero hay que desvincular esa factura.
 const conFacturaFiscal = computed(() =>
-  props.orders.filter(o => (o.invoices || []).some(f => f.es_fiscal)))
+  props.orders.filter(o => o.facturas?.tiene_fiscal))
 
 const disponible = computed(() =>
   props.orders.length > 0 && conFacturaFiscal.value.length < props.orders.length)
@@ -83,7 +83,7 @@ const elegir = (op) => {
 }
 
 const aplicar = async (patchDe, exito) => {
-  const objetivo = props.orders.filter(o => !(o.invoices || []).some(f => f.es_fiscal))
+  const objetivo = props.orders.filter(o => !o.facturas?.tiene_fiscal)
   cargando.value = true
   try {
     for (const o of objetivo) {

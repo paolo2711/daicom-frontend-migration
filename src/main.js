@@ -17,13 +17,11 @@ import 'animate.css'
 
 // 3. Configuración de Axios
 //axios.defaults.withCredentials = true
-//
-//axios.defaults.baseURL = "http://192.168.15.16/api/"
-//axios.defaults.baseURL = "http://127.0.0.1:8000/api/" //ruta local
-//axios.defaults.baseURL = "http://192.168.15.16:8000/api/" //ruta local del server
 
-//axios.defaults.baseURL = "http://100.127.45.59/api/";//del server app// pc casa
-axios.defaults.baseURL = window.location.origin + "/api/";// funcional de app + conexion pagina
+// La ruta sale de .env.development (npm run dev) o .env.production (npm run
+// build), donde estan las cuatro que usamos. Sin VITE_API_URL se arma con el
+// origen de la pagina, que es lo que sirve igual por IP o por daicom.com.
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || window.location.origin + "/api/"
 
 const app = createApp(App)
 

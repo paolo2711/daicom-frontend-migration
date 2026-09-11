@@ -18,13 +18,15 @@ export function usePaginatedSearch(apiServiceCall, mapperFunction, getActiveId =
   const searchQuery = ref(null)
   const total = ref(0)   // total de coincidencias en el server (para avisar "hay más")
 
-  // El seleccionado se antepone si el server no lo devolvió en esta tanda. Se
-  // hace sobre una copia: la lista guardada no se toca.
-  const aplicar = (lista, cuenta) => {
+  // Sin busqueda, el seleccionado se antepone si el server no lo devolvio, para
+  // que no desaparezca de la lista. Buscando no: ahi la lista son los
+  // resultados, y colar el elegido entre ellos confunde.
+  // Se hace sobre una copia: la lista guardada no se toca.
+  const aplicar = (lista, cuenta, buscando) => {
     total.value = cuenta
     const visibles = [...lista]
     const activeId = getActiveId()
-    if (activeId) {
+    if (!buscando && activeId) {
       const activo = items.value.find(item => item.id === activeId)
       if (activo && !visibles.some(item => item.id === activeId)) {
         visibles.unshift(activo)
@@ -50,7 +52,7 @@ export function usePaginatedSearch(apiServiceCall, mapperFunction, getActiveId =
       const guardado = leerCache(clave)
       if (guardado) {
         ultimaConsulta = texto
-        aplicar(guardado.lista, guardado.total)
+        aplicar(guardado.lista, guardado.total, Boolean(texto))
         return
       }
     }
@@ -63,7 +65,7 @@ export function usePaginatedSearch(apiServiceCall, mapperFunction, getActiveId =
       const lista = response.data.results.map(mapperFunction)
       if (clave) guardarCache(clave, { lista, total: cuenta })
       ultimaConsulta = texto
-      aplicar(lista, cuenta)
+      aplicar(lista, cuenta, Boolean(texto))
     } catch (error) {
       console.error("Error en la búsqueda paginada:", error)
     } finally {

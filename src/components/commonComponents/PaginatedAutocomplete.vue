@@ -63,9 +63,10 @@ const { items, loading, searchQuery: search, retrieveData, total } =
 
 const visibleItems = computed(() => {
   const base = items.value.filter(it => !props.excludeIds.includes(it[props.itemValue]))
-  // Si hay un `seed` (item ya seleccionado, ej. al editar) y no vino en la tanda,
-  // lo anteponemos para que se muestre sin necesidad de buscarlo.
-  if (props.seed && !base.some(it => it[props.itemValue] === props.seed[props.itemValue])) {
+  // El `seed` (lo ya elegido, al editar) se antepone para verlo sin buscarlo.
+  // Mientras se busca no, o aparece entre resultados que no le corresponden.
+  const buscando = Boolean(search.value)
+  if (!buscando && props.seed && !base.some(it => it[props.itemValue] === props.seed[props.itemValue])) {
     return [props.seed, ...base]
   }
   return base

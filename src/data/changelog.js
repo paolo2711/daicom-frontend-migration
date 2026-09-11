@@ -19,6 +19,13 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.3.2',
+    fecha: '2026-09-11',
+    arreglo: [
+      'Al buscar en un desplegable, el cliente o equipo ya elegido aparecía entre los resultados aunque no coincidiera con lo buscado.',
+    ],
+  },
+  {
     version: '3.7.3.1',
     fecha: '2026-09-11',
     cambio: [

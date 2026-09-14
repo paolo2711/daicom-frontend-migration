@@ -30,7 +30,7 @@
                 <v-checkbox v-model="selected_certs_to_update" :value="cert.id" color="primary" class="mr-3" hide-details></v-checkbox>
               </template>
               <v-list-item-title class="font-weight-medium">{{ cert.equipment }}</v-list-item-title>
-              <v-list-item-subtitle>Dueño actual: {{ cert.client_data ? cert.client_data.name : '---' }}</v-list-item-subtitle>
+              <v-list-item-subtitle>Dueño actual: {{ duenoDe(cert) }}</v-list-item-subtitle>
             </v-list-item>
           </v-list>
         </v-card>
@@ -143,6 +143,9 @@ const nuevoDoc = reactive({ 1: { numero: '', file: null }, 2: { numero: '', file
 const subiendoDoc = reactive({ 1: false, 2: false })
 
 const cliente_actual = ref(null)
+
+// El equipo trae dueño propio solo cuando no es el cliente de la orden.
+const duenoDe = (cert) => (cert.client_data || cliente_actual.value)?.name || '---'
 
 const dialogModel = computed({
   get: () => props.modelValue,

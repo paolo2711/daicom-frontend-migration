@@ -19,6 +19,13 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.3.7',
+    fecha: '2026-09-14',
+    arreglo: [
+      'Al editar una orden, cada equipo volvió a mostrar su dueño; desde la versión anterior decían todos "---".',
+    ],
+  },
+  {
     version: '3.7.3.6',
     fecha: '2026-09-11',
     cambio: [

@@ -459,16 +459,12 @@
       @reloadListComponent="retrieveAllCertificates"
     />
 
-    <div
-      id="context-menu-activator"
-      :style="`position: fixed; top: ${contextMenu.y}px; left: ${contextMenu.x}px; width: 0; height: 0; pointer-events: none; z-index: -1;`"
-    ></div>
-
+    <!-- El menu se ancla a las coordenadas del cursor. Son una prop reactiva, asi
+         que abrir uno con otro abierto lo reubica solo. -->
     <v-menu
       v-model="contextMenu.show"
-      activator="#context-menu-activator"
-      :location="contextMenu.location"
-      transition="scale-transition"
+      :target="[contextMenu.x, contextMenu.y]"
+      :transition="false"
     >
       <v-list v-if="contextMenu.item" density="compact" class="elevation-4 border rounded-lg bg-surface">
         <v-list-item v-if="contextMenu.item.status !== 5" @click="certificateModal?.open(contextMenu.item)">
@@ -915,44 +911,20 @@ const getSemaforoText = (item) => {
 // --------------------------------------
 
 // Estado del menú contextual global
-const contextMenu = ref({
-  show: false,
-  x: 0,
-  y: 0,
-  location: 'bottom start', // Dirección de apertura por defecto
-  item: null
-})
+// Vuetify voltea el menu solo cuando no entra en pantalla, en los dos ejes.
+const contextMenu = ref({ show: false, x: 0, y: 0, item: null })
 
 function handleRightClick (event, { item }) {
   event.preventDefault()
-  const cert = item.raw || item 
-  
-  // 1. Extraemos las coordenadas INMEDIATAMENTE para no perderlas en el asincronismo
-  const x = event.clientX;
-  const y = event.clientY;
-  
-  // 2. Apagamos el menú si estaba abierto
-  contextMenu.value.show = false 
+  const cert = item.raw || item
 
-  // el clic derecho siempre deja seleccionada unicamente
-  // esa fila, sin importar lo que estuviera marcado antes. Así el batch que se
-  // abra desde el menú siempre coincide con lo que el usuario ve resaltado.
-  if (cert.status !== 5) {
-    certificados_seleccionados.value = [cert]
-  }
-  
-  // 3. Usamos setTimeout en lugar de nextTick para evitar la condición de carrera con el "click-outside" nativo de Vuetify
-  setTimeout(() => {
-    // Lógica Senior de Pivote (Estilo Google Drive):
-    const vertical = y > window.innerHeight / 2 ? 'top' : 'bottom';
-    const horizontal = x > window.innerWidth / 2 ? 'end' : 'start';
+  // El menu es de una fila sola: la seleccion de lote se cancela para que la
+  // barra de abajo no ofrezca acciones sobre otros certificados.
+  if (certificados_seleccionados.value.length) certificados_seleccionados.value = []
 
-    contextMenu.value.item = cert
-    contextMenu.value.x = x
-    contextMenu.value.y = y
-    contextMenu.value.location = `${vertical} ${horizontal}`
-    contextMenu.value.show = true
-  }, 50) // 50ms son suficientes para que Vuetify limpie el estado anterior sin que el usuario note lag
+  // Posicion y contenido en una sola asignacion: el menu se mueve y cambia sus
+  // opciones en el mismo render, sin mostrar las de la fila anterior.
+  contextMenu.value = { show: true, item: cert, x: event.clientX, y: event.clientY }
 }
 
 function handleRowClick (event, { item }) {

@@ -32,8 +32,10 @@
           <div class="mb-1">
             <span class="font-weight-bold">Se imprime la hoja</span>
             <code class="ruta">CERTIFICADO</code>
-            <span class="text-medium-emphasis">en los acreditados y la</span>
-            <code class="ruta">hoja 3</code>
+            <span class="text-medium-emphasis">en los acreditados y la hoja</span>
+            <code class="ruta">IMPRESION</code>
+            <span class="text-medium-emphasis">o</span>
+            <code class="ruta">IMPRIMIR</code>
             <span class="text-medium-emphasis">en los demás.</span>
           </div>
           <div class="text-medium-emphasis">
@@ -480,7 +482,9 @@ defineExpose({ open })
 </script>
 
 <style scoped>
-.fila-bloqueada {
+/* La ultima celda queda entera: ahi vive el boton de adjuntar, que es lo que
+   desbloquea la fila. Apagarlo con el resto lo hacia parecer deshabilitado. */
+.fila-bloqueada td:not(:last-child) {
   opacity: 0.55;
 }
 

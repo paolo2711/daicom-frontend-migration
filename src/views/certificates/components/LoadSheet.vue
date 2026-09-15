@@ -44,8 +44,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { alPresionarEnter } from '@/utils/keyboard'
-
-const EXCEL_ACCEPT = '.xls,.xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.ms-excel.sheet.macroEnabled.12'
+import { EXCEL_ACCEPT } from '@/utils/certificates/excel'
 
 // Un modo por destino del archivo. Agregar uno es una entrada mas aqui.
 const MODOS = {

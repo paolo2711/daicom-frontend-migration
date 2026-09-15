@@ -11,7 +11,13 @@
 
           <v-spacer />
 
-          
+          <!-- Excel suelto: no pasa por la lista porque no es de ningún certificado -->
+          <v-btn variant="outlined" color="primary" class="mr-3" @click="printSheetRef?.open()">
+            <template v-slot:prepend>
+              <v-icon>mdi-printer</v-icon>
+            </template>
+            Excel a PDF
+          </v-btn>
 
           <!-- Nuevo certificado: abre el modal del hijo directamente -->
           <v-btn color="primary" @click="abrirNuevoCertificado">
@@ -29,6 +35,8 @@
           :modo_agrupar_prop="modo_agrupar_local"
         />
 
+        <print-sheet ref="printSheetRef" />
+
       </v-col>
     </v-row>
   </v-container>
@@ -41,9 +49,15 @@ import { ref, defineAsyncComponent } from 'vue'
 const ListCertificates = defineAsyncComponent(
   () => import('@/views/certificates/components/ListCertificates.vue')
 )
+const PrintSheet = defineAsyncComponent(
+  () => import('@/views/certificates/components/PrintSheet.vue')
+)
 
 // ─── Estado local ─────────────────────────────────────────────────────────────
 const modo_agrupar_local = ref(false)
+// El ref no se puede llamar printSheet: <print-sheet> cameliza a ese nombre y
+// Vue resolveria el componente al ref en vez de al import.
+const printSheetRef = ref(null)
 
 // ─── Ref al componente hijo ───────────────────────────────────────────────────
 // En Vue 3 con <script setup>, para acceder a métodos/refs del hijo,

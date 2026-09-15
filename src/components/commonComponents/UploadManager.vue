@@ -57,8 +57,8 @@
 
                     <template v-slot:prepend>
                       <v-avatar size="32" class="mr-3" :color="isDark ? 'grey-darken-3' : 'grey-lighten-4'">
-                        <v-icon size="small" :color="task.type === 'sheet' ? 'green-darken-2' : 'red-darken-2'">
-                          {{ task.type === 'sheet' ? 'mdi-file-excel-box' : 'mdi-file-pdf-box' }}
+                        <v-icon size="small" :color="esConversion(task) ? 'green-darken-2' : 'red-darken-2'">
+                          {{ esConversion(task) ? 'mdi-file-excel-box' : 'mdi-file-pdf-box' }}
                         </v-icon>
                       </v-avatar>
                     </template>
@@ -67,7 +67,7 @@
                     <v-list-item-subtitle 
                       style="font-size: 10px; max-width: 175px;" 
                       class="text-truncate"
-                      :class="(task.status === 'error' || task.status === 'cloud_error') ? 'text-error font-weight-bold' : 'text-medium-emphasis'"
+                      :class="fallida(task) ? 'text-error font-weight-bold' : 'text-medium-emphasis'"
                       :title="getStatusText(task)"
                     >
                       {{ getStatusText(task) }}
@@ -79,7 +79,7 @@
                         <!-- Una fila fallida se queda hasta que alguien la resuelve, asi
                              que sus botones se ven siempre. Esconderlos tras el hover
                              tiene sentido mientras la subida corre, no despues. -->
-                        <template v-if="task.status === 'error' || task.status === 'cloud_error'">
+                        <template v-if="fallida(task)">
                           <div class="d-flex align-center justify-end" style="gap: 4px;">
 
                             <v-tooltip v-if="task.is_cloud_error && task.offline_url" location="bottom" z-index="100000">
@@ -93,49 +93,54 @@
 
                             <v-tooltip location="bottom" z-index="100000">
                               <template v-slot:activator="{ props: tooltipProps }">
-                                <v-btn v-if="task.type === 'sheet' || task.source === 'manual'" v-bind="tooltipProps" icon variant="text" size="small" color="grey" @click.stop="discardTask(task)">
-                                  <v-icon>mdi-close</v-icon>
-                                </v-btn>
-                                <v-btn v-else v-bind="tooltipProps" icon variant="text" size="small" color="error" @click.stop="retryQr(task)">
+                                <v-btn v-if="reintentable(task)" v-bind="tooltipProps" icon variant="text" size="small" color="error" @click.stop="retryTask(task)">
                                   <v-icon>mdi-refresh</v-icon>
                                 </v-btn>
+                                <v-btn v-else v-bind="tooltipProps" icon variant="text" size="small" color="grey" @click.stop="removeTask(task)">
+                                  <v-icon>mdi-close</v-icon>
+                                </v-btn>
                               </template>
-                              <span>{{ (task.type === 'sheet' || task.source === 'manual') ? 'Descartar' : 'Reintentar' }}</span>
+                              <span>{{ reintentable(task) ? 'Reintentar' : 'Quitar de la lista' }}</span>
                             </v-tooltip>
 
                           </div>
                         </template>
 
-                        <template v-else-if="task.status === 'canceled'">
+                        <template v-else-if="detenida(task)">
                           <template v-if="isHovering">
                             <v-tooltip location="bottom" z-index="100000">
                               <template v-slot:activator="{ props: tooltipProps }">
-                                <v-btn v-bind="tooltipProps" icon variant="text" size="small" color="grey" @click.stop="discardTask(task)">
+                                <v-btn v-bind="tooltipProps" icon variant="text" size="small" color="grey" @click.stop="removeTask(task)">
                                   <v-icon>mdi-close</v-icon>
                                 </v-btn>
                               </template>
                               <span>Limpiar de la lista</span>
                             </v-tooltip>
                           </template>
-                          <v-icon v-else color="grey" size="24">mdi-cancel</v-icon>
+                          <v-icon v-else color="grey" size="24">
+                            {{ task.status === 'discarded' ? 'mdi-file-remove-outline' : 'mdi-cancel' }}
+                          </v-icon>
                         </template>
 
-                        <template v-else-if="task.status === 'success' || task.status === 'warning'">
+                        <template v-else-if="terminada(task)">
                           <template v-if="isHovering">
                             <v-tooltip location="bottom" z-index="100000">
                               <template v-slot:activator="{ props: tooltipProps }">
-                                <v-btn v-if="task.type === 'sheet'" v-bind="tooltipProps" icon variant="text" size="small" color="purple" @click.stop="openPreview(task)">
+                                <v-btn v-if="esperandoRevision(task)" v-bind="tooltipProps" icon variant="text" size="small" color="purple" @click.stop="openPreview(task)">
                                   <v-icon>mdi-eye</v-icon>
+                                </v-btn>
+                                <v-btn v-else-if="esConversion(task)" v-bind="tooltipProps" icon variant="text" size="small" color="purple" :href="task.url_base" target="_blank" :disabled="!task.url_base">
+                                  <v-icon>mdi-file-pdf-box</v-icon>
                                 </v-btn>
                                 <v-btn v-else v-bind="tooltipProps" icon variant="text" size="small" color="purple" :href="`https://daicomperu.com/${task.uuid}`" target="_blank">
                                   <v-icon>mdi-cloud-check</v-icon>
                                 </v-btn>
                               </template>
-                              <span>{{ task.type === 'sheet' ? 'Revisar PDF' : 'Ver PDF Subido' }}</span>
+                              <span>{{ getActionText(task) }}</span>
                             </v-tooltip>
                           </template>
                           <template v-else>
-                            <v-progress-circular v-if="task.status === 'success'" :model-value="100" color="success" size="28" width="3">
+                            <v-progress-circular v-if="task.status !== 'warning'" :model-value="100" color="success" size="28" width="3">
                               <v-icon size="small" color="success">mdi-check</v-icon>
                             </v-progress-circular>
                             <v-icon v-else color="warning" size="28">mdi-alert-circle</v-icon>
@@ -143,10 +148,11 @@
                         </template>
 
                         <template v-else>
-                          <template v-if="isHovering">
+                          <!-- Mientras guarda no hay nada que cancelar: la conversion ya termino. -->
+                          <template v-if="isHovering && task.status !== 'saving'">
                             <v-tooltip location="bottom" z-index="100000">
                               <template v-slot:activator="{ props: tooltipProps }">
-                                <v-btn v-if="task.type === 'sheet'" v-bind="tooltipProps" icon variant="text" size="small" color="grey" @click.stop="cancelSheet(task)">
+                                <v-btn v-if="esConversion(task)" v-bind="tooltipProps" icon variant="text" size="small" color="grey" @click.stop="cancelSheet(task)">
                                   <v-icon>mdi-close</v-icon>
                                 </v-btn>
                                 <v-btn v-else v-bind="tooltipProps" icon variant="text" size="small" color="grey" @click.stop="cancelQr(task)">
@@ -158,7 +164,7 @@
                           </template>
                           <v-progress-circular v-else
                                                :model-value="task.progress || 0"
-                                               :color="task.type === 'sheet' ? 'amber-darken-2' : 'primary'"
+                                               :color="esConversion(task) ? 'amber-darken-2' : 'primary'"
                                                size="28" width="3">
                             <span style="font-size: 8px; font-weight: bold;" class="text-medium-emphasis">
                               {{ Math.round(task.progress || 0) }}%
@@ -188,15 +194,27 @@
                         prepend-inner-icon="mdi-pencil" suffix=".pdf"
                         class="font-weight-bold" style="max-width: 700px; width: 100%;"/>        
           <v-spacer/>        
-          <v-btn variant="text" @click="preview_modal = false" class="mr-2 font-weight-bold" 
-                 :color="isDark ? 'white' : 'grey-darken-3'">
+          <v-btn variant="text" @click="discardPreview" class="mr-2 font-weight-bold"
+                 :color="isDark ? 'white' : 'grey-darken-3'" :disabled="guardando">
             <v-icon start>mdi-close</v-icon> Descartar
           </v-btn>
-          
-          <v-btn color="success" variant="flat" @click="approveSheet" class="font-weight-bold px-4">
+
+          <!-- El suelto no pertenece a ningun certificado: se lleva el PDF y listo. -->
+          <v-btn v-if="preview_task?.type === 'suelto'" color="primary" variant="flat" @click="downloadPreview" class="font-weight-bold px-4">
+            <v-icon start>mdi-download</v-icon> Descargar
+          </v-btn>
+          <v-btn v-else color="success" variant="flat" @click="approveSheet" class="font-weight-bold px-4"
+                 :loading="guardando">
             <v-icon start>mdi-check-bold</v-icon> Aprobar y Guardar
           </v-btn>
         </v-toolbar>
+
+        <!-- El guardado fallo: el PDF sigue en pantalla para reintentar sin regenerarlo.
+             El flex va explicito: sin base auto, la franja colapsa a su padding. -->
+        <v-alert v-if="preview_error" type="error" density="compact" variant="flat" tile
+                 class="text-body-2" style="flex: 0 0 auto;">
+          {{ preview_error }}
+        </v-alert>
 
         <div class="flex-grow-1" style="width: 100%; position: relative;">
           <iframe v-if="preview_url" :src="preview_url"
@@ -210,7 +228,10 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useTheme } from 'vuetify'
+import { Toast } from '@/plugins/alerts'
 import { useAppStore } from '@/stores/appStore'
+import CertificateDataService from '@/services/certificates/certificateDataService'
+import { detenida, enCurso, esConversion, esperandoRevision, fallida, reintentable, terminada } from '@/utils/uploadTasks'
 
 const appStore = useAppStore()
 const theme    = useTheme()
@@ -219,65 +240,63 @@ const isDark = computed(() => theme.global.current.value.dark)
 
 const minimized          = ref(false)
 const preview_modal      = ref(false)
+// { id, type, code, url } de la tarea abierta en el visor.
+const preview_task       = ref(null)
 const preview_url        = ref(null)
-const preview_code       = ref('')
-const preview_id         = ref(null)
 const preview_final_name = ref('')
-const preview_raw_url    = ref('')
+const preview_error      = ref('')
+const guardando          = ref(false)
 
 const tasks = computed(() => appStore.uploadTasks)
 
 // ¿Barra de seleccion activa? Para apartarse de ella en ventanas angostas.
 const selectionActive = computed(() => appStore.selectionActive)
 
-const ACTIVE = ['generating', 'uploading', 'retrying']
-
-const activeTasksCount = computed(() =>
-  tasks.value.filter(t => ACTIVE.includes(t.status)).length
-)
+const activeTasksCount = computed(() => tasks.value.filter(enCurso).length)
+const errorTasksCount = computed(() => tasks.value.filter(fallida).length)
 // Cancelado NO es error: se cuenta aparte para no ensuciar el header.
-const errorTasksCount = computed(() =>
-  tasks.value.filter(t => ['error', 'cloud_error'].includes(t.status)).length
-)
 const canceledTasksCount = computed(() =>
   tasks.value.filter(t => t.status === 'canceled').length
 )
+const discardedTasksCount = computed(() =>
+  tasks.value.filter(t => t.status === 'discarded').length
+)
+// Un PDF sin revisar todavia no esta listo: tiene su propio segmento.
+const porRevisarCount = computed(() => tasks.value.filter(esperandoRevision).length)
 const successTasksCount = computed(() =>
-  tasks.value.filter(t => t.status === 'success').length
+  tasks.value.filter(t => terminada(t) && t.status !== 'warning' && !esperandoRevision(t)).length
 )
 const warningTasksCount = computed(() =>
   tasks.value.filter(t => t.status === 'warning').length
 )
 // Tareas terminadas (todo lo que no esta activo) -> se pueden limpiar.
-const completedCount = computed(() =>
-  tasks.value.filter(t => !ACTIVE.includes(t.status)).length
-)
-// Fallidas que SI se pueden reintentar (solo QR; sheet/manual no).
-const failedRetryableCount = computed(() =>
-  tasks.value.filter(t => ['error', 'cloud_error'].includes(t.status) && t.type !== 'sheet' && t.source !== 'manual').length
-)
+const completedCount = computed(() => tasks.value.filter(t => !enCurso(t)).length)
+const failedRetryableCount = computed(() => tasks.value.filter(reintentable).length)
 
 // Header por segmentos: informa cada estado sin frases ambiguas.
 const headerText = computed(() => {
   const parts = []
   if (activeTasksCount.value)   parts.push(`${activeTasksCount.value} en proceso`)
+  if (porRevisarCount.value)    parts.push(`${porRevisarCount.value} por revisar`)
   if (successTasksCount.value)  parts.push(`${successTasksCount.value} ${successTasksCount.value === 1 ? 'lista' : 'listas'}`)
   if (warningTasksCount.value)  parts.push(`${warningTasksCount.value} con aviso`)
   if (errorTasksCount.value)    parts.push(`${errorTasksCount.value} ${errorTasksCount.value === 1 ? 'fallo' : 'fallos'}`)
   if (canceledTasksCount.value) parts.push(`${canceledTasksCount.value} cancelada${canceledTasksCount.value === 1 ? '' : 's'}`)
+  if (discardedTasksCount.value) parts.push(`${discardedTasksCount.value} descartada${discardedTasksCount.value === 1 ? '' : 's'}`)
   return parts.join(' · ') || 'Sin tareas'
 })
 
 function getStatusText(task) {
-  if (task.status === 'error' || task.status === 'cloud_error') return task.error_msg || 'Error de conexión / servidor';
+  if (fallida(task)) return task.error_msg || 'Error de conexión / servidor';
   
   // 2. Mostrar el paso a paso dinámico
   if (task.step) return task.step; 
 
   // 3. Textos genéricos por defecto (Esto soluciona el texto borrado por el WebSocket)
   const maps = {
-    sheet: { generating: 'Procesando Excel...', success: 'Listo para revisión.', canceled: 'Cancelado por usuario.' },
-    qr:    { 
+    sheet:  { generating: 'Procesando Excel...', success: 'Listo para revisión.', saving: 'Guardando...', saved: 'Guardado en el sistema', canceled: 'Cancelado por usuario.', discarded: 'Descartado.' },
+    suelto: { generating: 'Procesando Excel...', success: 'Listo para descargar.', canceled: 'Cancelado por usuario.', discarded: 'Descartado.' },
+    qr:    {
       generating: 'Iniciando proceso...', 
       uploading: 'Enviando a la red...', 
       retrying: `Reintentando (${task.attempts || 0}/3)...`, 
@@ -289,49 +308,47 @@ function getStatusText(task) {
   return maps[task.type]?.[task.status] || '';
 }
 
-function discardTask(task) {
+function getActionText(task) {
+  if (esperandoRevision(task)) return 'Revisar PDF'
+  if (esConversion(task)) return task.url_base ? 'Ver PDF Base' : 'Guardado, preparando el enlace'
+  return 'Ver PDF Subido'
+}
+
+function removeTask(task) {
   appStore.removeUploadTask(task.id, task.type)
   if (window.enviarProgresoWebSocket) {
     window.enviarProgresoWebSocket(task.id, 0, 'dismiss_task', task.code, 0, task.type)
   }
 }
 
-function retryQr(task) {
-  window.dispatchEvent(new CustomEvent('wss-qr-retry', { detail: { id: task.id } }))
+function retryTask(task) {
+  const evento = esConversion(task) ? 'wss-sheet-retry' : 'wss-qr-retry'
+  window.dispatchEvent(new CustomEvent(evento, { detail: { id: task.id, tipo: task.type } }))
 }
 
 function downloadOfflinePdf(task) {
   if (!task.offline_url) return;
-
-  let finalUrl = task.offline_url;
-  if (finalUrl.startsWith('/')) {
-    const base = ['localhost', '127.0.0.1'].includes(window.location.hostname)
-      ? 'http://localhost:8000'
-      : window.location.origin;
-    finalUrl = base + finalUrl;
-  }
-
-  window.open(finalUrl, '_blank');
-  discardTask(task);
+  window.open(task.offline_url, '_blank');
+  removeTask(task);
 }
 
 function cancelQr(task) {
   if (task.status === 'canceled') {
-    discardTask(task)
+    removeTask(task)
   } else {
     window.dispatchEvent(new CustomEvent('wss-qr-cancel', { detail: { id: task.id } }))
   }
 }
 
 function cancelSheet(task) {
-  window.dispatchEvent(new CustomEvent('wss-cancel-sheet-action', { detail: { id: task.id } }))
-  appStore.updateUploadTask(task.id, 'sheet', { status: 'canceled' })
+  window.dispatchEvent(new CustomEvent('wss-sheet-cancel', { detail: { id: task.id, tipo: task.type } }))
+  appStore.updateUploadTask(task.id, task.type, { status: 'canceled' })
 }
 
 // Quita las tareas terminadas (deja las activas). Sirve para el boton X y para
 // "Limpiar completadas" del menu (este ultimo funciona aunque haya activas).
 function clearCompleted() {
-  const done = tasks.value.filter(t => !ACTIVE.includes(t.status))
+  const done = tasks.value.filter(t => !enCurso(t))
   done.forEach(t => appStore.removeUploadTask(t.id, t.type))
   // Orden maestra para que las otras pantallas limpien lo terminado tambien.
   if (window.enviarProgresoWebSocket) {
@@ -339,11 +356,8 @@ function clearCompleted() {
   }
 }
 
-// Reintenta de una todas las fallidas reintentables (solo QR).
 function retryAllFailed() {
-  tasks.value
-    .filter(t => ['error', 'cloud_error'].includes(t.status) && t.type !== 'sheet' && t.source !== 'manual')
-    .forEach(t => window.dispatchEvent(new CustomEvent('wss-qr-retry', { detail: { id: t.id } })))
+  tasks.value.filter(reintentable).forEach(retryTask)
 }
 
 function closePanel() {
@@ -352,29 +366,88 @@ function closePanel() {
 }
 
 function openPreview(task) {
-  let finalUrl = task.url
-  if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
-    finalUrl = 'http://localhost:8000' + finalUrl
-  }
-  preview_url.value        = `${finalUrl}?v=${new Date().getTime()}`
-  preview_raw_url.value    = task.url
+  // La tarea sigue viva mientras se revisa: es lo que mantiene la fila del
+  // listado al dia hasta que el PDF se guarde de verdad.
+  preview_task.value       = { id: task.id, type: task.type, code: task.code, url: task.url }
+  // El ?v= evita que el navegador muestre el PDF anterior del mismo nombre.
+  preview_url.value        = `${task.url}?v=${new Date().getTime()}`
   preview_final_name.value = task.url.split('/').pop().replace('.pdf', '')
-  preview_code.value       = task.code
-  preview_id.value         = task.id
+  preview_error.value      = ''
   preview_modal.value      = true
-  discardTask(task)
 }
 
-function approveSheet() {
-  if (!preview_id.value) return
-  window.dispatchEvent(new CustomEvent('wss-approve-sheet-action', {
-    detail: {
-      id:         preview_id.value,
-      final_name: preview_final_name.value + '.pdf',
-      temp_url:   preview_raw_url.value,
-    },
-  }))
+// El temporal lo suelta el que termina de usarlo. Aprobar lo consume en el
+// servidor y lo borra alla; descargar y descartar lo sueltan desde aca.
+const releaseTemp = () =>
+  CertificateDataService.soltarTemporal(preview_task.value.url).catch(() => {})
+
+// Descartar deja el rastro a la vista. Descargar ya entrego lo suyo: la tarea
+// se va, porque no queda nada a lo que volver.
+function discardPreview() {
+  const { id, type } = preview_task.value
+  releaseTemp()
+  appStore.updateUploadTask(id, type, { status: 'discarded', progress: 0, step: '', url: '' })
   preview_modal.value = false
+}
+
+// Por blob: es del mismo origen, asi que respeta el nombre elegido tambien en
+// dev, donde el PDF lo sirve otro puerto.
+async function downloadPreview() {
+  try {
+    const respuesta = await fetch(preview_url.value)
+    const url = URL.createObjectURL(await respuesta.blob())
+    const enlace = document.createElement('a')
+    enlace.href = url
+    enlace.download = preview_final_name.value + '.pdf'
+    enlace.click()
+    URL.revokeObjectURL(url)
+  } catch {
+    window.open(preview_url.value, '_blank')
+  }
+  releaseTemp()
+  removeTask(preview_task.value)
+  preview_modal.value = false
+}
+
+// El visor se cierra cuando el guardado confirma, no al apretar el boton: si
+// falla, el PDF sigue en pantalla y el temporal sigue en el servidor.
+async function approveSheet() {
+  if (guardando.value) return
+  const { id, type } = preview_task.value
+  guardando.value = true
+  preview_error.value = ''
+  appStore.updateUploadTask(id, type, { status: 'saving', step: 'Guardando en red local...', error_msg: '' })
+
+  try {
+    const { data } = await CertificateDataService.patch(id, {
+      status: 2,
+      final_name: preview_final_name.value + '.pdf',
+      temp_url: preview_task.value.url,
+    })
+    appStore.updateUploadTask(id, type, {
+      status: 'saved', step: 'Guardado en el sistema', url_base: data?.uploaded_xls_url || '',
+    })
+    Toast.fire({ ...appStore.toastGuardadoExito, title: '¡Excel guardado!' })
+    preview_modal.value = false
+  } catch (error) {
+    const datos = error.response?.data || {}
+    const mensaje = datos.error || 'El disco de red no respondió.'
+
+    if (datos.regenerar) {
+      // El PDF ya no esta: no hay nada que revisar ni que guardar. La tarea cae
+      // a error, que es donde el panel ofrece volver a convertir el Excel.
+      appStore.updateUploadTask(id, type, { status: 'error', step: '', url: '', error_msg: mensaje })
+      preview_modal.value = false
+      return
+    }
+
+    // El temporal sigue en el servidor: se puede reintentar el guardado. El
+    // motivo queda tambien en la fila, para que no se pierda al cerrar.
+    appStore.updateUploadTask(id, type, { status: 'success', step: `No se guardó: ${mensaje}` })
+    preview_error.value = mensaje
+  } finally {
+    guardando.value = false
+  }
 }
 </script>
 

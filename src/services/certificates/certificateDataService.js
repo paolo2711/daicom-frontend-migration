@@ -1,6 +1,16 @@
 import axios from "axios";
 import authHeader from "@/services/auth-header";
 
+// ⚠️ NO fijar Content-Type para FormData — axios lo genera con el boundary correcto:
+// "multipart/form-data; boundary=----WebKitFormBoundaryXYZ"
+// Si lo pisamos sin boundary, Django no parsea el body y request.data llega vacío.
+const cabecerasDe = (data) => {
+  const headers = authHeader();
+  if (data instanceof FormData) delete headers['Content-Type'];
+  else headers['Content-Type'] = "application/json";
+  return headers;
+};
+
 export default {
   // Filtros por nombre, no por posicion: eran once parametros y llamarlo con
   // uno solo obligaba a pasar seis strings vacios hasta llegar al que importaba.
@@ -31,18 +41,17 @@ export default {
   },
 
   buildPDF(data) {
-    let headers = authHeader();
-    if (data instanceof FormData) {
-      // ⚠️ NO fijar Content-Type para FormData — axios lo genera con el boundary correcto:
-      // "multipart/form-data; boundary=----WebKitFormBoundaryXYZ"
-      // Si lo pisamos sin boundary, Django no parsea el body y request.data llega vacío.
-      delete headers['Content-Type'];
-    } else {
-      headers['Content-Type'] = "application/json";
-    }
-    return axios.post('certificates/pdf', data, {
-      headers: headers
-    });
+    return axios.post('certificates/pdf', data, { headers: cabecerasDe(data) });
+  },
+
+  // Excel que no es de ningún certificado: sale el PDF y nada más.
+  buildPDFSuelto(data) {
+    return axios.post('certificates/pdf/suelto', data, { headers: cabecerasDe(data) });
+  },
+
+  // El PDF temporal que el visor ya no necesita.
+  soltarTemporal(url) {
+    return axios.delete('certificates/temporal', { headers: cabecerasDe(), data: { url } });
   },
 
   // fecha_firma mueve solo el día del sello dibujado, para los certificados

@@ -249,6 +249,14 @@
               <span>Fallo la subida. Subir otro Excel</span>
             </v-tooltip>
 
+            <!-- El PDF ya salio pero nadie lo aprobo: no hay nada guardado todavia. -->
+            <v-tooltip v-else-if="estadoSubida(item.id, 'sheet') === 'revisando'" location="bottom">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" color="amber-darken-2">mdi-file-eye</v-icon>
+              </template>
+              <span>Listo para revisar en el panel de subidas</span>
+            </v-tooltip>
+
             <v-tooltip v-else location="bottom">
               <template v-slot:activator="{ props }">
                 <!-- El link sale del back ya armado. Los certificados viejos tienen

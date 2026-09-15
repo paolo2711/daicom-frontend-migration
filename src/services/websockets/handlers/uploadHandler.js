@@ -1,23 +1,7 @@
-// Progreso de subidas (Excel -> PDF, QR) y estados de la vista previa de la hoja.
+// Progreso de subidas: Excel -> PDF y QR.
 const emit = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }))
 
 export function handleUpload(data, appStore) {
-  const m = data.message
-
-  if (m && m.action === 'sheet-preview-ready') {
-    const t = appStore.uploadTasks.find(x => String(x.id) === String(m.cert_id) && x.type === 'sheet')
-    if (t && t.status === 'canceled') return true // ignorar si el usuario ya lo canceló
-    appStore.updateUploadTask(m.cert_id, 'sheet', { status: 'success', url: m.url, progress: 100 })
-    return true
-  }
-
-  if (m && m.action === 'sheet-preview-error') {
-    const t = appStore.uploadTasks.find(x => String(x.id) === String(m.cert_id) && x.type === 'sheet')
-    if (t && t.status === 'canceled') return true
-    appStore.updateUploadTask(m.cert_id, 'sheet', { status: 'error', progress: 0 })
-    return true
-  }
-
   if (data.type === 'upload_progress') {
     processUploadProgress(data, appStore)
     return true
@@ -62,7 +46,7 @@ function processUploadProgress(data, appStore) {
     // Si P1 mando a cancelar, disparamos el abort() local en P2 para matar la red tambien.
     if (data.status === 'canceled' && existing.status !== 'canceled') {
       if (taskType === 'qr') emit('wss-qr-cancel', { id: data.cert_id })
-      else emit('wss-cancel-sheet-action', { id: data.cert_id })
+      else emit('wss-sheet-cancel', { id: data.cert_id, tipo: taskType })
     }
 
     appStore.updateUploadTask(data.cert_id, taskType, {
@@ -76,7 +60,8 @@ function processUploadProgress(data, appStore) {
       offline_url: data.offline_url || null,
     })
     // Warning: proceso QR que si se cargo en nube pero no en local.
-    if (data.status === 'success' || data.status === 'warning') {
+    // El suelto no tiene fila que refrescar: no sale de ningun certificado.
+    if ((data.status === 'success' || data.status === 'warning') && taskType !== 'suelto') {
       emit('wss-update-row', data.cert_id)
     }
   }

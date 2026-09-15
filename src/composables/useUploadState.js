@@ -1,14 +1,11 @@
 import { useAppStore } from '@/stores/appStore'
+import { TIPOS_DE_FILA, enCurso, esperandoRevision, fallida, terminada } from '@/utils/uploadTasks'
 
-const EN_CURSO  = ['generating', 'uploading', 'retrying']
-const FALLIDA   = ['error', 'cloud_error']
-const TERMINADA = ['success', 'warning']
-const TIPOS     = ['qr', 'sheet']
-
-// El icono de la fila sale del dato del server. La tarea lo suple solo mientras
-// la accion esta en curso: apenas el server habla, la fila queda libre.
-// Sin ese corte la tarea le ganaba para siempre, porque vive en localStorage
-// hasta que la descartan del panel.
+// El icono de la fila sale del dato del server. La tarea lo suple hasta que el
+// server tenga algo que decir: mientras la accion corre, y tambien cuando el PDF
+// ya salio y nadie lo aprobo todavia.
+// El corte por `confirmada` hace falta porque la tarea vive en localStorage
+// hasta que la limpian del panel: sin el, le gana a la fila para siempre.
 export function useUploadState() {
   const appStore = useAppStore()
 
@@ -19,9 +16,10 @@ export function useUploadState() {
   const estadoSubida = (certId, tipo) => {
     const tarea = tareaDe(certId, tipo)
     if (!tarea) return null
-    if (EN_CURSO.includes(tarea.status)) return 'subiendo'
-    if (FALLIDA.includes(tarea.status)) return 'fallo'
-    if (TERMINADA.includes(tarea.status) && !tarea.confirmada) return 'logrado'
+    if (enCurso(tarea)) return 'subiendo'
+    if (fallida(tarea)) return 'fallo'
+    if (esperandoRevision(tarea)) return 'revisando'
+    if (terminada(tarea) && !tarea.confirmada) return 'logrado'
     return null
   }
 
@@ -30,7 +28,7 @@ export function useUploadState() {
   // silenciaba la tarea el icono quedaba en "no subido" aunque el panel dijera
   // que estaba listo. Con 95 subidas eso se cruza casi siempre.
   const confirmarFila = (certId, pedidoEn) => {
-    TIPOS.forEach((tipo) => {
+    TIPOS_DE_FILA.forEach((tipo) => {
       const tarea = tareaDe(certId, tipo)
       if (!tarea || (pedidoEn && tarea.terminadaEn && pedidoEn < tarea.terminadaEn)) return
       appStore.confirmarUploadTask(certId, tipo)

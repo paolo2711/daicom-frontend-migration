@@ -19,6 +19,13 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.4.1',
+    fecha: '2026-09-16',
+    arreglo: [
+      'Abrir el menú de una fila desde los tres puntos con otro menú abierto ya no lo cierra al instante.',
+    ],
+  },
+  {
     version: '3.7.4.0',
     fecha: '2026-09-16',
     nuevo: [

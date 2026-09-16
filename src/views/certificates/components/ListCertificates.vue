@@ -352,7 +352,7 @@
             variant="text" 
             density="comfortable" 
             color="grey-darken-1" 
-            @click.stop="handleRightClick($event, { item })"
+            @click.stop="handleMenuButton($event, { item })"
           >
             <v-icon>mdi-dots-vertical</v-icon>
           </v-btn>
@@ -914,17 +914,29 @@ const getSemaforoText = (item) => {
 // Vuetify voltea el menu solo cuando no entra en pantalla, en los dos ejes.
 const contextMenu = ref({ show: false, x: 0, y: 0, item: null })
 
-function handleRightClick (event, { item }) {
-  event.preventDefault()
-  const cert = item.raw || item
-
+function abrirMenu (x, y, cert) {
   // El menu es de una fila sola: la seleccion de lote se cancela para que la
   // barra de abajo no ofrezca acciones sobre otros certificados.
   if (certificados_seleccionados.value.length) certificados_seleccionados.value = []
 
   // Posicion y contenido en una sola asignacion: el menu se mueve y cambia sus
   // opciones en el mismo render, sin mostrar las de la fila anterior.
-  contextMenu.value = { show: true, item: cert, x: event.clientX, y: event.clientY }
+  contextMenu.value = { show: true, item: cert, x, y }
+}
+
+function handleRightClick (event, { item }) {
+  event.preventDefault()
+  abrirMenu(event.clientX, event.clientY, item.raw || item)
+}
+
+// Con el menu abierto, este click ya dejo encolado el cierre de Vuetify: la
+// apertura va detras. El click derecho no lo sufre, Vuetify no lo escucha.
+function handleMenuButton (event, { item }) {
+  const { clientX, clientY } = event
+  const cert = item.raw || item
+
+  if (!contextMenu.value.show) return abrirMenu(clientX, clientY, cert)
+  setTimeout(() => abrirMenu(clientX, clientY, cert), 0)
 }
 
 function handleRowClick (event, { item }) {

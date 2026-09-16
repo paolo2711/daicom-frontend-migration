@@ -19,6 +19,29 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.4.0',
+    fecha: '2026-09-16',
+    nuevo: [
+      'Se pueden convertir Excels a PDF con membrete sin crear un certificado, desde el botón nuevo en Certificados.',
+    ],
+    cambio: [
+      'El panel de subidas acompaña al Excel hasta que el PDF queda guardado, y el ícono de la fila lo sigue.',
+      'El menú del clic derecho en Certificados tarda un 71% menos en abrirse.',
+      'Los certificados no acreditados imprimen la hoja llamada IMPRESIÓN o IMPRIMIR, sin importar en qué lugar del libro esté.',
+      'El visor ya no se cierra al aprobar: espera la confirmación, y si algo falla queda abierto para reintentar.',
+      'Un PDF descartado queda a la vista en el panel hasta que se limpie, igual que uno cancelado.',
+      'Se puede reintentar una conversión que falló, cuando el Excel salió de la carpeta del servidor.',
+      'Los mensajes de error del panel de subidas entran en la fila; el detalle largo sale al pasar el mouse.',
+    ],
+    arreglo: [
+      'Un certificado ya no puede quedar marcado como subido si el portal no llegó a publicarlo.',
+      'Cancelar la subida de un QR la cancela de verdad; antes seguía subiendo por debajo.',
+      'Cuando el PDF ya no está en el disco, Aprobar lo avisa y ofrece volver a convertir, en vez de abrir un visor vacío.',
+      'En las acciones por lote, el botón para adjuntar de una fila bloqueada dejó de verse apagado.',
+      'Los enlaces a los PDF abren igual entrando por la IP o por daicom.com.',
+    ],
+  },
+  {
     version: '3.7.3.7',
     fecha: '2026-09-14',
     arreglo: [

@@ -10,8 +10,6 @@ import certificateDataService from '@/services/certificates/certificateDataServi
 
 const appStore = useAppStore()
 
-const abortControllers = {}
-
 function getTask(certId) {
   return appStore.uploadTasks.find(
     t => String(t.id) === String(certId) && t.type === 'qr'
@@ -50,15 +48,12 @@ function handleQRStart(e) {
   processQR(certificate.id)
 }
 
+// El pedido de cancelar va al servidor, que es quien firma y sube. La tarea no
+// se da por cancelada hasta que el conteste: puede haber alcanzado a subirla.
 function handleQRCancel(e) {
   const certId = e.detail.id
-  if (abortControllers[certId]) {
-    abortControllers[certId].abort()
-    delete abortControllers[certId]
-  }
-  const code = (getTask(certId) || {}).code || 'Desconocido'
-  appStore.updateUploadTask(certId, 'qr', { status: 'canceled', progress: 0 })
-  sendWSProgress(certId, 0, 'canceled', code, 0)
+  if (window.cancelarEnServidor) window.cancelarEnServidor('cancel_qr', certId)
+  appStore.updateUploadTask(certId, 'qr', { status: 'cancelling', step: 'Cancelando...' })
 }
 
 function handleQRRetry(e) {
@@ -70,9 +65,6 @@ function handleQRRetry(e) {
 async function processQR(certId) {
   if (isCancelled(certId)) return
 
-  const controller = new AbortController()
-  abortControllers[certId] = controller
-
   const getCode     = () => (getTask(certId) || {}).code     || ''
   const getAttempts = () => (getTask(certId) || {}).attempts || 0
 
@@ -80,57 +72,63 @@ async function processQR(certId) {
     appStore.updateUploadTask(certId, 'qr', { status: 'generating', progress: 15, step: 'Generando y Firmando PDF...' })
     sendWSProgress(certId, 15, 'generating', getCode(), getAttempts())
 
-    // El backend ahora hace todo el trabajo pesado, incluyendo la subida.
-    // Solo esperamos a que termine. Los WebSockets irán actualizando la barra.
+    // Firmar y subir lo hace el servidor; la barra la mueven sus avisos por WebSocket.
     const generated_qr = await certificateDataService.generateQR(certId, (getTask(certId) || {}).fecha_firma)
-    
+
     if (isCancelled(certId)) return
 
-    // Extraer la data sin importar si Axios la desempaquetó o no
     const responseData = generated_qr.data || generated_qr;
 
-    // Evaluamos el status real basado estrictamente en el flag del backend
+    // Llego a tiempo: no se publico nada y el archivo subido ya se borro.
+    if (responseData.cancelado) {
+      appStore.updateUploadTask(certId, 'qr', { status: 'canceled', progress: 0, step: '' })
+      sendWSProgress(certId, 0, 'canceled', getCode(), 0)
+      return
+    }
+
     const finalStatus = responseData.warning === true ? 'warning' : 'success';
     const finalStep   = responseData.success || '¡Completado!';
+    // El cancelar llego con el documento ya publicado: gana lo que paso de verdad.
+    const tarde = (getTask(certId) || {}).status === 'cancelling';
 
-    appStore.updateUploadTask(certId, 'qr', { 
-      status: finalStatus, 
-      progress: 100, 
+    appStore.updateUploadTask(certId, 'qr', {
+      status: finalStatus,
+      progress: 100,
       uuid: responseData.uuid,
-      step: finalStep
+      step: tarde ? 'Ya se había subido.' : finalStep
     })
     sendWSProgress(certId, 100, finalStatus, getCode(), getAttempts())
 
   } catch (error) {
-    if (isCancelled(certId) || error.name === 'AbortError') return
+    if (isCancelled(certId)) return
 
-    // Desempaquetado a prueba de balas para Axios
     const responseData = error.response?.data || error.response || {};
     const errorMsg = responseData.error || error.message || 'Error de conexión / Timeout';
     const currentTask = getTask(certId)
+    if (!currentTask) return
 
-    if (currentTask && currentTask.attempts < 2 && !responseData.error) {
-      // Solo reintenta si es fallo de red, no si el backend devolvió un error lógico (ej: .pfx dañado)
+    // Un error con mensaje del servidor no se reintenta solo: el problema no es
+    // la red y volver a intentarlo da lo mismo.
+    if (currentTask.attempts < 2 && !responseData.error) {
       appStore.updateUploadTask(certId, 'qr', { status: 'retrying', attempts: currentTask.attempts + 1, step: 'Fallo de red, reintentando...' })
       sendWSProgress(certId, 5, 'retrying', getCode(), currentTask.attempts + 1)
       setTimeout(() => { processQR(certId) }, 3000)
-    } else if (currentTask) {
-      const responseData = error.response?.data || error.response || {};
-      const errorMsg = responseData.error || error.message || 'Error de conexión / Timeout';
-      const isCloudError = !!responseData.is_cloud_error;
-      const offlineUrl = responseData.offline_url || null;
+      return
+    }
 
-      appStore.updateUploadTask(certId, 'qr', {
-        status: 'error',
-        error_msg: errorMsg,
-        step: '',
-        is_cloud_error: isCloudError,
-        offline_url: offlineUrl
-      })
+    const isCloudError = !!responseData.is_cloud_error;
+    const offlineUrl = responseData.offline_url || null;
 
-      if (window.enviarProgresoWebSocket) {
-        window.enviarProgresoWebSocket(certId, 0, 'error', getCode(), currentTask.attempts, 'qr', '', errorMsg, isCloudError, offlineUrl)
-      }
+    appStore.updateUploadTask(certId, 'qr', {
+      status: 'error',
+      error_msg: errorMsg,
+      step: '',
+      is_cloud_error: isCloudError,
+      offline_url: offlineUrl
+    })
+
+    if (window.enviarProgresoWebSocket) {
+      window.enviarProgresoWebSocket(certId, 0, 'error', getCode(), currentTask.attempts, 'qr', '', errorMsg, isCloudError, offlineUrl)
     }
   }
 }

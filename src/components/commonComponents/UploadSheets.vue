@@ -83,7 +83,7 @@ function handleSheetStart(e) {
 
 function handleSheetCancel(e) {
   const { id, tipo = 'sheet' } = e.detail
-  if (window.cancelarSheetWebSocket) window.cancelarSheetWebSocket(id)
+  if (window.cancelarEnServidor) window.cancelarEnServidor('cancel_sheet', id)
   const tarea = getTask(id, tipo)
   if (tarea && window.enviarProgresoWebSocket) {
     window.enviarProgresoWebSocket(id, 0, 'canceled', tarea.code, 0, tipo)

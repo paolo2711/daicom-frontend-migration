@@ -101,9 +101,10 @@ const conectarWebSocket = () => {
     }
   }
 
-  window.cancelarSheetWebSocket = (certId) => {
+  // El trabajo corre en el servidor, asi que cancelarlo se le avisa a el.
+  window.cancelarEnServidor = (accion, certId) => {
     if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ action: 'cancel_sheet', cert_id: certId }))
+      socket.send(JSON.stringify({ action: accion, cert_id: certId }))
     }
   }
 

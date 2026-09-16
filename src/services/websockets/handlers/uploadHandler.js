@@ -1,4 +1,6 @@
 // Progreso de subidas: Excel -> PDF y QR.
+import { enCurso } from '@/utils/uploadTasks'
+
 const emit = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }))
 
 export function handleUpload(data, appStore) {
@@ -16,7 +18,7 @@ function processUploadProgress(data, appStore) {
 
   // 1. Limpieza masiva (el usuario presiono Cerrar Panel en otra pestana).
   if (data.status === 'dismiss_all_done') {
-    const done = tasks.filter(t => !['generating', 'uploading', 'retrying'].includes(t.status))
+    const done = tasks.filter(t => !enCurso(t))
     done.forEach(t => appStore.removeUploadTask(t.id, t.type))
     return
   }

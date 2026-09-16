@@ -148,8 +148,7 @@
                         </template>
 
                         <template v-else>
-                          <!-- Mientras guarda no hay nada que cancelar: la conversion ya termino. -->
-                          <template v-if="isHovering && task.status !== 'saving'">
+                          <template v-if="isHovering && cancelable(task)">
                             <v-tooltip location="bottom" z-index="100000">
                               <template v-slot:activator="{ props: tooltipProps }">
                                 <v-btn v-if="esConversion(task)" v-bind="tooltipProps" icon variant="text" size="small" color="grey" @click.stop="cancelSheet(task)">
@@ -231,7 +230,7 @@ import { useTheme } from 'vuetify'
 import { Toast } from '@/plugins/alerts'
 import { useAppStore } from '@/stores/appStore'
 import CertificateDataService from '@/services/certificates/certificateDataService'
-import { detenida, enCurso, esConversion, esperandoRevision, fallida, reintentable, terminada } from '@/utils/uploadTasks'
+import { cancelable, detenida, enCurso, esConversion, esperandoRevision, fallida, reintentable, terminada } from '@/utils/uploadTasks'
 
 const appStore = useAppStore()
 const theme    = useTheme()
@@ -298,10 +297,12 @@ function getStatusText(task) {
     suelto: { generating: 'Procesando Excel...', success: 'Listo para descargar.', canceled: 'Cancelado por usuario.', discarded: 'Descartado.' },
     qr:    {
       generating: 'Iniciando proceso...', 
-      uploading: 'Enviando a la red...', 
-      retrying: `Reintentando (${task.attempts || 0}/3)...`, 
+      uploading: 'Enviando a la red...',
+      publishing: 'Publicando...',
+      retrying: `Reintentando (${task.attempts || 0}/3)...`,
       success: '¡Completado!', 
       canceled: 'Cancelado por usuario.',
+      cancelling: 'Cancelando...',
       warning: 'Subido a la nube. Falló la copia local (archivo abierto).'
     }
   };
@@ -314,7 +315,14 @@ function getActionText(task) {
   return 'Ver PDF Subido'
 }
 
+// El PDF de rescate solo sirve mientras su fila este en el panel: cuando la fila
+// se va nadie mas lo va a bajar, y en el servidor seria basura.
+function soltarRescate(task) {
+  if (task.offline_url) CertificateDataService.soltarTemporal(task.offline_url).catch(() => {})
+}
+
 function removeTask(task) {
+  soltarRescate(task)
   appStore.removeUploadTask(task.id, task.type)
   if (window.enviarProgresoWebSocket) {
     window.enviarProgresoWebSocket(task.id, 0, 'dismiss_task', task.code, 0, task.type)
@@ -349,7 +357,10 @@ function cancelSheet(task) {
 // "Limpiar completadas" del menu (este ultimo funciona aunque haya activas).
 function clearCompleted() {
   const done = tasks.value.filter(t => !enCurso(t))
-  done.forEach(t => appStore.removeUploadTask(t.id, t.type))
+  done.forEach(t => {
+    soltarRescate(t)
+    appStore.removeUploadTask(t.id, t.type)
+  })
   // Orden maestra para que las otras pantallas limpien lo terminado tambien.
   if (window.enviarProgresoWebSocket) {
     window.enviarProgresoWebSocket('all', 0, 'dismiss_all_done', 'all', 0, 'all')

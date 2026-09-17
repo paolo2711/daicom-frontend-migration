@@ -19,6 +19,17 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.4.2',
+    fecha: '2026-09-17',
+    cambio: [
+      'Subir un QR a la nube queda registrado en la actividad de Inicio, igual que quitarlo.',
+      'El filtro de órdenes afectas a detracción dejó de mostrar las anuladas.',
+    ],
+    arreglo: [
+      'Los contadores de las píldoras de Órdenes dejaron de incluir las órdenes sin cargo, así que el número coincide con lo que carga la lista.',
+    ],
+  },
+  {
     version: '3.7.4.1',
     fecha: '2026-09-16',
     arreglo: [

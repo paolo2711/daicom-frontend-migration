@@ -19,6 +19,17 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.4.3',
+    fecha: '2026-09-18',
+    nuevo: [
+      'El panel de facturas se puede filtrar por tipo: facturas o registros sin comprobante.',
+    ],
+    arreglo: [
+      'Marcar una orden sin cargo, anularla o agregarle una factura ya no deja su registro interno de abonos suelto en el panel.',
+      'Marcar varias órdenes a la vez ya no se detiene en la primera que falla: aplica las demás y avisa cuáles quedaron afuera y por qué.',
+    ],
+  },
+  {
     version: '3.7.4.2',
     fecha: '2026-09-17',
     cambio: [

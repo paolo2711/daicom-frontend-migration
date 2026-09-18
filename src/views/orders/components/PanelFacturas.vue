@@ -41,6 +41,8 @@
           <v-select v-model="estado_filter" :items="estado_options" label="Estado"
                     density="compact" variant="outlined" hide-details class="mb-3" />
           <v-select v-model="detraccion_filter" :items="detraccion_options" label="Detracción"
+                    density="compact" variant="outlined" hide-details class="mb-3" />
+          <v-select v-model="tipo_filter" :items="tipo_options" label="Tipo"
                     density="compact" variant="outlined" hide-details />
         </v-card>
       </v-menu>
@@ -337,6 +339,7 @@ const page_size = ref(30)
 const currency_filter = ref(null)
 const estado_filter = ref(null)
 const detraccion_filter = ref(null)
+const tipo_filter = ref(null)
 
 // El buscador ya no vive en el panel: llega de Filtros Generales por prop.
 const search_query = computed(() => props.search || '')
@@ -377,7 +380,15 @@ const detraccion_options = [
   { title: 'Con detracción', value: 'si' },
   { title: 'Sin detracción', value: 'no' },
 ]
-const hay_filtros = computed(() => !!(currency_filter.value || estado_filter.value || detraccion_filter.value))
+// Fiscal = comprobante ante SUNAT. Interna = el registro de abonos de una orden
+// sin comprobante, que se ve en el panel pero no existe para SUNAT.
+const tipo_options = [
+  { title: 'Todos los tipos', value: null },
+  { title: 'Facturas', value: 'fiscal' },
+  { title: 'Sin comprobante', value: 'interna' },
+]
+const hay_filtros = computed(() => !!(currency_filter.value || estado_filter.value
+  || detraccion_filter.value || tipo_filter.value))
 
 // 1 En proceso (gris), 2 Deuda (rojo), 3 Abonado (naranja), 4 Anulada (azul-gris,
 // distinto del gris de "En proceso"), 5 Pagado (verde), 6 Excedido (azul).
@@ -413,6 +424,7 @@ const cargar = async () => {
       currency: currency_filter.value || undefined,
       estado: estado_filter.value || undefined,
       detraccion: detraccion_filter.value || undefined,
+      tipo: tipo_filter.value || undefined,
       q: search_query.value || undefined,
       page: page.value,
       page_size: page_size.value,
@@ -469,7 +481,7 @@ watch(() => props.order_type, () => { page.value = 1; cargar() })
 watch(() => props.foco_order_id, () => { page.value = 1; cargar() })
 // Expandir/contraer es solo cambio de layout: NO recargamos ni perdemos la
 // página (los datos son los mismos en ambas vistas).
-watch([currency_filter, estado_filter, detraccion_filter], () => { page.value = 1; cargar() })
+watch([currency_filter, estado_filter, detraccion_filter, tipo_filter], () => { page.value = 1; cargar() })
 watch(search_query, () => {
   clearTimeout(searchTimeout)
   searchTimeout = setTimeout(() => { page.value = 1; cargar() }, 350)

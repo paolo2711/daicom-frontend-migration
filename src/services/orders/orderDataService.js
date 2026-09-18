@@ -150,7 +150,7 @@ class OrderDataService {
 
     /** Lista TODAS las facturas de la empresa (no solo las que tienen saldo
      *  libre) — fuente de datos correcta para un panel/listado financiero.
-     *  filtros: { order_type, currency, estado, q, page, page_size } */
+     *  filtros: { order_type, currency, estado, detraccion, tipo, q, page, page_size } */
     listInvoices(filtros = {}) {
         let headers = authHeader();
         return axios.get('orders/invoices', { params: filtros, headers });

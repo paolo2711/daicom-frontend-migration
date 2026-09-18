@@ -82,27 +82,44 @@ const elegir = (op) => {
   return op.clave === 'sin_cargo' ? marcarSinCargo() : marcarSinComprobante()
 }
 
+// El servidor rechaza por campo, con el motivo adentro.
+const motivoDe = (err) => {
+  const d = err.response?.data || {}
+  return d.requiere_pago?.[0] || d.wants_invoice?.[0] || d.detail || 'no se pudo'
+}
+
+// Un rechazo no frena a las que siguen. El emit va siempre: las que si
+// cambiaron tienen que repintarse aunque otra haya fallado.
 const aplicar = async (patchDe, exito) => {
   const objetivo = props.orders.filter(o => !o.facturas?.tiene_fiscal)
+  const salteadas = props.orders.length - objetivo.length
+
   cargando.value = true
-  try {
-    for (const o of objetivo) {
+  const fallados = []
+  for (const o of objetivo) {
+    try {
       await OrderDataService.patch(o.id, patchDe(o))
+    } catch (err) {
+      fallados.push(`${o.order_number}: ${motivoDe(err)}`)
     }
-    const salteadas = props.orders.length - objetivo.length
-    Toast.fire({
-      timer: 2400, icon: 'success',
-      title: salteadas ? `${exito} (${salteadas} con factura fiscal se saltearon)` : exito,
-    })
-    emit('aplicado')
-  } catch (err) {
-    const d = err.response?.data
-    const msg = d?.requiere_pago?.[0] || d?.wants_invoice?.[0] || d?.detail
-              || 'No se pudo actualizar alguna orden.'
-    Swal.fire('No se pudo', msg, 'error')
-  } finally {
-    cargando.value = false
   }
+  cargando.value = false
+  emit('aplicado')
+
+  if (fallados.length) {
+    Swal.fire({
+      icon: 'error',
+      title: fallados.length === objetivo.length ? 'No se pudo' : 'Algunas no se pudieron',
+      html: fallados.join('<br>'),
+      confirmButtonText: 'Entendido',
+    })
+    return
+  }
+
+  Toast.fire({
+    timer: 2400, icon: 'success',
+    title: salteadas ? `${exito} (${salteadas} con factura fiscal se saltearon)` : exito,
+  })
 }
 
 const marcarSinComprobante = async () => {
@@ -123,6 +140,17 @@ const marcarSinComprobante = async () => {
                 n === 1 ? 'Marcada sin comprobante' : 'Marcadas sin comprobante')
 }
 
+// El contenedor interno lleva el numero de su orden, asi que se descarta con
+// ella. Siempre esta vacio: con abonos, el servidor no deja marcar sin cargo.
+const loQueSeDescarta = () => {
+  const numeros = props.orders
+    .filter(o => !o.facturas?.tiene_fiscal && o.facturas?.no_factura)
+    .map(o => o.facturas.no_factura)
+  return numeros.length
+    ? `<br><br>Se descarta su registro interno de abonos (${numeros.join(', ')}).`
+    : ''
+}
+
 // Sin cargo no pregunta moneda: no hay nada que cobrar, asi que no nace ninguna
 // factura donde guardarla.
 const marcarSinCargo = async () => {
@@ -130,7 +158,7 @@ const marcarSinCargo = async () => {
   const r = await Swal.fire({
     title: n === 1 ? '¿Sin cargo?' : `¿Sin cargo las ${n}?`,
     html: 'No se va a cobrar: no se genera factura ni se pueden registrar abonos. '
-        + 'Es para equipos propios o trabajos de cortesía.',
+        + 'Es para equipos propios o trabajos de cortesía.' + loQueSeDescarta(),
     icon: 'question', showCancelButton: true,
     confirmButtonText: 'Sí, sin cargo', cancelButtonText: 'Cancelar',
   })

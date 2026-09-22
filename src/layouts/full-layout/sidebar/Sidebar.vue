@@ -277,7 +277,7 @@ const filterGroupPermission = (item) => {
   position: fixed !important;
   top: 0;
   left: 0;
-  z-index: 1000;
+  z-index: var(--z-sidebar);
   transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

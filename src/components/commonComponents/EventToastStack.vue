@@ -55,7 +55,7 @@ const abrir = (t) => {
   position: fixed;
   top: 1rem;
   right: 1rem;
-  z-index: 9999;              /* igual que los toasts de SweetAlert */
+  z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
   gap: 0.65rem;

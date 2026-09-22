@@ -19,7 +19,7 @@
           <v-spacer/>
 
           <!-- Acciones de lote: reintentar fallidos / limpiar completadas -->
-          <v-menu location="top end" :z-index="100000" v-if="failedRetryableCount > 0 || completedCount > 0">
+          <v-menu location="top end" v-if="failedRetryableCount > 0 || completedCount > 0">
             <template v-slot:activator="{ props: mprops }">
               <v-btn v-bind="mprops" icon variant="text" size="small" @click.stop>
                 <v-icon>mdi-dots-vertical</v-icon>
@@ -82,7 +82,7 @@
                         <template v-if="fallida(task)">
                           <div class="d-flex align-center justify-end" style="gap: 4px;">
 
-                            <v-tooltip v-if="task.is_cloud_error && task.offline_url" location="bottom" z-index="100000">
+                            <v-tooltip v-if="task.is_cloud_error && task.offline_url" location="bottom">
                               <template v-slot:activator="{ props: tooltipProps }">
                                 <v-btn v-bind="tooltipProps" icon variant="text" size="small" color="info" @click.stop="downloadOfflinePdf(task)">
                                   <v-icon>mdi-download</v-icon>
@@ -91,7 +91,7 @@
                               <span>Descargar Rescate</span>
                             </v-tooltip>
 
-                            <v-tooltip location="bottom" z-index="100000">
+                            <v-tooltip location="bottom">
                               <template v-slot:activator="{ props: tooltipProps }">
                                 <v-btn v-if="reintentable(task)" v-bind="tooltipProps" icon variant="text" size="small" color="error" @click.stop="retryTask(task)">
                                   <v-icon>mdi-refresh</v-icon>
@@ -108,7 +108,7 @@
 
                         <template v-else-if="detenida(task)">
                           <template v-if="isHovering">
-                            <v-tooltip location="bottom" z-index="100000">
+                            <v-tooltip location="bottom">
                               <template v-slot:activator="{ props: tooltipProps }">
                                 <v-btn v-bind="tooltipProps" icon variant="text" size="small" color="grey" @click.stop="removeTask(task)">
                                   <v-icon>mdi-close</v-icon>
@@ -124,7 +124,7 @@
 
                         <template v-else-if="terminada(task)">
                           <template v-if="isHovering">
-                            <v-tooltip location="bottom" z-index="100000">
+                            <v-tooltip location="bottom">
                               <template v-slot:activator="{ props: tooltipProps }">
                                 <v-btn v-if="esperandoRevision(task)" v-bind="tooltipProps" icon variant="text" size="small" color="purple" @click.stop="openPreview(task)">
                                   <v-icon>mdi-eye</v-icon>
@@ -149,7 +149,7 @@
 
                         <template v-else>
                           <template v-if="isHovering && cancelable(task)">
-                            <v-tooltip location="bottom" z-index="100000">
+                            <v-tooltip location="bottom">
                               <template v-slot:activator="{ props: tooltipProps }">
                                 <v-btn v-if="esConversion(task)" v-bind="tooltipProps" icon variant="text" size="small" color="grey" @click.stop="cancelSheet(task)">
                                   <v-icon>mdi-close</v-icon>
@@ -183,7 +183,7 @@
       </v-card>
     </v-slide-y-reverse-transition>
 
-    <v-dialog v-model="preview_modal" fullscreen persistent transition="dialog-bottom-transition" z-index="99999">
+    <v-dialog v-model="preview_modal" fullscreen persistent transition="dialog-bottom-transition">
       <v-card class="d-flex flex-column" style="height: 100vh; overflow: hidden; background-color: #525659;">
         <v-toolbar flat height="64" class="flex-grow-0 flex-shrink-0">
           <v-icon class="mr-2 d-none d-md-flex">mdi-file-pdf-box</v-icon>
@@ -467,7 +467,7 @@ async function approveSheet() {
   position: fixed !important;
   bottom: 24px;
   right: 24px;
-  z-index: 9999;
+  z-index: var(--z-panel-subidas);
   /* Mismo material que el SelectionBar: tema-aware, radio 16, borde y sombra */
   border-radius: 16px !important;
   width: min(345px, calc(100vw - 32px));

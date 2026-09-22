@@ -22,6 +22,23 @@ $success: #1E8449;
 $accent: #fc4b6c;
 $default: #563dea;
 
+/* CAPAS
+   Vuetify abre menus, tooltips y dialogos a partir de 2000, y sube de a dos por
+   cada uno que se apile encima. Todo lo que tenga que quedar por debajo de un
+   menu va debajo de 2000; solo los avisos que tapan la pantalla entera pasan
+   por arriba. Sin esta escala, cada flotante elegia su numero y terminaban
+   compitiendo a fuerza de ceros. */
+:root {
+  --z-velo-notificaciones: 900;
+  --z-panel-notificaciones: 950;
+  --z-barra-seleccion: 999;
+  --z-sidebar: 1000;
+  --z-barra-carga: 1031;
+  --z-panel-subidas: 1500;
+  --z-avisos-estado: 1900;
+  --z-toast: 9999;
+}
+
 :export {
   primary: $primary;
   info: $info;

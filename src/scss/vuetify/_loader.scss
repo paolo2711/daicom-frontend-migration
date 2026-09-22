@@ -14,7 +14,7 @@
   .bar {
     background: $accent;
     position: fixed;
-    z-index: 1031;
+    z-index: var(--z-barra-carga);
     top: 0;
     left: 0;
     width: 100%;
@@ -33,7 +33,7 @@
   .spinner {
     display: block;
     position: fixed;
-    z-index: 1031;
+    z-index: var(--z-barra-carga);
     top: 50%;
     right: 50%;
   }

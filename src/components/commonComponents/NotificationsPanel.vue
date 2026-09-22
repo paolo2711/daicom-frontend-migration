@@ -191,7 +191,7 @@ const abrir = (n) => {
 .notif-scrim {
   position: fixed;
   inset: 0;
-  z-index: 900;               /* por debajo del sidebar (1000) */
+  z-index: var(--z-velo-notificaciones);
   background: rgba(0, 0, 0, 0.28);
 }
 .notif-panel {
@@ -200,7 +200,7 @@ const abrir = (n) => {
   left: 70px;                 /* nace a la derecha del rail */
   bottom: 0;
   width: min(397px, calc(100vw - 90px));
-  z-index: 950;              /* debajo del rail: parece salir de él */
+  z-index: var(--z-panel-notificaciones);  /* debajo del rail: parece salir de el */
   /* El fondo viene inline = mismo color del sidebar (se mezclan). */
   box-shadow: 6px 0 24px rgba(0, 0, 0, 0.14);
   display: flex;

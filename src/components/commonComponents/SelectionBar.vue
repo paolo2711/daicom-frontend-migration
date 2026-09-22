@@ -46,7 +46,7 @@ onUnmounted(() => { appStore.selectionActive = false })
   bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 999;
+  z-index: var(--z-barra-seleccion);
   border-radius: 16px !important;
   max-width: 94vw;
   /* Tema-aware: claro = azul-gris suave; oscuro = mica (familia del fondo app). */

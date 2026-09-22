@@ -43,7 +43,7 @@ const toneForLevel = (level) =>
   top: 12px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 2000;              /* sobre el contenido, debajo de diálogos modales */
+  z-index: var(--z-avisos-estado);
   display: flex;
   flex-direction: column;
   align-items: center;

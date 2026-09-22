@@ -21,7 +21,6 @@
         :loading="loading_list"
         item-value="id"
         class="elevation-0 rounded-lg tabla-mejorada bg-surface"
-        style="border: 1px solid rgba(0,0,0,0.12);"
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
@@ -164,11 +163,3 @@ onMounted(() => {
 
 defineExpose({ retrieveAllLabs, openAddDialog })
 </script>
-
-<style scoped>
-.tabla-mejorada.v-data-table-server {
-  border: 1px solid var(--v-border-color);
-  border-radius: 8px;
-  overflow: hidden;
-}
-</style>

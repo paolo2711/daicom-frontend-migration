@@ -233,11 +233,3 @@ const openAddDialog = () => {
 
 defineExpose({ retrieveAllClients, openAddDialog })
 </script>
-
-<style scoped>
-.tabla-mejorada.v-data-table-server {
-  border: 1px solid var(--v-border-color);
-  border-radius: 8px;
-  overflow: hidden;
-}
-</style>

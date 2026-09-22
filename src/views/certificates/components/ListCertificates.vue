@@ -141,7 +141,6 @@
         :headers="headers"
         :items="certificates"
         class="elevation-0 rounded-lg tabla-mejorada tabla-certificados-interactiva bg-surface"
-        style="border: 1px solid rgba(0,0,0,0.12);"
         :row-props="getRowProps"
         v-model="certificados_seleccionados"
         show-select

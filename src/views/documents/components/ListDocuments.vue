@@ -31,7 +31,7 @@
     </div>
 
     <TableLoadingOverlay :loading="loading" text="Cargando documentos..." :isEmpty="documents.length === 0">
-      <v-table density="compact" class="tabla-mejorada border rounded-lg" hover>
+      <v-table density="compact" class="tabla-mejorada rounded-lg" hover>
         <thead>
           <tr>
             <th class="text-left font-weight-bold">Documento</th>

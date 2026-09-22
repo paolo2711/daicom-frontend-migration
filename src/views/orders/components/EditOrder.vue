@@ -23,7 +23,7 @@
             <v-list-item
               v-for="cert in edit_order_certs"
               :key="cert.id"
-              style="border-bottom: 1px solid #ddd;"
+              class="border-b-thin"
               :disabled="cert.status === 5"
             >
               <template #prepend>
@@ -40,7 +40,7 @@
 
           <!-- Cotización y guías (documento único c/u) -->
           <div class="doc-group mt-2">
-            <div class="doc-group__title"><v-icon size="small" start>mdi-file-check-outline</v-icon> Cotización y guías</div>
+            <div class="doc-group__title text-medium-emphasis"><v-icon size="small" start>mdi-file-check-outline</v-icon> Cotización y guías</div>
             <div v-for="u in unicos" :key="u.campo" class="d-flex align-center mb-2" style="gap: 8px;">
               <v-file-input v-model="files_to_upload[u.campo]" :label="u.label" variant="outlined" density="compact"
                             hide-details accept="application/pdf" :prepend-inner-icon="u.icon" prepend-icon="" class="flex-grow-1" />
@@ -54,7 +54,7 @@
 
           <!-- Secciones múltiples: OC + Valorizaciones -->
           <div v-for="s in secciones" :key="s.tipo" class="doc-group mt-4">
-            <div class="doc-group__title">
+            <div class="doc-group__title text-medium-emphasis">
               <v-icon size="small" start :color="s.color">{{ s.icon }}</v-icon> {{ s.titulo }}
               <v-chip size="x-small" variant="tonal" class="ml-2">{{ docs[s.tipo].length }}</v-chip>
             </div>
@@ -86,7 +86,7 @@
         </div>
       </v-card-text>
 
-      <v-card-actions class="px-6 pb-4 pt-2" style="border-top: 1px solid rgba(0,0,0,0.1);">
+      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin">
         <v-spacer/>
         <v-btn variant="flat" class="font-weight-bold rounded-lg mr-3 px-6" @click="close">Cerrar</v-btn>
         <v-btn color="primary" variant="flat" elevation="2" class="text-white font-weight-bold rounded-lg px-6"
@@ -257,20 +257,19 @@ function close() {
 
 <style scoped>
 .doc-group {
-  border: 1px solid rgba(0,0,0,0.09);
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 12px;
   padding: 12px 14px;
 }
 .doc-group__title {
   font-size: 0.8rem;
   font-weight: 700;
-  color: rgba(0,0,0,0.65);
   display: flex;
   align-items: center;
   margin-bottom: 10px;
 }
 .doc-table {
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 8px;
 }
 </style>

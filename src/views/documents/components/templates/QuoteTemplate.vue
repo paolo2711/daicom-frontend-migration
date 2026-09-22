@@ -7,7 +7,7 @@
       </base-modal-header>
 
       <!-- PESTAÑAS (TABS) -->
-      <v-tabs v-model="tab" bg-color="transparent" color="primary" class="border-bottom mx-4 mt-2" style="flex-shrink: 0;">
+      <v-tabs v-model="tab" bg-color="transparent" color="primary" class="border-b-thin mx-4 mt-2" style="flex-shrink: 0;">
         <v-tab value="1"><v-icon start>mdi-domain</v-icon> 1. Cliente y Datos</v-tab>
         <v-tab value="2"><v-icon start>mdi-format-list-bulleted</v-icon> 2. Servicios a Cotizar</v-tab>
         <v-tab value="3"><v-icon start>mdi-script-text-outline</v-icon> 3. Términos y Anexos</v-tab>
@@ -182,9 +182,3 @@ const guardarCotizacion = async () => {
   }
 }
 </script>
-
-<style scoped>
-.border-bottom {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-}
-</style>

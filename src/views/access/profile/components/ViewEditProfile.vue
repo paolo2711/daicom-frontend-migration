@@ -3,7 +3,7 @@
 
     <!--  Datos de la cuenta (siempre editable)  -->
     <v-card variant="flat" class="border rounded-lg bg-surface elevation-0" :loading="is_loading">
-      <div class="d-flex align-center pa-4" style="border-bottom: 1px solid var(--v-border-color, rgba(0,0,0,0.12));">
+      <div class="d-flex align-center pa-4 border-b-thin">
         <v-icon start color="primary" size="28" class="mr-2">mdi-badge-account-horizontal</v-icon>
         <h3 class="text-h6 font-weight mb-0">Información de la cuenta</h3>
         <v-spacer></v-spacer>
@@ -71,7 +71,7 @@
 
     <!--  Contrasena (tarjeta aparte)  -->
     <v-card variant="flat" class="border rounded-lg bg-surface elevation-0">
-      <div class="d-flex align-center pa-4" style="border-bottom: 1px solid var(--v-border-color, rgba(0,0,0,0.12));">
+      <div class="d-flex align-center pa-4 border-b-thin">
         <v-icon start color="primary" size="28" class="mr-2">mdi-lock-reset</v-icon>
         <h3 class="text-h6 font-weight mb-0">Contraseña</h3>
       </div>

@@ -116,10 +116,10 @@
           <v-col cols="12" md="4" class="pt-2">
             <div class="text-subtitle-2 font-weight-bold text-grey-darken-1 mb-3">Logotipo de la compañía</div>
             
-            <v-card v-if="logoPreview" variant="flat" class="bg-grey-lighten-4 mb-4 rounded-lg d-flex align-center justify-center overflow-hidden" style="min-height: 180px; border: 1px solid rgba(0,0,0,0.12);">
+            <v-card v-if="logoPreview" variant="flat" class="bg-surface mb-4 rounded-lg d-flex align-center justify-center overflow-hidden border-thin" style="min-height: 180px;">
               <v-img :src="logoPreview" contain max-height="250" class="w-100"></v-img>
             </v-card>
-            <v-card v-else variant="flat" class="bg-grey-lighten-4 mb-4 rounded-lg d-flex align-center justify-center" style="min-height: 180px; border: 1px dashed rgba(0,0,0,0.24);">
+            <v-card v-else variant="flat" class="bg-surface mb-4 rounded-lg d-flex align-center justify-center zona-vacia" style="min-height: 180px;">
               <v-icon size="64" color="grey-lighten-1">mdi-image-outline</v-icon>
             </v-card>
 
@@ -140,10 +140,10 @@
             <v-divider class="mb-3"></v-divider>
             <div class="text-subtitle-2 font-weight-bold text-grey-darken-1 mb-3">Cuentas Bancarias</div>
 
-            <v-card v-if="bankAccountsPreview" variant="flat" class="bg-grey-lighten-4 mb-4 rounded-lg d-flex align-center justify-center overflow-hidden" style="min-height: 180px; border: 1px solid rgba(0,0,0,0.12);">
+            <v-card v-if="bankAccountsPreview" variant="flat" class="bg-surface mb-4 rounded-lg d-flex align-center justify-center overflow-hidden border-thin" style="min-height: 180px;">
               <v-img :src="bankAccountsPreview" contain max-height="250" class="w-100"></v-img>
             </v-card>
-            <v-card v-else variant="flat" class="bg-grey-lighten-4 mb-4 rounded-lg d-flex align-center justify-center" style="min-height: 180px; border: 1px dashed rgba(0,0,0,0.24);">
+            <v-card v-else variant="flat" class="bg-surface mb-4 rounded-lg d-flex align-center justify-center zona-vacia" style="min-height: 180px;">
               <v-icon size="64" color="grey-lighten-1">mdi-bank-outline</v-icon>
             </v-card>
 
@@ -354,3 +354,11 @@ onMounted(() => {
   initCompany()
 })
 </script>
+
+<style scoped>
+/* La linea cortada de una zona sin archivo: no hay utilidad de Vuetify para
+   punteado, asi que se arma con sus mismas variables. */
+.zona-vacia {
+  border: 1px dashed rgba(var(--v-border-color), calc(var(--v-border-opacity) * 2));
+}
+</style>

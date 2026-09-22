@@ -9,7 +9,7 @@
     <v-row>
       <v-col cols="12" md="5">
         <v-card variant="flat" class="border rounded-lg bg-surface elevation-0 h-100">
-          <div class="d-flex align-center pa-4" style="border-bottom: 1px solid var(--v-border-color, rgba(0,0,0,0.12));">
+          <div class="d-flex align-center pa-4 border-b-thin">
             <h3 class="text-subtitle-1 font-weight-bold mb-0">Lista de Roles</h3>
             <v-spacer></v-spacer>
             <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" size="small" @click="listRoles?.openAddDialog()">

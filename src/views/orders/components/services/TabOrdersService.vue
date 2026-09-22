@@ -130,7 +130,6 @@
             item-value="id"
         :hover="false"
         class="elevation-0 rounded-lg tabla-mejorada tabla-ordenes-servicio bg-surface"
-        style="border: 1px solid rgba(0,0,0,0.12);"
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer

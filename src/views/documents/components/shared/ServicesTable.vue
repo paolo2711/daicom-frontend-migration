@@ -11,7 +11,7 @@
       </v-btn>
     </div>
 
-    <v-table density="compact" class="tabla-mejorada border rounded-lg mb-3">
+    <v-table density="compact" class="tabla-mejorada rounded-lg mb-3">
       <thead :class="$vuetify.theme.current.dark ? 'bg-grey-darken-4' : 'bg-grey-lighten-4'">
         <tr>
           <th width="50" class="text-center font-weight-bold">Item</th>

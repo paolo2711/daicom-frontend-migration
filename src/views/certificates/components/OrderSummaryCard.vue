@@ -182,7 +182,7 @@ const getColorPago = (metodo) => {
 
 <style scoped>
 .tarjeta-limpia {
-  border: 1px solid rgba(0,0,0,0.1);
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   overflow: hidden;
 }
 </style>

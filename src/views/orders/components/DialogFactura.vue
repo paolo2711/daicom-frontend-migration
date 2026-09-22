@@ -115,7 +115,7 @@
         </v-form>
       </v-card-text>
 
-      <v-card-actions class="px-6 pb-4 pt-2" style="border-top: 1px solid rgba(0,0,0,0.1);">
+      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin">
         <v-btn v-if="editando" color="error" variant="text" @click="eliminar" :loading="isDeleting">
           <v-icon start>mdi-delete-outline</v-icon> Eliminar
         </v-btn>

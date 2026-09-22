@@ -131,7 +131,6 @@
         item-value="id"
         :hover="false"
         class="elevation-0 rounded-lg tabla-mejorada tabla-ordenes-alquiler bg-surface"
-        style="border: 1px solid #FFCA28;"
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
@@ -687,6 +686,12 @@ onUnmounted(() => {
 .anulado-atenuado {
   opacity: 0.25 !important;
   pointer-events: none;
+}
+
+/* El ambar distingue Alquileres de Servicios de un vistazo. Pisa el marco
+   comun de _table.scss a proposito. */
+.v-application .tabla-ordenes-alquiler {
+  border-color: #FFCA28;
 }
 
 .tabla-ordenes-alquiler tbody tr {

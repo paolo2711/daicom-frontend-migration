@@ -26,7 +26,7 @@
       </v-card-text>
 
       <!-- Agregamos un borde superior para delimitar los botones cuando el contenido hace scroll -->
-      <v-card-actions class="px-6 pb-4 pt-2" style="border-top: 1px solid rgba(0,0,0,0.1);">
+      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin">
         <v-spacer />
         <v-btn variant="flat" class="font-weight-bold mr-3 px-4" @click="close">Cancelar</v-btn>
         <v-btn color="primary" @click="save" :disabled="!is_valid || items_to_save.length === 0" :loading="is_on_sending_process">

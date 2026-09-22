@@ -1,0 +1,9 @@
+// Marco de las tablas del listado. La expresion sirve para los dos temas, asi
+// que no lleva override en _dark.scss.
+// El .v-application delante gana sobre los estilos propios de Vuetify sin !important.
+
+.v-application .tabla-mejorada {
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 8px;
+  overflow: hidden;
+}

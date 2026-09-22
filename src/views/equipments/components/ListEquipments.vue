@@ -28,7 +28,6 @@
         item-value="id"
         :hover="false"
         class="elevation-0 rounded-lg tabla-mejorada bg-surface"
-        style="border: 1px solid rgba(0,0,0,0.12);"
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer

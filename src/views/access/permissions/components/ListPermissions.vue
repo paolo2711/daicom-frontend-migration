@@ -1,7 +1,7 @@
 <template>
   <v-card variant="flat" class="border rounded-lg bg-surface elevation-0 h-100 d-flex flex-column">
     
-    <div class="d-flex align-center pa-4" style="border-bottom: 1px solid var(--v-border-color, rgba(0,0,0,0.12));">
+    <div class="d-flex align-center pa-4 border-b-thin">
       <v-icon start color="primary" class="mr-2">mdi-lock-open-check</v-icon>
       <h3 class="text-subtitle-1 font-weight-bold mb-0 d-flex align-center">
         Permisos: <v-chip v-if="selected_role?.name" color="primary" variant="tonal" size="small" class="ml-2 font-weight-bold">{{ selected_role.name }}</v-chip>

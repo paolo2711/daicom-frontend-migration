@@ -13,7 +13,7 @@
       </base-modal-header>
 
       <v-card-text class="pa-4" style="min-height: 350px;">
-        <v-table density="compact" class="elevation-1 rounded-lg" style="border: 1px solid var(--v-border-color, #e0e0e0);">
+        <v-table density="compact" class="elevation-1 rounded-lg border-thin">
           <thead>
             <tr :class="isDark ? 'bg-grey-darken-3' : 'bg-grey-lighten-3'">
               <th class="text-left font-weight-bold text-uppercase">Nro Orden</th>

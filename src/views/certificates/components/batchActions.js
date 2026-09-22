@@ -3,13 +3,14 @@ import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
 import { fechaCorta } from '@/utils/dates'
 
 // Cada accion del modal de lote se describe entera en su entrada de ACCIONES.
-// La fila devuelve un nivel y no un color, para que la regla de los tres
-// colores este en un solo lugar.
+// La fila devuelve un nivel y no un color, para que la regla de los colores
+// este en un solo lugar.
 const HECHO = 'hecho'      // ya esta hecho, o listo para esta accion
 const BLOQUEA = 'bloquea'  // no se puede
 const NEUTRO = 'neutro'    // ni una cosa ni la otra
+const ESPERA = 'espera'    // depende de otra persona
 
-const COLOR_POR_NIVEL = { [BLOQUEA]: 'error', [NEUTRO]: 'grey' }
+const COLOR_POR_NIVEL = { [BLOQUEA]: 'error', [NEUTRO]: 'grey', [ESPERA]: 'orange-darken-2' }
 
 export const colorDe = (nivel, colorDeLaAccion) => COLOR_POR_NIVEL[nivel] || colorDeLaAccion
 
@@ -63,8 +64,10 @@ export const ACCIONES = {
 
     estadoPrevio: (item) => {
       if (item.disabled) return { texto: 'Sin Excel', nivel: BLOQUEA }
-      return item.already_has_it
-        ? { texto: 'En Nube', nivel: HECHO }
+      if (item.already_has_it) return { texto: 'En Nube', nivel: HECHO }
+      // Quien firma necesita saber a cuales los esta esperando gerencia.
+      return item.signature_requested
+        ? { texto: 'Solicitado', nivel: ESPERA }
         : { texto: 'Con PDF', nivel: NEUTRO }
     },
 
@@ -92,7 +95,7 @@ export const ACCIONES = {
     }),
 
     estadoPrevio: (item) => {
-      if (item.signature_requested) return { texto: 'Notificado', nivel: HECHO }
+      if (item.signature_requested) return { texto: 'Notificado', nivel: ESPERA }
       if (item.disabled) return { texto: 'Sin Excel', nivel: BLOQUEA }
       return { texto: item.already_has_it ? 'En Nube' : 'Con PDF', nivel: NEUTRO }
     },

@@ -256,8 +256,7 @@
                 @reload="retrieveOrders"
                 @add-extra="prepareExtraEquipment(item)"
                 @edit-certificate="openCertificateModal"
-                @request-signatures="certs => abrirBatchModal('notify', certs)"
-                @registrar-entrega="certs => abrirBatchModal('entrega', certs)"
+                @accion-certificados="clave => abrirBatchModal(clave, item.certificates)"
               />
             </td>
           </tr>

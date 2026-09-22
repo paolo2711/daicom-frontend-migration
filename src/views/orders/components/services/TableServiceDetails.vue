@@ -12,18 +12,14 @@
         </span>
       </div>
       <v-spacer/>
-      <!-- size="x-small" | left → start (V3) -->
-      <v-btn size="x-small" color="orange-darken-3" variant="flat" class="text-white mr-2" @click="$emit('request-signatures', order.certificates)" :disabled="order.status === 4 || !order.certificates || order.certificates.length === 0">
-        <v-icon start size="x-small">mdi-bell-ring</v-icon> Solicitar Firmas
-      </v-btn>
-      <v-btn v-if="hasPermission(1010)" size="x-small" color="teal-darken-2" variant="flat" class="text-white mr-2"
-             @click="$emit('registrar-entrega', order.certificates)"
-             :disabled="order.status === 4 || !order.certificates || order.certificates.length === 0">
-        <v-icon start size="x-small">mdi-package-variant-closed-check</v-icon> Marcar Entregados
-      </v-btn>
-      <v-btn size="x-small" color="primary" variant="flat" class="text-white" @click="$emit('add-extra')" :disabled="order.status === 4">
-        <v-icon start size="x-small">mdi-plus</v-icon> Añadir Equipo Extra
-      </v-btn>
+      <div class="d-flex align-center ga-2">
+        <action-group :acciones="accionesDeCertificados" etiqueta="Acciones en lote"
+                      @accion="clave => $emit('accion-certificados', clave)" />
+        <v-btn size="x-small" color="primary" variant="flat" class="text-white"
+               @click="$emit('add-extra')" :disabled="order.status === 4">
+          <v-icon start size="x-small">mdi-plus</v-icon> Añadir Equipo Extra
+        </v-btn>
+      </div>
     </v-toolbar>
 
     <!-- Los equipos todavia en camino: null mientras se piden. -->
@@ -156,9 +152,18 @@ import { copiarConAviso } from "@/utils/clipboard";
 import { estaEntregado } from "@/utils/certificates/entrega";
 import { tieneExcelBase } from "@/utils/certificates/excelBase";
 import { fechaCorta } from "@/utils/dates";
+import ActionGroup from "@/components/shared/ActionGroup.vue";
+
+// `clave` tiene que coincidir con las de ACCIONES del modal de lote.
+const ACCIONES_CERTIFICADOS = [
+  { clave: 'notify',  texto: 'Solicitar Firmas',  icono: 'mdi-bell-ring',                    color: 'orange-darken-3', permiso: 1005 },
+  { clave: 'entrega', texto: 'Marcar Entregados', icono: 'mdi-package-variant-closed-check', color: 'teal-darken-2',   permiso: 1010 },
+  { clave: 'qr',      texto: 'Firmar QR',         icono: 'mdi-qrcode-scan',                  color: 'primary',         permiso: 1001 },
+];
 
 export default {
   name: "TableServiceDetails",
+  components: { ActionGroup },
   setup() {
     const theme = useTheme()
     const isDark = vueComputed(() => theme.global.current.value.dark)
@@ -175,7 +180,14 @@ export default {
     user_permissions: [],
   }),
   computed: {
-    // isDark eliminado de aquí (ahora viene de setup)
+    accionesDeCertificados() {
+      const sinEquipos = this.order.status === 4 || !this.order.certificates?.length;
+      return ACCIONES_CERTIFICADOS.map(accion => ({
+        ...accion,
+        visible: this.hasPermission(accion.permiso),
+        disabled: sinEquipos,
+      }));
+    },
   },
   created() {
     const user = JSON.parse(localStorage.getItem('user')) || {};

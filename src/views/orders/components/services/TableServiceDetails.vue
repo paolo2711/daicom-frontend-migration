@@ -40,7 +40,10 @@
       </thead>
       <tbody>
         <tr v-for="cert in order.certificates" :key="cert.id" :class="cert.status === 5 ? 'fila-anulada' : ''">
-          <td><strong>{{ cert.registry_code }}</strong></td>
+          <td>
+            <strong>{{ cert.registry_code }}</strong>
+            <numeros-anteriores :numeros="cert.previous_numbers" />
+          </td>
           <td>{{ cert.equipment }}</td>
 
           <td class="text-center">
@@ -81,7 +84,6 @@
           </td>
 
           <td class="text-center">
-            <!-- v-chip x-small outlined → size="x-small" variant="outlined" -->
             <v-chip size="x-small" :color="estadoCert(cert).color" variant="outlined" label>
               {{ estadoCert(cert).texto }}
             </v-chip>
@@ -89,7 +91,6 @@
 
           <td class="text-center">
             <div class="d-flex justify-center align-center">
-              <!-- v-tooltip: bottom → location="bottom" | activator: {on} → {props} v-bind -->
               <v-tooltip location="bottom" color="info">
                 <template v-slot:activator="{ props }">
                   <v-btn icon variant="text" density="comfortable" size="x-small" color="blue-darken-2" class="mx-1" v-bind="props" @click="irACertificado(cert)" v-if="cert.status !== 5">
@@ -123,7 +124,6 @@
 
               <v-tooltip location="bottom" color="success" v-if="cert.status === 5 && hasPermission(1003)">
                 <template v-slot:activator="{ props }">
-                  <!-- [R1] variant="text" | [R2] density="comfortable" -->
                   <v-btn icon variant="text" density="comfortable" size="x-small" color="green-darken-2" class="mx-1" v-bind="props" @click="revivirCertConfirm(cert)">
                     <v-icon>mdi-backup-restore</v-icon>
                   </v-btn>
@@ -153,17 +153,19 @@ import { estaEntregado } from "@/utils/certificates/entrega";
 import { tieneExcelBase } from "@/utils/certificates/excelBase";
 import { fechaCorta } from "@/utils/dates";
 import ActionGroup from "@/components/shared/ActionGroup.vue";
+import NumerosAnteriores from "@/components/shared/NumerosAnteriores.vue";
 
 // `clave` tiene que coincidir con las de ACCIONES del modal de lote.
 const ACCIONES_CERTIFICADOS = [
   { clave: 'notify',  texto: 'Solicitar Firmas',  icono: 'mdi-bell-ring',                    color: 'orange-darken-3', permiso: 1005 },
   { clave: 'entrega', texto: 'Marcar Entregados', icono: 'mdi-package-variant-closed-check', color: 'teal-darken-2',   permiso: 1010 },
   { clave: 'qr',      texto: 'Firmar QR',         icono: 'mdi-qrcode-scan',                  color: 'primary',         permiso: 1001 },
+  { clave: 'tipo',    texto: 'Corregir Tipo',     icono: 'mdi-swap-horizontal',              color: 'indigo',          permiso: 1003 },
 ];
 
 export default {
   name: "TableServiceDetails",
-  components: { ActionGroup },
+  components: { ActionGroup, NumerosAnteriores },
   setup() {
     const theme = useTheme()
     const isDark = vueComputed(() => theme.global.current.value.dark)
@@ -197,9 +199,7 @@ export default {
   methods: {
     estaEntregado,
     fechaCorta,
-    // El back manda uploaded_xls_url ya armada, o null si ese certificado no
-    // tiene PDF base. Antes habia que adivinar aca si el campo traia una ruta o
-    // el flag viejo ("1", "0", "False"...).
+    // El back manda uploaded_xls_url ya armada, o null si no hay PDF base.
     hasValidPdf(cert) {
       return Boolean(cert.uploaded_xls_url);
     },
@@ -207,9 +207,7 @@ export default {
       return cert.uploaded_xls_url || undefined;
     },
     hasValidCloud(cert) {
-      const val = cert.uploaded;
-      // Previene falsos positivos con strings de base de datos
-      return Boolean(val && val !== 'False' && val !== '0' && val !== 'null');
+      return Boolean(cert.uploaded);
     },
     getValidCloudUrl(cert) {
       return this.hasValidCloud(cert) ? `https://daicomperu.com/${cert.uuid || cert.correlative}` : undefined;

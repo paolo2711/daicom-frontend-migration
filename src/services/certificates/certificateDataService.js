@@ -88,6 +88,12 @@ export default {
     return axios.post('certificates/entrega', { cert_ids: certIds, sent_date: sentDate }, { headers });
   },
 
+  corregirTipo(certIds, certificateType) {
+    const headers = authHeader();
+    headers['Content-Type'] = "application/json";
+    return axios.post('certificates/corregir-tipo', { cert_ids: certIds, certificate_type: certificateType }, { headers });
+  },
+
   // Guarda un PDF ya hecho como certificado base, sin convertir.
   subirPdfBase(id, formData) {
     const headers = authHeader();

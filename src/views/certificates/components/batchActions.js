@@ -1,5 +1,8 @@
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
+import { ANULADO, estaFirmado } from '@/utils/certificates/estado'
+import { TIPOS_CERTIFICADO, nombreDelTipo } from '@/utils/certificates/tipos'
+import { usePermissions } from '@/composables/usePermissions'
 import { fechaCorta } from '@/utils/dates'
 
 // Cada accion del modal de lote se describe entera en su entrada de ACCIONES.
@@ -9,8 +12,13 @@ const HECHO = 'hecho'      // ya esta hecho, o listo para esta accion
 const BLOQUEA = 'bloquea'  // no se puede
 const NEUTRO = 'neutro'    // ni una cosa ni la otra
 const ESPERA = 'espera'    // depende de otra persona
+const AVISO = 'aviso'      // se puede, pero se pierde algo
 
-const COLOR_POR_NIVEL = { [BLOQUEA]: 'error', [NEUTRO]: 'grey', [ESPERA]: 'orange-darken-2' }
+export const esAviso = (estado) => estado.nivel === AVISO
+
+const COLOR_POR_NIVEL = {
+  [BLOQUEA]: 'error', [NEUTRO]: 'grey', [ESPERA]: 'orange-darken-2', [AVISO]: 'warning',
+}
 
 export const colorDe = (nivel, colorDeLaAccion) => COLOR_POR_NIVEL[nivel] || colorDeLaAccion
 
@@ -21,6 +29,19 @@ const ADJUNTADO = {
 }
 
 export const estaAdjuntado = (item) => item.validation_status in ADJUNTADO
+
+// Las mismas reglas que por_que_no_se_corrige en el back.
+const PERMISO_FIRMA = 1001
+
+const impideCorregir = (cert, tipo) => {
+  if (cert.status === ANULADO) return { nivel: BLOQUEA, titulo: 'Está anulado' }
+  if (!tipo) return { nivel: NEUTRO, titulo: 'Elige el tipo correcto' }
+  if (cert.certificate_type === tipo) return { nivel: NEUTRO, titulo: `Ya es ${nombreDelTipo(tipo)}` }
+  if (estaFirmado(cert) && !usePermissions().hasAction(PERMISO_FIRMA)) {
+    return { nivel: BLOQUEA, titulo: 'Está firmado: corregirlo necesita el permiso de firma' }
+  }
+  return null
+}
 
 export const ACCIONES = {
   excel: {
@@ -135,6 +156,32 @@ export const ACCIONES = {
       return item.uploaded
         ? { icono: 'mdi-cloud-check', nivel: HECHO, titulo: 'En la nube' }
         : { icono: 'mdi-file-sign', nivel: NEUTRO, titulo: 'Firmado, pero no está en la nube' }
+    },
+  },
+
+  tipo: {
+    titulo: 'Corregir Tipo de Certificado',
+    icono: 'mdi-swap-horizontal',
+    color: 'indigo',
+    subtitulo: 'Cada uno toma el siguiente número del tipo elegido; el que tenía queda como número anterior:',
+    iconoAccion: 'mdi-swap-horizontal',
+    opcion: { label: 'Tipo correcto', items: TIPOS_CERTIFICADO },
+
+    preparar: (cert, tipo) => ({ disabled: Boolean(impideCorregir(cert, tipo)) }),
+
+    estadoPrevio: (item) => ({ texto: nombreDelTipo(item.certificate_type), nivel: NEUTRO }),
+
+    validacion: (item, tipo) => {
+      const impedimento = impideCorregir(item, tipo)
+      if (impedimento) return { ...impedimento, icono: 'mdi-minus-circle' }
+      if (estaEntregado(item)) {
+        return { icono: 'mdi-alert', nivel: AVISO, titulo: 'Ya se entregó: el QR que tiene el cliente deja de funcionar' }
+      }
+      if (item.uploaded) return { icono: 'mdi-cloud-off-outline', nivel: AVISO, titulo: 'Se baja de la nube' }
+      if (tieneExcelBase(item)) {
+        return { icono: 'mdi-file-remove', nivel: AVISO, titulo: 'Se descarta el Excel: hay que rehacerlo con el número nuevo' }
+      }
+      return { icono: 'mdi-check-circle', nivel: HECHO, titulo: `Pasa a ${nombreDelTipo(tipo)}` }
     },
   },
 }

@@ -52,8 +52,18 @@
           density="compact"
           variant="outlined"
           hide-details
-          class="mb-4"
-          style="max-width: 260px;"
+          class="campo-de-la-accion mb-4"
+        />
+
+        <v-select
+          v-if="modalConfig.opcion"
+          v-model="opcion"
+          :items="modalConfig.opcion.items"
+          :label="modalConfig.opcion.label"
+          density="compact"
+          variant="outlined"
+          hide-details
+          class="campo-de-la-accion mb-4"
         />
 
         <v-table density="compact" class="border rounded-lg bg-surface mt-2" style="max-height: 350px; overflow-y: auto;">
@@ -172,7 +182,7 @@
 
 <script setup>
 import { Toast } from '@/plugins/alerts'
-import { ref, computed, getCurrentInstance } from 'vue'
+import { ref, computed, watch, getCurrentInstance } from 'vue'
 import { useAppStore } from '@/stores/appStore'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
@@ -180,7 +190,8 @@ import { defineAsyncComponent } from 'vue'
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { alPresionarEnter } from '@/utils/keyboard'
 import { hoyISO } from '@/utils/dates'
-import { ACCIONES, colorDe, estaAdjuntado } from './batchActions'
+import { nombreDelTipo } from '@/utils/certificates/tipos'
+import { ACCIONES, colorDe, esAviso, estaAdjuntado } from './batchActions'
 
 const LoadSheet = defineAsyncComponent(() => import('@/views/certificates/components/LoadSheet.vue'))
 
@@ -198,6 +209,7 @@ const is_processing = ref(false)
 const loadSheetModalRef = ref(null)
 const force_select = ref(false)
 const fecha = ref('')
+const opcion = ref(null)
 
 const modalConfig = computed(() => ACCIONES[action.value] || ACCIONES.excel)
 
@@ -205,6 +217,7 @@ const modalConfig = computed(() => ACCIONES[action.value] || ACCIONES.excel)
 const hayItemsValidos = computed(() => selected_items.value.length > 0)
 
 const faltaLaFecha = computed(() => Boolean(modalConfig.value.fecha) && !fecha.value)
+const faltaLaOpcion = computed(() => Boolean(modalConfig.value.opcion) && !opcion.value)
 
 const fechaMaxima = computed(() =>
   modalConfig.value.fecha?.permiteFutura === false ? hoyISO() : undefined
@@ -212,7 +225,8 @@ const fechaMaxima = computed(() =>
 
 // Una sola condición para el botón y para el Enter, así no se separan.
 const puedeConfirmar = computed(() =>
-  !loading_validation.value && !is_processing.value && hayItemsValidos.value && !faltaLaFecha.value
+  !loading_validation.value && !is_processing.value && hayItemsValidos.value &&
+  !faltaLaFecha.value && !faltaLaOpcion.value
 )
 
 const confirmarConEnter = alPresionarEnter(() => {
@@ -246,12 +260,13 @@ const open = async (actionType, selectedCerts, forceSelect = false) => {
   selected_items.value = []
   force_select.value = forceSelect
   fecha.value = accion.fecha ? hoyISO() : ''
+  opcion.value = null
 
   items.value = selectedCerts.map(cert => ({
     ...cert,
     equipment: `${cert.equipment} ${cert.brand}`.trim(),
     validation_status: 'pending',
-    ...accion.preparar(cert),
+    ...accion.preparar(cert, null),
   }))
 
   // La acción que escanea el servidor marca las filas al saber qué encontró.
@@ -276,10 +291,19 @@ const openManualUpload    = (item) => abrirAdjuntar(item, 'excel')
 const openPdfBaseUpload   = (item) => abrirAdjuntar(item, 'pdf-base')
 const openManualPdfUpload = (item) => abrirAdjuntar(item, 'pdf')
 
+// Cambiar la opcion cambia que filas se pueden: se vuelven a preparar, y la
+// que queda bloqueada sale de la seleccion.
+watch(opcion, (valor) => {
+  if (!modalConfig.value.opcion) return
+  items.value.forEach(item => Object.assign(item, modalConfig.value.preparar(item, valor)))
+  const habilitados = new Set(items.value.filter(i => !i.disabled).map(i => i.id))
+  selected_items.value = selected_items.value.filter(id => habilitados.has(id))
+})
+
 const pintar = (estado) => ({ ...estado, color: colorDe(estado.nivel, modalConfig.value.color) })
 
-const estadoPrevio = (item) => pintar(modalConfig.value.estadoPrevio(item))
-const validacion   = (item) => pintar(modalConfig.value.validacion(item))
+const estadoPrevio = (item) => pintar(modalConfig.value.estadoPrevio(item, opcion.value))
+const validacion   = (item) => pintar(modalConfig.value.validacion(item, opcion.value))
 
 const discardManualPdf = (item) => {
   item.validation_status = 'pending'
@@ -386,6 +410,23 @@ const guardarPdfsBase = async (certs) => {
   })
 }
 
+const confirmarCorreccion = async (aptos) => {
+  const conPerdida = aptos.filter(item => esAviso(validacion(item))).length
+  const avisos = ['Cada uno toma el siguiente número de esa serie, y el que tenía queda como número anterior.']
+  if (conPerdida) {
+    avisos.push(`<b>${conPerdida}</b> ya tienen trabajo hecho que se pierde: revisa el ícono de su fila.`)
+  }
+  const { isConfirmed } = await $swal.fire({
+    icon: 'warning',
+    title: `¿Pasar ${aptos.length} a ${nombreDelTipo(opcion.value)}?`,
+    html: avisos.join('<br><br>'),
+    showCancelButton: true,
+    confirmButtonText: 'Sí, corregir',
+    cancelButtonText: 'Cancelar',
+  })
+  return isConfirmed
+}
+
 const confirmAction = async () => {
   if (is_processing.value) return
   is_processing.value = true
@@ -466,8 +507,26 @@ const confirmAction = async () => {
       close()
     }
 
+    else if (action.value === 'tipo') {
+      if (!await confirmarCorreccion(aptos)) return
+      const { data } = await CertificateDataService.corregirTipo(aptos.map(i => i.id), opcion.value)
+      const codigos = data.codigos
+      Toast.fire({
+        ...appStore.toastGuardadoExito,
+        title: codigos.length === 1
+          ? `Corregido: ahora es ${codigos[0]}`
+          : `${codigos.length} corregidos: del ${codigos[0]} al ${codigos[codigos.length - 1]}`
+      })
+      emit('clearSelection')
+      close()
+    }
+
   } catch (error) {
-    $swal.fire({ icon: 'error', title: 'Error', text: 'Hubo un problema al ejecutar la acción.' })
+    const data = error.response?.data
+    $swal.fire({
+      icon: 'error', title: 'Error',
+      html: [data?.error || 'Hubo un problema al ejecutar la acción.', ...(data?.rechazos || [])].join('<br>'),
+    })
   } finally {
     is_processing.value = false
   }
@@ -486,6 +545,10 @@ defineExpose({ open })
    desbloquea la fila. Apagarlo con el resto lo hacia parecer deshabilitado. */
 .fila-bloqueada td:not(:last-child) {
   opacity: 0.55;
+}
+
+.campo-de-la-accion {
+  max-width: 260px;
 }
 
 .ruta {

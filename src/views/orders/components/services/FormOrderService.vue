@@ -40,7 +40,7 @@
                             density="compact" variant="outlined" hide-details="auto" />
           </v-col>
           <v-col cols="12" md="4">
-            <v-select v-model="temp_eq.certificate_type" :items="cert_types" density="compact" variant="outlined"
+            <v-select v-model="temp_eq.certificate_type" :items="TIPOS_CERTIFICADO" density="compact" variant="outlined"
                       hide-details="auto" label="Tipo de Certificación" />
           </v-col>
           <v-col cols="12" md="2" class="ml-auto" v-if="next_cert_number_preview">
@@ -129,6 +129,7 @@ import EquipmentDataService from '@/services/equipments/equipmentDataService'
 import EquipmentMappers from '@/mappers/equipmentMappers'
 import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal.vue'
 import CorrelativeDataService from '@/services/correlative/correlativeDataService'
+import { TIPOS_CERTIFICADO, nombreDelTipo } from '@/utils/certificates/tipos'
 
 const emit = defineEmits(['update-list'])
 
@@ -142,14 +143,6 @@ const certificado_encontrado = ref(null)
 const buscando_cert          = ref(false)
 const base_correlatives      = ref({ 1: null, 2: null, 3: null })
 const equipments             = ref([])
-
-const cert_types = [
-  { title: 'ACREDITADO',    value: 1 },
-  { title: 'NO ACREDITADO', value: 2 },
-  { title: 'OPERATIVIDAD',  value: 3 },
-]
-
-// Filtro personalizado para Vuetify: ignora tildes en el frontend para no bloquear la data de MySQL
 
 // Comboboxes server-side
 const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)
@@ -228,14 +221,13 @@ function getCalculatedCorrelative(index) {
 function addEquipmentToBatch() {
   if (temp_eq.value.modo === 'nuevo') {
     if (!temp_eq.value.name || !temp_eq.value.lab || !temp_eq.value.certificate_type) return
-    const typeObj = cert_types.find(t => t.value === temp_eq.value.certificate_type)
     equipments.value.push({
       modo:             'nuevo',
       name:             temp_eq.value.name,
       lab:              temp_eq.value.lab,
       lab_name:         labSeleccionado.value?.name || 'No asignado',
       certificate_type: temp_eq.value.certificate_type,
-      type_label:       typeObj ? typeObj.title : 'ACREDITADO',
+      type_label:       nombreDelTipo(temp_eq.value.certificate_type),
     })
     temp_eq.value.name = ''
   } else {

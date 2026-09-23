@@ -17,9 +17,8 @@
               
               <v-row align="center" justify="center" v-if="!isEdit" class="mb-4">
                 <v-btn-toggle v-model="certificate.certificate_type" color="primary" selected-class="bg-primary text-white" rounded="lg" density="compact" mandatory @update:model-value="retrieveCorrelative">
-                  <v-btn :value="1" class="font-weight-bold px-4">ACREDITADO</v-btn>
-                  <v-btn :value="2" class="font-weight-bold px-4">NO ACREDITADO</v-btn>
-                  <v-btn :value="3" class="font-weight-bold px-4">OPERATIVIDAD</v-btn>
+                  <v-btn v-for="tipo in TIPOS_CERTIFICADO" :key="tipo.value" :value="tipo.value"
+                         class="font-weight-bold px-4">{{ tipo.title }}</v-btn>
                 </v-btn-toggle>
               </v-row>
 
@@ -187,6 +186,7 @@ import CertificateMappers from "@/mappers/certificateMappers.js"
 
 
 import CorrelativeDataService from "@/services/correlative/correlativeDataService.js"
+import { TIPOS_CERTIFICADO } from '@/utils/certificates/tipos'
 
 
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'

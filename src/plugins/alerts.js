@@ -7,6 +7,9 @@ const options = {
     confirmButtonColor: '#1E8449', // variables.success
     cancelButtonColor: '#fc4b6c',  // variables.accent
     reverseButtons: true,
+    // La copia de SweetAlert2 que trae vue-sweetalert2 exige que este escrito,
+    // aunque ya sea el valor por defecto; sin esto avisa en cada fire.
+    backdrop: true,
     allowOutsideClick: () => {
         const popup = Swal.getPopup()
         if (popup) {

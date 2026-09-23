@@ -19,6 +19,7 @@ export default {
       certificate_type_label: element.certificate_type_label,
       correlative: element.correlative,
       registry_code: element.registry_code,
+      previous_numbers: element.previous_numbers,
       uuid: element.uuid,
       
       // Entidades Relacionadas

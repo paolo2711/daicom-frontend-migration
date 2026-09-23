@@ -102,7 +102,7 @@
             </v-col>
 
             <v-col cols="12" md="2">
-              <v-autocomplete v-model="certificate_type" hide-details="auto" density="compact" prepend-inner-icon="mdi-cog" :items="certificate_types" item-title="name" item-value="id" clearable variant="outlined" label="Tipo" />
+              <v-autocomplete v-model="certificate_type" hide-details="auto" density="compact" prepend-inner-icon="mdi-cog" :items="TIPOS_CERTIFICADO" clearable variant="outlined" label="Tipo" />
             </v-col>
             
           </v-row>
@@ -202,8 +202,11 @@
 
         <!-- ── Tipo abreviado ── -->
         <template v-slot:item.certificate_type_label="{ item }">
-          <span :class="item.status === 5 ? 'anulado-atenuado' : ''">
-            {{ getTipoAbreviado(item.certificate_type_label) }}
+          <span class="text-no-wrap">
+            <span :class="item.status === 5 ? 'anulado-atenuado' : ''">
+              {{ siglaDelTipo(item.certificate_type) }}
+            </span>
+            <numeros-anteriores :numeros="item.previous_numbers" />
           </span>
         </template>
 
@@ -562,6 +565,8 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 import ClientSelect        from '@/components/shared/ClientSelect.vue'
 import { tieneExcelBase }  from '@/utils/certificates/excelBase'
 import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
+import { TIPOS_CERTIFICADO, siglaDelTipo } from '@/utils/certificates/tipos'
+import NumerosAnteriores from '@/components/shared/NumerosAnteriores.vue'
 import { fechaCorta }      from '@/utils/dates'
 import FilterPill          from '@/components/shared/FilterPill.vue'
 import DateRangeFilter     from '@/components/shared/DateRangeFilter.vue'
@@ -641,11 +646,6 @@ const client_id = ref(null)
 
 // ─── Tipo de certificado ──────────────────────────────────────────────────────
 const certificate_type  = ref(null)
-const certificate_types = ref([
-  { id: 1, name: 'ACREDITADO' },
-  { id: 2, name: 'NO ACREDITADO' },
-  { id: 3, name: 'OPERATIVIDAD' },
-])
 const correlative = ref('')
 const equipment = ref('')
 
@@ -865,13 +865,6 @@ function seleccionarTodaLaOrden (orderNum) {
 }
 
 import { mergeProps } from 'vue' // <--- Inyectamos mergeProps para que el Tooltip y el Menu convivan
-
-function getTipoAbreviado (tipoOriginal) {
-  if (tipoOriginal === 'ACREDITADO')    return 'ACR'
-  if (tipoOriginal === 'NO ACREDITADO') return 'NAC'
-  if (tipoOriginal === 'OPERATIVIDAD')  return 'OPE'
-  return tipoOriginal
-}
 
 // ---  SEMAFORO INTELIGENTE (FINANCIERO + OPERATIVO) ---
 

@@ -19,6 +19,26 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.4.4',
+    fecha: '2026-09-23',
+    nuevo: [
+      'Se puede firmar el QR de los equipos de una orden desde su fila en Órdenes, junto a solicitar firmas y marcar entregados.',
+    ],
+    cambio: [
+      'Cuando una orden tiene tres acciones o más, se agrupan en un menú para que el título de la fila se siga leyendo.',
+      'Solicitar firmas desde Órdenes pide el mismo permiso que en Certificados.',
+      'Al firmar por lote se ve qué certificados ya tienen la firma solicitada.',
+      'La tarjeta de la orden en Certificados abre cada comprobante tocando su fila y muestra hasta tres por lista, con un acceso a la orden para ver el resto.',
+      'La tarjeta de la orden solo avisa "Pendiente de pago" cuando ya hay una factura emitida.',
+    ],
+    arreglo: [
+      'El total abonado de la tarjeta de la orden en certificados suma los soles y los dólares por separado.',
+      'Los menús ya no se abren por debajo del panel de subidas.',
+      'En modo oscuro se leen los títulos del modal de editar alquiler y se ven los bordes que antes desaparecían.',
+      'Recargar la lista de Servicios vuelve a mostrar los equipos de la orden que estaba abierta.',
+    ],
+  },
+  {
     version: '3.7.4.3',
     fecha: '2026-09-18',
     nuevo: [

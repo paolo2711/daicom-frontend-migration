@@ -525,7 +525,7 @@ const retrieveOrders = () => {
         if (!isLatestOrdersLoad(token)) return   // llegó una carga más nueva → no pisar
         orders.value = res.data.results.map(orden => OrderMappers.getMap(orden))
         total_orders.value = res.data.count
-        cargarDetalleExpandido(idOrdenExpandida())
+        cargarEquiposExpandidos(idOrdenExpandida())
       })
       .finally(() => {
         if (isLatestOrdersLoad(token)) loading_list.value = false

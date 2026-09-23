@@ -1,0 +1,50 @@
+// Material de los paneles que flotan sobre la app. Cada panel pone su posicion
+// y su tamano; el aspecto sale de aca.
+//
+// Los selectores no cuelgan de .v-application: el contenido de un v-menu se
+// monta en .v-overlay-container, que vive fuera. Por eso el tema se mira
+// tambien en el propio elemento, que es donde queda al teletransportarse.
+
+// Fondo y sombra con !important: Vuetify los pinta en el contenido de un menu
+// con un selector de tres clases.
+.v-card.panel-flotante {
+  border-radius: 16px;
+  background: #dce4f0 !important;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.22) !important;
+  overflow: hidden;
+}
+
+.v-theme--dark .v-card.panel-flotante,
+.v-card.panel-flotante.v-theme--dark {
+  background: #2c3849 !important;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.60) !important;
+}
+
+// Dentro de un v-menu, Vuetify le da al contenido `border-radius: inherit`, asi
+// que el redondeo manda desde el contenedor: ponerselo solo a la tarjeta la deja
+// recortada por el que la envuelve.
+.v-overlay__content:has(> .panel-flotante) {
+  border-radius: 16px;
+}
+
+// Divisor suelto adentro del panel. El v-divider ya trae la linea: le falta el
+// tono, que es mas marcado que el del encabezado porque separa dos acciones.
+.v-divider.panel-flotante__division {
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.v-theme--dark .v-divider.panel-flotante__division {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+// Encabezado del panel: aca la linea hay que dibujarla entera, porque ni un
+// toolbar ni un header la traen.
+.panel-flotante__encabezado {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.v-theme--dark .panel-flotante__encabezado {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}

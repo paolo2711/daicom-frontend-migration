@@ -2,14 +2,13 @@
   <div>
     <v-slide-y-reverse-transition>
       <v-card v-if="tasks.length > 0"
-              class="upload-manager-card overflow-hidden"
+              class="upload-manager-card panel-flotante"
               :class="{ raised: selectionActive }">
 
-        <!-- Header tema-aware: muestra el fondo del card (mica oscuro / azul-gris claro) -->
         <v-toolbar density="compact" flat
                    color="transparent"
                    @click="minimized = !minimized"
-                   style="cursor: pointer;" class="upload-manager-header pl-3 pr-0">
+                   style="cursor: pointer;" class="panel-flotante__encabezado pl-3 pr-0">
           <v-progress-circular v-if="activeTasksCount > 0" indeterminate size="18" width="2" color="primary" class="mr-3"/>
           <v-icon v-else-if="errorTasksCount === tasks.length" color="error" class="mr-3">mdi-close-circle</v-icon>
           <v-icon v-else-if="successTasksCount === tasks.length" color="success" class="mr-3">mdi-check-circle</v-icon>
@@ -468,26 +467,8 @@ async function approveSheet() {
   bottom: 24px;
   right: 24px;
   z-index: var(--z-panel-subidas);
-  /* Mismo material que el SelectionBar: tema-aware, radio 16, borde y sombra */
-  border-radius: 16px !important;
   width: min(345px, calc(100vw - 32px));
-  background: #dce4f0 !important;
-  border: 1px solid rgba(0, 0, 0, 0.10) !important;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.22) !important;
-  overflow: hidden;
   transition: bottom 0.2s ease;
-}
-.v-theme--dark .upload-manager-card {
-  background: #2c3849 !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.60) !important;
-}
-/* Header apenas separado del listado (tema-aware) */
-.upload-manager-header {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
-}
-.v-theme--dark .upload-manager-header {
-  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 /* En ventanas angostas, si hay barra de seleccion activa, se sube para no
    pisarla (la barra vive centrada abajo a ~32px + su alto). */

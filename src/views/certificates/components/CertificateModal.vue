@@ -287,7 +287,7 @@ const open = async (item = null) => {
   isEdit.value = false
   let today = (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().substr(0, 10)
   certificate.value = {
-    certificate_type: 1, correlative: '', client: null, lab: '', equipment: '', brand: '',
+    certificate_type: 1, correlative: '', client: null, lab: null, equipment: null, brand: '',
     model: '', serie: '', indication_interval: '', identification_code: '',
     calibration_date: today, emission_date: today, signed_pdf: null, observations: '',
     signature_requested: false

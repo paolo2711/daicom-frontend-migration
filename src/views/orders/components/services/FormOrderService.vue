@@ -159,7 +159,7 @@ const $swal = appContext.config.globalProperties.$swal
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
 
-const temp_eq = ref({ modo: 'nuevo', name: '', lab: null, certificate_type: null, correlative_busqueda: '' })
+const temp_eq = ref({ modo: 'nuevo', name: null, lab: null, certificate_type: null, correlative_busqueda: '' })
 const certificado_encontrado = ref(null)
 const buscando_cert          = ref(false)
 const base_correlatives      = ref({ 1: null, 2: null, 3: null })
@@ -279,7 +279,7 @@ function addEquipmentToBatch() {
     certificado_encontrado.value = null
     temp_eq.value.correlative_busqueda = ''
   }
-  temp_eq.value.name = ''
+  temp_eq.value.name = null
 }
 
 defineExpose({ inyectarBorrador, marcarErrores, estimados })

@@ -8,7 +8,7 @@ const intentar = (accion) => {
 // Lo que se va cargando en un modal queda en el navegador hasta guardarlo o
 // cancelarlo, para no perderlo si se cierra la pestaña. `clave` es una funcion
 // porque la de un modal puede depender de la orden que tiene abierta.
-export function useBorradorLocal(clave) {
+export function useLocalDraft(clave) {
   const $swal = getCurrentInstance().appContext.config.globalProperties.$swal
 
   // Hasta ofrecer el anterior no se guarda nada: el modal vacio que se abre lo pisaria.

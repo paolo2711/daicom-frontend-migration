@@ -113,7 +113,7 @@ import { ref, computed, watch, getCurrentInstance, defineAsyncComponent } from '
 import { useTheme } from 'vuetify'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
-import { useErroresPorFila } from '@/composables/useErroresPorFila'
+import { useRowErrors } from '@/composables/useRowErrors'
 import { fechaCorta, hoyISO } from '@/utils/dates'
 import { FECHAS_ALQUILER, salidaDe } from '@/utils/orders/alquiler'
 
@@ -136,7 +136,7 @@ const temp_rental = ref({
   delivery_notes:       '',
 })
 const rentals        = ref([])
-const { errores, marcarErrores } = useErroresPorFila(rentals)
+const { errores, marcarErrores } = useRowErrors(rentals)
 
 watch(rentals, (val) => { emit('update-list', val) }, { deep: true })
 

@@ -43,7 +43,7 @@
 <script setup>
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import { ref, watch, nextTick, getCurrentInstance } from 'vue'
-import { useBorradorLocal } from '@/composables/useBorradorLocal'
+import { useLocalDraft } from '@/composables/useLocalDraft'
 import { useSavedNumbers } from '@/composables/useSavedNumbers'
 import { mensajeDeError } from '@/utils/errors'
 import OrderDataService from '@/services/orders/orderDataService'
@@ -68,7 +68,7 @@ const addOrderForm          = ref(null)
 const formRef               = ref(null)
 
 // Solo servicio: los equipos de un alquiler se eligen del inventario.
-const borrador = useBorradorLocal(() => 'daicom_borrador_orden_servicio')
+const borrador = useLocalDraft(() => 'daicom_borrador_orden_servicio')
 
 watch(() => order.value.order_type, () => { calculateNextNumber() })
 

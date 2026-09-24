@@ -150,7 +150,7 @@ import EquipmentMappers from '@/mappers/equipmentMappers'
 import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal.vue'
 import CorrelativeDataService from '@/services/correlative/correlativeDataService'
 import { TIPOS_CERTIFICADO, nombreDelTipo } from '@/utils/certificates/tipos'
-import { useErroresPorFila } from '@/composables/useErroresPorFila'
+import { useRowErrors } from '@/composables/useRowErrors'
 
 const emit = defineEmits(['update-list', 'update-config'])
 
@@ -164,7 +164,7 @@ const certificado_encontrado = ref(null)
 const buscando_cert          = ref(false)
 const base_correlatives      = ref({ 1: null, 2: null, 3: null })
 const equipments             = ref([])
-const { errores, marcarErrores } = useErroresPorFila(equipments)
+const { errores, marcarErrores } = useRowErrors(equipments)
 
 // Comboboxes server-side
 const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)

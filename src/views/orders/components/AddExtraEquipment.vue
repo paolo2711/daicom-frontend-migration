@@ -35,7 +35,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, getCurrentInstance } from 'vue'
-import { useBorradorLocal } from '@/composables/useBorradorLocal'
+import { useLocalDraft } from '@/composables/useLocalDraft'
 import { useSavedNumbers } from '@/composables/useSavedNumbers'
 import { mensajeDeError } from '@/utils/errors'
 import FormOrderService from './services/FormOrderService.vue'
@@ -68,7 +68,7 @@ const dialogModel = computed({
 const isRental = computed(() => props.order && props.order.order_type === 2)
 
 // Uno por orden: lo cargado para una no aparece al abrir otra.
-const borrador = useBorradorLocal(() => `daicom_borrador_equipos_${props.order?.id}`)
+const borrador = useLocalDraft(() => `daicom_borrador_equipos_${props.order?.id}`)
 
 watch([items_to_save, config], ([items, elegido]) => {
   if (!isRental.value) borrador.guardar({ items, config: elegido })

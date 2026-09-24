@@ -15,6 +15,11 @@ export const FECHAS_ALQUILER = {
   actual_return_date: 'Volvió el',
 }
 
+// Reglas de las fechas de una linea, en el formato de :rules de Vuetify (true o
+// el mensaje). El back revisa lo mismo al guardar (orders/services.py).
+export const reglaNoFutura = (hoy) => (fecha) => !fecha || fecha <= hoy || 'No puede ser a futuro'
+export const reglaNoAntesDe = (salida) => (fecha) => !fecha || !salida || fecha >= salida || 'Es antes de la salida'
+
 export function salidaDe(linea) {
   if (linea.departure_date) return fechaCorta(linea.departure_date)
   return linea.estado === 'anulado' ? 'No salió' : 'Aún no sale'

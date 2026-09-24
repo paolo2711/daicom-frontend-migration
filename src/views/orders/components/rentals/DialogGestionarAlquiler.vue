@@ -16,17 +16,17 @@
           <v-row dense>
             <v-col v-if="'departure_date' in fechas" cols="12" sm="6">
               <v-text-field v-model="fechas.departure_date" :label="FECHAS_ALQUILER.departure_date" type="date"
-                            :max="hoy" variant="outlined" density="compact" :rules="[obligatoria, noFutura]" />
+                            :max="hoy" variant="outlined" density="compact" :rules="[obligatoria, reglaNoFutura(hoy)]" />
             </v-col>
             <v-col cols="12" sm="6">
               <v-text-field v-model="fechas.expected_return_date" :label="FECHAS_ALQUILER.expected_return_date"
                             type="date" :min="fechas.departure_date || undefined" variant="outlined"
-                            density="compact" clearable :rules="[noAntesDeLaSalida]" />
+                            density="compact" clearable :rules="[reglaNoAntesDe(fechas.departure_date)]" />
             </v-col>
             <v-col v-if="'actual_return_date' in fechas" cols="12" sm="6">
               <v-text-field v-model="fechas.actual_return_date" :label="FECHAS_ALQUILER.actual_return_date"
-                            type="date" :min="fechas.departure_date" :max="hoy" variant="outlined"
-                            density="compact" :rules="[obligatoria, noFutura, noAntesDeLaSalida]" />
+                            type="date" :min="fechas.departure_date" :max="hoy" variant="outlined" density="compact"
+                            :rules="[obligatoria, reglaNoFutura(hoy), reglaNoAntesDe(fechas.departure_date)]" />
             </v-col>
           </v-row>
 
@@ -38,7 +38,8 @@
                 <v-text-field v-model="fechaDelPaso" :label="FECHAS_ALQUILER[paso.campo]" type="date"
                               :min="paso.clave === 'devolucion' ? fechas.departure_date : undefined" :max="hoy"
                               variant="outlined" density="compact"
-                              :rules="[obligatoria, noFutura, v => paso.clave !== 'devolucion' || noAntesDeLaSalida(v)]" />
+                              :rules="[obligatoria, reglaNoFutura(hoy),
+                                       paso.clave === 'devolucion' ? reglaNoAntesDe(fechas.departure_date) : () => true]" />
               </v-col>
             </v-row>
           </template>
@@ -69,7 +70,7 @@
 import { Toast } from '@/plugins/alerts'
 import { ref, computed, getCurrentInstance } from 'vue'
 import OrderDataService from '@/services/orders/orderDataService'
-import { ESTADOS_ALQUILER, FECHAS_ALQUILER, duracionDe } from '@/utils/orders/alquiler'
+import { ESTADOS_ALQUILER, FECHAS_ALQUILER, duracionDe, reglaNoAntesDe, reglaNoFutura } from '@/utils/orders/alquiler'
 import { hoyISO } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 
@@ -109,9 +110,6 @@ const cambios = computed(() => Object.fromEntries(
 const hayCambios = computed(() => Object.keys(cambios.value).length > 0)
 
 const obligatoria = (v) => !!v || 'Obligatoria'
-const noFutura = (v) => !v || v <= hoy.value || 'No puede ser a futuro'
-const noAntesDeLaSalida = (v) =>
-  !v || !fechas.value.departure_date || v >= fechas.value.departure_date || 'Es antes de la salida'
 
 function open(rental) {
   linea.value = rental

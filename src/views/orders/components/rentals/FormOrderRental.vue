@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-card variant="flat" class="border pa-4 rounded-lg" :color="isDark ? '#1E1E1E' : 'amber-lighten-5'">
+    <v-card variant="flat" class="border pa-4 rounded-lg" :color="isDark ? '#1E1E1E' : 'grey-lighten-4'">
       <div class="d-flex align-center mb-3">
         <div class="text-subtitle-1 font-weight-bold" :class="isDark ? 'text-amber-lighten-2' : 'text-amber-darken-4'">
           <v-icon size="small" color="amber-darken-3" class="mr-1">mdi-truck-delivery</v-icon>
@@ -73,12 +73,12 @@
 
     <v-table density="compact" class="mt-4 tabla-mejorada" v-if="rentals.length > 0">
       <thead>
-        <tr :class="isDark ? 'bg-grey-darken-3' : 'bg-amber-lighten-4'">
-          <th style="width: 130px;">ID Inventario</th>
+        <tr :class="isDark ? 'bg-grey-darken-3' : 'bg-grey-lighten-3'">
+          <th style="width: 8rem;">ID Inventario</th>
           <th>Equipo</th>
           <th>Serie</th>
-          <th class="text-center">{{ FECHAS_ALQUILER.departure_date }}</th>
-          <th class="text-center">{{ FECHAS_ALQUILER.expected_return_date }}</th>
+          <th style="width: 20%;">{{ FECHAS_ALQUILER.departure_date }}</th>
+          <th style="width: 20%;">{{ FECHAS_ALQUILER.expected_return_date }}</th>
           <th class="text-right">Acción</th>
         </tr>
       </thead>
@@ -87,14 +87,20 @@
           <td><strong>{{ item.internal_id }}</strong></td>
           <td>
             {{ item.name }}
+            <v-text-field v-model="item.delivery_notes" placeholder="Sin observaciones" variant="plain"
+                          density="compact" hide-details class="observaciones" />
             <div v-if="errores[index]" class="text-caption text-error">{{ errores[index] }}</div>
           </td>
           <td>{{ item.series || '—' }}</td>
-          <td class="text-center" :class="{ 'text-medium-emphasis': !item.departure_date }">
-            {{ salidaDe(item) }}
+          <td>
+            <v-text-field v-model="item.departure_date" type="date" :max="hoy" :rules="[reglaNoFutura(hoy)]"
+                          :hint="item.departure_date ? '' : salidaDe(item)" persistent-hint
+                          variant="plain" density="compact" hide-details="auto" />
           </td>
-          <td class="text-center" :class="{ 'text-medium-emphasis': !item.expected_return_date }">
-            {{ fechaCorta(item.expected_return_date) || '—' }}
+          <td>
+            <v-text-field v-model="item.expected_return_date" type="date" :min="item.departure_date || undefined"
+                          :rules="[reglaNoAntesDe(item.departure_date)]"
+                          variant="plain" density="compact" hide-details="auto" />
           </td>
           <td class="text-right">
             <v-btn icon size="x-small" variant="text" color="red" density="comfortable" @click="rentals.splice(index, 1)">
@@ -114,8 +120,8 @@ import { useTheme } from 'vuetify'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import { useRowErrors } from '@/composables/useRowErrors'
-import { fechaCorta, hoyISO } from '@/utils/dates'
-import { FECHAS_ALQUILER, salidaDe } from '@/utils/orders/alquiler'
+import { hoyISO } from '@/utils/dates'
+import { FECHAS_ALQUILER, reglaNoAntesDe, reglaNoFutura, salidaDe } from '@/utils/orders/alquiler'
 
 const AddEquipment = defineAsyncComponent(() => import('@/views/inventory/components/AddEquipment.vue'))
 const addEquipmentModalRef = ref(null)
@@ -146,8 +152,10 @@ const fetchEquipos = (page, size, query) =>
 const equipComboRef = ref(null)   // recargar la lista tras crear un equipo nuevo
 
 function problemaDeFechas({ departure_date: salida, expected_return_date: pactado }) {
-  if (salida && salida > hoy) return 'La salida no puede ser a futuro: déjala vacía y regístrala cuando salga.'
-  if (salida && pactado && pactado < salida) return 'La devolución pactada no puede ser antes de la salida.'
+  const salidaMal = reglaNoFutura(hoy)(salida)
+  if (salidaMal !== true) return `${FECHAS_ALQUILER.departure_date}: ${salidaMal}. Si todavía no sale, déjala vacía.`
+  const pactadoMal = reglaNoAntesDe(salida)(pactado)
+  if (pactadoMal !== true) return `${FECHAS_ALQUILER.expected_return_date}: ${pactadoMal}.`
   return null
 }
 
@@ -176,3 +184,11 @@ function addRentalToBatch() {
 
 defineExpose({ marcarErrores })
 </script>
+
+<style scoped>
+.observaciones :deep(input) {
+  font-size: 0.75rem;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  padding-top: 0;
+}
+</style>

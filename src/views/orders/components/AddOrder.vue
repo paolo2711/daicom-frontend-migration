@@ -42,6 +42,7 @@ import { Toast } from '@/plugins/alerts'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import { ref, watch, nextTick, getCurrentInstance } from 'vue'
 import { useAppStore } from '@/stores/appStore'
+import { useBorradorLocal } from '@/composables/useBorradorLocal'
 import OrderDataService from '@/services/orders/orderDataService'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
@@ -61,58 +62,37 @@ const addOrderForm          = ref(null)
 
 const formServicio          = ref(null)
 
+// Solo servicio: los equipos de un alquiler se eligen del inventario.
+const borrador = useBorradorLocal(() => 'daicom_borrador_orden_servicio')
+
 watch(() => order.value.order_type, () => { calculateNextNumber() })
 
-watch(items_to_save, (newVal) => {
-  if (order.value?.order_type === 1 && newVal?.length > 0) {
-    localStorage.setItem('daicom_draft_items_1', JSON.stringify(newVal))
-  }
+watch([items_to_save, () => order.value.client], ([items, client]) => {
+  if (order.value.order_type === 1 && items.length) borrador.guardar({ client, items })
 }, { deep: true })
 
-function open(tipo) {
-  const draft = tipo === 1 ? localStorage.getItem('daicom_draft_items_1') : null
+async function open(tipo) {
   items_to_save.value = []
   order.value = { client: null, order_type: tipo }
   dialog.value = true
   calculateNextNumber()
 
-  if (draft) {
-    setTimeout(() => {
-      $swal.fire({
-        title: '¿Recuperar borrador?',
-        text: 'Tienes equipos de Servicio pendientes de una sesión anterior.',
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, recuperar',
-        cancelButtonText: 'Descartar',
-        confirmButtonColor: '#1976D2'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          nextTick(() => {
-            const recuperados = JSON.parse(draft)
-            formServicio.value?.inyectarBorrador(recuperados)
-          })
-        } else {
-          localStorage.removeItem('daicom_draft_items_1')
-        }
-      })
-    }, 300)
-  }
+  if (tipo !== 1) return
+  const recuperado = await borrador.ofrecer()
+  if (!recuperado) return
+  order.value.client = recuperado.client
+  await nextTick()
+  formServicio.value?.inyectarBorrador(recuperado.items)
 }
 
 async function calculateNextNumber() {
-  const prefijo = order.value.order_type === 1 ? 'OS-' : 'ALQ-'
   try {
-    const res = await OrderDataService.getFiltered(1, 1, '', prefijo, '')
-    const totalRegistros = res.data.count
-    const year = new Date().getFullYear()
-    next_order_number.value = `${prefijo}${year}-${(totalRegistros + 1).toString().padStart(5, '0')}`
-  } catch (e) {
-    next_order_number.value = `${prefijo}${new Date().getFullYear()}-XXXXX`
+    const { data } = await OrderDataService.siguienteNumero(order.value.order_type)
+    next_order_number.value = data.numero
+  } catch {
+    next_order_number.value = ''
   }
 }
-
-
 
 async function save() {
   if (items_to_save.value.length === 0) return
@@ -132,17 +112,16 @@ async function save() {
     close()
     Toast.fire(appStore.successSavedOptions)
   } catch (error) {
-    console.error('Error al guardar la orden:', error)
-    $swal.fire('Error', 'Fallo de conexión. Revise los datos e intente de nuevo.', 'error')
+    const data = error.response?.data
+    formServicio.value?.marcarErrores(data?.filas)
+    $swal.fire('Error', data?.error || 'Fallo de conexión. Revise los datos e intente de nuevo.', 'error')
   } finally {
     is_on_sending_process.value = false
   }
 }
 
 function close() {
-  if (order.value?.order_type === 1) {
-    localStorage.removeItem('daicom_draft_items_1')
-  }
+  if (order.value?.order_type === 1) borrador.descartar()
   order.value.client = null
   items_to_save.value = []
   addOrderForm.value?.resetValidation()

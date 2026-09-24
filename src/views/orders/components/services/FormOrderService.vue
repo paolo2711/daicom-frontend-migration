@@ -94,14 +94,17 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(eq, index) in equipments" :key="index">
+        <tr v-for="(eq, index) in equipments" :key="index" :class="{ 'fila-con-error': errores[index] }">
           <td class="text-center">
             <v-chip size="x-small" :color="eq.modo === 'nuevo' ? 'primary' : 'grey-darken-1'"
                     class="text-white font-weight-bold" label style="min-width: 90px; justify-content: center;">
               {{ eq.modo === 'nuevo' ? getCalculatedCorrelative(index) : eq.registry_code }}
             </v-chip>
           </td>
-          <td><span class="text-subtitle-2">{{ eq.name }}</span></td>
+          <td>
+            <span class="text-subtitle-2">{{ eq.name }}</span>
+            <div v-if="errores[index]" class="text-caption text-error">{{ errores[index] }}</div>
+          </td>
           <td>{{ eq.lab_name }}</td>
           <td><v-chip size="x-small" variant="outlined">{{ eq.type_label }}</v-chip></td>
           <td class="text-right">
@@ -143,6 +146,8 @@ const certificado_encontrado = ref(null)
 const buscando_cert          = ref(false)
 const base_correlatives      = ref({ 1: null, 2: null, 3: null })
 const equipments             = ref([])
+// Lo que el back rechazo, por posicion en la lista.
+const errores                = ref({})
 
 // Comboboxes server-side
 const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)
@@ -160,9 +165,11 @@ const next_cert_number_preview = computed(() => {
 })
 
 
-
-watch(equipments, (val) => { emit('update-list', val) }, { deep: true })
-
+// Al tocar la lista las posiciones cambian: los errores ya no apuntan a su fila.
+watch(equipments, (val) => {
+  errores.value = {}
+  emit('update-list', val)
+}, { deep: true })
 
 onMounted(() => {
   initCorrelatives()   // los comboboxes se auto-cargan solos
@@ -170,7 +177,10 @@ onMounted(() => {
 
 function inyectarBorrador(datosRecuperados) {
   equipments.value = datosRecuperados
-  emit('update-list', equipments.value)
+}
+
+function marcarErrores(filas) {
+  errores.value = filas || {}
 }
 
 async function initCorrelatives() {
@@ -256,5 +266,11 @@ function addEquipmentToBatch() {
   temp_eq.value.name = ''
 }
 
-defineExpose({ inyectarBorrador })
+defineExpose({ inyectarBorrador, marcarErrores })
 </script>
+
+<style scoped>
+.fila-con-error td {
+  background: rgba(var(--v-theme-error), 0.08);
+}
+</style>

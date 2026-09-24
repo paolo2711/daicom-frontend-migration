@@ -45,6 +45,17 @@ class OrderDataService {
         return axios.get(`orders/${id}/equipos`, { headers: authHeader() });
     }
 
+    // Todos o ninguno: si una fila no se puede, responde cuales y no guarda nada.
+    agregarEquipos(id, items) {
+        let headers = authHeader();
+        headers['Content-Type'] = "application/json";
+        return axios.post(`orders/${id}/equipos`, { items }, { headers });
+    }
+
+    siguienteNumero(orderType) {
+        return axios.get('orders/siguiente-numero', { params: { order_type: orderType }, headers: authHeader() });
+    }
+
     // Facturas y abonos, para la tarjeta de resumen.
     getResumen(id) {
         return axios.get(`orders/${id}/resumen`, { headers: authHeader() });

@@ -453,15 +453,13 @@ const limpiarFechas = () => { filter_date_gt.value = ''; filter_date_lt.value = 
 // ── WebSockets ──
 const handleWssReload = () => { retrieveOrders(); cargarResumenes() }
 
-// Los equipos alquilados no vienen en la fila liviana; la orden abierta los
-// muestra, asi que ahi hace falta el detalle completo.
-const cargarDetalleExpandido = (orderId) => {
-  if (!orderId) return
-  OrderDataService.get(orderId)
-    .then(response => {
-      if (response?.data) updateSingleOrderInList(response.data)
-    })
-    .catch(() => {})
+// La fila no trae sus lineas: se piden al abrirla, y solo ellas.
+const cargarEquiposExpandidos = (orderId) => {
+  const fila = orders.value.find(o => String(o.id) === String(orderId))
+  if (!fila) return
+  OrderDataService.getEquipos(orderId)
+    .then(({ data }) => { fila.rentals = data })
+    .catch(() => { fila.rentals = [] })
 }
 
 const idOrdenExpandida = () => (
@@ -476,7 +474,7 @@ const fetchAndInjectSingleOrder = (event) => {
     const index = orders.value.findIndex(o => o.id === fila.id)
     if (index !== -1) Object.assign(orders.value[index], fila)
 
-    if (String(idOrdenExpandida()) === String(fila.id)) cargarDetalleExpandido(fila.id)
+    if (String(idOrdenExpandida()) === String(fila.id)) cargarEquiposExpandidos(fila.id)
 
     if (debounceTimeout) clearTimeout(debounceTimeout)
     debounceTimeout = setTimeout(() => { cargarResumenes() }, 1500)
@@ -486,7 +484,9 @@ const fetchAndInjectSingleOrder = (event) => {
 const updateSingleOrderInList = (updatedOrder) => {
   const index = orders.value.findIndex(o => o.id === updatedOrder.id)
   if (index !== -1) {
-    Object.assign(orders.value[index], OrderMappers.getMap(updatedOrder))
+    // Las lineas las trae cargarEquiposExpandidos; el resto de la orden no las pisa.
+    const lineas = orders.value[index].rentals
+    Object.assign(orders.value[index], OrderMappers.getMap(updatedOrder), { rentals: lineas })
   }
   // El Anti-DDoS (setTimeout) del WebSocket ya llama a cargarResumenes.
 }
@@ -564,41 +564,74 @@ const seleccionarFacturaEnPanel = (o) => {
 }
 
 // ── Acciones ──
+// Solo se anula lo que no salio: lo que esta en obra se devuelve antes. El back
+// lo exige igual; aca se avisa antes de intentarlo.
 const anulando = ref(false)
 const anularSeleccion = async () => {
   const ordenes = ordenes_seleccionadas.value
   if (ordenes.length === 0) return
   const r = await Swal.fire({
     title: `¿Anular ${ordenes.length} ${ordenes.length === 1 ? 'alquiler' : 'alquileres'}?`,
-    text: 'Se invalidarán las órdenes marcadas.',
+    html: 'Se invalidarán las órdenes marcadas.<br><br>Lo reservado vuelve a disponible. '
+      + 'Una orden con equipos en obra no se anula hasta registrar su devolución.',
     icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, anular',
   })
   if (!r.isConfirmed) return
   anulando.value = true
+  const resultados = await Promise.allSettled(ordenes.map(o => OrderDataService.anular(o.id)))
+  anulando.value = false
+  ordenes_seleccionadas.value = []
+  retrieveOrders()
+
+  const rechazos = resultados
+    .map((r, i) => r.status === 'rejected'
+      ? `${ordenes[i].order_number}: ${r.reason.response?.data?.error || 'no se pudo anular'}` : null)
+    .filter(Boolean)
+  if (rechazos.length) Swal.fire({ icon: 'warning', title: 'Algunas no se anularon', html: rechazos.join('<br>') })
+  else Toast.fire({ timer: 2200, icon: 'success', title: 'Órdenes anuladas' })
+}
+
+// La fila no trae sus equipos: se piden para saber que se puede anular.
+const lineasDe = async (order) => {
   try {
-    await Promise.all(ordenes.map(o => OrderDataService.anular(o.id)))
-    Toast.fire({ timer: 2200, icon: 'success', title: 'Órdenes anuladas' })
-    ordenes_seleccionadas.value = []
-    retrieveOrders()
-  } catch (e) {
-    Swal.fire('Error', 'No se pudieron anular todas las órdenes.', 'error')
-  } finally {
-    anulando.value = false
+    const { data } = await OrderDataService.getEquipos(order.id)
+    return data
+  } catch {
+    return []
   }
 }
 
-const anularOrderConfirm = (order) => {
-  Swal.fire({
-    title: '¿Anular Alquiler?', text: `Se invalidará la orden de alquiler ${order.order_number}`,
+const anularOrderConfirm = async (order) => {
+  const lineas = await lineasDe(order)
+  const idsEn = (estado) => lineas.filter(l => l.estado === estado).map(l => l.equipment_internal_id)
+
+  const enObra = idsEn('en_obra')
+  if (enObra.length) {
+    Swal.fire({
+      icon: 'info', title: 'Todavía no se puede anular',
+      html: `<b>${enObra.join(', ')}</b> ya salió. Registra su devolución y vuelve a anular.`,
+    })
+    return
+  }
+
+  const avisos = [`Se invalidará la orden de alquiler ${order.order_number}.`]
+  const reservados = idsEn('reservado')
+  if (reservados.length) {
+    avisos.push(`<b>${reservados.join(', ')}</b> ${reservados.length === 1 ? 'vuelve' : 'vuelven'} a disponible.`)
+  }
+
+  const { isConfirmed } = await Swal.fire({
+    title: '¿Anular Alquiler?', html: avisos.join('<br><br>'),
     icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, anular'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      OrderDataService.anular(order.id).then(() => {
-        Toast.fire({ timer: 2200, icon: 'success', title: 'Orden anulada' })
-        retrieveOrders()
-      })
-    }
   })
+  if (!isConfirmed) return
+  try {
+    await OrderDataService.anular(order.id)
+    Toast.fire({ timer: 2200, icon: 'success', title: 'Orden anulada' })
+    retrieveOrders()
+  } catch (error) {
+    Swal.fire('Error', error.response?.data?.error || 'No se pudo anular la orden.', 'error')
+  }
 }
 const abrirEditarOrden = (o) => { selected_order.value = o; edit_order_modal.value = true }
 const prepareExtraEquipment = (o) => { selected_order.value = o; dialog_extra.value = true }
@@ -644,7 +677,7 @@ watch(expanded, (newVal) => {
     return
   }
   if (expanded.value.length === 1) {
-    cargarDetalleExpandido(getSafeId(expanded.value[0]))
+    cargarEquiposExpandidos(getSafeId(expanded.value[0]))
   }
 })
 

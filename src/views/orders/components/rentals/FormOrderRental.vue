@@ -38,11 +38,14 @@
         </v-col>
 
         <v-col cols="12" md="3">
-          <v-text-field v-model="temp_rental.departure_date" label="Fecha Salida*" type="date" variant="outlined" density="compact" hide-details />
+          <v-text-field v-model="temp_rental.departure_date" :label="FECHAS_ALQUILER.departure_date" type="date"
+                        :max="hoy" variant="outlined" density="compact" hide-details clearable />
         </v-col>
 
         <v-col cols="12" md="3">
-          <v-text-field v-model="temp_rental.expected_return_date" label="Retorno Pactado" type="date" variant="outlined" density="compact" hide-details />
+          <v-text-field v-model="temp_rental.expected_return_date" :label="FECHAS_ALQUILER.expected_return_date" type="date"
+                        :min="temp_rental.departure_date || undefined"
+                        variant="outlined" density="compact" hide-details clearable />
         </v-col>
       </v-row>
 
@@ -55,12 +58,17 @@
         <v-col cols="12" md="3" class="text-right">
           <v-btn color="amber-darken-3" class="text-white" variant="flat" block
                  @click="addRentalToBatch"
-                 :disabled="!temp_rental.equipment || !temp_rental.departure_date">
+                 :disabled="!temp_rental.equipment">
             <template #prepend><v-icon size="small">mdi-plus</v-icon></template>
             Añadir
           </v-btn>
         </v-col>
       </v-row>
+
+      <div class="text-caption text-medium-emphasis mt-2">
+        Si el equipo todavía no sale, deja «{{ FECHAS_ALQUILER.departure_date }}» vacío: queda reservado y la
+        salida se registra cuando salga.
+      </div>
     </v-card>
 
     <v-table density="compact" class="mt-4 border rounded" v-if="rentals.length > 0">
@@ -69,19 +77,24 @@
           <th style="width: 130px;">ID Inventario</th>
           <th>Equipo</th>
           <th>Serie</th>
-          <th class="text-center">Salida</th>
-          <th class="text-center">Retorno</th>
+          <th class="text-center">{{ FECHAS_ALQUILER.departure_date }}</th>
+          <th class="text-center">{{ FECHAS_ALQUILER.expected_return_date }}</th>
           <th class="text-right">Acción</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(item, index) in rentals" :key="index">
+        <tr v-for="(item, index) in rentals" :key="index" :class="{ 'fila-con-error': errores[index] }">
           <td><strong>{{ item.internal_id }}</strong></td>
-          <td>{{ item.name }}</td>
-          <td>{{ item.series || '---' }}</td>
-          <td class="text-center">{{ item.departure_date }}</td>
-          <td class="text-center font-weight-medium" :class="!item.expected_return_date ? 'text-grey' : ''">
-            {{ item.expected_return_date || 'Sin fecha' }}
+          <td>
+            {{ item.name }}
+            <div v-if="errores[index]" class="text-caption text-error">{{ errores[index] }}</div>
+          </td>
+          <td>{{ item.series || '—' }}</td>
+          <td class="text-center" :class="{ 'text-medium-emphasis': !item.departure_date }">
+            {{ salidaDe(item) }}
+          </td>
+          <td class="text-center" :class="{ 'text-medium-emphasis': !item.expected_return_date }">
+            {{ fechaCorta(item.expected_return_date) || '—' }}
           </td>
           <td class="text-right">
             <v-btn icon size="x-small" variant="text" color="red" density="comfortable" @click="rentals.splice(index, 1)">
@@ -100,6 +113,9 @@ import { ref, computed, watch, getCurrentInstance, defineAsyncComponent } from '
 import { useTheme } from 'vuetify'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
+import { useErroresPorFila } from '@/composables/useErroresPorFila'
+import { fechaCorta, hoyISO } from '@/utils/dates'
+import { FECHAS_ALQUILER, salidaDe } from '@/utils/orders/alquiler'
 
 const AddEquipment = defineAsyncComponent(() => import('@/views/inventory/components/AddEquipment.vue'))
 const addEquipmentModalRef = ref(null)
@@ -111,35 +127,44 @@ const $swal = appContext.config.globalProperties.$swal
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
 
+const hoy = hoyISO()
+
 const temp_rental = ref({
   equipment:            null,
-  departure_date:       new Date().toISOString().substring(0, 10),
+  departure_date:       '',
   expected_return_date: '',
   delivery_notes:       '',
 })
 const rentals        = ref([])
+const { errores, marcarErrores } = useErroresPorFila(rentals)
 
 watch(rentals, (val) => { emit('update-list', val) }, { deep: true })
 
-// combobox (equipos disponibles, por id/nombre/…).
-// (traer 10, buscar al teclear, aviso "hay mas", preservar seleccion) lo
+// Solo los disponibles; al guardar, el back lo vuelve a revisar.
 const fetchEquipos = (page, size, query) =>
   InventoryDataService.getAll({ status: 1, search: query || '', page, page_size: size })
 const equipComboRef = ref(null)   // recargar la lista tras crear un equipo nuevo
 
+function problemaDeFechas({ departure_date: salida, expected_return_date: pactado }) {
+  if (salida && salida > hoy) return 'La salida no puede ser a futuro: déjala vacía y regístrala cuando salga.'
+  if (salida && pactado && pactado < salida) return 'La devolución pactada no puede ser antes de la salida.'
+  return null
+}
+
 function addRentalToBatch() {
   if (!temp_rental.value.equipment) return
-  if (temp_rental.value.expected_return_date && temp_rental.value.expected_return_date < temp_rental.value.departure_date) {
-    $swal.fire('Error de fechas', 'El retorno no puede ser antes de la salida', 'warning')
+  const problema = problemaDeFechas(temp_rental.value)
+  if (problema) {
+    $swal.fire('Revisa las fechas', problema, 'warning')
     return
   }
-  
+
   rentals.value.push({
     equipment_id:          temp_rental.value.equipment.id,
     internal_id:           temp_rental.value.equipment.internal_id,
     name:                  temp_rental.value.equipment.name,
     series:                temp_rental.value.equipment.series,
-    departure_date:        temp_rental.value.departure_date,
+    departure_date:        temp_rental.value.departure_date || null,
     expected_return_date:  temp_rental.value.expected_return_date || null,
     delivery_notes:        temp_rental.value.delivery_notes,
   })
@@ -148,4 +173,6 @@ function addRentalToBatch() {
   temp_rental.value.delivery_notes  = ''
   temp_rental.value.expected_return_date = ''
 }
+
+defineExpose({ marcarErrores })
 </script>

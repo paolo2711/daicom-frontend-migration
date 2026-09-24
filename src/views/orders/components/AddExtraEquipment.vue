@@ -6,13 +6,14 @@
       <v-card-text class="pt-4 pb-2 bg-surface" style="overflow-y: auto; flex-grow: 1;">
         <form-order-rental
           v-if="isRental"
+          ref="formRef"
           :key="'extra-rental-' + dialogModel"
           @update-list="list => items_to_save = list"
         />
 
         <form-order-service
           v-else
-          ref="formServicioRef"
+          ref="formRef"
           :key="'extra-service-' + dialogModel"
           @update-list="list => items_to_save = list"
         />
@@ -57,7 +58,7 @@ const $swal = appContext.config.globalProperties.$swal
 
 const loading_extra = ref(false)
 const items_to_save = ref([])
-const formServicioRef = ref(null)
+const formRef = ref(null)
 
 const dialogModel = computed({
   get: () => props.modelValue,
@@ -83,31 +84,21 @@ watch(dialogModel, async (abierto) => {
   const recuperado = await borrador.ofrecer()
   if (!recuperado) return
   await nextTick()
-  formServicioRef.value?.inyectarBorrador(recuperado.items)
+  formRef.value?.inyectarBorrador(recuperado.items)
 })
-
-const guardarAlquileres = () => Promise.all(items_to_save.value.map(item => OrderDataService.createRental({
-  order: props.order.id,
-  equipment: item.equipment_id,
-  departure_date: item.departure_date,
-  expected_return_date: item.expected_return_date || null,
-  delivery_notes: item.delivery_notes || '',
-})))
 
 async function saveExtraEquipments() {
   if (items_to_save.value.length === 0) return
   loading_extra.value = true
 
   try {
-    if (isRental.value) await guardarAlquileres()
-    else await OrderDataService.agregarEquipos(props.order.id, items_to_save.value)
-
+    await OrderDataService.agregarEquipos(props.order.id, items_to_save.value)
     Toast.fire({ timer: 2200, icon: 'success', title: `${items_to_save.value.length} equipo(s) añadido(s)` })
     emit('reload')
     close()
   } catch (error) {
     const data = error.response?.data
-    formServicioRef.value?.marcarErrores(data?.filas)
+    formRef.value?.marcarErrores(data?.filas)
     $swal.fire('Error', data?.error || 'No se pudieron guardar los equipos.', 'error')
   } finally {
     loading_extra.value = false

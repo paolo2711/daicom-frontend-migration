@@ -126,7 +126,7 @@
             :style="item.status === 2 ? 'cursor: pointer;' : ''"
             @click="item.status === 2 ? $emit('view-history', item) : null"
           >
-            {{ getStatusText(item.status) }}
+            {{ textoDeEstado(item) }}
             <!-- Alquilado: el chip abre el historial de viajes; hover muestra empresa orden -->
             <template v-if="item.status === 2">
               <v-icon end size="14">mdi-account-arrow-right</v-icon>
@@ -275,8 +275,10 @@ watch([estadoFilter, expedienteFilter, vencidoFilter], () => {
   loadItems()
 })
 
-const getStatusText = (val) => {
-  const status = statusOptions.find(s => s.value === val)
+// Reservado: apartado para una orden, pero todavia en el almacen.
+const textoDeEstado = (item) => {
+  if (item.current_rental?.estado === 'reservado') return 'Reservado'
+  const status = statusOptions.find(s => s.value === item.status)
   return status ? status.text : 'Desconocido'
 }
 

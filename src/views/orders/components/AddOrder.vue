@@ -19,8 +19,8 @@
 
           <v-divider class="my-4" />
 
-          <form-order-service ref="formServicio" v-if="order.order_type === 1" :key="'srv-'+dialog" @update-list="list => items_to_save = list" />
-          <form-order-rental v-else :key="'alq-'+dialog" @update-list="list => items_to_save = list" />
+          <form-order-service ref="formRef" v-if="order.order_type === 1" :key="'srv-'+dialog" @update-list="list => items_to_save = list" />
+          <form-order-rental ref="formRef" v-else :key="'alq-'+dialog" @update-list="list => items_to_save = list" />
 
         </v-form>
       </v-card-text>
@@ -60,7 +60,7 @@ const order                 = ref({ client: null, order_type: 1 })
 const items_to_save         = ref([])
 const addOrderForm          = ref(null)
 
-const formServicio          = ref(null)
+const formRef               = ref(null)
 
 // Solo servicio: los equipos de un alquiler se eligen del inventario.
 const borrador = useBorradorLocal(() => 'daicom_borrador_orden_servicio')
@@ -82,7 +82,7 @@ async function open(tipo) {
   if (!recuperado) return
   order.value.client = recuperado.client
   await nextTick()
-  formServicio.value?.inyectarBorrador(recuperado.items)
+  formRef.value?.inyectarBorrador(recuperado.items)
 }
 
 async function calculateNextNumber() {
@@ -113,7 +113,7 @@ async function save() {
     Toast.fire(appStore.successSavedOptions)
   } catch (error) {
     const data = error.response?.data
-    formServicio.value?.marcarErrores(data?.filas)
+    formRef.value?.marcarErrores(data?.filas)
     $swal.fire('Error', data?.error || 'Fallo de conexión. Revise los datos e intente de nuevo.', 'error')
   } finally {
     is_on_sending_process.value = false

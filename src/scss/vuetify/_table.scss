@@ -7,3 +7,8 @@
   border-radius: 8px;
   overflow: hidden;
 }
+
+// La fila que el servidor rechazo al guardar una lista.
+.v-application .fila-con-error td {
+  background: rgba(var(--v-theme-error), 0.08);
+}

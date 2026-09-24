@@ -12,6 +12,14 @@ export function fechaCorta(iso) {
   return fecha ? fecha.toLocaleDateString('es-PE') : ''
 }
 
+// Dias de calendario de una fecha a otra; negativo si `hasta` es antes.
+export function diasEntre(desde, hasta) {
+  const inicio = aFechaLocal(desde)
+  const fin = aFechaLocal(hasta)
+  if (!inicio || !fin) return null
+  return Math.round((fin - inicio) / 86400000)
+}
+
 export function hoyISO() {
   const hoy = new Date()
   const mes = String(hoy.getMonth() + 1).padStart(2, '0')

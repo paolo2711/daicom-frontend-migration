@@ -40,7 +40,7 @@ class OrderDataService {
         return axios.get(`orders/${id}/fila`, { headers: authHeader() });
     }
 
-    // Los equipos de la orden con su dueño, para el modal de edicion.
+    // Los certificados de un servicio o las lineas de un alquiler.
     getEquipos(id) {
         return axios.get(`orders/${id}/equipos`, { headers: authHeader() });
     }
@@ -218,14 +218,16 @@ class OrderDataService {
 
     // ─── ALQUILERES ──────────────────────────────────────────────────────────
 
-    createRental(data) {
+    // salida | devolucion | deshacer-devolucion
+    darPasoDeAlquiler(rental_id, paso, fecha = null) {
         let headers = authHeader();
         headers['Content-Type'] = "application/json";
-        return axios.post("orders/rentals/", data, { headers });
+        return axios.post(`orders/rentals/${rental_id}/${paso}`, { fecha }, { headers });
     }
 
-    returnRental(rental_id) {
-        return axios.patch(`orders/rentals/${rental_id}/return`, {}, { headers: authHeader() });
+    // Solo lo reservado: el equipo vuelve a disponible.
+    deleteRental(rental_id) {
+        return axios.delete(`orders/rentals/${rental_id}`, { headers: authHeader() });
     }
 
     updateRentalDates(rental_id, data) {

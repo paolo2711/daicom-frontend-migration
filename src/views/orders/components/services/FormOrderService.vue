@@ -133,6 +133,7 @@ import EquipmentMappers from '@/mappers/equipmentMappers'
 import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal.vue'
 import CorrelativeDataService from '@/services/correlative/correlativeDataService'
 import { TIPOS_CERTIFICADO, nombreDelTipo } from '@/utils/certificates/tipos'
+import { useErroresPorFila } from '@/composables/useErroresPorFila'
 
 const emit = defineEmits(['update-list'])
 
@@ -146,8 +147,7 @@ const certificado_encontrado = ref(null)
 const buscando_cert          = ref(false)
 const base_correlatives      = ref({ 1: null, 2: null, 3: null })
 const equipments             = ref([])
-// Lo que el back rechazo, por posicion en la lista.
-const errores                = ref({})
+const { errores, marcarErrores } = useErroresPorFila(equipments)
 
 // Comboboxes server-side
 const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)
@@ -165,11 +165,7 @@ const next_cert_number_preview = computed(() => {
 })
 
 
-// Al tocar la lista las posiciones cambian: los errores ya no apuntan a su fila.
-watch(equipments, (val) => {
-  errores.value = {}
-  emit('update-list', val)
-}, { deep: true })
+watch(equipments, (val) => { emit('update-list', val) }, { deep: true })
 
 onMounted(() => {
   initCorrelatives()   // los comboboxes se auto-cargan solos
@@ -179,9 +175,6 @@ function inyectarBorrador(datosRecuperados) {
   equipments.value = datosRecuperados
 }
 
-function marcarErrores(filas) {
-  errores.value = filas || {}
-}
 
 async function initCorrelatives() {
   try {
@@ -268,9 +261,3 @@ function addEquipmentToBatch() {
 
 defineExpose({ inyectarBorrador, marcarErrores })
 </script>
-
-<style scoped>
-.fila-con-error td {
-  background: rgba(var(--v-theme-error), 0.08);
-}
-</style>

@@ -18,9 +18,9 @@
             <tr :class="isDark ? 'bg-grey-darken-3' : 'bg-grey-lighten-3'">
               <th class="text-left font-weight-bold text-uppercase">Nro Orden</th>
               <th class="text-left font-weight-bold text-uppercase">Cliente</th>
-              <th class="text-center font-weight-bold text-uppercase">Salida</th>
-              <th class="text-center font-weight-bold text-uppercase">Retorno Real</th>
-              <th class="text-center font-weight-bold text-uppercase">Estado Viaje</th>
+              <th class="text-center font-weight-bold text-uppercase">{{ FECHAS_ALQUILER.departure_date }}</th>
+              <th class="text-center font-weight-bold text-uppercase">{{ FECHAS_ALQUILER.actual_return_date }}</th>
+              <th class="text-center font-weight-bold text-uppercase">Estado</th>
               <th v-if="puedeVerOrdenes" class="text-center font-weight-bold text-uppercase">Orden</th>
             </tr>
           </thead>
@@ -28,11 +28,15 @@
             <tr v-for="h in equipment.rental_history" :key="h.id">
               <td class="font-weight-medium">{{ h.order_number }}</td>
               <td>{{ h.client_name }}</td>
-              <td class="text-center">{{ h.departure_date }}</td>
-              <td class="text-center" :class="h.actual_return_date ? 'text-green font-weight-bold' : ''">{{ h.actual_return_date || 'En ruta...' }}</td>
+              <td class="text-center" :class="{ 'text-medium-emphasis': !h.departure_date }">
+                {{ salidaDe(h) }}
+              </td>
+              <td class="text-center" :class="h.actual_return_date ? 'text-success font-weight-bold' : 'text-medium-emphasis'">
+                {{ fechaCorta(h.actual_return_date) || '—' }}
+              </td>
               <td class="text-center">
-                <v-chip size="x-small" :color="h.return_status === 2 ? 'success' : 'amber-darken-3'" variant="flat" class="text-white">
-                  {{ h.return_status === 2 ? 'DEVUELTO' : 'EN OBRA' }}
+                <v-chip size="x-small" :color="ESTADOS_ALQUILER[h.estado].color" variant="outlined" label>
+                  {{ ESTADOS_ALQUILER[h.estado].texto }}
                 </v-chip>
               </td>
               <td v-if="puedeVerOrdenes" class="text-center">
@@ -62,6 +66,8 @@
 import { ref, computed } from 'vue'
 import { useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
+import { ESTADOS_ALQUILER, FECHAS_ALQUILER, salidaDe } from '@/utils/orders/alquiler'
+import { fechaCorta } from '@/utils/dates'
 
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)

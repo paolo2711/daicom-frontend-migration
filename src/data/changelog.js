@@ -19,6 +19,32 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.5.0',
+    fecha: '2026-09-24',
+    nuevo: [
+      'Se puede corregir el tipo de certificado de los equipos: toman el número de la serie correcta y el anterior queda a la vista junto al código.',
+      'Los equipos de un alquiler pasan por reservado, en obra y devuelto: la salida se registra cuando el equipo sale y una devolución se puede deshacer.',
+      'Al crear un alquiler la fecha de salida es opcional: sin ella el equipo queda reservado.',
+      'Un equipo reservado se puede quitar de la orden, y anular un alquiler devuelve al inventario lo que no salió.',
+    ],
+    cambio: [
+      'Crear una orden o agregarle equipos guarda todo o nada: si un equipo tiene un problema no se guarda ninguno, y su fila se marca en rojo con el motivo.',
+      'En la lista de equipos de una orden nueva se corrigen el equipo, el laboratorio y el tipo en la misma fila, y junto a guardar se ve cuántos van de cada tipo.',
+      'El número de cada certificado se muestra como estimado hasta guardar; si otro usuario tomó números mientras tanto, se avisa cuáles quedaron.',
+      'En los alquileres, la salida, la devolución pactada y las observaciones se corrigen en la misma fila antes de guardar.',
+      'Salida, devolución y estado se llaman igual en todas las pantallas de alquiler, e Inventario muestra "Reservado" para lo apartado que todavía no salió.',
+      'Los errores al guardar dicen qué falta o qué pasó, en vez de "Fallo de conexión".',
+      'El borrador de una orden de servicio recupera también el laboratorio y el tipo elegidos.',
+      'Inventario hace un 75% menos de consultas al cargar, y abrir un alquiler trae un 60% menos de datos.',
+    ],
+    arreglo: [
+      'Los certificados anulados ya no muestran un PDF que no existe y van al final de la tabla de la orden.',
+      'El historial de viajes dice "No salió" en los alquileres anulados, en vez de "En obra".',
+      'Elegir en un desplegable ya no hace una búsqueda de más al servidor.',
+      'Los campos de equipo y laboratorio ya no aparecen como llenos al abrir Nuevo servicio o Nuevo certificado.',
+    ],
+  },
+  {
     version: '3.7.4.4',
     fecha: '2026-09-23',
     nuevo: [

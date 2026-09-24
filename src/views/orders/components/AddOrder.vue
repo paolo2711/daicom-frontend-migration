@@ -19,18 +19,21 @@
 
           <v-divider class="my-4" />
 
-          <form-order-service ref="formRef" v-if="order.order_type === 1" :key="'srv-'+dialog" @update-list="list => items_to_save = list" />
+          <form-order-service ref="formRef" v-if="order.order_type === 1" :key="'srv-'+dialog"
+                              @update-list="list => items_to_save = list" @update-config="c => config = c" />
           <form-order-rental ref="formRef" v-else :key="'alq-'+dialog" @update-list="list => items_to_save = list" />
 
         </v-form>
       </v-card-text>
 
       <!-- Agregamos un borde superior para delimitar los botones cuando el contenido hace scroll -->
-      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin">
+      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin flex-wrap ga-2">
+        <resumen-equipos :filas="items_to_save" :por-tipo="order.order_type === 1" />
         <v-spacer />
-        <v-btn variant="flat" class="font-weight-bold mr-3 px-4" @click="close">Cancelar</v-btn>
-        <v-btn color="primary" @click="save" :disabled="!is_valid || items_to_save.length === 0" :loading="is_on_sending_process">
-          Guardar Orden de {{ order.order_type === 1 ? 'Servicio' : 'Alquiler' }}
+        <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
+        <v-btn color="primary" variant="flat" class="font-weight-bold px-4" @click="save"
+               :disabled="!is_valid || items_to_save.length === 0" :loading="is_on_sending_process">
+          Guardar orden
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -38,19 +41,20 @@
 </template>
 
 <script setup>
-import { Toast } from '@/plugins/alerts'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import { ref, watch, nextTick, getCurrentInstance } from 'vue'
-import { useAppStore } from '@/stores/appStore'
 import { useBorradorLocal } from '@/composables/useBorradorLocal'
+import { useSavedNumbers } from '@/composables/useSavedNumbers'
+import { mensajeDeError } from '@/utils/errors'
 import OrderDataService from '@/services/orders/orderDataService'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
+import ResumenEquipos from './ResumenEquipos.vue'
 
 
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
-const appStore = useAppStore()
+const avisarNumeros = useSavedNumbers()
 
 const dialog                = ref(false)
 const is_on_sending_process = ref(false)
@@ -58,6 +62,7 @@ const is_valid              = ref(false)
 const next_order_number     = ref('')
 const order                 = ref({ client: null, order_type: 1 })
 const items_to_save         = ref([])
+const config                = ref(null)
 const addOrderForm          = ref(null)
 
 const formRef               = ref(null)
@@ -67,12 +72,13 @@ const borrador = useBorradorLocal(() => 'daicom_borrador_orden_servicio')
 
 watch(() => order.value.order_type, () => { calculateNextNumber() })
 
-watch([items_to_save, () => order.value.client], ([items, client]) => {
-  if (order.value.order_type === 1 && items.length) borrador.guardar({ client, items })
+watch([items_to_save, config, () => order.value.client], ([items, elegido, client]) => {
+  if (order.value.order_type === 1) borrador.guardar({ client, items, config: elegido })
 }, { deep: true })
 
 async function open(tipo) {
   items_to_save.value = []
+  config.value = null
   order.value = { client: null, order_type: tipo }
   dialog.value = true
   calculateNextNumber()
@@ -82,7 +88,7 @@ async function open(tipo) {
   if (!recuperado) return
   order.value.client = recuperado.client
   await nextTick()
-  formRef.value?.inyectarBorrador(recuperado.items)
+  formRef.value?.inyectarBorrador(recuperado)
 }
 
 async function calculateNextNumber() {
@@ -105,16 +111,18 @@ async function save() {
     }
     payload_orden.items = items_to_save.value
 
-    await OrderDataService.create(payload_orden)
+    const filas = items_to_save.value
+    const estimados = formRef.value?.estimados?.()
+    const { data } = await OrderDataService.create(payload_orden)
     // Los documentos del alquiler (cotización, OC, guías, valorizaciones) se
     // suben luego desde Editar. Crear solo registra la orden.
 
     close()
-    Toast.fire(appStore.successSavedOptions)
+    avisarNumeros(`${data.order_number} creada`, filas, data.codigos, estimados)
   } catch (error) {
     const data = error.response?.data
     formRef.value?.marcarErrores(data?.filas)
-    $swal.fire('Error', data?.error || 'Fallo de conexión. Revise los datos e intente de nuevo.', 'error')
+    $swal.fire('No se guardó la orden', mensajeDeError(error, 'No se pudo guardar la orden.'), 'error')
   } finally {
     is_on_sending_process.value = false
   }

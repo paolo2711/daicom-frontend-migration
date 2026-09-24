@@ -11,28 +11,35 @@ const intentar = (accion) => {
 export function useBorradorLocal(clave) {
   const $swal = getCurrentInstance().appContext.config.globalProperties.$swal
 
-  const guardar = (datos) => intentar(() => localStorage.setItem(clave(), JSON.stringify(datos)))
-  const descartar = () => intentar(() => localStorage.removeItem(clave()))
+  // Hasta ofrecer el anterior no se guarda nada: el modal vacio que se abre lo pisaria.
+  let activo = false
+
+  const guardar = (datos) => activo && intentar(() => localStorage.setItem(clave(), JSON.stringify(datos)))
+  const descartar = () => {
+    activo = false
+    intentar(() => localStorage.removeItem(clave()))
+  }
   const leer = () => intentar(() => JSON.parse(localStorage.getItem(clave())))
 
   // El borrador si tiene equipos y el usuario lo quiere; si no, se descarta.
   const ofrecer = async () => {
+    activo = false
     const borrador = leer()
-    if (!borrador?.items?.length) {
-      descartar()
-      return null
+    let recuperado = null
+    if (borrador?.items?.length) {
+      const { isConfirmed } = await $swal.fire({
+        title: '¿Recuperar borrador?',
+        text: `Hay ${borrador.items.length} equipo(s) sin guardar de una sesión anterior.`,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, recuperar',
+        cancelButtonText: 'Descartar',
+      })
+      if (isConfirmed) recuperado = borrador
     }
-    const { isConfirmed } = await $swal.fire({
-      title: '¿Recuperar borrador?',
-      text: `Hay ${borrador.items.length} equipo(s) sin guardar de una sesión anterior.`,
-      icon: 'info',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, recuperar',
-      cancelButtonText: 'Descartar',
-    })
-    if (isConfirmed) return borrador
-    descartar()
-    return null
+    if (!recuperado) descartar()
+    activo = true
+    return recuperado
   }
 
   return { guardar, descartar, ofrecer }

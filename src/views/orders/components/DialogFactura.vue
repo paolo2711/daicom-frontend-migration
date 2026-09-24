@@ -136,6 +136,7 @@ import { Toast } from '@/plugins/alerts'
 import Swal from 'sweetalert2'
 import OrderDataService from '@/services/orders/orderDataService'
 import { useAppStore } from '@/stores/appStore'
+import { mensajeDeError } from '@/utils/errors'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
@@ -324,11 +325,7 @@ const save = async () => {
     emit('updateOrder')
     closeDialog()
   } catch (err) {
-    let msg = 'No se pudo guardar la factura.'
-    if (err.response?.data) {
-      msg = err.response.data.error || Object.values(err.response.data).flat().join(' | ')
-    }
-    Swal.fire('Operación rechazada', msg, 'error')
+    Swal.fire('Operación rechazada', mensajeDeError(err, 'No se pudo guardar la factura.'), 'error')
   } finally {
     isSaving.value = false
   }

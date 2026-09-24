@@ -71,7 +71,7 @@
       </div>
     </v-card>
 
-    <v-table density="compact" class="mt-4 border rounded" v-if="rentals.length > 0">
+    <v-table density="compact" class="mt-4 tabla-mejorada" v-if="rentals.length > 0">
       <thead>
         <tr :class="isDark ? 'bg-grey-darken-3' : 'bg-amber-lighten-4'">
           <th style="width: 130px;">ID Inventario</th>

@@ -116,6 +116,7 @@ import OrderDataService from '@/services/orders/orderDataService'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import { ESTADOS_ALQUILER, FECHAS_ALQUILER, duracionDe, salidaDe } from '@/utils/orders/alquiler'
 import { fechaCorta } from '@/utils/dates'
+import { mensajeDeError } from '@/utils/errors'
 
 const props = defineProps({
   order: { type: Object, required: true },
@@ -163,7 +164,7 @@ async function quitar(linea) {
     await OrderDataService.deleteRental(linea.id)
     Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo quitado' })
   } catch (error) {
-    $swal.fire('Error', error.response?.data?.error || 'No se pudo quitar el equipo.', 'error')
+    $swal.fire('No se quitó el equipo', mensajeDeError(error, 'No se pudo quitar el equipo.'), 'error')
   }
 }
 </script>

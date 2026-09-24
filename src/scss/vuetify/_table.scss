@@ -1,14 +1,15 @@
 // Marco de las tablas del listado. La expresion sirve para los dos temas, asi
 // que no lleva override en _dark.scss.
-// El .v-application delante gana sobre los estilos propios de Vuetify sin !important.
+// El .v-table delante gana sobre los estilos propios de Vuetify sin !important.
+// No cuelga de .v-application: un modal se monta en .v-overlay-container, fuera.
 
-.v-application .tabla-mejorada {
+.v-table.tabla-mejorada {
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 8px;
   overflow: hidden;
 }
 
 // La fila que el servidor rechazo al guardar una lista.
-.v-application .fila-con-error td {
+.v-table .fila-con-error td {
   background: rgba(var(--v-theme-error), 0.08);
 }

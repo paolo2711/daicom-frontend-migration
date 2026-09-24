@@ -331,6 +331,7 @@ import MenuSinFactura from '@/views/orders/components/MenuSinFactura.vue'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useAppStore } from '@/stores/appStore'
+import { mensajeDeError } from '@/utils/errors'
 import DialogFactura from '../DialogFactura.vue'
 import EditOrder from '../EditOrder.vue'
 import AddExtraEquipment from '../AddExtraEquipment.vue'
@@ -585,7 +586,7 @@ const anularSeleccion = async () => {
 
   const rechazos = resultados
     .map((r, i) => r.status === 'rejected'
-      ? `${ordenes[i].order_number}: ${r.reason.response?.data?.error || 'no se pudo anular'}` : null)
+      ? `${ordenes[i].order_number}: ${mensajeDeError(r.reason, 'no se pudo anular')}` : null)
     .filter(Boolean)
   if (rechazos.length) Swal.fire({ icon: 'warning', title: 'Algunas no se anularon', html: rechazos.join('<br>') })
   else Toast.fire({ timer: 2200, icon: 'success', title: 'Órdenes anuladas' })
@@ -630,7 +631,7 @@ const anularOrderConfirm = async (order) => {
     Toast.fire({ timer: 2200, icon: 'success', title: 'Orden anulada' })
     retrieveOrders()
   } catch (error) {
-    Swal.fire('Error', error.response?.data?.error || 'No se pudo anular la orden.', 'error')
+    Swal.fire('No se anuló la orden', mensajeDeError(error, 'No se pudo anular la orden.'), 'error')
   }
 }
 const abrirEditarOrden = (o) => { selected_order.value = o; edit_order_modal.value = true }

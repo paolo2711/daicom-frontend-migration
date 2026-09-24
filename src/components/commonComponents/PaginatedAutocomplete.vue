@@ -33,7 +33,7 @@
 // Combobox con busqueda server-side paginada. El comportamiento (traer 10, buscar
 // al teclear, aviso de "hay mas", preservar el seleccionado) esta definido aca una
 // sola vez. Cada combobox solo pasa su fetch, su label y sus slots si los necesita.
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 
 const props = defineProps({
@@ -55,9 +55,16 @@ const props = defineProps({
 // el nombre) sin tener que leer toda la lista.
 const emit = defineEmits(['update:modelValue', 'selected'])
 
-const selectedId = () => props.returnObject
-  ? (props.modelValue?.[props.itemValue] ?? null)
-  : (props.modelValue ?? null)
+const combo = ref(null)
+
+const idDe = (valor) => props.returnObject ? (valor?.[props.itemValue] ?? null) : (valor ?? null)
+
+// Lo elegido se anota al elegir, sin esperar a que el padre devuelva el v-model:
+// en ese mismo instante Vuetify escribe su titulo en la busqueda, y tiene que
+// reconocerse como eco y no pedirse al server.
+const elegidoId = ref(idDe(props.modelValue))
+watch(() => props.modelValue, (valor) => { elegidoId.value = idDe(valor) })
+const selectedId = () => elegidoId.value
 
 const { items, loading, searchQuery: search, retrieveData, total } =
   usePaginatedSearch((page, size, q) => props.fetch(page, size, q), props.mapper, selectedId, props.recurso)
@@ -74,9 +81,11 @@ const visibleItems = computed(() => {
 })
 const hayMas = computed(() => total.value > items.value.length)
 
+// Lo elegido puede ser el `seed`, que no viene en lo que trajo la ultima busqueda.
 function onSelect(v) {
+  elegidoId.value = idDe(v)
   emit('update:modelValue', v)
-  const obj = props.returnObject ? v : items.value.find(it => it[props.itemValue] === v)
+  const obj = props.returnObject ? v : [props.seed, ...items.value].find(it => it?.[props.itemValue] === v)
   emit('selected', obj ?? null)
 }
 

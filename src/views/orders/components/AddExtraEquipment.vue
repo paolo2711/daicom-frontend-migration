@@ -16,22 +16,17 @@
           ref="formRef"
           :key="'extra-service-' + dialogModel"
           @update-list="list => items_to_save = list"
+          @update-config="c => config = c"
         />
       </v-card-text>
 
-      <v-card-actions class="px-6 pb-4 pt-2">
+      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin flex-wrap ga-2">
+        <resumen-equipos :filas="items_to_save" :por-tipo="!isRental" />
         <v-spacer/>
-        <v-btn variant="flat" class="font-weight-bold rounded-lg mr-3 px-6" @click="close">Cancelar</v-btn>
-        <v-btn 
-          color="primary" 
-          variant="flat" 
-          elevation="2" 
-          class="text-white font-weight-bold rounded-lg px-6"
-          @click="saveExtraEquipments" 
-          :disabled="items_to_save.length === 0" 
-          :loading="loading_extra"
-        >
-          <v-icon start>mdi-content-save</v-icon> Guardar {{ items_to_save.length }} Equipo(s)
+        <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
+        <v-btn color="primary" variant="flat" class="font-weight-bold px-4" @click="saveExtraEquipments"
+               :disabled="items_to_save.length === 0" :loading="loading_extra">
+          Guardar equipos
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -39,11 +34,13 @@
 </template>
 
 <script setup>
-import { Toast } from '@/plugins/alerts'
 import { ref, computed, watch, nextTick, getCurrentInstance } from 'vue'
 import { useBorradorLocal } from '@/composables/useBorradorLocal'
+import { useSavedNumbers } from '@/composables/useSavedNumbers'
+import { mensajeDeError } from '@/utils/errors'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
+import ResumenEquipos, { cuantosEquipos } from './ResumenEquipos.vue'
 import OrderDataService from "@/services/orders/orderDataService"
 
 const props = defineProps({
@@ -55,9 +52,11 @@ const emit = defineEmits(['update:modelValue', 'close', 'reload'])
 
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
+const avisarNumeros = useSavedNumbers()
 
 const loading_extra = ref(false)
 const items_to_save = ref([])
+const config = ref(null)
 const formRef = ref(null)
 
 const dialogModel = computed({
@@ -71,20 +70,21 @@ const isRental = computed(() => props.order && props.order.order_type === 2)
 // Uno por orden: lo cargado para una no aparece al abrir otra.
 const borrador = useBorradorLocal(() => `daicom_borrador_equipos_${props.order?.id}`)
 
-watch(items_to_save, (items) => {
-  if (!isRental.value && items.length) borrador.guardar({ items })
+watch([items_to_save, config], ([items, elegido]) => {
+  if (!isRental.value) borrador.guardar({ items, config: elegido })
 }, { deep: true })
 
 watch(dialogModel, async (abierto) => {
   if (!abierto) {
     items_to_save.value = []
+    config.value = null
     return
   }
   if (isRental.value) return
   const recuperado = await borrador.ofrecer()
   if (!recuperado) return
   await nextTick()
-  formRef.value?.inyectarBorrador(recuperado.items)
+  formRef.value?.inyectarBorrador(recuperado)
 })
 
 async function saveExtraEquipments() {
@@ -92,14 +92,16 @@ async function saveExtraEquipments() {
   loading_extra.value = true
 
   try {
-    await OrderDataService.agregarEquipos(props.order.id, items_to_save.value)
-    Toast.fire({ timer: 2200, icon: 'success', title: `${items_to_save.value.length} equipo(s) añadido(s)` })
+    const filas = items_to_save.value
+    const estimados = formRef.value?.estimados?.()
+    const { data } = await OrderDataService.agregarEquipos(props.order.id, filas)
+    avisarNumeros(cuantosEquipos(filas.length, 'añadido'), filas, data.codigos, estimados)
     emit('reload')
     close()
   } catch (error) {
     const data = error.response?.data
     formRef.value?.marcarErrores(data?.filas)
-    $swal.fire('Error', data?.error || 'No se pudieron guardar los equipos.', 'error')
+    $swal.fire('No se guardaron los equipos', mensajeDeError(error, 'No se pudieron guardar los equipos.'), 'error')
   } finally {
     loading_extra.value = false
   }

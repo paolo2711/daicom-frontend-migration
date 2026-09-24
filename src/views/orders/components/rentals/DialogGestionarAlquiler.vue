@@ -71,6 +71,7 @@ import { ref, computed, getCurrentInstance } from 'vue'
 import OrderDataService from '@/services/orders/orderDataService'
 import { ESTADOS_ALQUILER, FECHAS_ALQUILER, duracionDe } from '@/utils/orders/alquiler'
 import { hoyISO } from '@/utils/dates'
+import { mensajeDeError } from '@/utils/errors'
 
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
@@ -132,7 +133,7 @@ async function intentar(accion, hecho) {
     Toast.fire({ timer: 2200, icon: 'success', title: hecho })
     close()
   } catch (error) {
-    $swal.fire('Error', error.response?.data?.error || 'No se pudo guardar.', 'error')
+    $swal.fire('No se guardó', mensajeDeError(error, 'No se pudo guardar.'), 'error')
   } finally {
     ocupado.value = false
   }

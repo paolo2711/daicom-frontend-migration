@@ -8,6 +8,11 @@ class CorrelativeDataService {
             headers: authHeader()
         })
     }
+
+    // { 1: siguiente acreditado, 2: no acreditado, 3: operatividad }
+    getTodos() {
+        return axios.get('certificates/correlative', { headers: authHeader() })
+    }
 }
 
 export default new CorrelativeDataService();

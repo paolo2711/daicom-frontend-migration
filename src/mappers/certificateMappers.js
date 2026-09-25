@@ -4,16 +4,9 @@ export default {
       id: element.id,
       
       // Control de Estado y Relaciones
-      status: element.status, 
-      order: element.order, 
-      
-      // Semaforo Inteligente de Órdenes
-      order_number: element.order_number,
-      order_status: element.order_status,
-      order_requiere_pago: element.order_requiere_pago,
-      order_has_invoices: element.order_has_invoices,
-      order_has_payments: element.order_has_payments,
-      
+      status: element.status,
+      order: element.order,
+
       // Datos Técnicos y de Registro
       certificate_type: element.certificate_type,
       certificate_type_label: element.certificate_type_label,
@@ -47,6 +40,18 @@ export default {
     };
   },
   
+  // Lo que la fila muestra de su orden. La lista lo trae aparte, una vez por
+  // orden; el detalle de un certificado lo trae junto a el.
+  getOrden(element) {
+    return {
+      order_number: element.order_number,
+      order_status: element.order_status,
+      order_requiere_pago: element.order_requiere_pago,
+      order_has_invoices: element.order_has_invoices,
+      order_has_payments: element.order_has_payments,
+    };
+  },
+
   putMap(element) {
     return {
       id: element.id,

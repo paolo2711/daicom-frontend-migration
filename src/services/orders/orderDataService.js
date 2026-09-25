@@ -25,12 +25,7 @@ class OrderDataService {
         return axios.get("orders", { params, headers });
     }
 
-    get(id) {
-        return axios.get(`orders/${id}`, { headers: authHeader() });
-    }
-
-    // Solo el semaforo. El detalle trae los certificados de la orden adentro:
-    // en una de 92 son 111 KB para pintar cuatro campos.
+    // Solo el semaforo de la orden.
     getEstado(id) {
         return axios.get(`orders/${id}/estado`, { headers: authHeader() });
     }

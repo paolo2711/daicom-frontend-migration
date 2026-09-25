@@ -361,8 +361,8 @@
         </template>
 
         <!-- ── Número de orden ── -->
-        <template v-slot:item.order_number="{ item }">
-          <span v-if="item.order_number">
+        <template v-slot:item.order="{ item }">
+          <span v-if="item.order">
             <v-menu
               v-if="permiso_resumen"
               :model-value="menu_abierto_id === item.id"
@@ -371,7 +371,7 @@
               transition="slide-x-transition"
               @update:model-value="(val) => {
                 menu_abierto_id = val ? item.id : null;
-                orden_resonancia = val ? item.order_number : null;
+                orden_resonancia = val ? item.order : null;
               }"
             >
               <template v-slot:activator="{ props: menuProps }">
@@ -383,7 +383,7 @@
                       :class="{
                         'boton-orden-atenuado': menu_abierto_id !== null
                           && menu_abierto_id !== item.id
-                          && orden_resonancia === item.order_number
+                          && orden_resonancia === item.order
                       }"
                     >
                       <v-btn icon variant="text" density="comfortable" color="primary" v-bind="mergeProps(menuProps, tooltipProps)" @click.stop>
@@ -398,9 +398,9 @@
               <order-summary-card
                 v-if="menu_abierto_id === item.id"
                 :orderId="item.order"
-                :orderNumber="item.order_number"
+                :orderNumber="ordenDe(item).order_number"
                 @cerrar-tarjeta="menu_abierto_id = null; orden_resonancia = null;"
-                @seleccionar-orden="seleccionarTodaLaOrden(item.order_number)"
+                @seleccionar-orden="seleccionarTodaLaOrden(item.order)"
               />
             </v-menu>
 
@@ -543,7 +543,7 @@
 
 <script setup>
 import { Toast } from '@/plugins/alerts'
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, getCurrentInstance, defineAsyncComponent } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, getCurrentInstance, defineAsyncComponent, mergeProps } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/appStore'
 
@@ -597,6 +597,9 @@ const batchActionModalRef  = ref(null)
 // ─── Estado de la tabla ───────────────────────────────────────────────────────
 const certificados_seleccionados = ref([])
 const certificates             = ref([])
+// Lo de cada orden de la pagina, por id: llega una vez aunque la compartan varias filas.
+const ordenes                  = ref({})
+const ordenDe                  = (item) => ordenes.value[item.order] || {}
 const total_certificates       = ref(0)
 const loading_list             = ref(false)
 const options                  = ref({ page: 1, itemsPerPage: 30 })
@@ -681,7 +684,7 @@ const baseHeaders = [
   { title: 'Nombre',              key: 'equipment',                               sortable: false },
   { title: 'XLS',                 key: 'uploaded_xls',          align: 'center', sortable: false },
   { title: 'Firma/QR',            key: 'uploaded',              align: 'center', sortable: false },
-  { title: 'Orden',               key: 'order_number',                            sortable: false },
+  { title: 'Orden',               key: 'order',                                   sortable: false },
   { title: 'F. Agregado',         key: 'created_at',                              sortable: false },
   { title: 'Opciones',            key: 'actions',               align: 'center', sortable: false },
 ]
@@ -698,7 +701,7 @@ const headers = computed(() =>
 
 // ─── Row props (reemplaza item-class de Vuetify 2) ───────────────────────────
 function getRowProps ({ item }) {
-  const esResonancia = orden_resonancia.value && item.order_number === orden_resonancia.value;
+  const esResonancia = orden_resonancia.value && item.order === orden_resonancia.value;
   const esOpcionesAbiertas = contextMenu.value.show && contextMenu.value.item?.id === item.id;
 
   return {
@@ -850,8 +853,8 @@ function aplicarFiltroFechas () {
   retrieveAllCertificates() // Dispara 1 sola búsqueda limpia al backend
 }
 
-function seleccionarTodaLaOrden (orderNum) {
-  const certificadosDeOrden = certificates.value.filter(c => c.order_number === orderNum && c.status !== 5)
+function seleccionarTodaLaOrden (orderId) {
+  const certificadosDeOrden = certificates.value.filter(c => c.order === orderId && c.status !== 5)
   
   certificadosDeOrden.forEach(cert => {
     if (!certificados_seleccionados.value.find(s => s.id === cert.id)) {
@@ -864,18 +867,17 @@ function seleccionarTodaLaOrden (orderNum) {
   menu_abierto_id.value = null
 }
 
-import { mergeProps } from 'vue' // <--- Inyectamos mergeProps para que el Tooltip y el Menu convivan
-
 // ---  SEMAFORO INTELIGENTE (FINANCIERO + OPERATIVO) ---
 
 const getSemaforoColor = (item) => {
-  if (item.order_status === 4) return 'grey-darken-3' // Anulada
+  const orden = ordenDe(item)
+  if (orden.order_status === 4) return 'grey-darken-3' // Anulada
   // Sin cargo va en verde: no hay nada que facturar ni cobrar, o sea que por el
   // lado del dinero esta cerrado igual que una pagada.
-  if (item.order_requiere_pago === false) return 'success'
+  if (orden.order_requiere_pago === false) return 'success'
 
-  const hasInv = item.order_has_invoices
-  const hasPay = item.order_has_payments
+  const hasInv = orden.order_has_invoices
+  const hasPay = orden.order_has_payments
 
   if (hasInv && hasPay) return 'success'  // Verde: Facturado y pagado
   if (hasInv || hasPay) return 'warning'  // Amarillo: Hay plata moviéndose (falta factura o falta pago)
@@ -886,11 +888,12 @@ const getSemaforoColor = (item) => {
 }
 
 const getSemaforoText = (item) => {
-  if (item.order_status === 4) return 'Orden Anulada'
-  if (item.order_requiere_pago === false) return 'Sin cargo, no se cobra'
+  const orden = ordenDe(item)
+  if (orden.order_status === 4) return 'Orden Anulada'
+  if (orden.order_requiere_pago === false) return 'Sin cargo, no se cobra'
 
-  const hasInv = item.order_has_invoices
-  const hasPay = item.order_has_payments
+  const hasInv = orden.order_has_invoices
+  const hasPay = orden.order_has_payments
 
   if (hasInv && hasPay) return 'Facturación y Liquidación Completadas'
   if (hasInv && !hasPay) return 'Facturada (Pendiente de Liquidación)'
@@ -983,6 +986,7 @@ function retrieveAllCertificates (opciones) {
   }).then((response) => {
     if (!isLatestCertLoad(token)) return   // llegó una carga más nueva → no pisar
     certificates.value = response.data.results.map(cert => CertificateMappers.getMap(cert))
+    ordenes.value = response.data.ordenes || {}
     total_certificates.value = response.data.count
     // La lista viene del server, asi que manda ella sobre cualquier tarea terminada.
     certificates.value.forEach(c => confirmarFila(c.id, pedidoEn))
@@ -1024,22 +1028,17 @@ function updateSingleCertificateInList (updatedCert, pedidoEn) {
     // Al tener el mapper actualizado, obtenemos el objeto limpio.
     // Object.assign muta el proxy reactivo directamente para que Vue 3 repinte solo esta fila.
     Object.assign(certificates.value[index], CertificateMappers.getMap(updatedCert))
+    // El detalle trae su orden: sirve aunque recien lo hayan vinculado a una que no estaba en la pagina.
+    if (updatedCert.order) ordenes.value = { ...ordenes.value, [updatedCert.order]: CertificateMappers.getOrden(updatedCert) }
   }
 }
 
-// El semaforo llega ya calculado desde el back, con los mismos nombres que usa
-// la fila. Antes se recalculaba aca a partir de la orden completa, con una regla
-// propia que podia discrepar de la del serializer.
+// El semaforo llega calculado desde el back, con la misma regla que la lista.
 function fetchAndInjectOrderUpdate (event) {
+  if (!(event.detail in ordenes.value)) return
   OrderDataService.getEstado(event.detail).then(response => {
     const estado = response?.data
-    if (!estado) return
-    certificates.value.forEach((cert, index) => {
-      if (cert.order_number === estado.order_number) {
-        certificates.value[index] = { ...certificates.value[index], ...estado }
-      }
-    })
-    certificates.value = [...certificates.value]
+    if (estado) ordenes.value = { ...ordenes.value, [event.detail]: estado }
   }).catch(() => {})
 }
 

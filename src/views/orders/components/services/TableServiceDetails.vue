@@ -155,12 +155,13 @@ import { fechaCorta } from "@/utils/dates";
 import ActionGroup from "@/components/shared/ActionGroup.vue";
 import NumerosAnteriores from "@/components/shared/NumerosAnteriores.vue";
 
-// `clave` tiene que coincidir con las de ACCIONES del modal de lote.
+// `clave` tiene que coincidir con las de ACCIONES del modal de lote. Sin
+// `permiso`, la ven todos.
 const ACCIONES_CERTIFICADOS = [
   { clave: 'notify',  texto: 'Solicitar Firmas',  icono: 'mdi-bell-ring',                    color: 'orange-darken-3', permiso: 1005 },
   { clave: 'entrega', texto: 'Marcar Entregados', icono: 'mdi-package-variant-closed-check', color: 'teal-darken-2',   permiso: 1010 },
   { clave: 'qr',      texto: 'Firmar QR',         icono: 'mdi-qrcode-scan',                  color: 'primary',         permiso: 1001 },
-  { clave: 'tipo',    texto: 'Corregir Tipo',     icono: 'mdi-swap-horizontal',              color: 'indigo',          permiso: 1003 },
+  { clave: 'tipo',    texto: 'Corregir Tipo',     icono: 'mdi-swap-horizontal',              color: 'indigo' },
 ];
 
 export default {
@@ -186,7 +187,7 @@ export default {
       const sinEquipos = this.order.status === 4 || !this.order.certificates?.length;
       return ACCIONES_CERTIFICADOS.map(accion => ({
         ...accion,
-        visible: this.hasPermission(accion.permiso),
+        visible: !accion.permiso || this.hasPermission(accion.permiso),
         disabled: sinEquipos,
       }));
     },

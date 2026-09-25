@@ -1,8 +1,7 @@
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
-import { ANULADO, estaFirmado } from '@/utils/certificates/estado'
+import { ANULADO, EN_NUBE } from '@/utils/certificates/estado'
 import { TIPOS_CERTIFICADO, nombreDelTipo } from '@/utils/certificates/tipos'
-import { usePermissions } from '@/composables/usePermissions'
 import { fechaCorta } from '@/utils/dates'
 
 // Cada accion del modal de lote se describe entera en su entrada de ACCIONES.
@@ -31,15 +30,11 @@ const ADJUNTADO = {
 export const estaAdjuntado = (item) => item.validation_status in ADJUNTADO
 
 // Las mismas reglas que por_que_no_se_corrige en el back.
-const PERMISO_FIRMA = 1001
-
 const impideCorregir = (cert, tipo) => {
   if (cert.status === ANULADO) return { nivel: BLOQUEA, titulo: 'Está anulado' }
   if (!tipo) return { nivel: NEUTRO, titulo: 'Elige el tipo correcto' }
   if (cert.certificate_type === tipo) return { nivel: NEUTRO, titulo: `Ya es ${nombreDelTipo(tipo)}` }
-  if (estaFirmado(cert) && !usePermissions().hasAction(PERMISO_FIRMA)) {
-    return { nivel: BLOQUEA, titulo: 'Está firmado: corregirlo necesita el permiso de firma' }
-  }
+  if (cert.status === EN_NUBE) return { nivel: BLOQUEA, titulo: 'Está en la nube: elimínalo de la nube primero' }
   return null
 }
 
@@ -175,9 +170,8 @@ export const ACCIONES = {
       const impedimento = impideCorregir(item, tipo)
       if (impedimento) return { ...impedimento, icono: 'mdi-minus-circle' }
       if (estaEntregado(item)) {
-        return { icono: 'mdi-alert', nivel: AVISO, titulo: 'Ya se entregó: el QR que tiene el cliente deja de funcionar' }
+        return { icono: 'mdi-alert', nivel: AVISO, titulo: 'Ya se entregó: el cliente lo tiene con el número anterior' }
       }
-      if (item.uploaded) return { icono: 'mdi-cloud-off-outline', nivel: AVISO, titulo: 'Se baja de la nube' }
       if (tieneExcelBase(item)) {
         return { icono: 'mdi-file-remove', nivel: AVISO, titulo: 'Se descarta el Excel: hay que rehacerlo con el número nuevo' }
       }

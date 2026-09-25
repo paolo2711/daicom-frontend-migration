@@ -1,6 +1,6 @@
 // Certificate.CertificateStatus en el back.
 const FIRMADO = 3
-const EN_NUBE = 4
+export const EN_NUBE = 4
 export const ANULADO = 5
 
 export function estaFirmado(cert) {

@@ -135,14 +135,12 @@ import { estaEntregado } from '@/utils/certificates/entrega'
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { fechaCorta, hoyISO } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
-import { usePermissions } from '@/composables/usePermissions'
 import { useAppStore } from '@/stores/appStore'
 
 const LabFormDialog = defineAsyncComponent(() => import('@/views/labs/components/LabFormDialog.vue'))
 const BatchActionModal = defineAsyncComponent(() => import('./BatchActionModal.vue'))
 
 const appStore = useAppStore()
-const PERMISO_CORREGIR = 1003
 
 const dialog = ref(false)
 const labDialogOpen = ref(false)
@@ -180,7 +178,7 @@ const codigoNuevo = computed(() => {
   return `${(form.value.emission_date || '').slice(0, 4)}-${String(correlativoNuevo.value).padStart(8, '0')}`
 })
 
-const puedeCorregir = computed(() => ficha.value.status !== ANULADO && usePermissions().hasAction(PERMISO_CORREGIR))
+const puedeCorregir = computed(() => ficha.value.status !== ANULADO)
 
 const estado = computed(() => {
   const cert = ficha.value

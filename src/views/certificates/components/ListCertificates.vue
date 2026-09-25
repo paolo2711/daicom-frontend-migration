@@ -135,7 +135,7 @@
         Marcar Entregados
       </v-btn>
 
-      <v-btn v-if="permiso_anular" variant="text" size="small" class="mx-1 font-weight-bold"
+      <v-btn variant="text" size="small" class="mx-1 font-weight-bold"
              prepend-icon="mdi-swap-horizontal" @click="abrirModalLote('tipo')">
         Corregir Tipo
       </v-btn>
@@ -520,12 +520,12 @@
           </v-list-item-title>
         </v-list-item>
 
-        <v-divider v-if="contextMenu.item.status !== 5 && permiso_anular" class="my-1 border-opacity-25"></v-divider>
-
-        <v-list-item v-if="contextMenu.item.status !== 5 && permiso_anular" @click="batchActionModalRef?.open('tipo', [contextMenu.item])">
+        <v-list-item v-if="contextMenu.item.status !== 5" @click="batchActionModalRef?.open('tipo', [contextMenu.item])">
           <template v-slot:prepend><v-icon size="small">mdi-swap-horizontal</v-icon></template>
           <v-list-item-title class="font-weight-medium text-body-2">Corregir Tipo</v-list-item-title>
         </v-list-item>
+
+        <v-divider v-if="contextMenu.item.status !== 5 && permiso_anular" class="my-1 border-opacity-25"></v-divider>
 
         <v-list-item v-if="permiso_anular && contextMenu.item.uploaded && contextMenu.item.status !== 5" @click="eliminarDeLaNubeConfirm(contextMenu.item)">
           <template v-slot:prepend><v-icon size="small">mdi-cloud-remove-outline</v-icon></template>

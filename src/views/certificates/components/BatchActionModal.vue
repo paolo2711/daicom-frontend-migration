@@ -196,7 +196,7 @@ import { ACCIONES, colorDe, esAviso, estaAdjuntado } from './batchActions'
 
 const LoadSheet = defineAsyncComponent(() => import('@/views/certificates/components/LoadSheet.vue'))
 
-const emit = defineEmits(['clearSelection', 'reloadListComponent'])
+const emit = defineEmits(['clearSelection', 'corregido'])
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
 const appStore = useAppStore()
@@ -518,6 +518,7 @@ const confirmAction = async () => {
           ? `Corregido: ahora es ${codigos[0]}`
           : `${codigos.length} corregidos: del ${codigos[0]} al ${codigos[codigos.length - 1]}`
       })
+      emit('corregido')
       emit('clearSelection')
       close()
     }

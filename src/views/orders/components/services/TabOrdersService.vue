@@ -308,7 +308,7 @@
     </selection-bar>
 
     <!-- MODALES -->
-    <batch-action-modal ref="batchActionModalRef" @reloadListComponent="retrieveOrders" />
+    <batch-action-modal ref="batchActionModalRef" />
 
     <dialog-factura v-model="factura_modal" :order="selected_order" :orders="ordenes_factura_multi" :order_type="1" @updateOrder="onFacturaGuardada" @close="cerrarFacturaModal" />
     <edit-order v-model="edit_order_modal" :order="selected_order" @updateOrder="updateSingleOrderInList" @close="edit_order_modal = false" />

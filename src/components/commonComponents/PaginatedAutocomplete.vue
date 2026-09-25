@@ -15,9 +15,10 @@
     :return-object="returnObject"
     no-filter
   >
-    <!-- Reenvia al padre solo los slots que si definio (selection / item). -->
+    <!-- Reenvia al padre solo los slots que si definio. -->
     <template v-if="$slots.selection" v-slot:selection="s"><slot name="selection" v-bind="s" /></template>
     <template v-if="$slots.item" v-slot:item="s"><slot name="item" v-bind="s" /></template>
+    <template v-if="$slots.append" v-slot:append><slot name="append" /></template>
 
     <!-- Aviso GENERICO reutilizable: hay mas resultados de los mostrados. -->
     <template v-if="hayMas" v-slot:append-item>

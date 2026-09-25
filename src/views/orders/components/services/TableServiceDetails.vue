@@ -106,7 +106,7 @@
                     <v-icon>mdi-pencil</v-icon>
                   </v-btn>
                 </template>
-                <span>Editar Certificado</span>
+                <span>Ver y editar</span>
               </v-tooltip>
 
               <v-tooltip location="bottom" color="warning" v-if="cert.status !== 5">

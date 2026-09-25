@@ -30,7 +30,6 @@ export default {
       
       // Archivos y Nube
       uploaded_xls_url: element.uploaded_xls_url,
-      signed_pdf: element.signed_pdf,
       attached_pdf: element.attached_pdf,
       uploaded: element.uploaded,
       signature_requested: element.signature_requested,
@@ -52,30 +51,14 @@ export default {
     };
   },
 
+  // Lo que el modal edita. Lo demas se cambia con su propia accion.
   putMap(element) {
     return {
-      id: element.id,
-      status: element.status,
-      order: element.order,
-      correlative: element.correlative,
-      registry_code: element.registry_code,
-      certificate_type: element.certificate_type,
       client: element.client,
       lab: element.lab,
       equipment: element.equipment,
-      brand: element.brand,
-      model: element.model,
-      serie: element.serie,
-      indication_interval: element.indication_interval,
-      identification_code: element.identification_code,
-      calibration_date: element.calibration_date,
       emission_date: element.emission_date,
-      uploaded_xls_url: element.uploaded_xls_url,
-      signed_pdf: element.signed_pdf,
-      signature_requested: element.signature_requested,
-      sent_to: element.sent_to,
-      sent_date: element.sent_date,
-      observations: element.observations
+      observations: element.observations,
     };
   }
 };

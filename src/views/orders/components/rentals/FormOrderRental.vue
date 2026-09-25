@@ -8,15 +8,16 @@
         </div>
       </div>
 
-      <v-row dense align="center">
-        <v-col cols="12" md="6" class="d-flex align-center">
+      <v-row dense>
+        <v-col cols="12">
           <paginated-autocomplete
             ref="equipComboRef"
             v-model="temp_rental.equipment"
             :fetch="fetchEquipos"
             :exclude-ids="rentals.map(r => r.equipment_id)"
-            label="Buscar Equipo* (ID, Nombre, Marca o Serie)"
+            label="Equipo (ID, nombre, marca o serie)"
             placeholder="Ej: DAI-017, Manómetro o N° serie"
+            prepend-inner-icon="mdi-toolbox-outline"
             variant="outlined"
             density="compact"
             hide-details
@@ -30,44 +31,40 @@
                 <v-list-item-subtitle>{{ item.raw.brand }} | ID: {{ item.raw.internal_id }}</v-list-item-subtitle>
               </v-list-item>
             </template>
+            <template #append>
+              <add-new-button texto="Nuevo equipo en el inventario" @click="addEquipmentModalRef?.open()" />
+            </template>
           </paginated-autocomplete>
-          
-          <v-btn icon size="small" color="primary" variant="tonal" class="ml-2 flex-shrink-0" @click="addEquipmentModalRef?.open()">
-            <v-icon>mdi-plus</v-icon>
-          </v-btn>
         </v-col>
 
-        <v-col cols="12" md="3">
+        <v-col cols="12" md="6">
           <v-text-field v-model="temp_rental.departure_date" :label="FECHAS_ALQUILER.departure_date" type="date"
                         :max="hoy" variant="outlined" density="compact" hide-details clearable />
         </v-col>
 
-        <v-col cols="12" md="3">
+        <v-col cols="12" md="6">
           <v-text-field v-model="temp_rental.expected_return_date" :label="FECHAS_ALQUILER.expected_return_date" type="date"
                         :min="temp_rental.departure_date || undefined"
                         variant="outlined" density="compact" hide-details clearable />
         </v-col>
-      </v-row>
 
-      <v-row dense>
-        <v-col cols="12" md="9">
+        <v-col cols="12">
           <v-text-field v-model="temp_rental.delivery_notes" label="Observaciones de entrega (Opcional)"
                         variant="outlined" density="compact" hide-details
                         placeholder="Ej: Se entrega con estuche y manual" />
         </v-col>
-        <v-col cols="12" md="3" class="text-right">
-          <v-btn color="amber-darken-3" class="text-white" variant="flat" block
-                 @click="addRentalToBatch"
-                 :disabled="!temp_rental.equipment">
-            <template #prepend><v-icon size="small">mdi-plus</v-icon></template>
-            Añadir
-          </v-btn>
-        </v-col>
       </v-row>
 
-      <div class="text-caption text-medium-emphasis mt-2">
-        Si el equipo todavía no sale, deja «{{ FECHAS_ALQUILER.departure_date }}» vacío: queda reservado y la
-        salida se registra cuando salga.
+      <div class="d-flex align-center ga-4 mt-3">
+        <div class="text-caption text-medium-emphasis">
+          Si el equipo todavía no sale, deja «{{ FECHAS_ALQUILER.departure_date }}» vacío: queda reservado y la
+          salida se registra cuando salga.
+        </div>
+        <v-spacer />
+        <v-btn color="amber-darken-3" class="text-white flex-shrink-0" variant="flat" prepend-icon="mdi-plus"
+               @click="addRentalToBatch" :disabled="!temp_rental.equipment">
+          Añadir
+        </v-btn>
       </div>
     </v-card>
 
@@ -119,6 +116,7 @@ import { ref, computed, watch, getCurrentInstance, defineAsyncComponent } from '
 import { useTheme } from 'vuetify'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
+import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { hoyISO } from '@/utils/dates'
 import { FECHAS_ALQUILER, reglaNoAntesDe, reglaNoFutura, salidaDe } from '@/utils/orders/alquiler'

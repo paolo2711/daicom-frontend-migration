@@ -15,28 +15,25 @@
       </div>
 
       <template v-if="temp_eq.modo === 'nuevo'">
-            <v-row dense>
-              <v-col cols="12" md="9">
-                <paginated-autocomplete ref="equipCatalogRef" v-model="temp_eq.name" :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
-                                recurso="equipos" :seed="semillaDeEquipo(temp_eq.name)"
-                                label="Equipo" :return-object="false" item-title="name" item-value="id"
-                                density="compact" variant="outlined" hide-details="auto"
-                                prepend-inner-icon="mdi-toolbox-outline" clearable />
-              </v-col>
-              <v-col cols="12" md="3" class="ml-auto">
-                <v-btn color="primary" variant="flat" block class="font-weight-bold" style="height: 40px;" @click="equipoMaestroModalRef?.open()">
-                  <template #prepend><v-icon>mdi-plus</v-icon></template>
-                  CATALOGO
-                </v-btn>
-              </v-col>
-            </v-row>
+        <v-row dense>
+          <v-col cols="12">
+            <paginated-autocomplete ref="equipCatalogRef" v-model="temp_eq.name" :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
+                            recurso="equipos" :seed="semillaDeEquipo(temp_eq.name)"
+                            label="Equipo" :return-object="false" item-title="name" item-value="id"
+                            density="compact" variant="outlined" hide-details="auto"
+                            prepend-inner-icon="mdi-toolbox-outline" clearable>
+              <template #append>
+                <add-new-button texto="Nuevo equipo en el catálogo" @click="equipoMaestroModalRef?.open()" />
+              </template>
+            </paginated-autocomplete>
+          </v-col>
 
-        <v-row dense class="mt-2">
           <v-col cols="12" md="5">
             <paginated-autocomplete v-model="temp_eq.lab" :fetch="fetchLabs" :mapper="LabMappers.getMap"
                             recurso="labs" :seed="labSeleccionado"
                             @selected="l => labSeleccionado = l"
                             label="Laboratorio" :return-object="false" item-title="name" item-value="id"
+                            prepend-inner-icon="mdi-flask-outline"
                             density="compact" variant="outlined" hide-details="auto" />
           </v-col>
           <v-col cols="12" md="4">
@@ -50,16 +47,16 @@
       </template>
 
       <v-row dense v-else align="center">
-        <v-col cols="8" md="8">
+        <v-col cols="12">
           <v-text-field v-model="temp_eq.correlative_busqueda" label="Nro. Correlativo (Ej: 15)"
                         type="number" variant="outlined" density="compact" hide-details
-                        @keyup.enter="buscarCertificadoHuerfano" />
-        </v-col>
-        <v-col cols="4" md="4">
-          <v-btn color="secondary" block variant="flat" @click="buscarCertificadoHuerfano" :loading="buscando_cert">
-            <template #prepend><v-icon size="small">mdi-magnify</v-icon></template>
-            Buscar
-          </v-btn>
+                        @keyup.enter="buscarCertificadoHuerfano">
+            <template #append-inner>
+              <v-btn icon size="small" variant="text" color="primary" :loading="buscando_cert" @click="buscarCertificadoHuerfano">
+                <v-icon>mdi-magnify</v-icon>
+              </v-btn>
+            </template>
+          </v-text-field>
         </v-col>
         <v-col cols="12" v-if="certificado_encontrado" class="mt-1">
           <v-chip color="success" variant="outlined" label class="justify-center font-weight-bold" style="height: 38px; width: 100%;">
@@ -69,16 +66,12 @@
         </v-col>
       </v-row>
 
-      <v-row dense>
-        <v-col cols="12" class="text-right mt-2">
-          <v-btn color="primary" variant="flat" size="small" @click="addEquipmentToBatch"
-                     density="comfortable"
-                     :disabled="(temp_eq.modo === 'nuevo' && (!temp_eq.name || !temp_eq.lab || !temp_eq.certificate_type)) || (temp_eq.modo === 'existente' && !certificado_encontrado)">
-            <template #prepend><v-icon size="small">mdi-plus</v-icon></template>
-            Añadir a la Lista
-          </v-btn>
-        </v-col>
-      </v-row>
+      <div class="text-right mt-3">
+        <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" @click="addEquipmentToBatch"
+               :disabled="(temp_eq.modo === 'nuevo' && (!temp_eq.name || !temp_eq.lab || !temp_eq.certificate_type)) || (temp_eq.modo === 'existente' && !certificado_encontrado)">
+          Añadir a la lista
+        </v-btn>
+      </div>
     </v-card>
 
     <v-table density="compact" class="mt-4 tabla-mejorada" v-if="equipments.length > 0">
@@ -143,6 +136,7 @@ import { ref, computed, watch, onMounted, getCurrentInstance } from 'vue'
 import { useTheme } from 'vuetify'
 import LabDataService from '@/services/labs/labDataService'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
+import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
 import LabMappers from '@/mappers/labMappers'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import EquipmentDataService from '@/services/equipments/equipmentDataService'

@@ -134,6 +134,11 @@
              prepend-icon="mdi-package-variant-closed-check" @click="abrirModalLote('entrega')">
         Marcar Entregados
       </v-btn>
+
+      <v-btn v-if="permiso_anular" variant="text" size="small" class="mx-1 font-weight-bold"
+             prepend-icon="mdi-swap-horizontal" @click="abrirModalLote('tipo')">
+        Corregir Tipo
+      </v-btn>
     </selection-bar>
 
     <table-loading-overlay :loading="loading_list" :isEmpty="certificates.length === 0">
@@ -191,9 +196,7 @@
               ? 'red'
               : (item.uploaded
                 ? 'green'
-                : (item.signed_pdf
-                  ? 'blue'
-                  : (tieneExcelBase(item) ? 'orange' : 'grey')))"
+                : (tieneExcelBase(item) ? 'orange' : 'grey'))"
             class="text-white font-weight-bold"
           >
             {{ item.registry_code }}
@@ -438,7 +441,6 @@
         <div class="d-flex flex-wrap justify-center">
           <v-chip size="small" color="grey"   class="mr-3 mb-1 text-white">Borrador (Sin Excel)</v-chip>
           <v-chip size="small" color="orange" class="mr-3 mb-1 text-white">En Proceso (Con Excel)</v-chip>
-          <v-chip size="small" color="blue"   class="mr-3 mb-1 text-white">Firmado (Con PDF)</v-chip>
           <v-chip size="small" color="green"  class="mr-3 mb-1 text-white">Listo (En Nube / QR)</v-chip>
           <v-chip size="small" color="red"    class="mb-1 text-white">Anulado</v-chip>
         </div>
@@ -458,7 +460,6 @@
     <batch-action-modal
       ref="batchActionModalRef"
       @clearSelection="certificados_seleccionados = []"
-      @reloadListComponent="retrieveAllCertificates"
     />
 
     <!-- El menu se ancla a las coordenadas del cursor. Son una prop reactiva, asi
@@ -471,7 +472,7 @@
       <v-list v-if="contextMenu.item" density="compact" class="elevation-4 border rounded-lg bg-surface">
         <v-list-item v-if="contextMenu.item.status !== 5" @click="certificateModal?.open(contextMenu.item)">
           <template v-slot:prepend><v-icon size="small">mdi-pencil</v-icon></template>
-          <v-list-item-title class="font-weight-medium text-body-2">Editar Datos</v-list-item-title>
+          <v-list-item-title class="font-weight-medium text-body-2">Ver y editar</v-list-item-title>
         </v-list-item>
 
         <v-list-item v-if="contextMenu.item.uploaded" @click="copiarLinkCertificado(contextMenu.item)">
@@ -520,6 +521,11 @@
         </v-list-item>
 
         <v-divider v-if="contextMenu.item.status !== 5 && permiso_anular" class="my-1 border-opacity-25"></v-divider>
+
+        <v-list-item v-if="contextMenu.item.status !== 5 && permiso_anular" @click="batchActionModalRef?.open('tipo', [contextMenu.item])">
+          <template v-slot:prepend><v-icon size="small">mdi-swap-horizontal</v-icon></template>
+          <v-list-item-title class="font-weight-medium text-body-2">Corregir Tipo</v-list-item-title>
+        </v-list-item>
 
         <v-list-item v-if="permiso_anular && contextMenu.item.uploaded && contextMenu.item.status !== 5" @click="eliminarDeLaNubeConfirm(contextMenu.item)">
           <template v-slot:prepend><v-icon size="small">mdi-cloud-remove-outline</v-icon></template>

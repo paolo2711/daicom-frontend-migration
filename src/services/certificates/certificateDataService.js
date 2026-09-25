@@ -65,19 +65,7 @@ export default {
   
 
   create(data) {
-    let headers = authHeader();
-    headers['Content-Type'] = "multipart/form-data";
-    return axios.post("certificates", data, {
-      headers: headers
-    });
-  },
-
-  async update(id, data) {
-    let headers = authHeader();
-    headers['Content-Type'] = "multipart/form-data";
-    return axios.put(`certificates/${id}`, data, {
-      headers: headers
-    });
+    return axios.post("certificates", data, { headers: cabecerasDe(data) });
   },
 
   // Registra la entrega. Sirve para uno o para varios, y con sent_date en nulo

@@ -1,22 +1,20 @@
 <template>
   <v-row dense align="center">
-    <!-- Buscador Local -->
-    <v-col cols="12" :md="creatable ? 5 : 7">
+    <v-col cols="12" md="7">
       <client-select
         :model-value="modelValue"
         :seed="clienteSembrado"
-        label="Buscar cliente registrado (nombre o documento)"
+        label="Cliente (nombre o documento)"
         no-data-text="Sin coincidencias. Puede buscar por RUC/DNI en SUNAT/RENIEC →"
         @update:model-value="onPickLocal"
         @selected="onPickCliente"
       />
     </v-col>
 
-    <!-- La Lupita (SUNAT/RENIEC) -->
-    <v-col cols="12" :md="creatable ? 4 : 5">
+    <v-col cols="12" md="5">
       <v-text-field
         v-model="documentoBuscar"
-        label="Buscar RUC/DNI en SUNAT/RENIEC"
+        label="RUC/DNI en SUNAT/RENIEC"
         density="compact"
         variant="outlined"
         hide-details="auto"
@@ -27,14 +25,11 @@
             <v-icon>mdi-magnify</v-icon>
           </v-btn>
         </template>
+        <!-- Alta manual, para cuando no esta en la base ni en SUNAT/RENIEC -->
+        <template v-if="creatable" v-slot:append>
+          <add-new-button texto="Nuevo cliente" @click="dialogAbierto = true" />
+        </template>
       </v-text-field>
-    </v-col>
-
-    <!-- Alta manual, para cuando no esta en la base ni en SUNAT/RENIEC -->
-    <v-col v-if="creatable" cols="12" md="3">
-      <v-btn color="primary" variant="flat" block height="40" @click="dialogAbierto = true">
-        <v-icon start>mdi-plus</v-icon> NUEVO
-      </v-btn>
     </v-col>
 
     <!-- Dentro de la fila a proposito: con dos nodos raiz el componente deja de
@@ -49,6 +44,7 @@ import { useClientLookup } from '@/composables/useClientLookup'
 import ClientDataService from '@/services/clients/clientDataService'
 import ClientMappers from '@/mappers/clientMappers'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
+import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
 
 const ClientFormDialog = defineAsyncComponent(() => import('@/views/clients/components/ClientFormDialog.vue'))
 

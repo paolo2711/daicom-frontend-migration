@@ -37,14 +37,17 @@ import StatusBanners from '@/components/commonComponents/StatusBanners.vue'
 import EventToastStack from '@/components/commonComponents/EventToastStack.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
 import { useStatusStore } from '@/stores/statusStore'
+import { useAuthStore } from '@/stores/authStore'
 import { flushQueuedToast } from '@/services/notifications/eventToasts'
+
+// El back cierra con este codigo si el token no vale (websockets/consumers.py).
+const SESION_INVALIDA = 4001
 
 let socket = null
 let reconexion = null
 
-// Cerrar a proposito no debe reconectar. Sin esto cada logout dejaba un socket
-// vivo con su onmessage puesto, y cada mensaje llegaba una vez por socket
-// colgado: cuatro sockets, cuatro veces la misma actualizacion.
+// Cerrar a proposito no debe reconectar: un socket colgado con su onmessage
+// puesto recibe cada mensaje otra vez.
 const cerrarSocket = () => {
   clearTimeout(reconexion)
   if (!socket) return
@@ -109,8 +112,13 @@ const conectarWebSocket = () => {
   }
 
   // Conexion perdida -> banner persistente: el usuario sabe que NO le llegaran
-  // los cambios en vivo. Se limpia solo al reconectar (onopen).
-  socket.onclose = () => {
+  // los cambios en vivo. Se limpia solo al reconectar (onopen). Si el cierre es
+  // por sesion invalida, reintentar no sirve: se cierra la sesion.
+  socket.onclose = (evento) => {
+    if (evento.code === SESION_INVALIDA) {
+      useAuthStore().cerrarSesionLocal('sesion')
+      return
+    }
     statusStore.raise('ws_down')
     reconexion = setTimeout(conectarWebSocket, 5000)
   }

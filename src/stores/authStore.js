@@ -2,6 +2,9 @@ import { defineStore } from 'pinia';
 import AuthService from '@/services/auth.service';
 import Swal from 'sweetalert2';
 
+// Varios pedidos pueden volver con 401 a la vez: la sesion se cierra una sola vez.
+let sesionCerrandose = false;
+
 export const useAuthStore = defineStore('auth', {
   state: () => {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -41,13 +44,30 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    // El server puede no aceptar el aviso (token ya invalido, sin red): la
+    // sesion de este navegador se cierra igual.
     async logout() {
       try {
         await AuthService.logout();
-      } finally {
-        this.status.loggedIn = false;
-        this.user = null;
+      } catch {
+        /* se cierra aca de todas formas */
       }
+      this.cerrarSesionLocal();
+    },
+
+    // Unico lugar que cierra la sesion en el navegador. Recarga la pagina entera
+    // para que se corten el WebSocket y lo que quedo en memoria de la sesion.
+    cerrarSesionLocal(motivo = '') {
+      if (sesionCerrandose) return;
+      sesionCerrandose = true;
+      try {
+        localStorage.removeItem('user');
+        localStorage.removeItem('permissions');
+      } catch {
+        /* sin almacenamiento no hay nada que borrar */
+      }
+      AuthService.deleteAllCookies();
+      window.location.href = motivo ? `/login?motivo=${motivo}` : '/login';
     },
   },
 });

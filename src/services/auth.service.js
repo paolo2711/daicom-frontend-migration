@@ -18,20 +18,9 @@ class AuthService{
             })
     }
 
+    // Invalida el token en el server. Lo local lo borra authStore.cerrarSesionLocal.
     logout() {
-        return axios
-            .post('auth/logout',
-            {},
-            {headers: authHeader()}
-            )
-            .then( response => {
-                if (response.status===204) {
-                    localStorage.removeItem('user');
-                    localStorage.removeItem('permissions');
-                    this.deleteAllCookies()
-                }
-                return response.data;
-            })
+        return axios.post('auth/logout', {}, { headers: authHeader() })
     }
 
     deleteAllCookies() {

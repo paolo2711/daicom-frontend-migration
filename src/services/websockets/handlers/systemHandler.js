@@ -1,5 +1,6 @@
 import { queueToastForNextLoad } from '@/services/notifications/eventToasts'
 import { useStatusStore } from '@/stores/statusStore'
+import { useAuthStore } from '@/stores/authStore'
 
 // Sistema / sesion: version de la app y acciones forzadas por el admin.
 // Cada handler devuelve true si CONSUMIO el mensaje (asi el router pasa al siguiente).
@@ -34,13 +35,7 @@ export function handleSystem(data, appStore, currentUser) {
 
   // Cierre de sesion forzado (el token ya se invalido en el server).
   if (m.action === 'FORCE_LOGOUT') {
-    if (paraMi(m, currentUser)) {
-      try {
-        localStorage.removeItem('user')
-        localStorage.removeItem('permissions')
-      } catch (e) { /* noop */ }
-      window.location.href = '/login'
-    }
+    if (paraMi(m, currentUser)) useAuthStore().cerrarSesionLocal('sesion')
     return true
   }
 

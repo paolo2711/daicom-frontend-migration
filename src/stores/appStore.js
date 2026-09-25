@@ -183,6 +183,10 @@ export const useAppStore = defineStore('app', {
       );
       this.saveUploads();
     },
+    clearUploadTasks() {
+      this.uploadTasks = [];
+      this.saveUploads();
+    },
     saveUploads() {
       localStorage.setItem('daicom_uploads', JSON.stringify(this.uploadTasks));
     },

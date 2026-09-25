@@ -151,7 +151,6 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
-import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/appStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useNotificationStore } from '@/stores/notificationStore'
@@ -164,7 +163,6 @@ import NotificationsPanel from '@/components/commonComponents/NotificationsPanel
 const appStore  = useAppStore()
 const authStore = useAuthStore()
 const theme     = useTheme()
-const router    = useRouter()
 const notifStore = useNotificationStore()
 
 //  Campanazo: al llegar una notificacion nueva, la campana se sacude y suena.
@@ -232,10 +230,10 @@ const toggleTheme = () => {
   appStore.setDarkStatus(isDark)
 }
 
+// Las subidas son de quien cierra: el siguiente que entre no las ve.
 const logOut = async () => {
+  appStore.clearUploadTasks()
   await authStore.logout()
-  appStore.uploadTasks = []
-  router.replace('/login')
 }
 
 const getPermissions = () => JSON.parse(localStorage.getItem('permissions')) || []

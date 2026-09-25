@@ -26,6 +26,10 @@
                 <h2 class="font-weight-bold mt-4 text-grey-darken-2">Inicio de sesión</h2>
                 <h6 class="text-subtitle-1">Ingrese sus credenciales de usuario</h6>
 
+                <v-alert v-if="sesionCerrada" type="info" variant="tonal" density="compact" class="mt-4">
+                  Tu sesión se cerró. Vuelve a ingresar.
+                </v-alert>
+
                 <v-form ref="form" v-model="valid" lazy-validation @submit.prevent="submit">
                   <v-text-field
                     v-model="username"
@@ -70,11 +74,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 
 const router = useRouter()
 const authStore = useAuthStore()
+
+// Llega asi cuando la sesion se cerro sola (ver authStore.cerrarSesionLocal).
+const sesionCerrada = useRoute().query.motivo === 'sesion'
 
 // Referencias del formulario
 const form = ref(null)

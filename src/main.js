@@ -8,6 +8,7 @@ import axios from 'axios'
 import vuetify from './plugins/vuetify'
 import registerBaseComponents from './plugins/base'
 import registerAlerts from './plugins/alerts'
+import registerSession from './plugins/session'
 
 // 2. Variables SCSS
 import '@/scss/variables.scss'
@@ -33,5 +34,6 @@ app.use(vuetify)
 // 5. Registros globales
 registerAlerts(app)
 registerBaseComponents(app)
+registerSession()
 
 app.mount('#app')

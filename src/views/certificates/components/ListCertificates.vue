@@ -544,7 +544,7 @@
 <script setup>
 import { Toast } from '@/plugins/alerts'
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, getCurrentInstance, defineAsyncComponent, mergeProps } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/appStore'
 
 import FluentPagination    from '@/components/commonComponents/FluentPagination.vue'
@@ -578,7 +578,6 @@ import { decidirRefresco } from '@/utils/changedRows'
 const BatchActionModal = defineAsyncComponent(() => import('./BatchActionModal.vue'))
 
 // ─── Composables ──────────────────────────────────────────────────────────────
-const router = useRouter()
 const route  = useRoute()
 
 const appStore = useAppStore()
@@ -990,12 +989,7 @@ function retrieveAllCertificates (opciones) {
     total_certificates.value = response.data.count
     // La lista viene del server, asi que manda ella sobre cualquier tarea terminada.
     certificates.value.forEach(c => confirmarFila(c.id, pedidoEn))
-  }).catch((e) => {
-    if (e.response?.status === 401) {
-      localStorage.clear()
-      router.replace('/login')
-    }
-  }).finally(() => {
+  }).catch(() => {}).finally(() => {
     if (isLatestCertLoad(token)) loading_list.value = false
   })
 }

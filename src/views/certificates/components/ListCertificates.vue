@@ -572,6 +572,7 @@ import FilterPill          from '@/components/shared/FilterPill.vue'
 import DateRangeFilter     from '@/components/shared/DateRangeFilter.vue'
 import { copiarConAviso } from '@/utils/clipboard'
 import { decidirRefresco } from '@/utils/changedRows'
+import { mensajeDeError } from '@/utils/errors'
 
 // Componentes async (lazy-loading igual que en Vue 2)
 // carga diferida de LoadSheet movida a BatchActionModal
@@ -1132,8 +1133,7 @@ function eliminarDeLaNubeConfirm(cert) {
         cert.uploaded = false
         cert.status = 3 // Lo retrocedemos a Firmado localmente
       }).catch((error) => {
-        const errorMsg = error.response?.data?.error || 'No se pudo contactar con el FTP.'
-        $swal.fire('Error al eliminar de la Nube', errorMsg, 'error')
+        $swal.fire('Error al eliminar de la Nube', mensajeDeError(error, 'No se pudo contactar con el FTP.'), 'error')
       })
     }
   })

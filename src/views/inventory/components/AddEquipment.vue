@@ -249,6 +249,7 @@ import Swal from 'sweetalert2'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import EquipmentDataService from '@/services/equipments/equipmentDataService'
+import { mensajeDeError } from '@/utils/errors'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
 
 const emit = defineEmits(['saved'])
@@ -455,25 +456,10 @@ const save = async () => {
     emit('saved')
     close()
   } catch (error) {
-    console.error("Error del servidor:", error.response)
-    let errorMsg = 'Revisa los datos e intenta de nuevo.'
-
-    if (error.response && error.response.data && typeof error.response.data === 'object') {
-      const labels = { series: 'N° de Serie', name: 'Nombre', brand: 'Marca', model: 'Modelo', status: 'Estado' }
-      let messages = []
-      for (let key in error.response.data) {
-        let fieldErrors = error.response.data[key]
-        let errorText = Array.isArray(fieldErrors) ? fieldErrors.join(', ') : fieldErrors
-        messages.push(`<b>${labels[key] || key}:</b> ${errorText}`)
-      }
-      if (messages.length > 0) {
-        errorMsg = messages.join('<br>')
-      }
-    }
-
+    const nombres = { series: 'N° de Serie', name: 'Nombre', brand: 'Marca', model: 'Modelo', status: 'Estado' }
     Swal.fire({
       title: 'Error al guardar',
-      html: errorMsg,
+      text: mensajeDeError(error, 'Revisa los datos e intenta de nuevo.', nombres),
       icon: 'error'
     })
   } finally {

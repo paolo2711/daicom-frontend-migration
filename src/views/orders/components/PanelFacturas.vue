@@ -314,6 +314,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import Swal from 'sweetalert2'
 import OrderDataService from '@/services/orders/orderDataService'
 import InvoiceMappers from '@/mappers/invoiceMappers'
+import { mensajeDeError } from '@/utils/errors'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
@@ -526,8 +527,7 @@ const confirmarVinculo = async (inv) => {
     emit('limpiar-seleccion')
     cargar() // refresco inmediato (además del WS)
   } catch (e) {
-    const msg = e?.response?.data?.error || 'No se pudo vincular.'
-    Swal.fire('Error', msg, 'error')
+    Swal.fire('Error', mensajeDeError(e, 'No se pudo vincular.'), 'error')
   }
 }
 
@@ -547,8 +547,7 @@ const desvincularOrden = async (inv, orden) => {
     Toast.fire({ timer: 2200, icon: 'success', title: 'Orden desvinculada' })
     cargar()
   } catch (e) {
-    const msg = e?.response?.data?.error || 'No se pudo desvincular.'
-    Swal.fire('Error', msg, 'error')
+    Swal.fire('Error', mensajeDeError(e, 'No se pudo desvincular.'), 'error')
   }
 }
 
@@ -570,8 +569,7 @@ const eliminarFactura = async (inv) => {
     Toast.fire({ timer: 2200, icon: 'success', title: 'Factura eliminada' })
     cargar()
   } catch (e) {
-    const msg = e?.response?.data?.error || 'No se pudo eliminar.'
-    Swal.fire('Error', msg, 'error')
+    Swal.fire('Error', mensajeDeError(e, 'No se pudo eliminar.'), 'error')
   }
 }
 

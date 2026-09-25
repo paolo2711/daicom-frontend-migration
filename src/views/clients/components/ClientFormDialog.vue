@@ -62,6 +62,7 @@ import ClientRules from '@/validators/rules/clientRules'
 import Characters from '@/validators/commonValidators/characters'
 import ClientMappers from '@/mappers/clientMappers'
 import { DOCUMENT_TYPE, DOCUMENT_LENGTH } from '@/utils/clients/documentTypes'
+import { mensajeDeError } from '@/utils/errors'
 import { useAppStore } from '@/stores/appStore'
 
 const props = defineProps({
@@ -155,15 +156,8 @@ const save = async () => {
       Swal.fire(appStore.successSavedOptions)
     }
   } catch (e) {
-    let errorText = ''
-    const fieldNames = { email: 'Email', name: 'Nombre', documentType: 'Tipo de documento', document: 'Documento' }
-    if (e.response?.data) {
-      for (const key in e.response.data) {
-        const field = fieldNames[key] || key
-        errorText += `${field}: ${e.response.data[key]}\n`
-      }
-    }
-    Swal.fire({ ...appStore.errorSavedOptions, text: errorText })
+    const nombres = { email: 'Email', name: 'Nombre', documentType: 'Tipo de documento', document: 'Documento' }
+    Swal.fire({ ...appStore.errorSavedOptions, text: mensajeDeError(e, 'No se pudo guardar el cliente.', nombres) })
   } finally {
     isSending.value = false
   }

@@ -6,6 +6,7 @@
 import { onMounted, onBeforeUnmount } from 'vue'
 import { useAppStore } from '@/stores/appStore'
 import certificateDataService from '@/services/certificates/certificateDataService'
+import { mensajeDeError } from '@/utils/errors'
 
 
 const appStore = useAppStore()
@@ -178,7 +179,7 @@ async function processManualPdf(certId, file) {
 
   } catch (error) {
     if (isCancelled(certId)) return
-    const errorMsg = error.response?.data?.error || error.message || 'Error de conexión / Nube caída';
+    const errorMsg = mensajeDeError(error, 'No se pudo subir el PDF a la nube.');
     appStore.updateUploadTask(certId, 'qr', { status: 'error', error_msg: errorMsg, step: '' })
     if (window.enviarProgresoWebSocket) {
       window.enviarProgresoWebSocket(certId, 0, 'error', getCode(), 0, 'qr', '', errorMsg)

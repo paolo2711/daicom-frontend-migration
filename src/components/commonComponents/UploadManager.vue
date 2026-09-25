@@ -229,6 +229,7 @@ import { useTheme } from 'vuetify'
 import { Toast } from '@/plugins/alerts'
 import { useAppStore } from '@/stores/appStore'
 import CertificateDataService from '@/services/certificates/certificateDataService'
+import { mensajeDeError } from '@/utils/errors'
 import { cancelable, detenida, enCurso, esConversion, esperandoRevision, fallida, reintentable, terminada } from '@/utils/uploadTasks'
 
 const appStore = useAppStore()
@@ -440,10 +441,9 @@ async function approveSheet() {
     Toast.fire({ ...appStore.toastGuardadoExito, title: '¡Excel guardado!' })
     preview_modal.value = false
   } catch (error) {
-    const datos = error.response?.data || {}
-    const mensaje = datos.error || 'El disco de red no respondió.'
+    const mensaje = mensajeDeError(error, 'El disco de red no respondió.')
 
-    if (datos.regenerar) {
+    if (error.response?.data?.regenerar) {
       // El PDF ya no esta: no hay nada que revisar ni que guardar. La tarea cae
       // a error, que es donde el panel ofrece volver a convertir el Excel.
       appStore.updateUploadTask(id, type, { status: 'error', step: '', url: '', error_msg: mensaje })

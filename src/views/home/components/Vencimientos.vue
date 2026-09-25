@@ -99,6 +99,7 @@
 import { ref, computed, onMounted } from 'vue'
 import Swal from 'sweetalert2'
 import HomeDataService from '@/services/home/homeDataService'
+import { mensajeDeError } from '@/utils/errors'
 
 const emit = defineEmits(['ir'])
 
@@ -167,7 +168,7 @@ const refrescar = async (automatico = false) => {
     if (data.error && !automatico) Swal.fire('Error', data.error, 'error')
   } catch (e) {
     if (!automatico) {
-      Swal.fire('Error', e.response?.data?.error || 'No se pudo revisar.', 'error')
+      Swal.fire('Error', mensajeDeError(e, 'No se pudo revisar.'), 'error')
     }
   } finally {
     cargando.value = false

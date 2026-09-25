@@ -175,6 +175,7 @@ import { Toast } from '@/plugins/alerts'
 import { useAppStore } from '@/stores/appStore'
 import { useStatusStore } from '@/stores/statusStore'
 import MaintenanceDataService from '@/services/maintenance/maintenanceDataService'
+import { mensajeDeError } from '@/utils/errors'
 import { showEventToast, queueToastForNextLoad } from '@/services/notifications/eventToasts'
 
 const appStore = useAppStore()
@@ -249,7 +250,7 @@ const crearNotifReal = async (category) => {
     const { data } = await MaintenanceDataService.testNotification(category)
     Toast.fire({ icon: 'success', title: data?.success || 'Notificación de prueba creada.' })
   } catch (e) {
-    Swal.fire('Error', e.response?.data?.detail || 'No se pudo crear la notificación.', 'error')
+    Swal.fire('Error', mensajeDeError(e, 'No se pudo crear la notificación.'), 'error')
   } finally {
     loadingTest.value = false
   }
@@ -269,8 +270,7 @@ const correrScan = async () => {
     const { data } = await MaintenanceDataService.scan()
     Toast.fire({ icon: 'success', title: data?.success || 'Escaneo listo.' })
   } catch (e) {
-    const msg = e.response?.data?.error || e.response?.data?.detail
-    Swal.fire('Error', msg || 'No se pudo escanear.', 'error')
+    Swal.fire('Error', mensajeDeError(e, 'No se pudo escanear.'), 'error')
   } finally {
     corriendo.value = false
     await cargarScan()   // el error tambien queda registrado, que se vea
@@ -292,7 +292,7 @@ const recargarTodos = async () => {
     const { data } = await MaintenanceDataService.reloadAllTabs()
     Toast.fire({ icon: 'success', title: data?.success || 'Recarga solicitada.' })
   } catch (e) {
-    Swal.fire('Error', e.response?.data?.detail || 'No se pudo solicitar la recarga.', 'error')
+    Swal.fire('Error', mensajeDeError(e, 'No se pudo solicitar la recarga.'), 'error')
   } finally {
     loadingReload.value = false
   }
@@ -313,7 +313,7 @@ const cerrarSesiones = async () => {
     const { data } = await MaintenanceDataService.forceLogoutAll()
     Toast.fire({ icon: 'success', title: data?.success || 'Sesiones cerradas.' })
   } catch (e) {
-    Swal.fire('Error', e.response?.data?.detail || 'No se pudo cerrar las sesiones.', 'error')
+    Swal.fire('Error', mensajeDeError(e, 'No se pudo cerrar las sesiones.'), 'error')
   } finally {
     loadingLogout.value = false
   }
@@ -334,7 +334,7 @@ const borrarNotificaciones = async () => {
     const { data } = await MaintenanceDataService.clearNotifications()
     Toast.fire({ icon: 'success', title: data?.success || 'Notificaciones borradas.' })
   } catch (e) {
-    Swal.fire('Error', e.response?.data?.detail || 'No se pudo borrar las notificaciones.', 'error')
+    Swal.fire('Error', mensajeDeError(e, 'No se pudo borrar las notificaciones.'), 'error')
   } finally {
     loadingNotif.value = false
   }

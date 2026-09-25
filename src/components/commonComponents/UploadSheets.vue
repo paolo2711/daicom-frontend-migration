@@ -6,6 +6,7 @@
 import { onMounted, onBeforeUnmount } from 'vue'
 import { useAppStore } from '@/stores/appStore'
 import CertificateDataService from '@/services/certificates/certificateDataService'
+import { mensajeDeError } from '@/utils/errors'
 
 const appStore = useAppStore()
 
@@ -70,7 +71,7 @@ async function processSheet(id, tipo, subido = {}) {
   } catch (error) {
     appStore.updateUploadTask(id, tipo, {
       status: 'error', progress: 0, step: '',
-      error_msg: error.response?.data?.error || 'No se pudo subir el archivo.',
+      error_msg: mensajeDeError(error, 'No se pudo subir el archivo.'),
     })
   }
 }

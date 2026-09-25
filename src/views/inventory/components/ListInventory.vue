@@ -178,6 +178,7 @@ import { Toast } from '@/plugins/alerts'
 
 import Swal from 'sweetalert2'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
+import { mensajeDeError } from '@/utils/errors'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
@@ -326,8 +327,7 @@ const deleteItem = (item) => {
         loadItems()
         Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo eliminado' })
       }).catch((e) => {
-        const msg = e.response?.data?.detail || 'No se pudo eliminar'
-        Swal.fire('No se pudo eliminar', msg, 'error')
+        Swal.fire('No se pudo eliminar', mensajeDeError(e, 'No se pudo eliminar el equipo.'), 'error')
       })
     }
   })

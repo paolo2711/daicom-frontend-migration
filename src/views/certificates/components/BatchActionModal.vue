@@ -190,6 +190,7 @@ import { defineAsyncComponent } from 'vue'
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { alPresionarEnter } from '@/utils/keyboard'
 import { hoyISO } from '@/utils/dates'
+import { mensajeDeError } from '@/utils/errors'
 import { nombreDelTipo } from '@/utils/certificates/tipos'
 import { ACCIONES, colorDe, esAviso, estaAdjuntado } from './batchActions'
 
@@ -392,7 +393,7 @@ const guardarPdfsBase = async (certs) => {
     try {
       await CertificateDataService.subirPdfBase(cert.id, formData)
     } catch (error) {
-      fallados.push(`${cert.registry_code}: ${error.response?.data?.error || 'no se pudo subir'}`)
+      fallados.push(`${cert.registry_code}: ${mensajeDeError(error, 'no se pudo subir')}`)
     }
   }
 

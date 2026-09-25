@@ -34,6 +34,7 @@ import { ref, computed } from 'vue'
 import Swal from 'sweetalert2'
 import { Toast } from '@/plugins/alerts'
 import OrderDataService from '@/services/orders/orderDataService'
+import { mensajeDeError } from '@/utils/errors'
 
 const props = defineProps({
   orders: { type: Array, default: () => [] },
@@ -82,12 +83,6 @@ const elegir = (op) => {
   return op.clave === 'sin_cargo' ? marcarSinCargo() : marcarSinComprobante()
 }
 
-// El servidor rechaza por campo, con el motivo adentro.
-const motivoDe = (err) => {
-  const d = err.response?.data || {}
-  return d.requiere_pago?.[0] || d.wants_invoice?.[0] || d.detail || 'no se pudo'
-}
-
 // Un rechazo no frena a las que siguen. El emit va siempre: las que si
 // cambiaron tienen que repintarse aunque otra haya fallado.
 const aplicar = async (patchDe, exito) => {
@@ -100,7 +95,7 @@ const aplicar = async (patchDe, exito) => {
     try {
       await OrderDataService.patch(o.id, patchDe(o))
     } catch (err) {
-      fallados.push(`${o.order_number}: ${motivoDe(err)}`)
+      fallados.push(`${o.order_number}: ${mensajeDeError(err, 'no se pudo')}`)
     }
   }
   cargando.value = false

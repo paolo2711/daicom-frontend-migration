@@ -35,6 +35,7 @@ import LabRules from '@/validators/rules/labRules'
 import Characters from '@/validators/commonValidators/characters'
 import LabMappers from '@/mappers/labMappers'
 import { useAppStore } from '@/stores/appStore'
+import { mensajeDeError } from '@/utils/errors'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -92,15 +93,8 @@ const save = async () => {
       Swal.fire(appStore.successSavedOptions)
     }
   } catch (e) {
-    let errorText = ''
-    const fieldNames = { name: 'Nombre', code: 'Código' }
-    if (e.response?.data) {
-      for (const key in e.response.data) {
-        const field = fieldNames[key] || key
-        errorText += `${field}: ${e.response.data[key]}\n`
-      }
-    }
-    Swal.fire({ ...appStore.errorSavedOptions, text: errorText })
+    const nombres = { name: 'Nombre', code: 'Código' }
+    Swal.fire({ ...appStore.errorSavedOptions, text: mensajeDeError(e, 'No se pudo guardar el laboratorio.', nombres) })
   } finally {
     isSending.value = false
   }

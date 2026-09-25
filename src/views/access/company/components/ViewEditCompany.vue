@@ -186,6 +186,7 @@ import CompanyRules from "@/validators/rules/companyRules"
 import Characters from "@/validators/commonValidators/characters"
 import CompanyDataService from "@/services/company/companyDataService"
 import CompanyMappers from "@/mappers/companyMappers"
+import { mensajeDeError } from '@/utils/errors'
 
 const appStore = useAppStore()
 
@@ -317,21 +318,10 @@ const saveCompany = async () => {
       initCompany()
     }
   } catch (e) {
-    let errorText = ''
-    const fieldNames = { email: 'Email', name: 'Nombre', address: 'Dirección', phone: 'Teléfono' }
-    
-    if (e.response?.data) {
-      for (const key in e.response.data) {
-        const field = fieldNames[key] || key
-        const errors = e.response.data[key]
-        const errorMsg = Array.isArray(errors) ? errors.join(', ') : errors
-        errorText += `<b>${field}:</b> ${errorMsg}<br>`
-      }
-    }
-
+    const nombres = { email: 'Email', name: 'Nombre', address: 'Dirección', phone: 'Teléfono' }
     Swal.fire({
       ...appStore.errorSavedOptions,
-      html: errorText || 'Ocurrió un error inesperado al guardar los datos.'
+      text: mensajeDeError(e, 'No se pudieron guardar los datos de la empresa.', nombres)
     })
   } finally {
     is_on_sending_process.value = false

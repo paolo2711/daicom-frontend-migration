@@ -81,6 +81,7 @@ import Swal from 'sweetalert2'
 import { useAppStore } from '@/stores/appStore'
 import SidebarItems from '@/layouts/full-layout/sidebar/SidebarItems'
 import PermissionDataService from '@/services/permissions/permissionDataService'
+import { mensajeDeError } from '@/utils/errors'
 
 const theme = useTheme()
 const appStore = useAppStore()
@@ -212,11 +213,7 @@ const save = async () => {
       Swal.fire(appStore.successSavedOptions)
     }
   } catch (e) {
-    let errorText = ''
-    if (e.response && e.response.data) {
-      errorText = e.response.data[0] || 'Ocurrió un error al guardar los permisos.'
-    }
-    Swal.fire({ ...appStore.errorSavedOptions, text: errorText })
+    Swal.fire({ ...appStore.errorSavedOptions, text: mensajeDeError(e, 'No se pudieron guardar los permisos.') })
   } finally {
     is_on_sending_process.value = false
   }

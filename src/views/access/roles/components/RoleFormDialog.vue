@@ -35,6 +35,7 @@ import RoleDataService from '@/services/roles/roleDataService'
 import RoleMappers from '@/mappers/roleMappers'
 import Characters from '@/validators/commonValidators/characters'
 import { useAppStore } from '@/stores/appStore'
+import { mensajeDeError } from '@/utils/errors'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -96,11 +97,7 @@ const save = async () => {
       Swal.fire(appStore.successSavedOptions)
     }
   } catch (e) {
-    let errorText = ''
-    if (e.response && e.response.data) {
-      errorText = e.response.data[0] || 'Error al guardar el rol'
-    }
-    Swal.fire({ ...appStore.errorSavedOptions, text: errorText })
+    Swal.fire({ ...appStore.errorSavedOptions, text: mensajeDeError(e, 'No se pudo guardar el rol.', { name: 'Nombre' }) })
   } finally {
     isSending.value = false
   }

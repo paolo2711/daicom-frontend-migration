@@ -262,8 +262,7 @@ const onPdfSelected = async (archivo) => {
       Toast.fire({ timer: 2500, icon: 'success', title: '¡Datos extraídos!' })
     }
   } catch (err) {
-    const msg = err.response?.data?.error || 'No se pudo leer el PDF. Ingresa los datos a mano.'
-    Toast.fire({ timer: 4000, icon: 'info', title: msg })
+    Toast.fire({ timer: 4000, icon: 'info', title: mensajeDeError(err, 'No se pudo leer el PDF. Ingresa los datos a mano.') })
   } finally {
     isExtracting.value = false
   }
@@ -346,8 +345,7 @@ const eliminar = async () => {
     emit('updateOrder')
     closeDialog()
   } catch (err) {
-    const msg = err.response?.data?.error || 'No se pudo eliminar.'
-    Swal.fire('Error', msg, 'error')
+    Swal.fire('Error', mensajeDeError(err, 'No se pudo eliminar.'), 'error')
   } finally {
     isDeleting.value = false
   }

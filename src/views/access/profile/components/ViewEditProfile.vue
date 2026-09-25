@@ -131,6 +131,7 @@ import UsersRules from '@/validators/rules/usersRules'
 import ProfileDataService from '@/services/profile/profileDataService'
 import ProfileMappers from '@/mappers/profileMappers'
 import Characters from '@/validators/commonValidators/characters'
+import { mensajeDeError } from '@/utils/errors'
 
 const appStore = useAppStore()
 
@@ -199,17 +200,10 @@ const onSignatureChange = () => {
   if (file instanceof File) signaturePreviewUrl.value = URL.createObjectURL(file)
 }
 
+const NOMBRES_DE_CAMPOS = { email: 'Email', username: 'Usuario', password: 'Contraseña', current_password: 'Contraseña Actual' }
+
 const showApiError = (e, fallback) => {
-  let html = ''
-  const fieldNames = { email: 'Email', username: 'Usuario', password: 'Contraseña', current_password: 'Contraseña Actual' }
-  if (e.response?.data) {
-    for (const key in e.response.data) {
-      const field = fieldNames[key] || key
-      const errs = e.response.data[key]
-      html += `<b>${field}:</b> ${Array.isArray(errs) ? errs.join(', ') : errs}<br>`
-    }
-  }
-  Swal.fire({ ...appStore.errorSavedOptions, html: html || fallback })
+  Swal.fire({ ...appStore.errorSavedOptions, text: mensajeDeError(e, fallback, NOMBRES_DE_CAMPOS) })
 }
 
 // Guarda SOLO los datos de la cuenta (sin tocar la contrasena).

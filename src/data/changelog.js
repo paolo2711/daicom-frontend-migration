@@ -19,6 +19,27 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.5.1',
+    fecha: '2026-09-25',
+    nuevo: [
+      'Corregir tipo también está en Certificados: en la barra de selección, en el menú y en la ficha del certificado.',
+    ],
+    cambio: [
+      '"Ver y editar" muestra en una sola pantalla el estado, la orden, quién creó el certificado y sus números anteriores, junto a los datos que se pueden cambiar.',
+      'Los formularios de certificado, orden de servicio y alquiler tienen el mismo diseño, y lo que falta se crea con el botón + junto a cada campo.',
+      'La fecha de emisión de un certificado firmado se puede corregir dentro del mismo año, porque el año va en su código.',
+      'Se retiró la subida manual de PDF firmado del flujo anterior, y con ella el código azul de la lista.',
+      'La lista de Certificados hace un 90% menos de consultas al cargar.',
+      'Los mensajes de error muestran el motivo que da el servidor en todas las pantallas.',
+    ],
+    arreglo: [
+      'Guardar un certificado ya no deshace una anulación, firma o solicitud de firma que otro hizo mientras estaba abierto.',
+      'Firmar, publicar, anular, eliminar de la nube y pedir firma exigen su permiso también en el servidor.',
+      'Si la sesión se cierra desde el servidor, la app vuelve al login con un aviso en vez de quedar vacía.',
+      'Cerrar sesión funciona aunque el servidor ya no reconozca la sesión, y las subidas pendientes no pasan al siguiente usuario.',
+    ],
+  },
+  {
     version: '3.7.5.0',
     fecha: '2026-09-24',
     nuevo: [

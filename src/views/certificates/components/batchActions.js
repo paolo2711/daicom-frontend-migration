@@ -145,12 +145,9 @@ export const ACCIONES = {
     },
 
     validacion: (item) => {
-      if (item.disabled) {
-        return { icono: 'mdi-close-circle', nivel: BLOQUEA, titulo: 'Todavía no está firmado' }
-      }
-      return item.uploaded
-        ? { icono: 'mdi-cloud-check', nivel: HECHO, titulo: 'En la nube' }
-        : { icono: 'mdi-file-sign', nivel: NEUTRO, titulo: 'Firmado, pero no está en la nube' }
+      return item.disabled
+        ? { icono: 'mdi-close-circle', nivel: BLOQUEA, titulo: 'Todavía no está firmado' }
+        : { icono: 'mdi-cloud-check', nivel: HECHO, titulo: 'En la nube' }
     },
   },
 

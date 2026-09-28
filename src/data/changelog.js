@@ -19,6 +19,18 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.5.2',
+    fecha: '2026-09-28',
+    nuevo: [
+      'Estado "Desactualizado (En Nube)": un certificado firmado al que se le reemplaza el Excel queda así en Certificados y en Órdenes hasta volver a firmarlo, y el cliente conserva el mismo QR.',
+    ],
+    arreglo: [
+      'Un certificado firmado al que se le cambió el Excel ya no permite corregir el tipo ni cambiar el año de la fecha.',
+      'Eliminar un certificado de la nube lo deja como estaba antes de firmar, y ya no se puede marcar como entregado sin documento firmado.',
+      'El color del código en Certificados sigue el estado del certificado, y los publicados hace tiempo se ven en verde y ofrecen copiar su link.',
+    ],
+  },
+  {
     version: '3.7.5.1',
     fecha: '2026-09-25',
     nuevo: [

@@ -13,7 +13,6 @@ export default {
       correlative: element.correlative,
       registry_code: element.registry_code,
       previous_numbers: element.previous_numbers,
-      uuid: element.uuid,
       
       // Entidades Relacionadas
       client_data: element.client_data,
@@ -32,6 +31,7 @@ export default {
       uploaded_xls_url: element.uploaded_xls_url,
       attached_pdf: element.attached_pdf,
       uploaded: element.uploaded,
+      link_nube: element.link_nube,
       signature_requested: element.signature_requested,
       
       // Metadatos de envío

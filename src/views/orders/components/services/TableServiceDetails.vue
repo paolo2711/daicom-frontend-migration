@@ -150,6 +150,7 @@ import { computed as vueComputed } from 'vue'
 import CertificateDataService from "@/services/certificates/certificateDataService";
 import { copiarConAviso } from "@/utils/clipboard";
 import { estaEntregado } from "@/utils/certificates/entrega";
+import { ESTADOS, NUBE_DESACTUALIZADA } from "@/utils/certificates/estado";
 import { tieneExcelBase } from "@/utils/certificates/excelBase";
 import { fechaCorta } from "@/utils/dates";
 import ActionGroup from "@/components/shared/ActionGroup.vue";
@@ -208,10 +209,10 @@ export default {
       return cert.uploaded_xls_url || undefined;
     },
     hasValidCloud(cert) {
-      return Boolean(cert.uploaded);
+      return Boolean(cert.link_nube);
     },
     getValidCloudUrl(cert) {
-      return this.hasValidCloud(cert) ? `https://daicomperu.com/${cert.uuid || cert.correlative}` : undefined;
+      return cert.link_nube || undefined;
     },
     // Clic normal en el botón de nube: abre el PDF (href). Ctrl/Cmd+clic: copia el link.
     onNubeClick(event, cert) {
@@ -228,8 +229,9 @@ export default {
     // Texto y color juntos: son el mismo estado.
     estadoCert(cert) {
       if (cert.status === 5) return { texto: 'ANULADO', color: 'red-darken-2' };
+      if (cert.status === NUBE_DESACTUALIZADA) return ESTADOS[NUBE_DESACTUALIZADA];
       if (estaEntregado(cert)) return { texto: 'Entregado', color: 'teal-darken-2' };
-      if (cert.attached_pdf || cert.uploaded) return { texto: 'Listo', color: 'success' };
+      if (cert.uploaded) return { texto: 'Listo', color: 'success' };
       if (cert.signature_requested) return { texto: 'Firma solicitada', color: 'warning' };
       if (tieneExcelBase(cert)) return { texto: 'En Proceso', color: 'warning' };
       return { texto: 'Borrador', color: 'grey-darken-1' };

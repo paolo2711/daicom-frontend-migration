@@ -179,7 +179,7 @@
               </v-card>
 
               <div class="d-flex justify-center" style="gap: 10px;">
-                <v-btn color="primary" variant="outlined" :href="`https://daicomperu.com/${form.latest_certificate.uuid}`" target="_blank" :disabled="!form.latest_certificate.uuid">
+                <v-btn color="primary" variant="outlined" :href="form.latest_certificate.link_nube" target="_blank" :disabled="!form.latest_certificate.link_nube">
                   <v-icon start>mdi-qrcode-scan</v-icon> Ver Certificado
                 </v-btn>
                 <v-btn color="error" variant="text" @click="unlinkCertificate" :loading="linkingCert">

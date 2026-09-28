@@ -1,6 +1,6 @@
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
-import { ANULADO, EN_NUBE } from '@/utils/certificates/estado'
+import { ANULADO, estaPublicado } from '@/utils/certificates/estado'
 import { TIPOS_CERTIFICADO, nombreDelTipo } from '@/utils/certificates/tipos'
 import { fechaCorta } from '@/utils/dates'
 
@@ -34,7 +34,7 @@ const impideCorregir = (cert, tipo) => {
   if (cert.status === ANULADO) return { nivel: BLOQUEA, titulo: 'Está anulado' }
   if (!tipo) return { nivel: NEUTRO, titulo: 'Elige el tipo correcto' }
   if (cert.certificate_type === tipo) return { nivel: NEUTRO, titulo: `Ya es ${nombreDelTipo(tipo)}` }
-  if (cert.status === EN_NUBE) return { nivel: BLOQUEA, titulo: 'Está en la nube: elimínalo de la nube primero' }
+  if (estaPublicado(cert)) return { nivel: BLOQUEA, titulo: 'Está en la nube: elimínalo de la nube primero' }
   return null
 }
 

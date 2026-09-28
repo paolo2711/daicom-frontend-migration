@@ -131,7 +131,7 @@
                                 <v-btn v-else-if="esConversion(task)" v-bind="tooltipProps" icon variant="text" size="small" color="purple" :href="task.url_base" target="_blank" :disabled="!task.url_base">
                                   <v-icon>mdi-file-pdf-box</v-icon>
                                 </v-btn>
-                                <v-btn v-else v-bind="tooltipProps" icon variant="text" size="small" color="purple" :href="`https://daicomperu.com/${task.uuid}`" target="_blank">
+                                <v-btn v-else v-bind="tooltipProps" icon variant="text" size="small" color="purple" :href="task.url" target="_blank" :disabled="!task.url">
                                   <v-icon>mdi-cloud-check</v-icon>
                                 </v-btn>
                               </template>
@@ -431,7 +431,6 @@ async function approveSheet() {
 
   try {
     const { data } = await CertificateDataService.patch(id, {
-      status: 2,
       final_name: preview_final_name.value + '.pdf',
       temp_url: preview_task.value.url,
     })

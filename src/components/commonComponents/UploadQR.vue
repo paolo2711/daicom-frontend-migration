@@ -95,7 +95,7 @@ async function processQR(certId) {
     appStore.updateUploadTask(certId, 'qr', {
       status: finalStatus,
       progress: 100,
-      uuid: responseData.uuid,
+      url: responseData.link_nube,
       step: tarde ? 'Ya se había subido.' : finalStep
     })
     sendWSProgress(certId, 100, finalStatus, getCode(), getAttempts())
@@ -173,7 +173,7 @@ async function processManualPdf(certId, file) {
     const finalStep   = responseData.success || 'Subida manual exitosa';
 
     appStore.updateUploadTask(certId, 'qr', { 
-      status: finalStatus, progress: 100, uuid: responseData.uuid, step: finalStep
+      status: finalStatus, progress: 100, url: responseData.link_nube, step: finalStep
     })
     sendWSProgress(certId, 100, finalStatus, getCode(), 0)
 

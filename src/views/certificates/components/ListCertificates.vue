@@ -326,6 +326,19 @@
                 </span>
               </v-tooltip>
 
+              <v-tooltip location="bottom" v-else-if="item.status === NUBE_DESACTUALIZADA">
+                <template v-slot:activator="{ props }">
+                  <v-btn
+                    v-bind="props" icon variant="text" density="comfortable" :color="ESTADOS[NUBE_DESACTUALIZADA].color"
+                    :disabled="!puedeGenerarQr(item)"
+                    @click.stop="openQRDialog(item)"
+                  >
+                    <v-icon>mdi-cloud-sync</v-icon>
+                  </v-btn>
+                </template>
+                <span>Archivo en nube desactualizado: firma para actualizarlo</span>
+              </v-tooltip>
+
               <v-tooltip location="bottom" v-else>
                 <template v-slot:activator="{ props }">
                   <v-btn
@@ -466,7 +479,7 @@
           <v-list-item-title class="font-weight-medium text-body-2">Ver y editar</v-list-item-title>
         </v-list-item>
 
-        <v-list-item v-if="contextMenu.item.uploaded" @click="copiarLinkCertificado(contextMenu.item)">
+        <v-list-item v-if="contextMenu.item.link_nube" @click="copiarLinkCertificado(contextMenu.item)">
           <template v-slot:prepend><v-icon size="small">mdi-link-variant</v-icon></template>
           <v-list-item-title class="font-weight-medium text-body-2">Copiar link</v-list-item-title>
         </v-list-item>
@@ -518,7 +531,7 @@
 
         <v-divider v-if="contextMenu.item.status !== 5 && permiso_anular" class="my-1 border-opacity-25"></v-divider>
 
-        <v-list-item v-if="permiso_anular && contextMenu.item.uploaded && contextMenu.item.status !== 5" @click="eliminarDeLaNubeConfirm(contextMenu.item)">
+        <v-list-item v-if="permiso_anular && contextMenu.item.link_nube && contextMenu.item.status !== 5" @click="eliminarDeLaNubeConfirm(contextMenu.item)">
           <template v-slot:prepend><v-icon size="small">mdi-cloud-remove-outline</v-icon></template>
           <v-list-item-title class="font-weight-medium text-body-2">Eliminar de la Nube</v-list-item-title>
         </v-list-item>
@@ -562,7 +575,7 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 import ClientSelect        from '@/components/shared/ClientSelect.vue'
 import { tieneExcelBase }  from '@/utils/certificates/excelBase'
 import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
-import { BORRADOR, EN_PROCESO, ESTADOS, estadoDe } from '@/utils/certificates/estado'
+import { BORRADOR, EN_PROCESO, NUBE_DESACTUALIZADA, ESTADOS, estadoDe } from '@/utils/certificates/estado'
 import { TIPOS_CERTIFICADO, siglaDelTipo } from '@/utils/certificates/tipos'
 import NumerosAnteriores from '@/components/shared/NumerosAnteriores.vue'
 import { fechaCorta }      from '@/utils/dates'
@@ -707,10 +720,9 @@ function getRowProps ({ item }) {
   }
 }
 
-// El uuid puede venir de la tarea antes que la fila se actualice.
+// Recien firmado, el link llega en la tarea antes que la fila se actualice.
 function linkNube(item) {
-  const uuid = item.uuid || tareaDe(item.id, 'qr')?.uuid
-  return uuid ? `https://daicomperu.com/${uuid}` : ''
+  return item.link_nube || tareaDe(item.id, 'qr')?.url || ''
 }
 
 // Guard de secuencia: si dos cargas se solapan, solo se aplica la mas reciente
@@ -1130,6 +1142,8 @@ function eliminarDeLaNubeConfirm(cert) {
         
         // Lo mismo que hace el back: vuelve a como estaba antes de firmar.
         cert.uploaded = false
+        cert.link_nube = null
+        cert.attached_pdf = null
         cert.status = tieneExcelBase(cert) ? EN_PROCESO : BORRADOR
       }).catch((error) => {
         $swal.fire('Error al eliminar de la Nube', mensajeDeError(error, 'No se pudo contactar con el FTP.'), 'error')

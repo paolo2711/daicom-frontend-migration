@@ -571,6 +571,7 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 import ClientSelect        from '@/components/shared/ClientSelect.vue'
 import { tieneExcelBase }  from '@/utils/certificates/excelBase'
 import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
+import { BORRADOR, EN_PROCESO } from '@/utils/certificates/estado'
 import { TIPOS_CERTIFICADO, siglaDelTipo } from '@/utils/certificates/tipos'
 import NumerosAnteriores from '@/components/shared/NumerosAnteriores.vue'
 import { fechaCorta }      from '@/utils/dates'
@@ -1136,8 +1137,9 @@ function eliminarDeLaNubeConfirm(cert) {
           Toast.fire({ timer: 2200, icon: 'success', title: data.success || 'Documento eliminado' })
         }
         
+        // Lo mismo que hace el back: vuelve a como estaba antes de firmar.
         cert.uploaded = false
-        cert.status = 3 // Lo retrocedemos a Firmado localmente
+        cert.status = tieneExcelBase(cert) ? EN_PROCESO : BORRADOR
       }).catch((error) => {
         $swal.fire('Error al eliminar de la Nube', mensajeDeError(error, 'No se pudo contactar con el FTP.'), 'error')
       })

@@ -184,8 +184,7 @@ const estado = computed(() => {
   const cert = ficha.value
   if (cert.status === ANULADO) return 'Anulado'
   let avance = 'Sin Excel'
-  if (cert.uploaded) avance = 'En la nube'
-  else if (estaFirmado(cert)) avance = 'Firmado'
+  if (estaFirmado(cert)) avance = 'En la nube'
   else if (tieneExcelBase(cert)) avance = 'Con Excel, sin firmar'
 
   const partes = [avance]

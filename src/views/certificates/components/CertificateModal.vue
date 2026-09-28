@@ -130,9 +130,8 @@ import CertificateMappers from '@/mappers/certificateMappers.js'
 import CorrelativeDataService from '@/services/correlative/correlativeDataService.js'
 import Characters from '@/validators/commonValidators/characters.js'
 import { TIPOS_CERTIFICADO, nombreDelTipo, siglaDelTipo } from '@/utils/certificates/tipos'
-import { ANULADO, estaFirmado } from '@/utils/certificates/estado'
+import { ANULADO, estaFirmado, estadoDe } from '@/utils/certificates/estado'
 import { estaEntregado } from '@/utils/certificates/entrega'
-import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { fechaCorta, hoyISO } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 import { useAppStore } from '@/stores/appStore'
@@ -182,12 +181,10 @@ const puedeCorregir = computed(() => ficha.value.status !== ANULADO)
 
 const estado = computed(() => {
   const cert = ficha.value
-  if (cert.status === ANULADO) return 'Anulado'
-  let avance = 'Sin Excel'
-  if (estaFirmado(cert)) avance = 'En la nube'
-  else if (tieneExcelBase(cert)) avance = 'Con Excel, sin firmar'
+  const texto = estadoDe(cert).texto
+  if (cert.status === ANULADO) return texto
 
-  const partes = [avance]
+  const partes = [texto]
   if (cert.signature_requested && !estaFirmado(cert)) partes.push('firma solicitada')
   if (estaEntregado(cert)) partes.push(`entregado el ${fechaCorta(cert.sent_date)}`)
   return partes.join(' · ')

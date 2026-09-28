@@ -191,14 +191,7 @@
 
         <!-- ── Chip de código de registro ── -->
         <template v-slot:item.registry_code="{ item }">
-          <v-chip
-            :color="item.status === 5
-              ? 'red'
-              : (item.uploaded
-                ? 'green'
-                : (tieneExcelBase(item) ? 'orange' : 'grey'))"
-            class="text-white font-weight-bold"
-          >
+          <v-chip :color="estadoDe(item).color" class="text-white font-weight-bold">
             {{ item.registry_code }}
           </v-chip>
         </template>
@@ -439,10 +432,8 @@
           Estados del Código:
         </span>
         <div class="d-flex flex-wrap justify-center">
-          <v-chip size="small" color="grey"   class="mr-3 mb-1 text-white">Borrador (Sin Excel)</v-chip>
-          <v-chip size="small" color="orange" class="mr-3 mb-1 text-white">En Proceso (Con Excel)</v-chip>
-          <v-chip size="small" color="green"  class="mr-3 mb-1 text-white">Listo (En Nube / QR)</v-chip>
-          <v-chip size="small" color="red"    class="mb-1 text-white">Anulado</v-chip>
+          <v-chip v-for="estado in ESTADOS" :key="estado.texto" size="small" :color="estado.color"
+                  class="mr-3 mb-1 text-white">{{ estado.texto }}</v-chip>
         </div>
       </v-row>
     </v-card>
@@ -571,7 +562,7 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 import ClientSelect        from '@/components/shared/ClientSelect.vue'
 import { tieneExcelBase }  from '@/utils/certificates/excelBase'
 import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
-import { BORRADOR, EN_PROCESO } from '@/utils/certificates/estado'
+import { BORRADOR, EN_PROCESO, ESTADOS, estadoDe } from '@/utils/certificates/estado'
 import { TIPOS_CERTIFICADO, siglaDelTipo } from '@/utils/certificates/tipos'
 import NumerosAnteriores from '@/components/shared/NumerosAnteriores.vue'
 import { fechaCorta }      from '@/utils/dates'

@@ -87,14 +87,32 @@
             </v-col>
           </v-row>
 
-          <!-- Moneda: se elige SIEMPRE al crear (la orden ya no tiene moneda;
-               cada factura maneja la suya). Al editar se conserva la de la factura. -->
-          <div v-if="!editando" class="mt-3">
-            <div class="text-caption text-medium-emphasis mb-1">Moneda de la factura</div>
-            <v-btn-toggle v-model="monedaSuelta" mandatory density="compact" color="primary" variant="outlined">
-              <v-btn value="PEN" size="small">Soles (S/)</v-btn>
-              <v-btn value="USD" size="small">Dólares ($)</v-btn>
-            </v-btn-toggle>
+          <div class="d-flex flex-wrap mt-3" style="gap: 24px;">
+            <!-- Moneda: se elige SIEMPRE al crear (la orden ya no tiene moneda;
+                 cada factura maneja la suya). Al editar se conserva la de la factura. -->
+            <div v-if="!editando">
+              <div class="text-caption text-medium-emphasis mb-1">Moneda de la factura</div>
+              <v-btn-toggle v-model="monedaSuelta" mandatory density="compact" color="primary" variant="outlined">
+                <v-btn value="PEN" size="small">Soles (S/)</v-btn>
+                <v-btn value="USD" size="small">Dólares ($)</v-btn>
+              </v-btn-toggle>
+            </div>
+
+            <div>
+              <div class="text-caption text-medium-emphasis mb-1">Condición de pago</div>
+              <v-btn-toggle v-model="facturaData.es_credito" mandatory density="compact" color="primary" variant="outlined">
+                <v-btn :value="false" size="small">Contado</v-btn>
+                <v-btn :value="true" size="small">Crédito</v-btn>
+              </v-btn-toggle>
+            </div>
+          </div>
+
+          <div v-if="facturaData.es_credito" class="mt-4" style="max-width: 220px;">
+            <date-picker
+              label="Vence (*)"
+              :date="facturaData.due_date"
+              @setPickedDate="(v) => (facturaData.due_date = v)"
+            />
           </div>
 
           <!-- Aviso de detracción estimada (informativo, antes de guardar) -->
@@ -205,11 +223,13 @@ const facturaData = ref({
   invoice_date: '',
   amount: '',
   exchange_rate: '',
+  es_credito: false,
+  due_date: '',
   pdf: null,
 })
 
 const resetForm = () => {
-  facturaData.value = { invoice_number: '', invoice_date: '', amount: '', exchange_rate: '', pdf: null }
+  facturaData.value = { invoice_number: '', invoice_date: '', amount: '', exchange_rate: '', es_credito: false, due_date: '', pdf: null }
   extraerCorrelativo.value = true
   monedaSuelta.value = 'PEN'
 }
@@ -227,6 +247,8 @@ const cargarDatosIniciales = () => {
       invoice_date: inv.invoice_date || '',
       amount: inv.amount || '',
       exchange_rate: inv.exchange_rate || '',
+      es_credito: inv.es_credito || false,
+      due_date: inv.due_date || '',
       pdf: null,
     }
   } else if (props.prefill) {
@@ -235,6 +257,8 @@ const cargarDatosIniciales = () => {
       invoice_date: props.prefill.invoice_date || '',
       amount: props.prefill.amount || '',
       exchange_rate: '',
+      es_credito: props.prefill.es_credito || false,
+      due_date: props.prefill.due_date || '',
       pdf: props.prefill.pdf || null,
     }
   } else {
@@ -256,6 +280,8 @@ const onPdfSelected = async (archivo) => {
     facturaData.value.invoice_number = res.data.invoice_number || facturaData.value.invoice_number
     facturaData.value.invoice_date = res.data.invoice_date || facturaData.value.invoice_date
     facturaData.value.amount = res.data.amount || facturaData.value.amount
+    facturaData.value.es_credito = !!res.data.es_credito
+    facturaData.value.due_date = res.data.due_date || ''
     if (res.data.warning) {
       Toast.fire({ timer: 5000, icon: 'warning', title: 'Extracción parcial', text: res.data.warning })
     } else {
@@ -287,6 +313,9 @@ const buildFormData = () => {
   if (esUSD.value && facturaData.value.exchange_rate) {
     data.append('exchange_rate', facturaData.value.exchange_rate)
   }
+  // Al contado el back borra el vencimiento.
+  data.append('es_credito', facturaData.value.es_credito)
+  if (facturaData.value.es_credito) data.append('due_date', facturaData.value.due_date)
   // Tipo de la pestaña: tipa la factura suelta al crearla (el backend lo usa
   // solo en la creación suelta; en editar/crear-en-orden lo ignora).
   if (props.order_type != null) data.append('order_type', props.order_type)
@@ -301,6 +330,10 @@ const save = async () => {
   }
   if (esUSD.value && !facturaData.value.exchange_rate) {
     Swal.fire('Falta el tipo de cambio', 'En dólares, el tipo de cambio es obligatorio.', 'warning')
+    return
+  }
+  if (facturaData.value.es_credito && !facturaData.value.due_date) {
+    Swal.fire('Falta el vencimiento', 'A crédito, la fecha de vencimiento es obligatoria.', 'warning')
     return
   }
 

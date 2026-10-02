@@ -27,7 +27,7 @@ export default {
       certificates: element.certificates || [],
       // La fila no las trae: null hasta que se piden sus lineas.
       rentals: element.rentals ?? null,
-      facturas: element.facturas || { cantidad: 0, numero: '', tiene_fiscal: false, no_factura: '' },
+      facturas: element.facturas || { cantidad: 0, numero: '', tiene_fiscal: false, no_factura: '', vence: null },
       
       // ─── DATOS EXCLUSIVOS DE ALQUILER (Order Type 2) ───
       client_order_reference: element.client_order_reference || '',

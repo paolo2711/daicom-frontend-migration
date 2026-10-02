@@ -6,7 +6,7 @@ class OrderDataService {
     // ─── ÓRDENES ────────────────────────────────────────────────────────────────
 
     // Agregamos `invoice_number` como último parámetro con valor por defecto
-    getFiltered(page, itemsPerPage, client, order_number, correlative, date_gt, date_lt, status, order_type, missing_payment = false, missing_invoice = false, afecta_detraccion = false, invoice_number = '') {
+    getFiltered(page, itemsPerPage, client, order_number, correlative, date_gt, date_lt, status, order_type, missing_payment = false, missing_invoice = false, a_credito = false, invoice_number = '') {
         let headers = authHeader();
         let params = { page: page, page_size: itemsPerPage };
 
@@ -20,7 +20,7 @@ class OrderDataService {
         if (order_type)        params.order_type        = order_type;
         if (missing_payment)   params.missing_payment   = missing_payment;
         if (missing_invoice)   params.missing_invoice   = missing_invoice;
-        if (afecta_detraccion) params.afecta_detraccion = afecta_detraccion;
+        if (a_credito)         params.a_credito         = a_credito;
 
         return axios.get("orders", { params, headers });
     }
@@ -235,7 +235,8 @@ class OrderDataService {
 
     // ─── RESÚMENES (Smart Chips) ─────────────────────────────────────────────
 
-    getPendingPaymentsSummary(order_type, client, order_number, correlative, date_gt, date_lt, invoice_number = '') {
+    // Cada pildora cuenta con los mismos filtros de la pantalla.
+    getPildora(pildora, order_type, client, order_number, correlative, date_gt, date_lt, invoice_number = '') {
         let headers = authHeader();
         let params = { order_type };
         if (client)       params.client       = client;
@@ -244,19 +245,19 @@ class OrderDataService {
         if (date_gt)      params.date_gt       = date_gt;
         if (date_lt)      params.date_lt       = date_lt;
         if (invoice_number) params.invoice_number = invoice_number;
-        return axios.get("orders/summary/pending-payments", { params, headers });
+        return axios.get(`orders/summary/${pildora}`, { params, headers });
     }
 
-    getPendingInvoicesSummary(order_type, client, order_number, correlative, date_gt, date_lt, invoice_number = '') {
-        let headers = authHeader();
-        let params = { order_type };
-        if (client)       params.client       = client;
-        if (order_number) params.order_number  = order_number;
-        if (correlative)  params.correlative   = correlative;
-        if (date_gt)      params.date_gt       = date_gt;
-        if (date_lt)      params.date_lt       = date_lt;
-        if (invoice_number) params.invoice_number = invoice_number;
-        return axios.get("orders/summary/pending-invoices", { params, headers });
+    getPendingPaymentsSummary(...filtros) {
+        return this.getPildora('pending-payments', ...filtros);
+    }
+
+    getPendingInvoicesSummary(...filtros) {
+        return this.getPildora('pending-invoices', ...filtros);
+    }
+
+    getPendingCreditSummary(...filtros) {
+        return this.getPildora('pending-credit', ...filtros);
     }
 }
 

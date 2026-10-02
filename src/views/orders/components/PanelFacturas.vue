@@ -119,12 +119,15 @@
           @click="modo_seleccion && puede_vincular(inv) ? confirmarVinculo(inv) : null"
         >
           <div class="col-estado">
-            <div class="estado-dot" :style="{ backgroundColor: estado_color(inv.status) }" />
+            <div class="estado-dot" :style="{ backgroundColor: estado_color(inv.estado) }" />
           </div>
           <div class="col-numero d-flex align-center ga-1 overflow-hidden">
             <span class="text-body-2 font-weight-medium text-truncate">{{ inv.invoice_number || 'Sin número' }}</span>
           </div>
-          <div class="col-fecha text-caption text-medium-emphasis">{{ inv.invoice_date || '—' }}</div>
+          <div class="col-fecha text-caption">
+            <div class="text-medium-emphasis">{{ inv.invoice_date || '—' }}</div>
+            <div v-if="vencimiento(inv)" :class="`text-${vencimiento(inv).color}`">{{ vencimiento(inv).texto }}</div>
+          </div>
           <div class="col-monto text-right">
             <div class="text-body-2 font-weight-medium">{{ montoMostrar(inv) }}</div>
             <div v-if="saldoInfo(inv)" class="text-caption" :class="saldoInfo(inv).cls">{{ saldoInfo(inv).text }}</div>
@@ -141,7 +144,7 @@
             <span v-else class="text-disabled">—</span>
           </div>
           <div class="col-estado-txt text-center">
-            <v-chip size="small" :color="estado_color(inv.status)" variant="tonal" class="estado-chip">{{ estado_texto(inv.status) }}</v-chip>
+            <v-chip size="small" :color="estado_color(inv.estado)" variant="tonal" class="estado-chip">{{ estado_texto(inv.estado) }}</v-chip>
           </div>
           <div class="col-ordenes text-center">
             <v-tooltip location="top" v-if="inv.ordenes_vinculadas.length">
@@ -203,13 +206,16 @@
           :title="modo_seleccion && !puede_vincular(inv) ? motivoNoVincular(inv) : undefined"
           @click="modo_seleccion && puede_vincular(inv) ? confirmarVinculo(inv) : null"
         >
-          <div class="estado-dot flex-shrink-0" :style="{ backgroundColor: estado_color(inv.status) }" />
+          <div class="estado-dot flex-shrink-0" :style="{ backgroundColor: estado_color(inv.estado) }" />
 
           <div class="factura-main flex-grow-1 overflow-hidden">
             <div class="d-flex align-center ga-1">
               <span class="text-body-2 font-weight-medium text-truncate">{{ inv.invoice_number || 'Sin número' }}</span>
             </div>
-            <div class="text-caption text-medium-emphasis text-truncate">{{ inv.invoice_date || '—' }}</div>
+            <div class="text-caption text-truncate">
+              <span class="text-medium-emphasis">{{ inv.invoice_date || '—' }}</span>
+              <span v-if="vencimiento(inv)" :class="`text-${vencimiento(inv).color}`"> · {{ vencimiento(inv).texto }}</span>
+            </div>
           </div>
 
           <div class="factura-monto flex-shrink-0 text-right">
@@ -321,6 +327,7 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 import DialogFactura from './DialogFactura.vue'
 import DialogLiquidacion from './DialogLiquidacion.vue'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
+import { CREDITO, vencimiento } from '@/utils/orders/cobro'
 
 const props = defineProps({
   order_type:            { type: Number, required: true },
@@ -371,6 +378,7 @@ const estado_options = [
   { title: 'Todos los estados', value: null },
   { title: 'En proceso', value: 1 },
   { title: 'Deuda', value: 2 },
+  { title: 'Crédito', value: CREDITO },
   { title: 'Abonado', value: 3 },
   { title: 'Pagado', value: 5 },
   { title: 'Excedido', value: 6 },
@@ -392,10 +400,11 @@ const hay_filtros = computed(() => !!(currency_filter.value || estado_filter.val
   || detraccion_filter.value || tipo_filter.value))
 
 // 1 En proceso (gris), 2 Deuda (rojo), 3 Abonado (naranja), 4 Anulada (azul-gris,
-// distinto del gris de "En proceso"), 5 Pagado (verde), 6 Excedido (azul).
-const ESTADO_COLORS = { 1: '#9e9e9e', 2: '#e53935', 3: '#fb8c00', 4: '#546e7a', 5: '#43a047', 6: '#1e88e5' }
+// distinto del gris de "En proceso"), 5 Pagado (verde), 6 Excedido (azul),
+// 8 Crédito (verde azulado).
+const ESTADO_COLORS = { 1: '#9e9e9e', 2: '#e53935', 3: '#fb8c00', 4: '#546e7a', 5: '#43a047', 6: '#1e88e5', [CREDITO]: '#00897b' }
 const estado_color = (s) => ESTADO_COLORS[s] || ESTADO_COLORS[2]
-const ESTADO_TEXTOS = { 1: 'En proceso', 2: 'Deuda', 3: 'Abonado', 4: 'Anulada', 5: 'Pagado', 6: 'Excedido', 7: 'Sin cargo' }
+const ESTADO_TEXTOS = { 1: 'En proceso', 2: 'Deuda', 3: 'Abonado', 4: 'Anulada', 5: 'Pagado', 6: 'Excedido', 7: 'Sin cargo', [CREDITO]: 'Crédito' }
 const estado_texto = (s) => ESTADO_TEXTOS[s] || 'Deuda'
 const simbolo = (c) => (c === 'USD' ? '$' : 'S/')
 const money = (v) => Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -404,11 +413,12 @@ const montoMostrar = (inv) => {
   const v = Number(inv.amount || 0)
   return v > 0 ? `${simbolo(inv.currency)} ${money(v)}` : '—'
 }
-// Resto de la factura: "Pdte X" (rojo) si falta cobrar, "Exc. X" (azul, color
-// de Excedido) si pagaron de más, null si está justo/pagado.
+// Resto de la factura: "Pdte X" si falta cobrar (rojo, o verde azulado si es
+// crédito que no vence), "Exc. X" (azul, color de Excedido) si pagaron de más,
+// null si está justo/pagado.
 const saldoInfo = (inv) => {
   const s = Number(inv.saldo_pendiente || 0)
-  if (s > 0) return { text: `Pdte ${money(s)}`, cls: 'text-error' }
+  if (s > 0) return { text: `Pdte ${money(s)}`, cls: inv.estado === CREDITO ? 'text-teal' : 'text-error' }
   if (s < 0) return { text: `Exc. ${money(-s)}`, cls: 'text-blue-darken-1' }
   return null
 }
@@ -619,6 +629,8 @@ const onPdfDropped = async (file) => {
       invoice_number: res.data.invoice_number || '',
       invoice_date: res.data.invoice_date || '',
       amount: res.data.amount || '',
+      es_credito: res.data.es_credito || false,
+      due_date: res.data.due_date || '',
       pdf: file,
     }
     // Feedback de extracción (igual que el file-input del modal)

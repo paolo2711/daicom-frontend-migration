@@ -52,6 +52,7 @@
             <div class="d-flex flex-column">
               <span class="text-body-2 font-weight-bold">{{ inv.invoice_number || 'Sin número' }}</span>
               <span class="text-caption text-medium-emphasis">{{ inv.invoice_date || 'Sin fecha' }}</span>
+              <span v-if="vencimiento(inv)" class="text-caption" :class="`text-${vencimiento(inv).color}`">{{ vencimiento(inv).texto }}</span>
             </div>
             <div class="d-flex align-center">
               <span class="text-body-2 font-weight-bold mr-2">{{ simbolo(inv.currency) }} {{ formatMoney(inv.amount) }}</span>
@@ -119,6 +120,10 @@
           </div>
         </div>
 
+        <v-alert v-else-if="orderData.vence" density="compact" variant="tonal" color="teal" class="mb-0 text-caption font-weight-bold">
+          <v-icon start size="small">mdi-calendar-clock</v-icon> A crédito · vence {{ fechaCorta(orderData.vence) }}
+        </v-alert>
+
         <!-- Sin factura no hay nada que cobrar todavia: decirlo en naranja pone
              dos alarmas para el mismo hecho. -->
         <v-alert v-else-if="facturas.length" density="compact" variant="tonal" color="warning" class="mb-0 text-caption font-weight-bold text-orange-darken-4">
@@ -144,6 +149,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import OrderDataService from '@/services/orders/orderDataService.js'
+import { fechaCorta } from '@/utils/dates'
+import { vencimiento } from '@/utils/orders/cobro'
 
 const props = defineProps({
   orderId: { type: Number, required: true },

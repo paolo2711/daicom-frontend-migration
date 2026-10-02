@@ -19,6 +19,18 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.5.3',
+    fecha: '2026-10-02',
+    arreglo: [
+      'Firmar muchos certificados a la vez ya no deja la plataforma sin responder: los demás siguen trabajando y el lote termina antes.',
+      'En Órdenes, la tabla de equipos se actualiza fila por fila mientras se firma, sin vaciarse.',
+      'Si se corta la conexión mientras se firma o se convierte un Excel, el panel de subidas muestra cómo quedó cada tarea al reconectar.',
+      'En Servicios, escribir en un filtro mientras llegan cambios ya no pierde la búsqueda.',
+      'En Alquileres, la orden abierta ya no queda vacía al recargar la lista.',
+      'En Servicios, guardar una factura ya no deja vacíos los equipos de la orden abierta.',
+    ],
+  },
+  {
     version: '3.7.5.2',
     fecha: '2026-09-28',
     nuevo: [

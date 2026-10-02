@@ -19,6 +19,19 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.6.0',
+    fecha: '2026-10-02',
+    nuevo: [
+      'Facturas a crédito: al subir el PDF se detectan la condición y el vencimiento, y se pueden marcar o corregir a mano.',
+      'Píldora "A crédito" en Servicios y Alquileres con las órdenes cuya factura aún no vence.',
+      'En Inicio, Vencimientos muestra las facturas a crédito vencidas y las que vencen en la semana.',
+    ],
+    cambio: [
+      'Una factura a crédito no aparece en "Falta pago" ni en rojo hasta su vencimiento; si vence sin pago, vuelve a Deuda.',
+      'El panel de facturas puede filtrar por estado "Crédito".',
+    ],
+  },
+  {
     version: '3.7.5.3',
     fecha: '2026-10-02',
     arreglo: [

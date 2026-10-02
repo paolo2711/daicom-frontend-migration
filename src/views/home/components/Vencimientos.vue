@@ -22,7 +22,7 @@
     <div v-if="!grupos.length" class="venc-vacio px-4 pb-4">
       {{ cargando ? 'Revisando…' : 'No se pudo cargar el estado de vencimientos.' }}
     </div>
-    <div v-else class="venc-cols">
+    <div v-else class="venc-cols" :class="{ 'venc-cols--tres': grupos.length > 2 }">
       <div v-for="g in grupos" :key="g.id" class="venc-col">
         <div class="venc-col-head">
           <span class="venc-col-titulo">{{ g.titulo }}</span>
@@ -134,6 +134,8 @@ const grupos = computed(() => {
       vacio: d.escaneado ? 'Todos vigentes' : 'Sin revisar todavia' },
     { id: 'inventario', titulo: 'Inventario', ...d.inventario,
       vacio: d.escaneado ? 'Todos vigentes' : 'Sin revisar todavia' },
+    // Solo llega para quien ve Ordenes, y no sale del escaneo: se lee al pedirla.
+    ...(d.facturas ? [{ id: 'facturas', titulo: 'Facturas a crédito', ...d.facturas, vacio: 'Ninguna por vencer' }] : []),
   ]
 })
 
@@ -196,10 +198,17 @@ onMounted(cargar)
 .venc-cols { display: flex; flex-wrap: wrap; }
 .venc-col { flex: 1 1 22rem; min-width: 0; padding: .2rem 1.15rem 1rem; }
 
-/* Las dos columnas se leian como una sola lista larga. La linea las separa. */
+/* Las columnas se leian como una sola lista larga. La linea las separa. */
 .venc-col + .venc-col { border-left: 1px solid rgba(128, 128, 128, .22); }
 @media (max-width: 780px) {
   .venc-col + .venc-col { border-left: none; border-top: 1px solid rgba(128, 128, 128, .22); }
+}
+/* Con tres, van las tres en fila o una debajo de otra: partidas en 2 y 1, la de
+   abajo queda sola con la linea a la izquierda. */
+.venc-cols--tres .venc-col { flex-basis: 18rem; }
+@media (max-width: 1000px) {
+  .venc-cols--tres .venc-col { flex-basis: 100%; }
+  .venc-cols--tres .venc-col + .venc-col { border-left: none; border-top: 1px solid rgba(128, 128, 128, .22); }
 }
 
 .venc-col-head { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; margin-bottom: .6rem; }

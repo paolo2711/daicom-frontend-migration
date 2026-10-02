@@ -1,5 +1,5 @@
 // Recargas de tabla y actualizaciones de fila quirurgicas (RELOAD_* / UPDATE_ROW).
-import { refreshPendingSignatures } from '@/services/certificates/pendingSignatures'
+import { AVISOS_QUE_LA_CAMBIAN, refreshPendingSignatures } from '@/services/certificates/pendingSignatures'
 import { alVolverAVer, pestanaOculta } from '@/utils/tabVisibility'
 
 const emit = (name, detail) =>
@@ -18,49 +18,62 @@ const RELOADS = {
 
 // `enLote` es el evento con la lista completa de ids, para las listas que ya
 // saben decidir entre parchear y releer su pagina. Las que todavia no lo
-// implementan reciben un aviso por fila, como siempre.
+// implementan reciben un aviso por fila, como siempre. `recargas` son las de
+// esa tabla, para cuando la pestaña esta oculta.
 const FILAS = {
   cert_id: {
     evento: 'wss-update-row',
     enLote: 'wss-update-rows',
-    recargas: ['wss-reload-certificates'],
+    recargas: ['RELOAD_CERTIFICATES'],
   },
   order_id: {
     evento: 'wss-update-order-row',
     enLote: null,
-    recargas: ['wss-reload-orders-service', 'wss-reload-orders-rental'],
+    recargas: ['RELOAD_ORDERS_service', 'RELOAD_ORDERS_rental'],
+  },
+  // Solo cambio la barra de la orden: uno de sus certificados cambio de estado.
+  order_progress_id: {
+    evento: 'wss-update-order-progress',
+    enLote: null,
+    recargas: ['RELOAD_ORDERS_service', 'RELOAD_ORDERS_rental'],
   },
   invoice_id: {
     evento: 'wss-update-invoice-row',
     enLote: null,
-    recargas: ['wss-reload-invoices'],
+    recargas: ['RELOAD_INVOICES'],
   },
   doc_id: {
     evento: 'wss-update-document-row',
     enLote: null,
-    recargas: ['wss-reload-documents'],
+    recargas: ['RELOAD_DOCUMENTS'],
   },
 }
 
 const campoDe = (m) => Object.keys(FILAS).find((c) => m[c])
 
-function recargar(appStore, evento) {
-  refreshPendingSignatures(appStore)
-  emit(evento)
+// Las pildoras de cobro de Ordenes las refresca cada pestaña con los avisos de
+// sus ordenes; la campana, el notificationHandler.
+function contadores(appStore, aviso) {
+  if (AVISOS_QUE_LA_CAMBIAN.has(aviso)) refreshPendingSignatures(appStore)
+}
+
+function recargar(appStore, comando) {
+  contadores(appStore, comando)
+  emit(RELOADS[comando])
 }
 
 // Con la pestaña oculta nada se parchea: se anota la recarga de esa tabla y al
 // volver sale una sola, hayan cambiado 3 filas o 95.
 function aplazar(appStore, recargas) {
-  recargas.forEach((r) => alVolverAVer(r, () => recargar(appStore, r)))
+  recargas.forEach((comando) => alVolverAVer(comando, () => recargar(appStore, comando)))
 }
 
 export function handleReload(data, appStore) {
   // Recargas por string.
   if (typeof data.message === 'string' && RELOADS[data.message]) {
-    const evento = RELOADS[data.message]
-    if (pestanaOculta()) alVolverAVer(evento, () => recargar(appStore, evento))
-    else recargar(appStore, evento)
+    const comando = data.message
+    if (pestanaOculta()) alVolverAVer(comando, () => recargar(appStore, comando))
+    else recargar(appStore, comando)
     return true
   }
 
@@ -73,7 +86,7 @@ export function handleReload(data, appStore) {
     if (!campo) return false
     if (pestanaOculta()) aplazar(appStore, FILAS[campo].recargas)
     else {
-      refreshPendingSignatures(appStore)
+      contadores(appStore, campo)
       emit(FILAS[campo].evento, m[campo])
     }
     return true
@@ -88,7 +101,7 @@ export function handleReload(data, appStore) {
     if (pestanaOculta()) {
       aplazar(appStore, recargas)
     } else {
-      refreshPendingSignatures(appStore)
+      contadores(appStore, campo)
       if (enLote) emit(enLote, m[campo])
       else m[campo].forEach((id) => emit(evento, id))
     }

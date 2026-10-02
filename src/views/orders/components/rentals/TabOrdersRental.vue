@@ -331,6 +331,7 @@ import MenuSinFactura from '@/views/orders/components/MenuSinFactura.vue'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
+import { throttle } from '@/utils/throttle'
 import { useAppStore } from '@/stores/appStore'
 import { mensajeDeError } from '@/utils/errors'
 import DialogFactura from '../DialogFactura.vue'
@@ -407,9 +408,6 @@ const options = ref({ page: 1, itemsPerPage: 15 })
 const is_admin = ref(false)
 const user_permissions = ref([])
 
-let debounceTimeout = null
-
-
 // ── Data ──
 const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestRequest()
 
@@ -431,13 +429,16 @@ const retrieveOrders = () => {
   })
 }
 
-const cargarResumenes = () => {
+// Las pildoras de cobro, con los filtros de la pantalla.
+const cargarResumenes = () => Promise.all([
   OrderDataService.getPendingPaymentsSummary(2, filter_client_id.value, filter_order.value, filter_client_ref.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value)
-    .then((res) => { appStore.setPendingPaymentsRentalCount(res.data.pending_payments) }).catch(() => {})
-
+    .then((res) => { appStore.setPendingPaymentsRentalCount(res.data.pending_payments) }).catch(() => {}),
   OrderDataService.getPendingInvoicesSummary(2, filter_client_id.value, filter_order.value, filter_client_ref.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value)
-    .then((res) => { appStore.setPendingInvoicesRentalCount(res.data.pending_invoices) }).catch(() => {})
-}
+    .then((res) => { appStore.setPendingInvoicesRentalCount(res.data.pending_invoices) }).catch(() => {}),
+])
+
+// Las mismas, cuando las pide un aviso: con el freno de los contadores.
+const refrescarResumenes = throttle(cargarResumenes)
 
 const applyFilters = () => {
   // Si el panel de facturas está maximizado, tapa la tabla: al filtrar lo
@@ -454,7 +455,7 @@ const toggleFiltroFactura = () => { filtro_sin_factura.value = !filtro_sin_factu
 const limpiarFechas = () => { filter_date_gt.value = ''; filter_date_lt.value = ''; applyFilters() }
 
 // ── WebSockets ──
-const handleWssReload = () => { retrieveOrders(); cargarResumenes() }
+const handleWssReload = () => { retrieveOrders(); refrescarResumenes() }
 
 const idOrdenExpandida = () => (
   expanded.value.length === 1 ? getSafeId(expanded.value[0]) : null
@@ -470,9 +471,7 @@ const fetchAndInjectSingleOrder = (event) => {
 
     // Las lineas no tienen avisos propios: cambian con los de su orden.
     if (String(idOrdenExpandida()) === String(fila.id)) cargarItems(fila.id)
-
-    if (debounceTimeout) clearTimeout(debounceTimeout)
-    debounceTimeout = setTimeout(() => { cargarResumenes() }, 1500)
+    refrescarResumenes()
   }).catch(() => {})
 }
 

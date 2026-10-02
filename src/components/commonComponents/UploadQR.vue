@@ -11,6 +11,9 @@ import { mensajeDeError } from '@/utils/errors'
 
 const appStore = useAppStore()
 
+// Como queda una tarea recien pedida, tambien al reintentarla.
+const EN_COLA = { status: 'generating', progress: 5, attempts: 0, step: '', error_msg: '', is_cloud_error: false, offline_url: null }
+
 function getTask(certId) {
   return appStore.uploadTasks.find(
     t => String(t.id) === String(certId) && t.type === 'qr'
@@ -28,25 +31,33 @@ function sendWSProgress(certId, progress, status, code, attempts) {
   }
 }
 
-function handleQRStart(e) {
-  const { certificate, fechaFirma = '' } = e.detail
-  const currentUser = JSON.parse(localStorage.getItem('user')) || {}
-  const username = currentUser.username || 'unknown'
+function usuarioActual() {
+  return (JSON.parse(localStorage.getItem('user')) || {}).username || 'unknown'
+}
 
-  // Viaja en la tarea para que el reintento use la misma fecha que el original.
-  const exists = getTask(certificate.id)
-  if (exists) {
-    appStore.updateUploadTask(certificate.id, 'qr', { status: 'generating', progress: 5, attempts: 0, username, fecha_firma: fechaFirma })
-  } else {
-    appStore.addUploadTask({
-      id: certificate.id, code: certificate.registry_code,
-      status: 'generating', progress: 5, attempts: 0,
-      username, type: 'qr', fecha_firma: fechaFirma,
-    })
+// La firma corre en el servidor: aca solo se encola. El avance y el resultado
+// de cada una llegan por el panel de subidas (uploadHandler).
+async function encolar(certIds, fechaFirma) {
+  try {
+    await certificateDataService.firmar(certIds, fechaFirma)
+  } catch (error) {
+    const error_msg = mensajeDeError(error, 'No se pudo iniciar la firma.')
+    certIds.forEach(id => appStore.updateUploadTask(id, 'qr', { status: 'error', step: '', error_msg }))
   }
+}
 
-  sendWSProgress(certificate.id, 5, 'generating', certificate.registry_code, 0)
-  processQR(certificate.id)
+function handleQRStart(e) {
+  const { certificates, fechaFirma = '' } = e.detail
+  const username = usuarioActual()
+
+  certificates.forEach(certificate => {
+    // Viaja en la tarea para que el reintento use la misma fecha que el original.
+    const tarea = { ...EN_COLA, username, fecha_firma: fechaFirma }
+    if (getTask(certificate.id)) appStore.updateUploadTask(certificate.id, 'qr', tarea)
+    else appStore.addUploadTask({ id: certificate.id, code: certificate.registry_code, type: 'qr', ...tarea })
+  })
+
+  encolar(certificates.map(c => c.id), fechaFirma)
 }
 
 // El pedido de cancelar va al servidor, que es quien firma y sube. La tarea no
@@ -58,86 +69,15 @@ function handleQRCancel(e) {
 }
 
 function handleQRRetry(e) {
-  const certId = e.detail.id
-  appStore.updateUploadTask(certId, 'qr', { status: 'generating', progress: 5, attempts: 0 })
-  processQR(certId)
-}
-
-async function processQR(certId) {
-  if (isCancelled(certId)) return
-
-  const getCode     = () => (getTask(certId) || {}).code     || ''
-  const getAttempts = () => (getTask(certId) || {}).attempts || 0
-
-  try {
-    appStore.updateUploadTask(certId, 'qr', { status: 'generating', progress: 15, step: 'Generando y Firmando PDF...' })
-    sendWSProgress(certId, 15, 'generating', getCode(), getAttempts())
-
-    // Firmar y subir lo hace el servidor; la barra la mueven sus avisos por WebSocket.
-    const generated_qr = await certificateDataService.generateQR(certId, (getTask(certId) || {}).fecha_firma)
-
-    if (isCancelled(certId)) return
-
-    const responseData = generated_qr.data || generated_qr;
-
-    // Llego a tiempo: no se publico nada y el archivo subido ya se borro.
-    if (responseData.cancelado) {
-      appStore.updateUploadTask(certId, 'qr', { status: 'canceled', progress: 0, step: '' })
-      sendWSProgress(certId, 0, 'canceled', getCode(), 0)
-      return
-    }
-
-    const finalStatus = responseData.warning === true ? 'warning' : 'success';
-    const finalStep   = responseData.success || '¡Completado!';
-    // El cancelar llego con el documento ya publicado: gana lo que paso de verdad.
-    const tarde = (getTask(certId) || {}).status === 'cancelling';
-
-    appStore.updateUploadTask(certId, 'qr', {
-      status: finalStatus,
-      progress: 100,
-      url: responseData.link_nube,
-      step: tarde ? 'Ya se había subido.' : finalStep
-    })
-    sendWSProgress(certId, 100, finalStatus, getCode(), getAttempts())
-
-  } catch (error) {
-    if (isCancelled(certId)) return
-
-    const responseData = error.response?.data || error.response || {};
-    const errorMsg = responseData.error || error.message || 'Error de conexión / Timeout';
-    const currentTask = getTask(certId)
-    if (!currentTask) return
-
-    // Un error con mensaje del servidor no se reintenta solo: el problema no es
-    // la red y volver a intentarlo da lo mismo.
-    if (currentTask.attempts < 2 && !responseData.error) {
-      appStore.updateUploadTask(certId, 'qr', { status: 'retrying', attempts: currentTask.attempts + 1, step: 'Fallo de red, reintentando...' })
-      sendWSProgress(certId, 5, 'retrying', getCode(), currentTask.attempts + 1)
-      setTimeout(() => { processQR(certId) }, 3000)
-      return
-    }
-
-    const isCloudError = !!responseData.is_cloud_error;
-    const offlineUrl = responseData.offline_url || null;
-
-    appStore.updateUploadTask(certId, 'qr', {
-      status: 'error',
-      error_msg: errorMsg,
-      step: '',
-      is_cloud_error: isCloudError,
-      offline_url: offlineUrl
-    })
-
-    if (window.enviarProgresoWebSocket) {
-      window.enviarProgresoWebSocket(certId, 0, 'error', getCode(), currentTask.attempts, 'qr', '', errorMsg, isCloudError, offlineUrl)
-    }
-  }
+  const tarea = getTask(e.detail.id)
+  if (!tarea) return
+  appStore.updateUploadTask(tarea.id, 'qr', EN_COLA)
+  encolar([tarea.id], tarea.fecha_firma)
 }
 
 function handleManualPdfStart(e) {
   const { certificate, file } = e.detail
-  const currentUser = JSON.parse(localStorage.getItem('user')) || {}
-  const username = currentUser.username || 'unknown'
+  const username = usuarioActual()
 
   const exists = getTask(certificate.id)
   if (exists) {
@@ -164,15 +104,15 @@ async function processManualPdf(certId, file) {
   try {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     // NOTA: Asegúrate de tener este método en tu certificateDataService.js
     const response = await certificateDataService.manualCloudUpload(certId, formData);
-    
+
     const responseData = response.data || response;
     const finalStatus = responseData.warning === true ? 'warning' : 'success';
     const finalStep   = responseData.success || 'Subida manual exitosa';
 
-    appStore.updateUploadTask(certId, 'qr', { 
+    appStore.updateUploadTask(certId, 'qr', {
       status: finalStatus, progress: 100, url: responseData.link_nube, step: finalStep
     })
     sendWSProgress(certId, 100, finalStatus, getCode(), 0)

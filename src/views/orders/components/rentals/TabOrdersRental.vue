@@ -330,6 +330,7 @@ import OrderMappers from '@/mappers/orderMappers'
 import MenuSinFactura from '@/views/orders/components/MenuSinFactura.vue'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { useOrderItems } from '@/composables/useOrderItems'
 import { useAppStore } from '@/stores/appStore'
 import { mensajeDeError } from '@/utils/errors'
 import DialogFactura from '../DialogFactura.vue'
@@ -369,6 +370,7 @@ const headers = [
 // ── Tabla + filtros ──
 const orders = ref([])
 const expanded = ref([])
+const { cargarItems, reemplazarOrdenes } = useOrderItems(orders, 'rentals')
 
 // Resiliencia a return-object: el id puede venir suelto o dentro de un objeto.
 const getSafeId = (val) => {
@@ -422,7 +424,7 @@ const retrieveOrders = () => {
     filter_invoice.value
   ).then(res => {
     if (!isLatestOrdersLoad(token)) return   // llegó una carga más nueva → no pisar
-    orders.value = res.data.results.map(orden => OrderMappers.getMap(orden))
+    reemplazarOrdenes(res.data.results.map(orden => OrderMappers.getMap(orden)), idOrdenExpandida())
     total_orders.value = res.data.count
   }).finally(() => {
     if (isLatestOrdersLoad(token)) loading_list.value = false
@@ -454,15 +456,6 @@ const limpiarFechas = () => { filter_date_gt.value = ''; filter_date_lt.value = 
 // ── WebSockets ──
 const handleWssReload = () => { retrieveOrders(); cargarResumenes() }
 
-// La fila no trae sus lineas: se piden al abrirla, y solo ellas.
-const cargarEquiposExpandidos = (orderId) => {
-  const fila = orders.value.find(o => String(o.id) === String(orderId))
-  if (!fila) return
-  OrderDataService.getEquipos(orderId)
-    .then(({ data }) => { fila.rentals = data })
-    .catch(() => { fila.rentals = [] })
-}
-
 const idOrdenExpandida = () => (
   expanded.value.length === 1 ? getSafeId(expanded.value[0]) : null
 )
@@ -475,7 +468,8 @@ const fetchAndInjectSingleOrder = (event) => {
     const index = orders.value.findIndex(o => o.id === fila.id)
     if (index !== -1) Object.assign(orders.value[index], fila)
 
-    if (String(idOrdenExpandida()) === String(fila.id)) cargarEquiposExpandidos(fila.id)
+    // Las lineas no tienen avisos propios: cambian con los de su orden.
+    if (String(idOrdenExpandida()) === String(fila.id)) cargarItems(fila.id)
 
     if (debounceTimeout) clearTimeout(debounceTimeout)
     debounceTimeout = setTimeout(() => { cargarResumenes() }, 1500)
@@ -485,7 +479,7 @@ const fetchAndInjectSingleOrder = (event) => {
 const updateSingleOrderInList = (updatedOrder) => {
   const index = orders.value.findIndex(o => o.id === updatedOrder.id)
   if (index !== -1) {
-    // Las lineas las trae cargarEquiposExpandidos; el resto de la orden no las pisa.
+    // Las lineas las trae useOrderItems; el resto de la orden no las pisa.
     const lineas = orders.value[index].rentals
     Object.assign(orders.value[index], OrderMappers.getMap(updatedOrder), { rentals: lineas })
   }
@@ -678,7 +672,7 @@ watch(expanded, (newVal) => {
     return
   }
   if (expanded.value.length === 1) {
-    cargarEquiposExpandidos(getSafeId(expanded.value[0]))
+    cargarItems(getSafeId(expanded.value[0]), { mostrarCarga: true })
   }
 })
 

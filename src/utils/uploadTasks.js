@@ -19,6 +19,10 @@ export const TIPOS_DE_FILA = ['qr', 'sheet']
 const SIN_VUELTA = ['saving', 'publishing', 'cancelling']
 
 export const enCurso   = (tarea) => EN_CURSO.includes(tarea.status)
+// Lo que corre la pestaña con su propio pedido, no el servidor: aprobar el PDF
+// ('saving') y subir el PDF rescatado. Del servidor no hay avisos que pedirle.
+export const enElServidor = (tarea) =>
+  enCurso(tarea) && tarea.status !== 'saving' && tarea.source !== 'manual'
 export const cancelable = (tarea) => enCurso(tarea) && !SIN_VUELTA.includes(tarea.status)
 export const fallida   = (tarea) => FALLIDA.includes(tarea.status)
 export const terminada = (tarea) => TERMINADA.includes(tarea.status)

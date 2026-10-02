@@ -35,9 +35,11 @@ class OrderDataService {
         return axios.get(`orders/${id}/fila`, { headers: authHeader() });
     }
 
-    // Los certificados de un servicio o las lineas de un alquiler.
-    getEquipos(id) {
-        return axios.get(`orders/${id}/equipos`, { headers: authHeader() });
+    // Los certificados de un servicio o las lineas de un alquiler. Con `ids`,
+    // solo esos certificados, y solo los que siguen en la orden.
+    getEquipos(id, ids = null) {
+        const params = ids ? { ids: ids.join(',') } : {};
+        return axios.get(`orders/${id}/equipos`, { headers: authHeader(), params });
     }
 
     // Todos o ninguno: si una fila no se puede, responde cuales y no guarda nada.

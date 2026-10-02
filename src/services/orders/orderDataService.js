@@ -258,18 +258,6 @@ class OrderDataService {
         if (invoice_number) params.invoice_number = invoice_number;
         return axios.get("orders/summary/pending-invoices", { params, headers });
     }
-
-    getAfectasDetraccionSummary(order_type, client, order_number, correlative, date_gt, date_lt, invoice_number = '') {
-        let headers = authHeader();
-        let params = { order_type };
-        if (client)       params.client       = client;
-        if (order_number) params.order_number  = order_number;
-        if (correlative)  params.correlative   = correlative;
-        if (date_gt)      params.date_gt       = date_gt;
-        if (date_lt)      params.date_lt       = date_lt;
-        if (invoice_number) params.invoice_number = invoice_number;
-        return axios.get("orders/summary/afectas-detraccion", { params, headers });
-    }
 }
 
 export default new OrderDataService();

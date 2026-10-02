@@ -1,10 +1,7 @@
 // Notificaciones (persistentes + su toast de EVENTO) y ANUNCIOS manuales.
 import { useNotificationStore } from '@/stores/notificationStore'
 import { showEventToast } from '@/services/notifications/eventToasts'
-import { refreshPendingSignatures } from '@/services/certificates/pendingSignatures'
-
-// Categorias cuyo evento cambia la pildora de "pendientes de firma".
-const AFECTAN_PENDIENTES = new Set(['firma_solicitada', 'qr_subido'])
+import { NOTIFICACIONES_QUE_LA_CAMBIAN, refreshPendingSignatures } from '@/services/certificates/pendingSignatures'
 
 export function handleNotification(data, appStore, currentUser) {
   const m = data.message
@@ -12,9 +9,9 @@ export function handleNotification(data, appStore, currentUser) {
 
   const miEmpresa = () => m.company == null || m.company == currentUser.company
 
-  // Liviano: solo el numero de la campana (al marcar leido).
+  // Al marcar leido: cambia el numero, y lo leido en la lista si esta abierta.
   if (m.action === 'UPDATE_NOTIF_COUNT') {
-    if (miEmpresa()) { try { useNotificationStore().fetchUnread() } catch (e) { /* noop */ } }
+    if (miEmpresa()) { try { useNotificationStore().resync() } catch (e) { /* noop */ } }
     return true
   }
 
@@ -28,7 +25,7 @@ export function handleNotification(data, appStore, currentUser) {
   // Si la categoria afecta a firmas, refresca esa pildora (dirigido, sin toast aparte).
   if (m.action === 'NEW_NOTIFICATION') {
     try { useNotificationStore().onNew() } catch (e) { /* noop */ }
-    if (AFECTAN_PENDIENTES.has(m.category)) refreshPendingSignatures(appStore)
+    if (NOTIFICACIONES_QUE_LA_CAMBIAN.has(m.category)) refreshPendingSignatures(appStore)
     showEventToast(m)
     return true
   }

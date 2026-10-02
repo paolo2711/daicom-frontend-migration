@@ -333,6 +333,8 @@ import MenuSinFactura from '@/views/orders/components/MenuSinFactura.vue'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
+import { debounce } from '@/utils/debounce'
+import { throttle } from '@/utils/throttle'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
 import DialogFactura from '../DialogFactura.vue'
@@ -459,9 +461,8 @@ const user = JSON.parse(localStorage.getItem('user')) || {}
 const is_admin = user.kind !== undefined && user.kind < 1
 const user_permissions = user.action_permissions || []
 
-// Guard de secuencia (solo aplica la carga mas reciente) + debounce de filtros.
+// Guard de secuencia: solo aplica la carga mas reciente.
 const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestRequest()
-let debounceTimeout = null
 
 // Funciones de filtro
 const applyFilters = () => {
@@ -483,16 +484,16 @@ const toggleFiltroFactura = () => {
   applyFilters()
 }
 
-const cargarResumenes = () => {
-  OrderDataService.getPendingPaymentsSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value).then((res) => {
-    appStore.setPendingPaymentsServiceCount(res.data.pending_payments)
-  }).catch(() => {})
-  
-  OrderDataService.getPendingInvoicesSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value).then((res) => {
-    appStore.setPendingInvoicesServiceCount(res.data.pending_invoices)
-  }).catch(() => {})
-}
+// Las pildoras de cobro, con los filtros de la pantalla.
+const cargarResumenes = () => Promise.all([
+  OrderDataService.getPendingPaymentsSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value)
+    .then((res) => { appStore.setPendingPaymentsServiceCount(res.data.pending_payments) }).catch(() => {}),
+  OrderDataService.getPendingInvoicesSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value)
+    .then((res) => { appStore.setPendingInvoicesServiceCount(res.data.pending_invoices) }).catch(() => {}),
+])
 
+// Las mismas, cuando las pide un aviso: con el freno de los contadores.
+const refrescarResumenes = throttle(cargarResumenes)
 
 
 const limpiarFechas = () => {
@@ -739,22 +740,28 @@ const idOrdenExpandida = () => (
 // WebSockets
 // La fila de la orden: barra, estado y cobro. Sus equipos tienen sus propios
 // avisos, los de cada certificado.
+// Devuelve la fila si la orden es de servicio, o null.
+const refrescarFila = (orderId) => OrderDataService.getFila(orderId)
+  .then(response => {
+    const fila = response?.data
+    if (!fila || (fila.order_type !== 1 && fila.order_type)) return null
+
+    // Se vuelca tal cual: trae solo campos de fila, asi que no pisa los
+    // equipos ni los abonos que la lista ya tenia.
+    const index = orders.value.findIndex(o => o.id === fila.id)
+    if (index !== -1) Object.assign(orders.value[index], fila)
+    return fila
+  })
+  .catch(() => null)
+
+// Cambio la orden (sus datos, facturas, abonos o cuantos equipos vivos tiene):
+// la fila y las pildoras de cobro.
 const fetchAndInjectSingleOrder = (event) => {
-  OrderDataService.getFila(event.detail)
-    .then(response => {
-      const fila = response?.data
-      if (!fila || (fila.order_type !== 1 && fila.order_type)) return
-
-      // Se vuelca tal cual: trae solo campos de fila, asi que no pisa los
-      // equipos ni los abonos que la lista ya tenia.
-      const index = orders.value.findIndex(o => o.id === fila.id)
-      if (index !== -1) Object.assign(orders.value[index], fila)
-
-      clearTimeout(debounceTimeout)
-      debounceTimeout = setTimeout(() => { cargarResumenes() }, 1500)
-    })
-    .catch(() => {})
+  refrescarFila(event.detail).then(fila => { if (fila) refrescarResumenes() })
 }
+
+// Solo cambio la barra: un equipo cambio de estado sin tocar el cobro.
+const refrescarProgreso = (event) => refrescarFila(event.detail)
 
 // Los certificados que cambiaron se reemplazan en su fila de la orden abierta.
 const aplicarEquiposCambiados = (event) => actualizarItems(idOrdenExpandida(), [].concat(event.detail))
@@ -773,6 +780,7 @@ const updateSingleOrderInList = (updatedOrder) => {
 
 const handleWssReload = () => {
   retrieveOrders()
+  refrescarResumenes()
 }
 
 // Watchers (igual que en ListCertificates)
@@ -780,10 +788,7 @@ watch(options, () => { retrieveOrders() }, { deep: true })
 
 // Quitamos filter_date_gt y filter_date_lt para que solo se apliquen con el botón "Aplicar"
 // Debounce: espera a que el usuario deje de teclear antes de pegarle al backend.
-watch([filter_order, filter_correlative, filter_invoice, filter_client_id, filter_status], () => {
-  clearTimeout(debounceTimeout)
-  debounceTimeout = setTimeout(applyFilters, 350)
-})
+watch([filter_order, filter_correlative, filter_invoice, filter_client_id, filter_status], debounce(applyFilters))
 
 // Ciclo de vida
 watch(() => route.query.buscar_orden, (val) => {
@@ -816,6 +821,7 @@ onMounted(() => {
   retrieveOrders()
   window.addEventListener('wss-reload-orders-service', handleWssReload)
   window.addEventListener('wss-update-order-row', fetchAndInjectSingleOrder)
+  window.addEventListener('wss-update-order-progress', refrescarProgreso)
   window.addEventListener('wss-update-row', aplicarEquiposCambiados)
   window.addEventListener('wss-update-rows', aplicarEquiposCambiados)
   window.addEventListener('wss-reload-certificates', recargarEquiposPorWebSocket)
@@ -824,6 +830,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('wss-reload-orders-service', handleWssReload)
   window.removeEventListener('wss-update-order-row', fetchAndInjectSingleOrder)
+  window.removeEventListener('wss-update-order-progress', refrescarProgreso)
   window.removeEventListener('wss-update-row', aplicarEquiposCambiados)
   window.removeEventListener('wss-update-rows', aplicarEquiposCambiados)
   window.removeEventListener('wss-reload-certificates', recargarEquiposPorWebSocket)

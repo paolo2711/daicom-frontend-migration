@@ -889,6 +889,7 @@ const getSemaforoColor = (item) => {
   const hasInv = orden.order_has_invoices
   const hasPay = orden.order_has_payments
 
+  if (orden.order_vence) return 'teal'    // A credito: no se cobra hasta que vence
   if (hasInv && hasPay) return 'success'  // Verde: Facturado y pagado
   if (hasInv || hasPay) return 'warning'  // Amarillo: Hay plata moviéndose (falta factura o falta pago)
   
@@ -905,6 +906,7 @@ const getSemaforoText = (item) => {
   const hasInv = orden.order_has_invoices
   const hasPay = orden.order_has_payments
 
+  if (orden.order_vence) return `A crédito · vence ${fechaCorta(orden.order_vence)}`
   if (hasInv && hasPay) return 'Facturación y Liquidación Completadas'
   if (hasInv && !hasPay) return 'Facturada (Pendiente de Liquidación)'
   if (!hasInv && hasPay) return 'Liquidación en Proceso (Pendiente de Facturación)'

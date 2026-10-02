@@ -52,6 +52,15 @@
         >Falta Pago</filter-pill>
 
         <filter-pill
+          :active="filtro_a_credito"
+          :count="appStore.pendingCreditServiceCount"
+          color="teal"
+          icon="mdi-calendar-clock"
+          tooltip="Filtrar órdenes a crédito que aún no vencen"
+          @click="toggleFiltroCredito"
+        >A Crédito</filter-pill>
+
+        <filter-pill
           :active="filtro_sin_factura"
           :count="appStore.pendingInvoicesServiceCount"
           color="warning"
@@ -335,6 +344,7 @@ import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
 import { debounce } from '@/utils/debounce'
 import { throttle } from '@/utils/throttle'
+import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemaforoFinanciero } from '@/utils/orders/cobro'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
 import DialogFactura from '../DialogFactura.vue'
@@ -359,6 +369,7 @@ const panel_expandido = ref(false)
 // Nuevos estados UI de Filtros Avanzados y Chips
 const mostrar_filtros_avanzados = ref(false)
 const filtro_falta_pago = ref(false)
+const filtro_a_credito = ref(false)
 const filtro_sin_factura = ref(false)
 
 // Texto computado para el calendario elegante
@@ -474,8 +485,16 @@ const applyFilters = () => {
   cargarResumenes() // Sincroniza las píldoras cada vez que filtras
 }
 
+// Falta pago y A credito no comparten ordenes: prender una apaga la otra.
 const toggleFiltroPago = () => {
   filtro_falta_pago.value = !filtro_falta_pago.value
+  if (filtro_falta_pago.value) filtro_a_credito.value = false
+  applyFilters()
+}
+
+const toggleFiltroCredito = () => {
+  filtro_a_credito.value = !filtro_a_credito.value
+  if (filtro_a_credito.value) filtro_falta_pago.value = false
   applyFilters()
 }
 
@@ -490,6 +509,8 @@ const cargarResumenes = () => Promise.all([
     .then((res) => { appStore.setPendingPaymentsServiceCount(res.data.pending_payments) }).catch(() => {}),
   OrderDataService.getPendingInvoicesSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value)
     .then((res) => { appStore.setPendingInvoicesServiceCount(res.data.pending_invoices) }).catch(() => {}),
+  OrderDataService.getPendingCreditSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value)
+    .then((res) => { appStore.setPendingCreditServiceCount(res.data.pending_credit) }).catch(() => {}),
 ])
 
 // Las mismas, cuando las pide un aviso: con el freno de los contadores.
@@ -521,7 +542,7 @@ const retrieveOrders = () => {
     1,
     filtro_falta_pago.value,
     filtro_sin_factura.value,
-    false,
+    filtro_a_credito.value,
     filter_invoice.value
   )
       .then((res) => {
@@ -553,69 +574,6 @@ const manejarClicFila = (event, { item }) => {
 const getCurrencySymbol = (currency) => {
   const symbols = { 'PEN': 'S/', 'USD': '$', 'EUR': '€' }
   return symbols[currency] || 'S/'
-}
-
-// --- LOGICA DEL SEMÁFORO FINANCIERO (VÍNCULO) ---
-// Única columna financiera de la tabla: ya no hay un "Estado" aparte
-// leyendo o.status crudo — ese campo queda congelado para órdenes
-// facturadas desde que el pago vive en la Factura, no en la Orden
-// (ver Order.estado_financiero en el backend). Todo sale de ahí.
-// El estado sale ÚNICAMENTE de estado_financiero (que el backend calcula
-// agregando las facturas de la orden). Los campos total_pagado/saldo_pendiente
-// ya NO existen en la orden — usarlos daba siempre "pagado" por undefined.
-// estado_financiero: 1=En Proceso, 2=Deuda, 3=Abonado, 4=Anulada, 5=Pagado, 6=Excedido
-const getColorSemaforoFinanciero = (o) => {
-  // Sin cargo va primero: esas ordenes tambien tienen wants_invoice en false y
-  // caerian en la rama de abajo, que habla de abonos que nunca van a existir.
-  if (o.requiere_pago === false) return 'grey-darken-2'
-  if (o.wants_invoice === false) {
-    // Sin comprobante: verde si ya tiene abono (pagado), gris si aún no.
-    return o.estado_financiero === 5 ? 'success' : 'grey-darken-2'
-  }
-  switch (o.estado_financiero) {
-    case 4: return 'grey-darken-1'   // Anulada
-    case 6: return 'blue-darken-1'   // Excedido
-    case 5: return 'success'         // Pagado
-    case 3: return 'warning'         // Abonado (parcial)
-    case 2: return 'error'           // Deuda
-    case 1:
-    default: return 'grey'           // En proceso / sin factura
-  }
-}
-
-const getIconoSemaforoFinanciero = (o) => {
-  // Ícono único de trazo fino, adaptado al estado financiero
-  if (o.requiere_pago === false) return 'mdi-cash-off'
-  if (o.wants_invoice === false) {
-    return o.estado_financiero === 5 ? 'mdi-file-document-check-outline' : 'mdi-file-document-remove-outline'
-  }
-  switch (o.estado_financiero) {
-    case 4: return 'mdi-file-document-remove-outline' // Anulada
-    case 6: return 'mdi-file-document-alert-outline'  // Excedido
-    case 5: return 'mdi-file-document-check-outline'  // Pagado
-    case 3: return 'mdi-file-document-edit-outline'   // Abonado parcial
-    case 2: return 'mdi-file-document-alert-outline'  // Deuda
-    case 1:
-    default: return 'mdi-file-document-outline'  // Libre / sin factura
-  }
-}
-
-const getTextoSemaforoFinanciero = (o) => {
-  if (o.requiere_pago === false) return 'Sin cargo, no se cobra'
-  if (o.wants_invoice === false) {
-    return o.estado_financiero === 5 ? 'Sin comprobante · Pagado' : 'Sin comprobante · Sin abono aún'
-  }
-  const { cantidad, numero } = o.facturas || { cantidad: 0, numero: '' }
-  const cuantas = cantidad > 1 ? `${cantidad} facturas` : numero
-  switch (o.estado_financiero) {
-    case 4: return 'Orden anulada'
-    case 6: return `Excedido (${cuantas})`
-    case 5: return `Pagado (${cuantas})`
-    case 3: return `Abono parcial (${cuantas})`
-    case 2: return `Sin abonos / Deuda (${cuantas})`
-    case 1:
-    default: return 'Sin factura — clic para ver'
-  }
 }
 
 // Clic en el semáforo: si la orden tiene factura(s), enfoca el panel en
@@ -803,7 +761,7 @@ watch(() => route.query.buscar_factura, (val) => {
 const aplicarPildorasDeRuta = () => {
   let cambio = false
   if (route.query.sin_factura) { filtro_sin_factura.value = true; cambio = true }
-  if (route.query.falta_pago)  { filtro_falta_pago.value = true;  cambio = true }
+  if (route.query.falta_pago)  { filtro_falta_pago.value = true; filtro_a_credito.value = false; cambio = true }
   if (cambio) applyFilters()
 }
 watch(() => [route.query.sin_factura, route.query.falta_pago], aplicarPildorasDeRuta)

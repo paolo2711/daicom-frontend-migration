@@ -137,6 +137,8 @@ export const useAppStore = defineStore('app', {
     pendingInvoicesServiceCount: 0,
     pendingPaymentsRentalCount: 0,
     pendingInvoicesRentalCount: 0,
+    pendingCreditServiceCount: 0,
+    pendingCreditRentalCount: 0,
   }),
 
   actions: {
@@ -194,7 +196,9 @@ export const useAppStore = defineStore('app', {
     setPendingPaymentsServiceCount(count) { this.pendingPaymentsServiceCount = count; },
     setPendingInvoicesServiceCount(count) { this.pendingInvoicesServiceCount = count; },
     setPendingPaymentsRentalCount(count) { this.pendingPaymentsRentalCount = count; },
-    setPendingInvoicesRentalCount(count) { this.pendingInvoicesRentalCount = count; }
+    setPendingInvoicesRentalCount(count) { this.pendingInvoicesRentalCount = count; },
+    setPendingCreditServiceCount(count) { this.pendingCreditServiceCount = count; },
+    setPendingCreditRentalCount(count) { this.pendingCreditRentalCount = count; }
   },
   getters: {
     sidebarColorEffective: (state) => state.darkStatus ? '#1b2028' : state.sidebarColor,

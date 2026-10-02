@@ -48,6 +48,7 @@ export default {
       order_requiere_pago: element.order_requiere_pago,
       order_has_invoices: element.order_has_invoices,
       order_has_payments: element.order_has_payments,
+      order_vence: element.order_vence,
     };
   },
 

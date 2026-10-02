@@ -23,8 +23,14 @@ export default {
       detraccion_applies: element.detraccion_applies || false,
       detraccion_amount: element.detraccion_amount != null ? Number(element.detraccion_amount) : 0,
 
+      // ─── CRÉDITO: no se cobra hasta due_date ───
+      es_credito: element.es_credito || false,
+      due_date: element.due_date || null,
+
       // ─── ESTADO FINANCIERO (vive en la factura, ver OrderInvoice.status) ───
       status: element.status ?? 2, // 2 = Deuda por defecto
+      // El que se muestra: igual a status, salvo Crédito (8) mientras no vence.
+      estado: element.estado ?? element.status ?? 2,
 
       // ─── CEREBRO FINANCIERO DE LA FACTURA ───
       total_pagado: element.total_pagado != null ? Number(element.total_pagado) : 0,

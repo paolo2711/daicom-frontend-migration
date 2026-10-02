@@ -39,6 +39,7 @@ import CertificateDataService from '@/services/certificates/certificateDataServi
 import { useStatusStore } from '@/stores/statusStore'
 import { useAuthStore } from '@/stores/authStore'
 import { flushQueuedToast } from '@/services/notifications/eventToasts'
+import { enElServidor } from '@/utils/uploadTasks'
 
 // El back cierra con este codigo si el token no vale (websockets/consumers.py).
 const SESION_INVALIDA = 4001
@@ -61,6 +62,13 @@ const statusStore = useStatusStore()
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
 
+// Lo que el servidor siguio haciendo sin conexion llega como el ultimo aviso
+// de cada tarea (websockets/panel.py): asi ninguna queda colgada en el panel.
+const recuperarTareas = () => {
+  const tareas = appStore.uploadTasks.filter(enElServidor).map(t => ({ tipo: t.type, id: t.id }))
+  if (tareas.length) socket.send(JSON.stringify({ action: 'recuperar_tareas', tareas }))
+}
+
 const conectarWebSocket = () => {
   cerrarSocket()
 
@@ -81,6 +89,7 @@ const conectarWebSocket = () => {
   // Conexion recuperada -> quitamos el banner y refrescamos: mientras estuvo
   // caida se perdieron eventos, asi que la pantalla quedo desactualizada.
   socket.onopen = () => {
+    recuperarTareas()
     if (statusStore.active.includes('ws_down')) {
       statusStore.clear('ws_down')
       window.dispatchEvent(new CustomEvent('wss-reload-tables'))

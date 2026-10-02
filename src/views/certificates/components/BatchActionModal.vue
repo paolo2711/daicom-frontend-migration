@@ -445,15 +445,18 @@ const confirmAction = async () => {
     } 
     
     else if (action.value === 'qr') {
-      aptos.forEach(cert => {
-        if (cert.validation_status === 'manual_pdf' && cert.file) {
-          window.dispatchEvent(new CustomEvent('wss-manual-pdf-upload', { detail: { certificate: cert, file: cert.file } }))
-        } else {
-          window.dispatchEvent(new CustomEvent('wss-qr-start', {
-            detail: { certificate: cert, fechaFirma: fecha.value }
-          }))
-        }
+      // El PDF ya firmado se sube de a uno desde el navegador; el resto va en un
+      // solo pedido y lo firma el servidor.
+      const manuales = aptos.filter(cert => cert.validation_status === 'manual_pdf' && cert.file)
+      const aFirmar = aptos.filter(cert => !manuales.includes(cert))
+      manuales.forEach(cert => {
+        window.dispatchEvent(new CustomEvent('wss-manual-pdf-upload', { detail: { certificate: cert, file: cert.file } }))
       })
+      if (aFirmar.length) {
+        window.dispatchEvent(new CustomEvent('wss-qr-start', {
+          detail: { certificates: aFirmar, fechaFirma: fecha.value }
+        }))
+      }
       Toast.fire({ timer: 4000,
         icon: 'info', title: `Procesando ${aptos.length} firmas/subidas en segundo plano...`
       })

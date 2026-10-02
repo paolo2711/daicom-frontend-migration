@@ -332,6 +332,7 @@ import OrderMappers from '@/mappers/orderMappers'
 import MenuSinFactura from '@/views/orders/components/MenuSinFactura.vue'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { useOrderItems } from '@/composables/useOrderItems'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
 import DialogFactura from '../DialogFactura.vue'
@@ -393,6 +394,7 @@ const headers = [
 // Datos de tabla
 const orders = ref([])
 const expanded = ref([])
+const { cargarItems, actualizarItems, reemplazarOrdenes } = useOrderItems(orders, 'certificates')
 
 // --- LÓGICA DE EXPANSIÓN ROBUSTA (Resiliencia a return-object) ---
 const getSafeId = (val) => {
@@ -409,10 +411,10 @@ const isOrderExpanded = (item) => {
 watch(expanded, (newVal) => {
   if (newVal.length > 1) {
     expanded.value = [newVal[newVal.length - 1]]
+    return
   }
-
   if (expanded.value.length === 1) {
-    cargarEquiposExpandidos(getSafeId(expanded.value[0]))
+    cargarItems(getSafeId(expanded.value[0]), { mostrarCarga: true })
   }
 })
 const total_orders = ref(0)
@@ -523,9 +525,8 @@ const retrieveOrders = () => {
   )
       .then((res) => {
         if (!isLatestOrdersLoad(token)) return   // llegó una carga más nueva → no pisar
-        orders.value = res.data.results.map(orden => OrderMappers.getMap(orden))
+        reemplazarOrdenes(res.data.results.map(orden => OrderMappers.getMap(orden)), idOrdenExpandida())
         total_orders.value = res.data.count
-        cargarEquiposExpandidos(idOrdenExpandida())
       })
       .finally(() => {
         if (isLatestOrdersLoad(token)) loading_list.value = false
@@ -731,22 +732,13 @@ const abrirEditarOrden = (o) => {
   })
 }
 
-// La fila lleva el contador de equipos, no los equipos.
-const cargarEquiposExpandidos = (orderId) => {
-  if (!orderId) return
-  const fila = orders.value.find(o => String(o.id) === String(orderId))
-  if (!fila) return
-  fila.certificates = null
-  OrderDataService.getEquipos(orderId)
-    .then(response => { fila.certificates = response.data || [] })
-    .catch(() => { fila.certificates = [] })
-}
-
 const idOrdenExpandida = () => (
   expanded.value.length === 1 ? getSafeId(expanded.value[0]) : null
 )
 
 // WebSockets
+// La fila de la orden: barra, estado y cobro. Sus equipos tienen sus propios
+// avisos, los de cada certificado.
 const fetchAndInjectSingleOrder = (event) => {
   OrderDataService.getFila(event.detail)
     .then(response => {
@@ -758,18 +750,24 @@ const fetchAndInjectSingleOrder = (event) => {
       const index = orders.value.findIndex(o => o.id === fila.id)
       if (index !== -1) Object.assign(orders.value[index], fila)
 
-      if (String(idOrdenExpandida()) === String(fila.id)) cargarEquiposExpandidos(fila.id)
-
       clearTimeout(debounceTimeout)
       debounceTimeout = setTimeout(() => { cargarResumenes() }, 1500)
     })
     .catch(() => {})
 }
 
+// Los certificados que cambiaron se reemplazan en su fila de la orden abierta.
+const aplicarEquiposCambiados = (event) => actualizarItems(idOrdenExpandida(), [].concat(event.detail))
+
+// Se creo o se borro un certificado: cambio quien esta en la orden.
+const recargarEquiposPorWebSocket = () => cargarItems(idOrdenExpandida())
+
 const updateSingleOrderInList = (updatedOrder) => {
   const index = orders.value.findIndex(o => o.id === updatedOrder.id)
   if (index !== -1) {
-    Object.assign(orders.value[index], OrderMappers.getMap(updatedOrder))
+    // Los equipos los trae useOrderItems; el resto de la orden no los pisa.
+    const equipos = orders.value[index].certificates
+    Object.assign(orders.value[index], OrderMappers.getMap(updatedOrder), { certificates: equipos })
   }
 }
 
@@ -818,11 +816,17 @@ onMounted(() => {
   retrieveOrders()
   window.addEventListener('wss-reload-orders-service', handleWssReload)
   window.addEventListener('wss-update-order-row', fetchAndInjectSingleOrder)
+  window.addEventListener('wss-update-row', aplicarEquiposCambiados)
+  window.addEventListener('wss-update-rows', aplicarEquiposCambiados)
+  window.addEventListener('wss-reload-certificates', recargarEquiposPorWebSocket)
 })
 
 onUnmounted(() => {
   window.removeEventListener('wss-reload-orders-service', handleWssReload)
   window.removeEventListener('wss-update-order-row', fetchAndInjectSingleOrder)
+  window.removeEventListener('wss-update-row', aplicarEquiposCambiados)
+  window.removeEventListener('wss-update-rows', aplicarEquiposCambiados)
+  window.removeEventListener('wss-reload-certificates', recargarEquiposPorWebSocket)
 })
 </script>
 

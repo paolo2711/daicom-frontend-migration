@@ -54,12 +54,11 @@ export default {
     return axios.delete('certificates/temporal', { headers: cabecerasDe(), data: { url } });
   },
 
-  // fecha_firma mueve solo el día del sello dibujado, para los certificados
-  // viejos que se vuelven a generar.
-  async generateQR(id, fechaFirma = '') {
-    const headers = authHeader();
-    headers['Content-Type'] = "application/json";
-    return axios.post(`certificates/attach_qr/${id}`, { fecha_firma: fechaFirma }, { headers });
+  // Solo encola: el avance y el resultado de cada uno llegan por el panel de
+  // subidas. fecha_firma mueve solo el día del sello dibujado, para los
+  // certificados viejos que se vuelven a generar.
+  firmar(certIds, fechaFirma = '') {
+    return axios.post('certificates/firmar', { cert_ids: certIds, fecha_firma: fechaFirma }, { headers: authHeader() });
   },
 
   

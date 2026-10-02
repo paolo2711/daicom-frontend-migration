@@ -45,10 +45,10 @@ function processUploadProgress(data, appStore) {
       return
     }
 
-    // Si P1 mando a cancelar, disparamos el abort() local en P2 para matar la red tambien.
-    if (data.status === 'canceled' && existing.status !== 'canceled') {
-      if (taskType === 'qr') emit('wss-qr-cancel', { id: data.cert_id })
-      else emit('wss-sheet-cancel', { id: data.cert_id, tipo: taskType })
+    // Otra pestaña cancelo una conversion: esta tambien se lo pide al servidor.
+    // La firma no: su 'canceled' lo manda el servidor cuando ya la freno.
+    if (data.status === 'canceled' && existing.status !== 'canceled' && taskType !== 'qr') {
+      emit('wss-sheet-cancel', { id: data.cert_id, tipo: taskType })
     }
 
     appStore.updateUploadTask(data.cert_id, taskType, {
@@ -62,9 +62,9 @@ function processUploadProgress(data, appStore) {
       is_cloud_error: data.is_cloud_error || false,
       offline_url: data.offline_url || null,
     })
-    // Warning: proceso QR que si se cargo en nube pero no en local.
-    // El suelto no tiene fila que refrescar: no sale de ningun certificado.
-    if ((data.status === 'success' || data.status === 'warning') && taskType !== 'suelto') {
+    // Solo la conversion refresca su fila desde aca. La firma guarda el
+    // certificado y eso ya avisa a su fila; el suelto no tiene fila.
+    if (data.status === 'success' && taskType === 'sheet') {
       emit('wss-update-row', data.cert_id)
     }
   }

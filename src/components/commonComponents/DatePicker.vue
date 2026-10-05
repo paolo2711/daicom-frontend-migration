@@ -12,7 +12,7 @@
         hide-details="auto"
       />
     </template>
-    <v-date-picker v-model="dateObj" @update:model-value="onDateChange" />
+    <v-date-picker v-model="dateObj" :min="min" @update:model-value="onDateChange" />
   </v-menu>
 </template>
 
@@ -21,7 +21,9 @@ import { ref, watch, computed } from 'vue'
 
 const props = defineProps({
   date: String,
-  label: String
+  label: String,
+  // 'YYYY-MM-DD': los dias anteriores no se pueden elegir.
+  min: String
 })
 
 const emit = defineEmits(['setPickedDate'])

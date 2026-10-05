@@ -4,14 +4,18 @@ import { fechaCorta, hoyISO } from '@/utils/dates'
 // calcula al leer (OrderInvoice.estado y Order.estado_financiero).
 export const CREDITO = 8
 
+// A credito y dentro del plazo, tenga abonos o no: lo que falta todavia no se
+// cobra.
+export const porVencer = (factura) => !!(factura.es_credito && factura.due_date && factura.due_date >= hoyISO())
+
 // "Vence 25/11/2026" mientras corre el plazo, "Venció ..." en rojo si ya paso
 // sin pagarse. Pagada no dice nada: null.
 export function vencimiento(factura) {
   if (!factura.es_credito || !factura.due_date || [5, 6].includes(factura.estado)) return null
-  const vencida = factura.due_date < hoyISO()
+  const vigente = porVencer(factura)
   return {
-    texto: `${vencida ? 'Venció' : 'Vence'} ${fechaCorta(factura.due_date)}`,
-    color: vencida ? 'error' : 'teal',
+    texto: `${vigente ? 'Vence' : 'Venció'} ${fechaCorta(factura.due_date)}`,
+    color: vigente ? 'teal' : 'error',
   }
 }
 

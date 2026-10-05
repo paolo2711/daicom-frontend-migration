@@ -113,33 +113,10 @@
     <selection-bar
       :count="certificados_seleccionados.length"
       label="seleccionado(s)"
+      :acciones="accionesDe(certificados_seleccionados)"
+      @accion="clave => ejecutarAccion(clave, certificados_seleccionados)"
       @clear="certificados_seleccionados = []"
-    >
-      <v-btn v-if="permiso_elaborar" variant="text" size="small" class="mx-1 font-weight-bold"
-             prepend-icon="mdi-file-pdf-box" @click="abrirModalLote('excel')">
-        Subir Excels
-      </v-btn>
-
-      <v-btn v-if="permiso_qr" variant="text" size="small" class="mx-1 font-weight-bold"
-             prepend-icon="mdi-qrcode-scan" @click="abrirModalLote('qr')">
-        Firmar QR
-      </v-btn>
-
-      <v-btn v-if="permiso_solicitar_firma" variant="text" size="small" class="mx-1 font-weight-bold"
-             prepend-icon="mdi-bell-ring" @click="abrirModalLote('notify')">
-        Solicitar Firma
-      </v-btn>
-
-      <v-btn v-if="permiso_entrega" variant="text" size="small" class="mx-1 font-weight-bold"
-             prepend-icon="mdi-package-variant-closed-check" @click="abrirModalLote('entrega')">
-        Marcar Entregados
-      </v-btn>
-
-      <v-btn variant="text" size="small" class="mx-1 font-weight-bold"
-             prepend-icon="mdi-swap-horizontal" @click="abrirModalLote('tipo')">
-        Corregir Tipo
-      </v-btn>
-    </selection-bar>
+    />
 
     <table-loading-overlay :loading="loading_list" :isEmpty="certificates.length === 0">
       <v-data-table-server
@@ -154,7 +131,7 @@
         return-object
         :loading="loading_list"
         @click:row="handleRowClick"
-        @contextmenu:row="handleRightClick"
+        @contextmenu:row="alClickDerecho"
         :items-length="total_certificates"
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
@@ -239,7 +216,7 @@
               <template v-slot:activator="{ props }">
                 <v-btn
                   v-bind="props" icon variant="text" density="comfortable" color="error"
-                  :disabled="!puedeSubirExcel(item)" @click.stop="openUploadDialog(item)"
+                  :disabled="!puede('excel', item)" @click.stop="abrirLote('excel', [item])"
                 >
                   <v-icon>mdi-file-alert</v-icon>
                 </v-btn>
@@ -278,7 +255,7 @@
                 <v-btn
                   v-else
                   v-bind="props" icon variant="text" density="comfortable" color="grey"
-                  :disabled="!puedeSubirExcel(item)" @click.stop="openUploadDialog(item)"
+                  :disabled="!puede('excel', item)" @click.stop="abrirLote('excel', [item])"
                 >
                   <v-icon>mdi-file-pdf-box</v-icon>
                 </v-btn>
@@ -299,8 +276,8 @@
               <template v-slot:activator="{ props }">
                 <v-btn
                   v-bind="props" icon variant="text" density="comfortable" color="error"
-                  :disabled="!puedeGenerarQr(item)"
-                  @click.stop="openQRDialog(item)"
+                  :disabled="!puede('qr', item)"
+                  @click.stop="abrirLote('qr', [item])"
                 >
                   <v-icon>mdi-cloud-alert</v-icon>
                 </v-btn>
@@ -313,7 +290,7 @@
                 <template v-slot:activator="{ props }">
                   <v-btn
                     v-bind="props" icon variant="text" density="comfortable" color="primary"
-                    :href="linkNube(item)" target="_blank"
+                    :href="linkDe(item)" target="_blank"
                     :disabled="item.status === 5" @click.stop="onNubeClick($event, item)"
                   >
                     <v-icon>{{ estaEntregado(item) ? 'mdi-cloud-check' : 'mdi-cloud' }}</v-icon>
@@ -330,8 +307,8 @@
                 <template v-slot:activator="{ props }">
                   <v-btn
                     v-bind="props" icon variant="text" density="comfortable" :color="ESTADOS[NUBE_DESACTUALIZADA].color"
-                    :disabled="!puedeGenerarQr(item)"
-                    @click.stop="openQRDialog(item)"
+                    :disabled="!puede('qr', item)"
+                    @click.stop="abrirLote('qr', [item])"
                   >
                     <v-icon>mdi-cloud-sync</v-icon>
                   </v-btn>
@@ -343,8 +320,8 @@
                 <template v-slot:activator="{ props }">
                   <v-btn
                     v-bind="props" icon variant="text" density="comfortable" color="grey"
-                    :disabled="!puedeGenerarQr(item)"
-                    @click.stop="openQRDialog(item)"
+                    :disabled="!puede('qr', item)"
+                    @click.stop="abrirLote('qr', [item])"
                   >
                     <v-badge :model-value="item.signature_requested === true" color="warning" dot offset-x="2" offset-y="2">
                       <v-icon>mdi-qrcode-plus</v-icon>
@@ -363,7 +340,7 @@
             variant="text" 
             density="comfortable" 
             color="grey-darken-1" 
-            @click.stop="handleMenuButton($event, { item })"
+            @click.stop="alBotonDeFila($event, item)"
           >
             <v-icon>mdi-dots-vertical</v-icon>
           </v-btn>
@@ -466,94 +443,14 @@
       @clearSelection="certificados_seleccionados = []"
     />
 
-    <!-- El menu se ancla a las coordenadas del cursor. Son una prop reactiva, asi
-         que abrir uno con otro abierto lo reubica solo. -->
-    <v-menu
-      v-model="contextMenu.show"
-      :target="[contextMenu.x, contextMenu.y]"
-      :transition="false"
-    >
-      <v-list v-if="contextMenu.item" density="compact" class="elevation-4 border rounded-lg bg-surface">
-        <v-list-item v-if="contextMenu.item.status !== 5" @click="certificateModal?.open(contextMenu.item)">
-          <template v-slot:prepend><v-icon size="small">mdi-pencil</v-icon></template>
-          <v-list-item-title class="font-weight-medium text-body-2">Ver y editar</v-list-item-title>
-        </v-list-item>
-
-        <v-list-item v-if="contextMenu.item.link_nube" @click="copiarLinkCertificado(contextMenu.item)">
-          <template v-slot:prepend><v-icon size="small">mdi-link-variant</v-icon></template>
-          <v-list-item-title class="font-weight-medium text-body-2">Copiar link</v-list-item-title>
-        </v-list-item>
-
-        <v-list-item v-if="puedeSubirExcel(contextMenu.item)" @click="openUploadDialog(contextMenu.item)">
-          <template v-slot:prepend><v-icon size="small">mdi-file-excel</v-icon></template>
-          <v-list-item-title class="font-weight-medium text-body-2">
-            {{ tieneExcelBase(contextMenu.item) ? 'Reemplazar Excel' : 'Subir Excel' }}
-          </v-list-item-title>
-        </v-list-item>
-
-        <v-list-item v-if="permiso_solicitar_firma && contextMenu.item.status !== 5 && tieneExcelBase(contextMenu.item)" @click="contextMenu.item.signature_requested ? cancelarSolicitudFirma(contextMenu.item) : solicitarFirmaIndividual(contextMenu.item)">
-          <template v-slot:prepend>
-            <v-icon size="small">
-              {{ contextMenu.item.signature_requested ? 'mdi-bell-cancel-outline' : 'mdi-bell-ring' }}
-            </v-icon>
-          </template>
-          <v-list-item-title class="font-weight-medium text-body-2">
-            {{ contextMenu.item.signature_requested ? 'Cancelar Solicitud' : 'Solicitar Firma' }}
-          </v-list-item-title>
-        </v-list-item>
-
-        <v-list-item v-if="permiso_entrega && (esEntregable(contextMenu.item) || estaEntregado(contextMenu.item))"
-                     @click="estaEntregado(contextMenu.item) ? quitarEntrega(contextMenu.item) : abrirEntrega(contextMenu.item)">
-          <template v-slot:prepend>
-            <v-icon size="small">
-              {{ estaEntregado(contextMenu.item) ? 'mdi-package-variant-closed-remove' : 'mdi-package-variant-closed-check' }}
-            </v-icon>
-          </template>
-          <v-list-item-title class="font-weight-medium text-body-2">
-            {{ estaEntregado(contextMenu.item) ? 'Quitar entrega' : 'Marcar como entregado' }}
-          </v-list-item-title>
-          <v-list-item-subtitle v-if="estaEntregado(contextMenu.item)" class="text-caption">
-            Entregado {{ fechaCorta(contextMenu.item.sent_date) }}
-          </v-list-item-subtitle>
-        </v-list-item>
-
-        <v-list-item v-if="puedeGenerarQr(contextMenu.item)" @click="openQRDialog(contextMenu.item)">
-          <template v-slot:prepend><v-icon size="small">{{ contextMenu.item.uploaded ? 'mdi-refresh' : 'mdi-qrcode-scan' }}</v-icon></template>
-          <v-list-item-title class="font-weight-medium text-body-2">
-            {{ contextMenu.item.uploaded ? 'Regenerar QR' : 'Generar QR y Firmar' }}
-          </v-list-item-title>
-        </v-list-item>
-
-        <v-list-item v-if="contextMenu.item.status !== 5" @click="batchActionModalRef?.open('tipo', [contextMenu.item])">
-          <template v-slot:prepend><v-icon size="small">mdi-swap-horizontal</v-icon></template>
-          <v-list-item-title class="font-weight-medium text-body-2">Corregir Tipo</v-list-item-title>
-        </v-list-item>
-
-        <v-divider v-if="contextMenu.item.status !== 5 && permiso_anular" class="my-1 border-opacity-25"></v-divider>
-
-        <v-list-item v-if="permiso_anular && contextMenu.item.link_nube && contextMenu.item.status !== 5" @click="eliminarDeLaNubeConfirm(contextMenu.item)">
-          <template v-slot:prepend><v-icon size="small">mdi-cloud-remove-outline</v-icon></template>
-          <v-list-item-title class="font-weight-medium text-body-2">Eliminar de la Nube</v-list-item-title>
-        </v-list-item>
-
-        <v-list-item v-if="contextMenu.item.status !== 5 && permiso_anular" @click="anularCertConfirm(contextMenu.item)">
-          <template v-slot:prepend><v-icon size="small">mdi-delete-outline</v-icon></template>
-          <v-list-item-title class="font-weight-medium text-body-2">Anular Certificado</v-list-item-title>
-        </v-list-item>
-        
-        <v-list-item v-if="contextMenu.item.status === 5 && permiso_anular" @click="revivirCertConfirm(contextMenu.item)">
-          <template v-slot:prepend><v-icon size="small">mdi-backup-restore</v-icon></template>
-          <v-list-item-title class="font-weight-medium text-body-2">Restaurar Certificado</v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-menu>
+    <action-menu :menu="menu" :acciones="accionesDe(menu.filas)"
+                 @accion="clave => ejecutarAccion(clave, menu.filas)" />
 
   </v-container>
 </template>
 
 <script setup>
-import { Toast } from '@/plugins/alerts'
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, getCurrentInstance, defineAsyncComponent, mergeProps } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, defineAsyncComponent, mergeProps } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/appStore'
 
@@ -574,16 +471,20 @@ import OrderSummaryCard    from './OrderSummaryCard.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import ClientSelect        from '@/components/shared/ClientSelect.vue'
 import { tieneExcelBase }  from '@/utils/certificates/excelBase'
-import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
-import { BORRADOR, EN_PROCESO, NUBE_DESACTUALIZADA, ESTADOS, estadoDe } from '@/utils/certificates/estado'
+import { estaEntregado } from '@/utils/certificates/entrega'
+import { ANULADO, NUBE_DESACTUALIZADA, ESTADOS, estadoDe } from '@/utils/certificates/estado'
 import { TIPOS_CERTIFICADO, siglaDelTipo } from '@/utils/certificates/tipos'
+import { ACCIONES_CERTIFICADO } from '@/utils/certificates/acciones'
+import { accionesPara } from '@/utils/actions'
+import { usePermissions } from '@/composables/usePermissions'
 import NumerosAnteriores from '@/components/shared/NumerosAnteriores.vue'
+import ActionMenu from '@/components/shared/ActionMenu.vue'
+import { useContextMenu } from '@/composables/useContextMenu'
 import { fechaCorta, fechaISO, hoyISO } from '@/utils/dates'
 import FilterPill          from '@/components/shared/FilterPill.vue'
 import DateRangeFilter     from '@/components/shared/DateRangeFilter.vue'
-import { copiarConAviso } from '@/utils/clipboard'
 import { decidirRefresco } from '@/utils/changedRows'
-import { mensajeDeError } from '@/utils/errors'
+import { useCertificateActions } from '@/composables/useCertificateActions'
 
 // Componentes async (lazy-loading igual que en Vue 2)
 // carga diferida de LoadSheet movida a BatchActionModal
@@ -593,11 +494,8 @@ const BatchActionModal = defineAsyncComponent(() => import('./BatchActionModal.v
 const route  = useRoute()
 
 const appStore = useAppStore()
-const { tareaDe, estadoSubida, confirmarFila } = useUploadState()
-
-// Acceso a $swal (registrado globalmente con vue-sweetalert2)
-const { appContext } = getCurrentInstance()
-const $swal = appContext.config.globalProperties.$swal
+const { estadoSubida, confirmarFila } = useUploadState()
+const { hasAction } = usePermissions()
 
 // ─── Template refs ────────────────────────────────────────────────────────────
 const certificateModal     = ref(null)
@@ -667,16 +565,12 @@ const orden_resonancia = ref(null)
 // ─── Permisos ─────────────────────────────────────────────────────────────────
 const is_admin                = ref(false)
 const user_permissions        = ref([])
-const permiso_qr              = ref(false)
 const permiso_resumen         = ref(false)
-const permiso_anular          = ref(false)
-const permiso_solicitar_firma = ref(false)
-const permiso_elaborar        = ref(false)  // 15: subir Excel base (metrólogo)
-const permiso_entrega         = ref(false)
 
-// Las mismas reglas se pedian en los botones de la fila y en el menu contextual.
-const puedeSubirExcel = (item) => item.status !== 5 && permiso_elaborar.value
-const puedeGenerarQr  = (item) => tieneExcelBase(item) && item.status !== 5 && permiso_qr.value
+const accionesDe = (certs) => accionesPara(ACCIONES_CERTIFICADO, certs, hasAction)
+
+// Los botones de Excel y QR de la fila siguen las reglas del menu.
+const puede = (clave, cert) => accionesDe([cert]).some(a => a.clave === clave && !a.disabled)
 //permisos pildora
 const ver_bandeja_firmas = computed(() => {
   return is_admin.value || user_permissions.value.includes(1001) || user_permissions.value.includes(1005)
@@ -710,16 +604,11 @@ const headers = computed(() =>
 // ─── Row props (reemplaza item-class de Vuetify 2) ───────────────────────────
 function getRowProps ({ item }) {
   const esResonancia = orden_resonancia.value && item.order === orden_resonancia.value;
-  const esOpcionesAbiertas = contextMenu.value.show && contextMenu.value.item?.id === item.id;
+  const esOpcionesAbiertas = estaEnElMenu(item);
 
   return {
     class: (esResonancia || esOpcionesAbiertas) ? 'resonancia-activa' : ''
   }
-}
-
-// Recien firmado, el link llega en la tarea antes que la fila se actualice.
-function linkNube(item) {
-  return item.link_nube || tareaDe(item.id, 'qr')?.url || ''
 }
 
 // Guard de secuencia: si dos cargas se solapan, solo se aplica la mas reciente
@@ -750,34 +639,16 @@ watch(certificate_type,  () => { options.value.page = 1; retrieveAllCertificates
 watch(client_id,         () => { options.value.page = 1; retrieveAllCertificates() })
 watch(lab_id,            () => { options.value.page = 1; retrieveAllCertificates() })
 
-function abrirModalLote (accion) {
-  if (batchActionModalRef.value) {
-    batchActionModalRef.value.open(accion, certificados_seleccionados.value)
-  }
+// El modal de lote muestra fila por fila que va a pasar. Con uno solo la fila
+// va marcada aunque ya tenga lo suyo: elegirlo es pedir reemplazarlo.
+function abrirLote (accion, certs) {
+  batchActionModalRef.value?.open(accion, certs, certs.length === 1)
 }
 
-// Marcar pasa por el modal aunque sea uno: hay que elegir la fecha.
-function abrirEntrega (cert) {
-  batchActionModalRef.value?.open('entrega', [cert], true)
-}
-
-function quitarEntrega (cert) {
-  $swal.fire({
-    title: '¿Quitar la entrega?',
-    text: `${cert.registry_code} volverá a figurar como no entregado.`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, quitar',
-    cancelButtonText: 'Cancelar',
-  }).then((result) => {
-    if (!result.isConfirmed) return
-    CertificateDataService.registrarEntrega([cert.id], null).then(() => {
-      Toast.fire({ timer: 2500, icon: 'info', title: 'Entrega quitada' })
-    }).catch(() => {
-      $swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo quitar la entrega.' })
-    })
-  })
-}
+const { ejecutarAccion, copiarLinks, linkDe } = useCertificateActions({
+  abrirLote,
+  abrirFicha: (cert) => certificateModal.value?.open(cert),
+})
 
 // ─── Expose ───────────────────────────────────────────────────────────────────
 defineExpose({
@@ -791,12 +662,7 @@ onMounted(() => {
   
   is_admin.value         = user.kind !== undefined && user.kind < 1
   user_permissions.value = user.action_permissions || []
-  permiso_qr.value              = is_admin.value || user_permissions.value.includes(1001)
   permiso_resumen.value         = is_admin.value || user_permissions.value.includes(1002)
-  permiso_anular.value          = is_admin.value || user_permissions.value.includes(1003)
-  permiso_solicitar_firma.value = is_admin.value || user_permissions.value.includes(1005)
-  permiso_elaborar.value        = is_admin.value || user_permissions.value.includes(1006)
-  permiso_entrega.value         = is_admin.value || user_permissions.value.includes(1010)
 
   if (route.query.correlativo) {
     correlative.value = route.query.correlativo
@@ -914,34 +780,9 @@ const getSemaforoText = (item) => {
 }
 // --------------------------------------
 
-// Estado del menú contextual global
-// Vuetify voltea el menu solo cuando no entra en pantalla, en los dos ejes.
-const contextMenu = ref({ show: false, x: 0, y: 0, item: null })
-
-function abrirMenu (x, y, cert) {
-  // El menu es de una fila sola: la seleccion de lote se cancela para que la
-  // barra de abajo no ofrezca acciones sobre otros certificados.
-  if (certificados_seleccionados.value.length) certificados_seleccionados.value = []
-
-  // Posicion y contenido en una sola asignacion: el menu se mueve y cambia sus
-  // opciones en el mismo render, sin mostrar las de la fila anterior.
-  contextMenu.value = { show: true, item: cert, x, y }
-}
-
-function handleRightClick (event, { item }) {
-  event.preventDefault()
-  abrirMenu(event.clientX, event.clientY, item.raw || item)
-}
-
-// Con el menu abierto, este click ya dejo encolado el cierre de Vuetify: la
-// apertura va detras. El click derecho no lo sufre, Vuetify no lo escucha.
-function handleMenuButton (event, { item }) {
-  const { clientX, clientY } = event
-  const cert = item.raw || item
-
-  if (!contextMenu.value.show) return abrirMenu(clientX, clientY, cert)
-  setTimeout(() => abrirMenu(clientX, clientY, cert), 0)
-}
+// Un anulado no se marca: su menu es de el solo.
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } =
+  useContextMenu(certificados_seleccionados, { seMarca: cert => cert.status !== ANULADO })
 
 function handleRowClick (event, { item }) {
   // Prevenir selección si el clic fue en un botón, enlace o ícono interactivo
@@ -1046,120 +887,11 @@ function fetchAndInjectOrderUpdate (event) {
   }).catch(() => {})
 }
 
-function anularCertConfirm (cert) {
-  $swal.fire({
-    title: '¿Anular este certificado?',
-    text: `El correlativo ${cert.registry_code} se marcará como anulado.`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, anular',
-  }).then((result) => {
-    if (result.isConfirmed) {
-      CertificateDataService.patch(cert.id, { status: 5 }).then(() => {
-        Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo anulado' })
-        // El aviso a los demas lo da la notificacion `cert_anulado` (dirigida, persistente).
-      })
-    }
-  })
-}
-
-function revivirCertConfirm (cert) {
-  $swal.fire({
-    title: '¿Restaurar certificado?',
-    text: `El correlativo ${cert.registry_code} volverá a estado Borrador.`,
-    icon: 'info',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, restaurar',
-    cancelButtonText: 'Cancelar',
-  }).then((result) => {
-    if (result.isConfirmed) {
-      CertificateDataService.patch(cert.id, { status: 1 })
-        .then(() => {
-          Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo restaurado' })
-        })
-        .catch(() => {
-          $swal.fire('Error', 'No se pudo restaurar el equipo.', 'error')
-        })
-    }
-  })
-}
-
-function solicitarFirmaIndividual(cert) {
-  CertificateDataService.requestBatchSignatures([cert.id]).then(() => {
-    Toast.fire({ timer: 3000,
-      icon: 'success', title: `Firma solicitada para ${cert.registry_code}`
-    })
-  }).catch(() => {
-    $swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo notificar a gerencia.' })
-  })
-}
-
-function cancelarSolicitudFirma(cert) {
-  CertificateDataService.cancelSignatureRequest(cert.id).then(() => {
-    Toast.fire({ timer: 3000,
-      icon: 'info', title: `Solicitud cancelada para ${cert.registry_code}`
-    })
-  }).catch(() => {
-    $swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cancelar la solicitud.' })
-  })
-}
-
-
-// Copia el link público del certificado al portapapeles con un toast breve.
-function copiarLinkCertificado(cert) {
-  const link = linkNube(cert)
-  if (link) copiarConAviso(link, 'Link copiado')
-}
-
 // Clic normal en el botón de nube: abre el PDF (href). Ctrl/Cmd+clic: copia el link.
 function onNubeClick(event, cert) {
   if (event.ctrlKey || event.metaKey) {
     event.preventDefault()
-    copiarLinkCertificado(cert)
-  }
-}
-
-function eliminarDeLaNubeConfirm(cert) {
-  $swal.fire({
-    title: '¿Eliminar de la Nube Pública?',
-    text: `El QR físico dejará de funcionar y el PDF ya no será visible en daicomperu.com, pero el equipo NO será anulado en el sistema interno.`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, eliminar',
-    cancelButtonText: 'Cancelar'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      CertificateDataService.removeFromCloud(cert.id).then((response) => {
-        // Leemos la data de forma agnóstica como lo hicimos en Uploadqr.vue
-        const data = response.data || response;
-        
-        if (data.warning) {
-          $swal.fire('Nube Limpia', data.success, 'warning')
-        } else {
-          Toast.fire({ timer: 2200, icon: 'success', title: data.success || 'Documento eliminado' })
-        }
-        
-        // Lo mismo que hace el back: vuelve a como estaba antes de firmar.
-        cert.uploaded = false
-        cert.link_nube = null
-        cert.attached_pdf = null
-        cert.status = tieneExcelBase(cert) ? EN_PROCESO : BORRADOR
-      }).catch((error) => {
-        $swal.fire('Error al eliminar de la Nube', mensajeDeError(error, 'No se pudo contactar con el FTP.'), 'error')
-      })
-    }
-  })
-}
-
-function openUploadDialog (item) {
-  if (batchActionModalRef.value) {
-    batchActionModalRef.value.open('excel', [item], true)
-  }
-}
-
-function openQRDialog (item) {
-  if (batchActionModalRef.value) {
-    batchActionModalRef.value.open('qr', [item], true)
+    copiarLinks([cert])
   }
 }
 

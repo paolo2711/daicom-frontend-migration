@@ -112,14 +112,21 @@ export default {
     return axios.post(`certificates/${id}/manual-upload`, data, { headers: headers });
   },
 
-  removeFromCloud(id) {
-    let headers = authHeader();
-    return axios.delete(`certificates/${id}/cloud`, { headers: headers });
+  // Uno o varios: cada uno cuenta como le fue por el panel de subidas.
+  eliminarDeLaNube(certIds) {
+    return axios.post('certificates/eliminar-de-la-nube', { cert_ids: certIds }, { headers: authHeader() });
   },
 
-  cancelSignatureRequest(id) {
-    let headers = authHeader();
-    return axios.patch(`certificates/${id}/cancel-signature`, {}, { headers: headers });
+  anular(certIds) {
+    return axios.post('certificates/anular', { cert_ids: certIds }, { headers: authHeader() });
+  },
+
+  restaurar(certIds) {
+    return axios.post('certificates/restaurar', { cert_ids: certIds }, { headers: authHeader() });
+  },
+
+  cancelarSolicitudes(certIds) {
+    return axios.post('certificates/cancelar-solicitudes', { cert_ids: certIds }, { headers: authHeader() });
   },
 
   requestBatchSignatures(certIds) {

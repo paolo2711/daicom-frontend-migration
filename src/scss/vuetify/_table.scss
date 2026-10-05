@@ -9,6 +9,15 @@
   overflow: hidden;
 }
 
+// La fila de la que habla el menu abierto, cuando el menu no la marca. Una
+// tabla con hover propio la excluye con :not(.fila-en-menu).
+.v-table tbody tr.fila-en-menu > td {
+  background-color: #E3F2FD !important;
+}
+.v-theme--dark .v-table tbody tr.fila-en-menu > td {
+  background-color: #0f1d31 !important;
+}
+
 // La fila que el servidor rechazo al guardar una lista.
 .v-table .fila-con-error td {
   background: rgba(var(--v-theme-error), 0.08);

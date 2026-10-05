@@ -143,9 +143,9 @@
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
         @click:row="manejarClicFila"
-        
-        :row-props="(data) => ({ 
-          class: isOrderExpanded(data.item) ? 'fila-padre-activa' : '' 
+        @contextmenu:row="alClickDerecho"
+        :row-props="(data) => ({
+          class: { 'fila-padre-activa': isOrderExpanded(data.item), 'fila-en-menu': estaEnElMenu(data.item) }
         })"
       >
         <template v-slot:bottom>
@@ -219,36 +219,8 @@
 
 
         <template v-slot:item.actions="{ item }">
-          <v-tooltip location="bottom" color="primary">
-            <template v-slot:activator="{ props }">
-              <v-btn
-                v-bind="props"
-                icon
-                :disabled="item.status === 4"
-                variant="text"
-                density="comfortable"
-                @click="abrirEditarOrden(item)"
-              >
-                <v-icon>mdi-pencil</v-icon>
-              </v-btn>
-            </template>
-            <span>Editar Cliente</span>
-          </v-tooltip>
-
-          <v-tooltip location="bottom" color="error" v-if="hasPermission(1004) && item.status !== 4">
-            <template v-slot:activator="{ props }">
-              <v-btn
-                v-bind="props"
-                icon
-                variant="text"
-                density="comfortable"
-                @click="anularOrderConfirm(item)"
-              >
-                <v-icon>mdi-delete-outline</v-icon>
-              </v-btn>
-            </template>
-            <span>Anular Orden Completa</span>
-          </v-tooltip>
+          <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" color="grey-darken-1"
+                 @click.stop="alBotonDeFila($event, item)" />
         </template>
 
         <template v-slot:expanded-row="{ columns, item }">
@@ -259,7 +231,7 @@
                 @reload="retrieveOrders"
                 @add-extra="prepareExtraEquipment(item)"
                 @edit-certificate="openCertificateModal"
-                @accion-certificados="clave => abrirBatchModal(clave, item.certificates)"
+                @accion-certificados="abrirBatchModal"
               />
             </td>
           </tr>
@@ -288,27 +260,18 @@
       </v-col>
     </v-row>
 
-    <!-- Barra flotante de selección (componente común). El botón "Vincular" se
-         quitó: al marcar órdenes el PanelFacturas ya entra en modo selección y
-         tocar una factura ahí las vincula — el botón era redundante. -->
+    <!-- Con órdenes marcadas, el panel de facturas ya está en modo vincular:
+         tocar una factura ahí las vincula. -->
     <selection-bar
       :count="ordenes_seleccionadas.length"
       label="seleccionada(s)"
+      :acciones="accionesDe(ordenes_seleccionadas)"
+      @accion="clave => ejecutarAccion(clave, ordenes_seleccionadas)"
       @clear="ordenes_seleccionadas = []"
-    >
-      <v-btn variant="text" size="small" class="mx-1 font-weight-bold"
-             prepend-icon="mdi-file-document-plus" @click="crearFacturaParaSeleccion">
-        Facturar
-      </v-btn>
+    />
 
-      <menu-sin-factura :orders="ordenes_seleccionadas"
-                        @aplicado="ordenes_seleccionadas = []" />
-
-      <v-btn v-if="hasPermission(1004)" variant="text" color="error" size="small" class="mx-1 font-weight-bold"
-             prepend-icon="mdi-cancel" :loading="anulando" @click="anularSeleccion">
-        Anular
-      </v-btn>
-    </selection-bar>
+    <action-menu :menu="menu" :acciones="accionesDe(menu.filas)"
+                 @accion="clave => ejecutarAccion(clave, menu.filas)" />
 
     <!-- MODALES -->
     <batch-action-modal ref="batchActionModalRef" />
@@ -322,7 +285,6 @@
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { Toast } from '@/plugins/alerts'
 import { useRoute } from 'vue-router'
 import { useTheme } from 'vuetify'
 import { useAppStore } from '@/stores/appStore'
@@ -332,7 +294,13 @@ import ClientSelect from '@/components/shared/ClientSelect.vue'
 import FilterPill from '@/components/shared/FilterPill.vue'
 import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import OrderMappers from '@/mappers/orderMappers'
-import MenuSinFactura from '@/views/orders/components/MenuSinFactura.vue'
+import ActionMenu from '@/components/shared/ActionMenu.vue'
+import { useContextMenu } from '@/composables/useContextMenu'
+import { usePermissions } from '@/composables/usePermissions'
+import { accionesPara } from '@/utils/actions'
+import { ACCIONES_ORDEN, VINCULAR } from '@/utils/orders/acciones'
+import { SIN_CARGO, SIN_COMPROBANTE, alternarMarca } from '@/utils/orders/sinFactura'
+import { anularOrdenes } from '@/utils/orders/anulacion'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
@@ -377,10 +345,9 @@ const selected_order = ref(null)
 const certificateModalRef = ref(null)
 const batchActionModalRef = ref(null)
 
+// Con uno solo la fila va marcada aunque ya tenga lo suyo, como en Certificados.
 const abrirBatchModal = (accion, certs) => {
-  if (batchActionModalRef.value) {
-    batchActionModalRef.value.open(accion, certs)
-  }
+  batchActionModalRef.value?.open(accion, certs, certs.length === 1)
 }
 
 const openCertificateModal = (cert) => {
@@ -459,11 +426,6 @@ const order_statuses = [
 ]
 
 // Clientes
-
-// Usuario y permisos
-const user = JSON.parse(localStorage.getItem('user')) || {}
-const is_admin = user.kind !== undefined && user.kind < 1
-const user_permissions = user.action_permissions || []
 
 // Guard de secuencia: solo aplica la carga mas reciente.
 const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestRequest()
@@ -586,18 +548,9 @@ const seleccionarFacturaEnPanel = (o) => {
   }
 }
 
-// "FACTURAR LOTE": crea UNA factura y la reparte automáticamente entre
-// todas las órdenes marcadas (partes iguales, sin pedirte nada). Si es
-// "CREAR FACTURA": abre DialogFactura para crear una factura nueva.
-// Con 1 orden marcada la crea y vincula directo. Con varias, por ahora
-// se crea sobre la primera y las demás se vinculan luego con VINCULAR
-// (crear-factura-multi vive en la limpieza pendiente de DialogFactura).
-// "CREAR FACTURA" desde la barra: una sola factura para TODAS las órdenes
-// marcadas. Deben compartir moneda (el backend exige lo mismo al vincular).
-const crearFacturaParaSeleccion = () => {
-  const ordenes = ordenes_seleccionadas.value
-  if (ordenes.length === 0) return
-  // La moneda ya no depende de la orden: se elige en el dialogo de la factura.
+// Una sola factura para todas: DialogFactura la crea y les vincula las ordenes.
+// La moneda se elige ahi, la orden no tiene.
+const facturar = (ordenes) => {
   selected_order.value = null
   ordenes_factura_multi.value = [...ordenes]
   factura_modal.value = true
@@ -623,49 +576,43 @@ const getProgreso = (o) => {
   return o.progreso || { total: 0, listos: 0 }
 }
 
-const hasPermission = (id) => {
-  if (is_admin) return true
-  return user_permissions.includes(id)
-}
-
-// Acciones
-const anulando = ref(false)
-const anularSeleccion = async () => {
-  const ordenes = ordenes_seleccionadas.value
-  if (ordenes.length === 0) return
+const anular = async (ordenes) => {
+  const vivas = ordenes.filter(o => o.status !== 4)
   const r = await Swal.fire({
-    title: `¿Anular ${ordenes.length} ${ordenes.length === 1 ? 'orden' : 'órdenes'}?`,
-    text: 'Se invalidarán las órdenes marcadas y sus equipos.',
-    icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, anular',
+    title: vivas.length === 1 ? `¿Anular la orden ${vivas[0].order_number}?` : `¿Anular ${vivas.length} órdenes?`,
+    text: 'Se anulan también todos sus equipos.',
+    icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, anular', cancelButtonText: 'Cancelar',
   })
-  if (!r.isConfirmed) return
-  anulando.value = true
-  try {
-    await Promise.all(ordenes.map(o => OrderDataService.anular(o.id)))
-    Toast.fire({ timer: 2200, icon: 'success', title: 'Órdenes anuladas' })
-    ordenes_seleccionadas.value = []
-    retrieveOrders()
-  } catch (e) {
-    Swal.fire('Error', 'No se pudieron anular todas las órdenes.', 'error')
-  } finally {
-    anulando.value = false
-  }
+  if (r.isConfirmed && await anularOrdenes(vivas)) ordenes_seleccionadas.value = []
 }
 
-const anularOrderConfirm = (order) => {
-  Swal.fire({
-    title: '¿Anular Orden y todos sus Equipos?',
-    text: `Se invalidará la orden ${order.order_number}`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, anular todo'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      OrderDataService.anular(order.id).then(() => {
-        Toast.fire({ timer: 2200, icon: 'success', title: 'Orden anulada' })
-      })
-    }
-  })
+const estaMarcada = (orden) => ordenes_seleccionadas.value.some(o => o.id === orden.id)
+
+// Vincular es marcarla para el panel de facturas: sobre las ya marcadas no hay
+// nada que hacer, asi que no aparece.
+const { hasAction } = usePermissions()
+const accionesDe = (ordenes) => accionesPara(ACCIONES_ORDEN, ordenes, hasAction)
+  .filter(a => a.clave !== VINCULAR || !ordenes.every(estaMarcada))
+
+// Marcar pone al panel de facturas en modo vincular: el menu no marca.
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(ordenes_seleccionadas, { marca: false })
+
+// Que hace cada accion de ACCIONES_ORDEN.
+const ejecutarAccion = async (clave, ordenes) => {
+  const [orden] = ordenes
+  switch (clave) {
+    case 'editar': return abrirEditarOrden(orden)
+    case 'equipo': return prepareExtraEquipment(orden)
+    case VINCULAR:
+      ordenes_seleccionadas.value = [...ordenes_seleccionadas.value, ...ordenes.filter(o => !estaMarcada(o))]
+      return
+    case 'facturar': return facturar(ordenes)
+    case SIN_COMPROBANTE:
+    case SIN_CARGO:
+      if (await alternarMarca(clave, ordenes)) ordenes_seleccionadas.value = []
+      return
+    case 'anular': return anular(ordenes)
+  }
 }
 
 const prepareExtraEquipment = (o) => {
@@ -825,10 +772,10 @@ onUnmounted(() => {
 
 /* ── Hover de filas normales (las no expandidas) ── */
 /* Replicamos lo que haría Vuetify pero solo donde queremos */
-.v-theme--light .tabla-ordenes-servicio tbody tr:not(.fila-padre-activa):not(.fila-activa):hover > td {
+.v-theme--light .tabla-ordenes-servicio tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
   background-color: rgba(0, 0, 0, 0.04) !important;
 }
-.v-theme--dark .tabla-ordenes-servicio tbody tr:not(.fila-padre-activa):not(.fila-activa):hover > td {
+.v-theme--dark .tabla-ordenes-servicio tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 

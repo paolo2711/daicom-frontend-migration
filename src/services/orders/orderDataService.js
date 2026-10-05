@@ -58,9 +58,15 @@ class OrderDataService {
         return axios.get(`orders/${id}/resumen`, { headers: authHeader() });
     }
 
-    // Anula la orden y sus equipos. El back resuelve cuales son.
-    anular(id) {
-        return axios.post(`orders/${id}/anular`, {}, { headers: authHeader() });
+    // Anula una o varias ordenes con sus equipos, todas o ninguna.
+    anular(ids) {
+        return axios.post('orders/anular', { order_ids: ids }, { headers: authHeader() });
+    }
+
+    // marca: sin_comprobante | sin_cargo | con_factura. La que no se puede no
+    // frena a las demas: vuelve en `rechazos`.
+    marcarComprobante(ids, marca, currency) {
+        return axios.post('orders/marcar-comprobante', { order_ids: ids, marca, currency }, { headers: authHeader() });
     }
 
     create(data) {

@@ -1,7 +1,7 @@
 // Vocabulario del panel de subidas. Lo leen la fila del listado y el panel: un
 // estado nuevo se suma al grupo que le toca y los dos lo entienden.
 
-const EN_CURSO  = ['generating', 'uploading', 'publishing', 'retrying', 'saving', 'cancelling']
+const EN_CURSO  = ['generating', 'uploading', 'publishing', 'retrying', 'saving', 'cancelling', 'removing']
 const FALLIDA   = ['error', 'cloud_error']
 const TERMINADA = ['success', 'warning', 'saved']
 // Las que corto el usuario: quedan a la vista hasta que las limpie.
@@ -14,9 +14,9 @@ const TIPOS_CONVERSION = ['sheet', 'suelto']
 export const TIPOS_DE_FILA = ['qr', 'sheet']
 
 // En curso y ya sin marcha atras: 'saving' copia al disco de red, 'publishing'
-// da de alta el documento en el portal y 'cancelling' espera que el servidor
-// conteste si alcanzo a frenar.
-const SIN_VUELTA = ['saving', 'publishing', 'cancelling']
+// da de alta el documento en el portal, 'cancelling' espera que el servidor
+// conteste si alcanzo a frenar y 'removing' lo saca del portal.
+const SIN_VUELTA = ['saving', 'publishing', 'cancelling', 'removing']
 
 export const enCurso   = (tarea) => EN_CURSO.includes(tarea.status)
 // Lo que corre la pestaña con su propio pedido, no el servidor: aprobar el PDF
@@ -29,6 +29,9 @@ export const terminada = (tarea) => TERMINADA.includes(tarea.status)
 export const detenida  = (tarea) => DETENIDA.includes(tarea.status)
 
 export const esConversion = (tarea) => TIPOS_CONVERSION.includes(tarea.type)
+
+// Sacar de la nube no deja ningun PDF que abrir al terminar.
+export const esBaja = (tarea) => tarea.type === 'nube'
 
 // Una conversion en 'success' tiene el PDF hecho y todavia sin guardar: lo que
 // sigue no es cerrarla, es que alguien lo revise.

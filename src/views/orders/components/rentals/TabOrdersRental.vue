@@ -326,7 +326,6 @@
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { Toast } from '@/plugins/alerts'
 import { useRoute } from 'vue-router'
 import Swal from 'sweetalert2'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
@@ -343,7 +342,7 @@ import { useOrderItems } from '@/composables/useOrderItems'
 import { throttle } from '@/utils/throttle'
 import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemaforoFinanciero } from '@/utils/orders/cobro'
 import { useAppStore } from '@/stores/appStore'
-import { mensajeDeError } from '@/utils/errors'
+import { anularOrdenes } from '@/utils/orders/anulacion'
 import DialogFactura from '../DialogFactura.vue'
 import EditOrder from '../EditOrder.vue'
 import AddExtraEquipment from '../AddExtraEquipment.vue'
@@ -545,17 +544,11 @@ const anularSeleccion = async () => {
   })
   if (!r.isConfirmed) return
   anulando.value = true
-  const resultados = await Promise.allSettled(ordenes.map(o => OrderDataService.anular(o.id)))
+  const anuladas = await anularOrdenes(ordenes)
   anulando.value = false
+  if (!anuladas) return
   ordenes_seleccionadas.value = []
   retrieveOrders()
-
-  const rechazos = resultados
-    .map((r, i) => r.status === 'rejected'
-      ? `${ordenes[i].order_number}: ${mensajeDeError(r.reason, 'no se pudo anular')}` : null)
-    .filter(Boolean)
-  if (rechazos.length) Swal.fire({ icon: 'warning', title: 'Algunas no se anularon', html: rechazos.join('<br>') })
-  else Toast.fire({ timer: 2200, icon: 'success', title: 'Órdenes anuladas' })
 }
 
 // La fila no trae sus equipos: se piden para saber que se puede anular.
@@ -591,14 +584,7 @@ const anularOrderConfirm = async (order) => {
     title: '¿Anular Alquiler?', html: avisos.join('<br><br>'),
     icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, anular'
   })
-  if (!isConfirmed) return
-  try {
-    await OrderDataService.anular(order.id)
-    Toast.fire({ timer: 2200, icon: 'success', title: 'Orden anulada' })
-    retrieveOrders()
-  } catch (error) {
-    Swal.fire('No se anuló la orden', mensajeDeError(error, 'No se pudo anular la orden.'), 'error')
-  }
+  if (isConfirmed && await anularOrdenes([order])) retrieveOrders()
 }
 const abrirEditarOrden = (o) => { selected_order.value = o; edit_order_modal.value = true }
 const prepareExtraEquipment = (o) => { selected_order.value = o; dialog_extra.value = true }

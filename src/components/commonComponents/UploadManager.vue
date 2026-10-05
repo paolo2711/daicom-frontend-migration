@@ -56,9 +56,7 @@
 
                     <template v-slot:prepend>
                       <v-avatar size="32" class="mr-3" :color="isDark ? 'grey-darken-3' : 'grey-lighten-4'">
-                        <v-icon size="small" :color="esConversion(task) ? 'green-darken-2' : 'red-darken-2'">
-                          {{ esConversion(task) ? 'mdi-file-excel-box' : 'mdi-file-pdf-box' }}
-                        </v-icon>
+                        <v-icon size="small" :color="iconoDe(task).color">{{ iconoDe(task).icono }}</v-icon>
                       </v-avatar>
                     </template>
 
@@ -122,7 +120,7 @@
                         </template>
 
                         <template v-else-if="terminada(task)">
-                          <template v-if="isHovering">
+                          <template v-if="isHovering && !esBaja(task)">
                             <v-tooltip location="bottom">
                               <template v-slot:activator="{ props: tooltipProps }">
                                 <v-btn v-if="esperandoRevision(task)" v-bind="tooltipProps" icon variant="text" size="small" color="purple" @click.stop="openPreview(task)">
@@ -230,7 +228,7 @@ import { Toast } from '@/plugins/alerts'
 import { useAppStore } from '@/stores/appStore'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import { mensajeDeError } from '@/utils/errors'
-import { cancelable, detenida, enCurso, esConversion, esperandoRevision, fallida, reintentable, terminada } from '@/utils/uploadTasks'
+import { cancelable, detenida, enCurso, esBaja, esConversion, esperandoRevision, fallida, reintentable, terminada } from '@/utils/uploadTasks'
 
 const appStore = useAppStore()
 const theme    = useTheme()
@@ -304,9 +302,16 @@ function getStatusText(task) {
       canceled: 'Cancelado por usuario.',
       cancelling: 'Cancelando...',
       warning: 'Subido a la nube. Falló la copia local (archivo abierto).'
-    }
+    },
+    nube:   { removing: 'Eliminando de la nube...', success: 'Eliminado de la nube.' },
   };
   return maps[task.type]?.[task.status] || '';
+}
+
+function iconoDe(task) {
+  if (esConversion(task)) return { icono: 'mdi-file-excel-box', color: 'green-darken-2' }
+  if (esBaja(task)) return { icono: 'mdi-cloud-remove-outline', color: 'blue-grey' }
+  return { icono: 'mdi-file-pdf-box', color: 'red-darken-2' }
 }
 
 function getActionText(task) {
@@ -329,7 +334,15 @@ function removeTask(task) {
   }
 }
 
+// La baja se vuelve a encolar; como va, lo cuentan los avisos del servidor.
 function retryTask(task) {
+  if (esBaja(task)) {
+    appStore.updateUploadTask(task.id, task.type, { status: 'removing', progress: 5, error_msg: '' })
+    CertificateDataService.eliminarDeLaNube([task.id]).catch((error) => {
+      appStore.updateUploadTask(task.id, task.type, { status: 'error', error_msg: mensajeDeError(error, 'No se pudo eliminar de la nube.') })
+    })
+    return
+  }
   const evento = esConversion(task) ? 'wss-sheet-retry' : 'wss-qr-retry'
   window.dispatchEvent(new CustomEvent(evento, { detail: { id: task.id, tipo: task.type } }))
 }

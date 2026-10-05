@@ -14,9 +14,9 @@
       <v-spacer/>
       <div class="d-flex align-center ga-2">
         <action-group :acciones="accionesDeCertificados" etiqueta="Acciones en lote"
-                      @accion="clave => $emit('accion-certificados', clave)" />
+                      @accion="clave => emit('accion-certificados', clave, order.certificates)" />
         <v-btn size="x-small" color="primary" variant="flat" class="text-white"
-               @click="$emit('add-extra')" :disabled="order.status === 4">
+               @click="emit('add-extra')" :disabled="order.status === 4">
           <v-icon start size="x-small">mdi-plus</v-icon> Añadir Equipo Extra
         </v-btn>
       </div>
@@ -39,7 +39,9 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="cert in order.certificates" :key="cert.id" :class="cert.status === 5 ? 'fila-anulada' : ''">
+        <tr v-for="cert in order.certificates" :key="cert.id"
+            :class="{ 'fila-anulada': cert.status === ANULADO, 'fila-en-menu': estaEnElMenu(cert) }"
+            @contextmenu="alClickDerecho($event, { item: cert })">
           <td>
             <strong>{{ cert.registry_code }}</strong>
             <numeros-anteriores :numeros="cert.previous_numbers" />
@@ -50,26 +52,26 @@
             <div class="d-flex justify-center align-center">
               <v-btn 
                 icon variant="text" density="comfortable" size="x-small" class="mx-1"
-                :href="getValidPdfUrl(cert)" 
-                target="_blank" 
-                :disabled="!hasValidPdf(cert)"
+                :href="cert.uploaded_xls_url || undefined"
+                target="_blank"
+                :disabled="!tieneExcelBase(cert)"
               >
-                <v-icon :color="hasValidPdf(cert) ? 'primary' : 'grey-lighten-1'">
+                <v-icon :color="tieneExcelBase(cert) ? 'primary' : 'grey-lighten-1'">
                   mdi-file-pdf-box
                 </v-icon>
               </v-btn>
 
-              <v-tooltip location="bottom" :disabled="!hasValidCloud(cert)">
+              <v-tooltip location="bottom" :disabled="!linkDe(cert)">
                 <template v-slot:activator="{ props }">
                   <v-btn
                     v-bind="props"
                     icon variant="text" density="comfortable" size="x-small" class="mx-1"
-                    :href="getValidCloudUrl(cert)"
+                    :href="linkDe(cert) || undefined"
                     target="_blank"
-                    :disabled="!hasValidCloud(cert)"
+                    :disabled="!linkDe(cert)"
                     @click.stop="onNubeClick($event, cert)"
                   >
-                    <v-icon :color="hasValidCloud(cert) ? 'primary' : 'grey-lighten-1'">
+                    <v-icon :color="linkDe(cert) ? 'primary' : 'grey-lighten-1'">
                       mdi-cloud-check
                     </v-icon>
                   </v-btn>
@@ -90,47 +92,8 @@
           </td>
 
           <td class="text-center">
-            <div class="d-flex justify-center align-center">
-              <v-tooltip location="bottom" color="info">
-                <template v-slot:activator="{ props }">
-                  <v-btn icon variant="text" density="comfortable" size="x-small" color="blue-darken-2" class="mx-1" v-bind="props" @click="irACertificado(cert)" v-if="cert.status !== 5">
-                    <v-icon>mdi-open-in-new</v-icon>
-                  </v-btn>
-                </template>
-                <span>Ir al Certificado</span>
-              </v-tooltip>
-
-              <v-tooltip location="bottom" color="primary">
-                <template v-slot:activator="{ props }">
-                  <v-btn icon variant="text" density="comfortable" size="x-small" color="primary" class="mx-1" v-bind="props" @click="$emit('edit-certificate', cert)" v-if="cert.status !== 5">
-                    <v-icon>mdi-pencil</v-icon>
-                  </v-btn>
-                </template>
-                <span>Ver y editar</span>
-              </v-tooltip>
-
-              <v-tooltip location="bottom" color="warning" v-if="cert.status !== 5">
-                <template v-slot:activator="{ props }">
-                  <v-btn icon variant="text" density="comfortable" size="x-small" color="orange-darken-3" class="mx-1" v-bind="props" @click="desvincularCertificado(cert)">
-                    <v-icon>mdi-link-variant-off</v-icon>
-                  </v-btn>
-                </template>
-                <span>Desvincular de la Orden</span>
-              </v-tooltip>
-
-              <v-btn icon variant="text" density="comfortable" size="x-small" color="red" class="mx-1" @click="anularCertConfirm(cert)" v-if="cert.status !== 5 && hasPermission(1003)">
-                <v-icon>mdi-minus-circle-outline</v-icon>
-              </v-btn>
-
-              <v-tooltip location="bottom" color="success" v-if="cert.status === 5 && hasPermission(1003)">
-                <template v-slot:activator="{ props }">
-                  <v-btn icon variant="text" density="comfortable" size="x-small" color="green-darken-2" class="mx-1" v-bind="props" @click="revivirCertConfirm(cert)">
-                    <v-icon>mdi-backup-restore</v-icon>
-                  </v-btn>
-                </template>
-                <span>Restaurar Certificado</span>
-              </v-tooltip>
-            </div>
+            <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" size="x-small" color="grey-darken-1"
+                   @click.stop="alBotonDeFila($event, cert)" />
           </td>
         </tr>
         <tr v-if="!order.certificates || order.certificates.length === 0">
@@ -140,162 +103,127 @@
         </tr>
       </tbody>
     </v-table>
+
+    <action-menu :menu="menu" :acciones="accionesDe(menu.filas)"
+                 @accion="clave => ejecutarAccion(clave, menu.filas)" />
   </v-card>
 </template>
 
-<script>
+<script setup>
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { Toast } from '@/plugins/alerts'
-import { useTheme } from 'vuetify'
-import { computed as vueComputed } from 'vue'
-import CertificateDataService from "@/services/certificates/certificateDataService";
-import { copiarConAviso } from "@/utils/clipboard";
-import { estaEntregado } from "@/utils/certificates/entrega";
-import { ESTADOS, NUBE_DESACTUALIZADA } from "@/utils/certificates/estado";
-import { tieneExcelBase } from "@/utils/certificates/excelBase";
-import { fechaCorta } from "@/utils/dates";
-import ActionGroup from "@/components/shared/ActionGroup.vue";
-import NumerosAnteriores from "@/components/shared/NumerosAnteriores.vue";
+import CertificateDataService from '@/services/certificates/certificateDataService'
+import { useSwal } from '@/composables/useSwal'
+import { usePermissions } from '@/composables/usePermissions'
+import { useContextMenu } from '@/composables/useContextMenu'
+import { useCertificateActions } from '@/composables/useCertificateActions'
+import { accionesPara } from '@/utils/actions'
+import { ACCIONES_CERTIFICADO } from '@/utils/certificates/acciones'
+import { estaEntregado } from '@/utils/certificates/entrega'
+import { ANULADO, ESTADOS, NUBE_DESACTUALIZADA } from '@/utils/certificates/estado'
+import { tieneExcelBase } from '@/utils/certificates/excelBase'
+import { mensajeDeError } from '@/utils/errors'
+import { fechaCorta } from '@/utils/dates'
+import ActionGroup from '@/components/shared/ActionGroup.vue'
+import ActionMenu from '@/components/shared/ActionMenu.vue'
+import NumerosAnteriores from '@/components/shared/NumerosAnteriores.vue'
+
+const props = defineProps({
+  order: { type: Object, required: true },
+})
+const emit = defineEmits(['add-extra', 'edit-certificate', 'accion-certificados'])
+
+const router = useRouter()
+const swal = useSwal()
+const { hasAction } = usePermissions()
 
 // `clave` tiene que coincidir con las de ACCIONES del modal de lote. Sin
 // `permiso`, la ven todos.
-const ACCIONES_CERTIFICADOS = [
+const ACCIONES_EN_LOTE = [
   { clave: 'notify',  texto: 'Solicitar Firmas',  icono: 'mdi-bell-ring',                    color: 'orange-darken-3', permiso: 1005 },
   { clave: 'entrega', texto: 'Marcar Entregados', icono: 'mdi-package-variant-closed-check', color: 'teal-darken-2',   permiso: 1010 },
   { clave: 'qr',      texto: 'Firmar QR',         icono: 'mdi-qrcode-scan',                  color: 'primary',         permiso: 1001 },
   { clave: 'tipo',    texto: 'Corregir Tipo',     icono: 'mdi-swap-horizontal',              color: 'indigo' },
-];
+]
 
-export default {
-  name: "TableServiceDetails",
-  components: { ActionGroup, NumerosAnteriores },
-  setup() {
-    const theme = useTheme()
-    const isDark = vueComputed(() => theme.global.current.value.dark)
-    return { isDark }
+const accionesDeCertificados = computed(() => {
+  const sinEquipos = props.order.status === 4 || !props.order.certificates?.length
+  return ACCIONES_EN_LOTE.map(accion => ({
+    ...accion,
+    visible: !accion.permiso || hasAction(accion.permiso),
+    disabled: sinEquipos,
+  }))
+})
+
+// Las de certificados, mas las que solo tienen sentido dentro de una orden.
+const vivo = (cert) => cert.status !== ANULADO
+const ACCIONES_EQUIPO = [
+  {
+    clave: 'ir', grupo: 'ver', varios: false,
+    icono: 'mdi-open-in-new', texto: 'Ir al certificado',
+    disponible: ([cert]) => vivo(cert),
   },
-  props: {
-    order: {
-      type: Object,
-      required: true
-    }
+  ...ACCIONES_CERTIFICADO,
+  {
+    clave: 'desvincular', grupo: 'peligro', varios: false,
+    icono: 'mdi-link-variant-off', texto: 'Desvincular de la orden',
+    disponible: ([cert]) => vivo(cert),
   },
-  data: () => ({
-    is_admin: false,
-    user_permissions: [],
-  }),
-  computed: {
-    accionesDeCertificados() {
-      const sinEquipos = this.order.status === 4 || !this.order.certificates?.length;
-      return ACCIONES_CERTIFICADOS.map(accion => ({
-        ...accion,
-        visible: !accion.permiso || this.hasPermission(accion.permiso),
-        disabled: sinEquipos,
-      }));
-    },
-  },
-  created() {
-    const user = JSON.parse(localStorage.getItem('user')) || {};
-    this.is_admin = user.kind !== undefined && user.kind < 1;
-    this.user_permissions = user.action_permissions || [];
-  },
-  methods: {
-    estaEntregado,
-    fechaCorta,
-    // El back manda uploaded_xls_url ya armada, o null si no hay PDF base.
-    hasValidPdf(cert) {
-      return Boolean(cert.uploaded_xls_url);
-    },
-    getValidPdfUrl(cert) {
-      return cert.uploaded_xls_url || undefined;
-    },
-    hasValidCloud(cert) {
-      return Boolean(cert.link_nube);
-    },
-    getValidCloudUrl(cert) {
-      return cert.link_nube || undefined;
-    },
-    // Clic normal en el botón de nube: abre el PDF (href). Ctrl/Cmd+clic: copia el link.
-    onNubeClick(event, cert) {
-      if (event.ctrlKey || event.metaKey) {
-        event.preventDefault();
-        const link = this.getValidCloudUrl(cert);
-        if (!link) return;
-        copiarConAviso(link, 'Link copiado');
-      }
-    },
-    irACertificado(cert) {
-      this.$router.push({ path: '/certificates', query: { correlativo: cert.correlative } }).catch(() => {});
-    },
-    // Texto y color juntos: son el mismo estado.
-    estadoCert(cert) {
-      if (cert.status === 5) return { texto: 'ANULADO', color: 'red-darken-2' };
-      if (cert.status === NUBE_DESACTUALIZADA) return ESTADOS[NUBE_DESACTUALIZADA];
-      if (estaEntregado(cert)) return { texto: 'Entregado', color: 'teal-darken-2' };
-      if (cert.uploaded) return { texto: 'Listo', color: 'success' };
-      if (cert.signature_requested) return { texto: 'Firma solicitada', color: 'warning' };
-      if (tieneExcelBase(cert)) return { texto: 'En Proceso', color: 'warning' };
-      return { texto: 'Borrador', color: 'grey-darken-1' };
-    },
-    desvincularCertificado(cert) {
-      this.$swal.fire({
-        title: '¿Desvincular este equipo?',
-        text: `El correlativo ${cert.registry_code} quedará "huérfano" y desaparecerá de esta orden.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, desvincular',
-        cancelButtonText: 'Cancelar'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          // Mandamos order en null para romper la relación de llave foránea en Django
-          CertificateDataService.patch(cert.id, { order: null }).then(() => {
-            Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo desvinculado' });
-          }).catch(err => {
-            console.error("Error al desvincular equipo:", err);
-            this.$swal.fire('Error', 'No se pudo desvincular el equipo.', 'error');
-          });
-        }
-      });
-    },
-    anularCertConfirm(cert) {
-      this.$swal.fire({
-        title: '¿Anular este equipo?',
-        text: `El correlativo ${cert.registry_code} se marcará como anulado.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, anular'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          CertificateDataService.patch(cert.id, { status: 5 }).then(() => {
-            Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo anulado' });
-          }).catch(err => {
-            console.error("Error al anular equipo:", err);
-            this.$swal.fire('Error', 'No se pudo comunicar con el servidor.', 'error');
-          });
-        }
-      });
-    },
-    hasPermission(id) {
-      if (this.is_admin) return true;
-      return this.user_permissions.includes(id);
-    },
-    revivirCertConfirm(cert) {
-      this.$swal.fire({
-        title: '¿Restaurar equipo?',
-        text: `El correlativo ${cert.registry_code} volverá a estado Borrador.`,
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, restaurar',
-        cancelButtonText: 'Cancelar'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          CertificateDataService.patch(cert.id, { status: 1 }).then(() => {
-            Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo restaurado' });
-          }).catch(() => {
-            this.$swal.fire('Error', 'No se pudo restaurar el equipo.', 'error');
-          });
-        }
-      });
-    }
+]
+const accionesDe = (certs) => accionesPara(ACCIONES_EQUIPO, certs, hasAction)
+
+// Los equipos no se marcan: el menu es del que se toco.
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu()
+
+const { ejecutarAccion: accionDeCertificado, copiarLinks, linkDe } = useCertificateActions({
+  abrirLote: (clave, certs) => emit('accion-certificados', clave, certs),
+  abrirFicha: (cert) => emit('edit-certificate', cert),
+})
+
+function ejecutarAccion (clave, certs) {
+  const [cert] = certs
+  if (clave === 'ir') return irACertificado(cert)
+  if (clave === 'desvincular') return desvincular(cert)
+  accionDeCertificado(clave, certs)
+}
+
+// Clic normal en el botón de nube: abre el PDF (href). Ctrl/Cmd+clic: copia el link.
+function onNubeClick (event, cert) {
+  if (event.ctrlKey || event.metaKey) {
+    event.preventDefault()
+    copiarLinks([cert])
+  }
+}
+
+function irACertificado (cert) {
+  router.push({ path: '/certificates', query: { correlativo: cert.correlative } }).catch(() => {})
+}
+
+// Texto y color juntos: son el mismo estado.
+function estadoCert (cert) {
+  if (cert.status === ANULADO) return { texto: 'ANULADO', color: 'red-darken-2' }
+  if (cert.status === NUBE_DESACTUALIZADA) return ESTADOS[NUBE_DESACTUALIZADA]
+  if (estaEntregado(cert)) return { texto: 'Entregado', color: 'teal-darken-2' }
+  if (cert.uploaded) return { texto: 'Listo', color: 'success' }
+  if (cert.signature_requested) return { texto: 'Firma solicitada', color: 'warning' }
+  if (tieneExcelBase(cert)) return { texto: 'En Proceso', color: 'warning' }
+  return { texto: 'Borrador', color: 'grey-darken-1' }
+}
+
+async function desvincular (cert) {
+  const { isConfirmed } = await swal.fire({
+    title: '¿Desvincular este equipo?',
+    text: `${cert.registry_code} quedará sin orden y saldrá de esta.`,
+    icon: 'warning', showCancelButton: true,
+    confirmButtonText: 'Sí, desvincular', cancelButtonText: 'Cancelar',
+  })
+  if (!isConfirmed) return
+  try {
+    await CertificateDataService.patch(cert.id, { order: null })
+    Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo desvinculado' })
+  } catch (err) {
+    swal.fire({ icon: 'error', title: 'Error', text: mensajeDeError(err, 'No se pudo desvincular el equipo.') })
   }
 }
 </script>

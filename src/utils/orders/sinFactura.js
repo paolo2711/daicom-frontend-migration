@@ -9,13 +9,6 @@ export const SIN_COMPROBANTE = 'sin_comprobante'
 export const SIN_CARGO = 'sin_cargo'
 const CON_FACTURA = 'con_factura'
 
-export const MARCAS = [
-  { clave: SIN_COMPROBANTE, texto: 'Sin comprobante', icono: 'mdi-file-remove-outline',
-    ayuda: 'Se cobra, pero no lleva factura' },
-  { clave: SIN_CARGO, texto: 'Sin cargo', icono: 'mdi-cash-off',
-    ayuda: 'No se cobra: equipo propio o cortesia' },
-]
-
 // Una orden con factura fiscal ya emitida no se puede marcar de ninguna de las
 // dos formas: primero hay que desvincular esa factura.
 export const puedeMarcarse = (orden) => !orden.facturas?.tiene_fiscal

@@ -5,7 +5,8 @@ import { SIN_CARGO, SIN_COMPROBANTE, marcaDe, puedeMarcarse } from '@/utils/orde
 // utils/actions.js.
 
 const ANULADA = 4  // Order.OrderStatus.CANCELLED
-const viva = (orden) => orden.status !== ANULADA
+export const ALQUILER = 2  // Order.OrderType.RENTAL
+export const viva = (orden) => orden.status !== ANULADA
 const quitaOPone = (marca, texto) => (ordenes) => (marcaDe(ordenes) === marca ? `Quitar ${texto.toLowerCase()}` : texto)
 
 export const VINCULAR = 'vincular'
@@ -13,7 +14,9 @@ export const VINCULAR = 'vincular'
 export const ACCIONES_ORDEN = [
   {
     clave: 'editar', grupo: 'orden', varios: false,
-    icono: 'mdi-pencil', texto: 'Editar cliente',
+    icono: 'mdi-pencil',
+    // En alquileres el modal tambien lleva las OC y valorizaciones.
+    texto: ([orden]) => (orden.order_type === ALQUILER ? 'Editar alquiler' : 'Editar cliente'),
     disponible: ([orden]) => viva(orden),
   },
   {

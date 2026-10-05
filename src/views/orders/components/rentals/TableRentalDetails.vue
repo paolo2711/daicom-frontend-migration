@@ -34,7 +34,9 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="linea in filas" :key="linea.id" :class="{ 'fila-anulada': linea.estado === 'anulado' }">
+        <tr v-for="linea in filas" :key="linea.id"
+            :class="{ 'fila-anulada': linea.estado === 'anulado', 'fila-en-menu': estaEnElMenu(linea) }"
+            @contextmenu="alClickDerecho($event, { item: linea })">
           <td><strong>{{ linea.equipment_internal_id }}</strong></td>
           <td>
             <div class="font-weight-medium">{{ linea.equipment_name }}</div>
@@ -62,34 +64,8 @@
             </div>
           </td>
           <td class="text-center">
-            <div class="d-flex justify-center align-center">
-              <v-tooltip location="bottom" text="Ver / Editar Equipo">
-                <template v-slot:activator="{ props }">
-                  <v-btn icon size="x-small" variant="text" color="info" density="comfortable" class="mx-1"
-                         v-bind="props" @click="verEquipo(linea)">
-                    <v-icon>mdi-eye</v-icon>
-                  </v-btn>
-                </template>
-              </v-tooltip>
-
-              <v-tooltip v-if="linea.estado !== 'anulado'" location="bottom" text="Gestionar salida, devolución y fechas">
-                <template v-slot:activator="{ props }">
-                  <v-btn icon size="x-small" variant="text" color="primary" density="comfortable" class="mx-1"
-                         v-bind="props" @click="gestionarRef?.open(linea)">
-                    <v-icon>mdi-calendar-edit</v-icon>
-                  </v-btn>
-                </template>
-              </v-tooltip>
-
-              <v-tooltip v-if="linea.estado === 'reservado' && !anulada" location="bottom" text="Quitar de la orden">
-                <template v-slot:activator="{ props }">
-                  <v-btn icon size="x-small" variant="text" color="red" density="comfortable" class="mx-1"
-                         v-bind="props" @click="quitar(linea)">
-                    <v-icon>mdi-minus-circle-outline</v-icon>
-                  </v-btn>
-                </template>
-              </v-tooltip>
-            </div>
+            <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" size="x-small" color="grey-darken-1"
+                   @click.stop="alBotonDeFila($event, linea)" />
           </td>
         </tr>
         <tr v-if="filas.length === 0">
@@ -99,6 +75,9 @@
         </tr>
       </tbody>
     </v-table>
+
+    <action-menu :menu="menu" :acciones="accionesDe(menu.filas)"
+                 @accion="clave => ejecutarAccion(clave, menu.filas)" />
 
     <dialog-gestionar-alquiler ref="gestionarRef" />
 
@@ -110,6 +89,9 @@
 import { Toast } from '@/plugins/alerts'
 import { computed, getCurrentInstance, ref } from 'vue'
 import DialogGestionarAlquiler from './DialogGestionarAlquiler.vue'
+import ActionMenu from '@/components/shared/ActionMenu.vue'
+import { useContextMenu } from '@/composables/useContextMenu'
+import { accionesPara } from '@/utils/actions'
 import AddEquipment from '@/views/inventory/components/AddEquipment.vue'
 import { useTheme } from 'vuetify'
 import OrderDataService from '@/services/orders/orderDataService'
@@ -140,6 +122,35 @@ const filas = computed(() => (props.order.rentals || []).map(linea => ({
   presentacion: ESTADOS_ALQUILER[linea.estado],
   duracion: duracionDe(linea),
 })))
+
+// Lo que se puede hacer con un equipo del alquiler. Las lineas no se marcan:
+// el menu es de la que se toco.
+const ACCIONES_LINEA = [
+  {
+    clave: 'ver', grupo: 'ver', varios: false,
+    icono: 'mdi-eye', texto: 'Ver equipo',
+    disponible: () => true,
+  },
+  {
+    clave: 'gestionar', grupo: 'trabajo', varios: false,
+    icono: 'mdi-calendar-edit', texto: 'Salida, devolución y fechas',
+    disponible: ([linea]) => linea.estado !== 'anulado',
+  },
+  {
+    clave: 'quitar', grupo: 'peligro', varios: false,
+    icono: 'mdi-minus-circle-outline', texto: 'Quitar de la orden',
+    disponible: ([linea]) => linea.estado === 'reservado' && !anulada.value,
+  },
+]
+const accionesDe = (lineas) => accionesPara(ACCIONES_LINEA, lineas, () => true)
+
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu()
+
+function ejecutarAccion (clave, [linea]) {
+  if (clave === 'ver') return verEquipo(linea)
+  if (clave === 'gestionar') return gestionarRef.value?.open(linea)
+  if (clave === 'quitar') return quitar(linea)
+}
 
 async function verEquipo(linea) {
   try {

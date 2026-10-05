@@ -144,9 +144,9 @@
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
         @click:row="manejarClicFila"
-
+        @contextmenu:row="alClickDerecho"
         :row-props="(data) => ({
-          class: isOrderExpanded(data.item) ? 'fila-padre-activa' : ''
+          class: { 'fila-padre-activa': isOrderExpanded(data.item), 'fila-en-menu': estaEnElMenu(data.item) }
         })"
       >
         <template v-slot:bottom>
@@ -246,23 +246,8 @@
 
 
         <template v-slot:item.actions="{ item }">
-          <v-tooltip location="bottom" color="primary">
-            <template v-slot:activator="{ props }">
-              <v-btn v-bind="props" icon variant="text" density="comfortable" @click="abrirEditarOrden(item)" :disabled="item.status === 4">
-                <v-icon>mdi-pencil</v-icon>
-              </v-btn>
-            </template>
-            <span>Editar alquiler</span>
-          </v-tooltip>
-
-          <v-tooltip location="bottom" color="error" v-if="hasPermission(1004) && item.status !== 4">
-            <template v-slot:activator="{ props }">
-              <v-btn v-bind="props" icon variant="text" density="comfortable" @click="anularOrderConfirm(item)">
-                <v-icon>mdi-delete-outline</v-icon>
-              </v-btn>
-            </template>
-            <span>Anular Orden Alquiler</span>
-          </v-tooltip>
+          <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" color="grey-darken-1"
+                 @click.stop="alBotonDeFila($event, item)" />
         </template>
 
         <template v-slot:expanded-row="{ columns, item }">
@@ -296,25 +281,18 @@
       </v-col>
     </v-row>
 
-    <!-- Barra flotante de selección (crear factura / sin factura) -->
+    <!-- Con órdenes marcadas, el panel de facturas ya está en modo vincular:
+         tocar una factura ahí las vincula. -->
     <selection-bar
       :count="ordenes_seleccionadas.length"
       label="seleccionada(s)"
+      :acciones="accionesDe(ordenes_seleccionadas)"
+      @accion="clave => ejecutarAccion(clave, ordenes_seleccionadas)"
       @clear="ordenes_seleccionadas = []"
-    >
-      <v-btn variant="text" size="small" class="mx-1 font-weight-bold"
-             prepend-icon="mdi-file-document-plus" @click="crearFacturaParaSeleccion">
-        Facturar
-      </v-btn>
+    />
 
-      <menu-sin-factura :orders="ordenes_seleccionadas"
-                        @aplicado="ordenes_seleccionadas = []" />
-
-      <v-btn v-if="hasPermission(1004)" variant="text" color="error" size="small" class="mx-1 font-weight-bold"
-             prepend-icon="mdi-cancel" :loading="anulando" @click="anularSeleccion">
-        Anular
-      </v-btn>
-    </selection-bar>
+    <action-menu :menu="menu" :acciones="accionesDe(menu.filas)"
+                 @accion="clave => ejecutarAccion(clave, menu.filas)" />
 
     <!-- MODALES -->
     <dialog-factura v-model="factura_modal" :order="selected_order" :orders="ordenes_factura_multi" :order_type="2" @updateOrder="onFacturaGuardada" @close="cerrarFacturaModal" />
@@ -327,7 +305,6 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import Swal from 'sweetalert2'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import OrderDataService from '@/services/orders/orderDataService'
@@ -335,14 +312,14 @@ import ClientSelect from '@/components/shared/ClientSelect.vue'
 import FilterPill from '@/components/shared/FilterPill.vue'
 import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import OrderMappers from '@/mappers/orderMappers'
-import MenuSinFactura from '@/views/orders/components/MenuSinFactura.vue'
+import ActionMenu from '@/components/shared/ActionMenu.vue'
+import { useOrderActions } from '@/composables/useOrderActions'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
 import { throttle } from '@/utils/throttle'
 import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemaforoFinanciero } from '@/utils/orders/cobro'
 import { useAppStore } from '@/stores/appStore'
-import { anularOrdenes } from '@/utils/orders/anulacion'
 import DialogFactura from '../DialogFactura.vue'
 import EditOrder from '../EditOrder.vue'
 import AddExtraEquipment from '../AddExtraEquipment.vue'
@@ -415,8 +392,6 @@ const order_statuses = [
 const loading_list = ref(false)
 const total_orders = ref(0)
 const options = ref({ page: 1, itemsPerPage: 15 })
-const is_admin = ref(false)
-const user_permissions = ref([])
 
 // ── Data ──
 const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestRequest()
@@ -530,76 +505,23 @@ const seleccionarFacturaEnPanel = (o) => {
 }
 
 // ── Acciones ──
-// Solo se anula lo que no salio: lo que esta en obra se devuelve antes. El back
-// lo exige igual; aca se avisa antes de intentarlo.
-const anulando = ref(false)
-const anularSeleccion = async () => {
-  const ordenes = ordenes_seleccionadas.value
-  if (ordenes.length === 0) return
-  const r = await Swal.fire({
-    title: `¿Anular ${ordenes.length} ${ordenes.length === 1 ? 'alquiler' : 'alquileres'}?`,
-    html: 'Se invalidarán las órdenes marcadas.<br><br>Lo reservado vuelve a disponible. '
-      + 'Una orden con equipos en obra no se anula hasta registrar su devolución.',
-    icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, anular',
-  })
-  if (!r.isConfirmed) return
-  anulando.value = true
-  const anuladas = await anularOrdenes(ordenes)
-  anulando.value = false
-  if (!anuladas) return
-  ordenes_seleccionadas.value = []
-  retrieveOrders()
-}
-
-// La fila no trae sus equipos: se piden para saber que se puede anular.
-const lineasDe = async (order) => {
-  try {
-    const { data } = await OrderDataService.getEquipos(order.id)
-    return data
-  } catch {
-    return []
-  }
-}
-
-const anularOrderConfirm = async (order) => {
-  const lineas = await lineasDe(order)
-  const idsEn = (estado) => lineas.filter(l => l.estado === estado).map(l => l.equipment_internal_id)
-
-  const enObra = idsEn('en_obra')
-  if (enObra.length) {
-    Swal.fire({
-      icon: 'info', title: 'Todavía no se puede anular',
-      html: `<b>${enObra.join(', ')}</b> ya salió. Registra su devolución y vuelve a anular.`,
-    })
-    return
-  }
-
-  const avisos = [`Se invalidará la orden de alquiler ${order.order_number}.`]
-  const reservados = idsEn('reservado')
-  if (reservados.length) {
-    avisos.push(`<b>${reservados.join(', ')}</b> ${reservados.length === 1 ? 'vuelve' : 'vuelven'} a disponible.`)
-  }
-
-  const { isConfirmed } = await Swal.fire({
-    title: '¿Anular Alquiler?', html: avisos.join('<br><br>'),
-    icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, anular'
-  })
-  if (isConfirmed && await anularOrdenes([order])) retrieveOrders()
-}
 const abrirEditarOrden = (o) => { selected_order.value = o; edit_order_modal.value = true }
 const prepareExtraEquipment = (o) => { selected_order.value = o; dialog_extra.value = true }
-const hasPermission = (id) => (is_admin.value ? true : user_permissions.value.includes(id))
 
-// ── Panel de facturas: crear por selección / sin factura ──
-// "CREAR FACTURA": una sola factura para TODAS las ordenes marcadas. La moneda
-// se elige en el dialogo de la factura (la orden ya no tiene moneda propia).
-const crearFacturaParaSeleccion = () => {
-  const ordenes = ordenes_seleccionadas.value
-  if (ordenes.length === 0) return
+// Una sola factura para todas: DialogFactura la crea y les vincula las ordenes.
+// La moneda se elige ahi, la orden no tiene.
+const facturar = (ordenes) => {
   selected_order.value = null
   ordenes_factura_multi.value = [...ordenes]
   factura_modal.value = true
 }
+
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, ejecutarAccion } =
+  useOrderActions(ordenes_seleccionadas, {
+    editar: abrirEditarOrden,
+    agregarEquipo: prepareExtraEquipment,
+    facturar,
+  })
 
 // Guardado desde el diálogo: en multi limpia la selección; en single refresca su fila.
 const onFacturaGuardada = (payload) => {
@@ -645,9 +567,6 @@ watch(ordenes_seleccionadas, (val) => {
 })
 
 onMounted(() => {
-  const user = JSON.parse(localStorage.getItem('user')) || {}
-  is_admin.value = user.kind !== undefined && user.kind < 1
-  user_permissions.value = user.action_permissions || []
   if (route.query.buscar_orden) filter_order.value = route.query.buscar_orden
   if (route.query.buscar_factura) filter_invoice.value = route.query.buscar_factura
   retrieveOrders()
@@ -685,10 +604,10 @@ onUnmounted(() => {
 }
 
 /* ── Hover de filas normales ── */
-.v-theme--light .tabla-ordenes-alquiler tbody tr:not(.fila-padre-activa):not(.fila-activa):hover > td {
+.v-theme--light .tabla-ordenes-alquiler tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
   background-color: rgba(0, 0, 0, 0.04) !important;
 }
-.v-theme--dark .tabla-ordenes-alquiler tbody tr:not(.fila-padre-activa):not(.fila-activa):hover > td {
+.v-theme--dark .tabla-ordenes-alquiler tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 

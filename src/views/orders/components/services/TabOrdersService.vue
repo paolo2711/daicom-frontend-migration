@@ -288,19 +288,13 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTheme } from 'vuetify'
 import { useAppStore } from '@/stores/appStore'
-import Swal from 'sweetalert2'
 import OrderDataService from '@/services/orders/orderDataService'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
 import FilterPill from '@/components/shared/FilterPill.vue'
 import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
-import { useContextMenu } from '@/composables/useContextMenu'
-import { usePermissions } from '@/composables/usePermissions'
-import { accionesPara } from '@/utils/actions'
-import { ACCIONES_ORDEN, VINCULAR } from '@/utils/orders/acciones'
-import { SIN_CARGO, SIN_COMPROBANTE, alternarMarca } from '@/utils/orders/sinFactura'
-import { anularOrdenes } from '@/utils/orders/anulacion'
+import { useOrderActions } from '@/composables/useOrderActions'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
@@ -576,45 +570,6 @@ const getProgreso = (o) => {
   return o.progreso || { total: 0, listos: 0 }
 }
 
-const anular = async (ordenes) => {
-  const vivas = ordenes.filter(o => o.status !== 4)
-  const r = await Swal.fire({
-    title: vivas.length === 1 ? `¿Anular la orden ${vivas[0].order_number}?` : `¿Anular ${vivas.length} órdenes?`,
-    text: 'Se anulan también todos sus equipos.',
-    icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, anular', cancelButtonText: 'Cancelar',
-  })
-  if (r.isConfirmed && await anularOrdenes(vivas)) ordenes_seleccionadas.value = []
-}
-
-const estaMarcada = (orden) => ordenes_seleccionadas.value.some(o => o.id === orden.id)
-
-// Vincular es marcarla para el panel de facturas: sobre las ya marcadas no hay
-// nada que hacer, asi que no aparece.
-const { hasAction } = usePermissions()
-const accionesDe = (ordenes) => accionesPara(ACCIONES_ORDEN, ordenes, hasAction)
-  .filter(a => a.clave !== VINCULAR || !ordenes.every(estaMarcada))
-
-// Marcar pone al panel de facturas en modo vincular: el menu no marca.
-const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(ordenes_seleccionadas, { marca: false })
-
-// Que hace cada accion de ACCIONES_ORDEN.
-const ejecutarAccion = async (clave, ordenes) => {
-  const [orden] = ordenes
-  switch (clave) {
-    case 'editar': return abrirEditarOrden(orden)
-    case 'equipo': return prepareExtraEquipment(orden)
-    case VINCULAR:
-      ordenes_seleccionadas.value = [...ordenes_seleccionadas.value, ...ordenes.filter(o => !estaMarcada(o))]
-      return
-    case 'facturar': return facturar(ordenes)
-    case SIN_COMPROBANTE:
-    case SIN_CARGO:
-      if (await alternarMarca(clave, ordenes)) ordenes_seleccionadas.value = []
-      return
-    case 'anular': return anular(ordenes)
-  }
-}
-
 const prepareExtraEquipment = (o) => {
   selected_order.value = o
   dialog_extra.value = true
@@ -630,6 +585,13 @@ const abrirEditarOrden = (o) => {
     edit_order_modal.value = true
   })
 }
+
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, ejecutarAccion } =
+  useOrderActions(ordenes_seleccionadas, {
+    editar: abrirEditarOrden,
+    agregarEquipo: prepareExtraEquipment,
+    facturar,
+  })
 
 const idOrdenExpandida = () => (
   expanded.value.length === 1 ? getSafeId(expanded.value[0]) : null

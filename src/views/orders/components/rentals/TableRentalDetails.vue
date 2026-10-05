@@ -7,7 +7,7 @@
       </span>
       <span v-if="order.created_at" class="text-caption text-medium-emphasis ml-3 mt-1 font-weight-medium d-flex align-center">
         <v-icon size="x-small" class="mr-1">mdi-calendar-blank</v-icon>
-        {{ order.created_at.substring(0, 10) }}
+        {{ fechaCorta(order.created_at) }}
       </span>
       <v-spacer />
       <v-btn size="x-small" color="amber-darken-3" variant="flat" class="text-white" @click="emit('add-rental')" :disabled="anulada">

@@ -59,7 +59,7 @@
                 {{ monedaActual === 'USD' ? '$' : 'S/' }} {{ pago.amount }}
               </v-list-item-title>
               <v-list-item-subtitle>
-                {{ pago.payment_method }} - {{ pago.payment_date }}
+                {{ pago.payment_method }} - {{ fechaCorta(pago.payment_date) }}
               </v-list-item-subtitle>
               <v-list-item-subtitle v-if="pago.notes" class="font-italic text-caption">
                 "{{ pago.notes }}"
@@ -226,6 +226,7 @@ import OrderDataService from '@/services/orders/orderDataService'
 import { useAppStore } from '@/stores/appStore'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
+import { fechaCorta, hoyISO } from '@/utils/dates'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -258,7 +259,7 @@ const payment_data = reactive({
   amount: '',
   payment_method: '',
   notes: '',
-  payment_date: new Date().toISOString().split('T')[0]
+  payment_date: hoyISO()
 })
 
 const metodos = ['EFECTIVO', 'BILLETERA', 'TRANSFERENCIA']
@@ -267,7 +268,7 @@ const resetLocalForm = () => {
   payment_data.amount = ''
   payment_data.payment_method = ''
   payment_data.notes = ''
-  payment_data.payment_date = new Date().toISOString().split('T')[0]
+  payment_data.payment_date = hoyISO()
   file.value = null
   editando.value = false
   pago_id_editar.value = null

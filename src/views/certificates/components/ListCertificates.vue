@@ -426,7 +426,7 @@
         <!-- ── Fecha ── -->
         <template v-slot:item.created_at="{ item }">
           <span :class="item.status === 5 ? 'anulado-atenuado' : ''">
-            {{ item.created_at ? item.created_at.substring(0, 10) : '---' }}
+            {{ fechaCorta(item.created_at) || '---' }}
           </span>
         </template>
 
@@ -578,7 +578,7 @@ import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
 import { BORRADOR, EN_PROCESO, NUBE_DESACTUALIZADA, ESTADOS, estadoDe } from '@/utils/certificates/estado'
 import { TIPOS_CERTIFICADO, siglaDelTipo } from '@/utils/certificates/tipos'
 import NumerosAnteriores from '@/components/shared/NumerosAnteriores.vue'
-import { fechaCorta }      from '@/utils/dates'
+import { fechaCorta, fechaISO, hoyISO } from '@/utils/dates'
 import FilterPill          from '@/components/shared/FilterPill.vue'
 import DateRangeFilter     from '@/components/shared/DateRangeFilter.vue'
 import { copiarConAviso } from '@/utils/clipboard'
@@ -624,12 +624,9 @@ const mostrar_filtros_avanzados = ref(false) // Toggle de la UI
 const emission_date__gt = ref((() => {
   const d = new Date()
   d.setMonth(d.getMonth() - 8) // ventana por defecto: últimos 8 meses
-  return d.toISOString().substring(0, 10)
+  return fechaISO(d)
 })())
-const emission_date__lt = ref(
-  new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
-    .toISOString().substring(0, 10)
-)
+const emission_date__lt = ref(hoyISO())
 
 
 // ─── Laboratorios ─────────────────────────────────────────────────────────────

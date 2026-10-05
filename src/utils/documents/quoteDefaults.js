@@ -1,3 +1,5 @@
+import { hoyISO } from '@/utils/dates'
+
 export const CURRENT_QUOTE_SCHEMA = "1.0"
 
 export const quoteDefaultJSON = () => {
@@ -7,7 +9,7 @@ export const quoteDefaultJSON = () => {
       format_code: "FORD-022",
       revision: "1",
       city: "Arequipa",
-      date: new Date().toISOString().substring(0, 10),
+      date: hoyISO(),
       validity_days: 15,
       payment_terms: "Contado",
       currency: "PEN"

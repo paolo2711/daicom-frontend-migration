@@ -1,3 +1,5 @@
+import { hoyISO } from '@/utils/dates'
+
 export const CURRENT_FORMATO_INGRESO_SCHEMA = "1.0"
 
 export const formatoIngresoDefaultJSON = () => {
@@ -6,7 +8,7 @@ export const formatoIngresoDefaultJSON = () => {
     format_code: "FORD-042",
     revision: "0",
     city: "Arequipa",
-    date: new Date().toISOString().substring(0, 10),
+    date: hoyISO(),
     client_data: {
       full_name: "",
       dni: "",

@@ -45,7 +45,7 @@
         <tbody>
           <tr v-for="doc in documents" :key="doc.id" :class="doc.status === 'ANULADO' ? 'doc-anulado' : ''">
             <td><span class="font-weight-bold text-primary">{{ doc.document_number }}</span></td>
-            <td>{{ formatFecha(doc.created_at) }}</td>
+            <td>{{ fechaCorta(doc.created_at) || '-' }}</td>
             <td>{{ nombreCliente(doc) }}</td>
             <td>{{ formatMonto(doc) }}</td>
             <td class="text-center">
@@ -118,6 +118,7 @@ import FluentPagination from '@/components/commonComponents/FluentPagination.vue
 import QuoteTemplate from './templates/QuoteTemplate.vue'
 import DocumentsDataService from '@/services/documents/documentsDataService'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { fechaCorta } from '@/utils/dates'
 
 const search = ref('')
 const loading = ref(false)
@@ -209,13 +210,6 @@ watch(search, () => {
     fetchDocuments()
   }, 400)
 })
-
-const formatFecha = (isoDate) => {
-  if (!isoDate) return '-'
-  const d = new Date(isoDate)
-  if (Number.isNaN(d.getTime())) return '-'
-  return d.toLocaleDateString('es-PE')
-}
 
 const nombreCliente = (doc) => {
   return doc.client_name || 'Sin Cliente Registrado'

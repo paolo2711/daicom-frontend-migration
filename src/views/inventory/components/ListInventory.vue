@@ -179,6 +179,7 @@ import { Toast } from '@/plugins/alerts'
 import Swal from 'sweetalert2'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import { mensajeDeError } from '@/utils/errors'
+import { fechaCorta } from '@/utils/dates'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
@@ -292,13 +293,13 @@ const getStatusColor = (val) => {
 const certInfo = (item) => {
   const c = item.latest_certificate
   if (!c || !c.registry_code) return { has: false }
-  const info = { has: true, code: c.registry_code, emitido: c.emission_date || '—', vence: '—', label: 'VIGENTE' }
+  const info = { has: true, code: c.registry_code, emitido: fechaCorta(c.emission_date) || '—', vence: '—', label: 'VIGENTE' }
   if (c.emission_date) {
     const emis = new Date(c.emission_date)
     if (!isNaN(emis.getTime())) {
       const v = new Date(emis)
       v.setFullYear(v.getFullYear() + 1)
-      info.vence = v.toISOString().slice(0, 10)
+      info.vence = fechaCorta(v.toISOString())
       const hoy = new Date()
       hoy.setHours(0, 0, 0, 0)
       const dias = Math.round((v - hoy) / 86400000)

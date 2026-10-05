@@ -83,7 +83,7 @@
                     @click="irDesdeModal(it.ruta)">
               <span class="venc-cod">{{ it.codigo }}</span>
               <span class="venc-nombre">{{ it.nombre }}</span>
-              <span class="venc-fecha">{{ it.vence }}</span>
+              <span class="venc-fecha">{{ fechaCorta(it.vence) }}</span>
               <span class="venc-dias" :class="it.dias < 0 ? 'text-error' : 'text-warning'">
                 {{ textoDias(it.dias) }}
               </span>
@@ -100,6 +100,7 @@ import { ref, computed, onMounted } from 'vue'
 import Swal from 'sweetalert2'
 import HomeDataService from '@/services/home/homeDataService'
 import { mensajeDeError } from '@/utils/errors'
+import { fechaCorta, fechaHora, horaCorta, hoyISO } from '@/utils/dates'
 
 const emit = defineEmits(['ir'])
 
@@ -116,13 +117,7 @@ const detalle = ref(null)
 const origen = computed(() => {
   const cuando = datos.value?.escaneado
   if (!cuando) return 'Patrones e inventario sin revisar todavia'
-  const f = new Date(cuando)
-  if (isNaN(f)) return `Patrones e inventario, revisados ${cuando}`
-  // 24h, igual que la hora que muestra Mantenimiento. Con 12h el locale mete su
-  // propio punto final ("05:21 p. m.") y quedaban dos.
-  const hora = f.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false })
-  const mismoDia = new Date().toDateString() === f.toDateString()
-  const cuandoTexto = mismoDia ? `hoy ${hora}` : `el ${f.toLocaleDateString('es-PE')} ${hora}`
+  const cuandoTexto = cuando.slice(0, 10) === hoyISO() ? `hoy ${horaCorta(cuando)}` : `el ${fechaHora(cuando)}`
   return `Patrones e inventario, revisados ${cuandoTexto}`
 })
 

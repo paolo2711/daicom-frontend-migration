@@ -32,7 +32,7 @@
                 <v-icon size="12" class="mr-1">
                   {{ ultima && ultima.error ? 'mdi-alert-circle-outline' : 'mdi-clock-outline' }}
                 </v-icon>
-                <template v-if="ultima">{{ ultima.fecha }} {{ ultima.hora }} · {{ detalleCorto(ultima.detalle) }}</template>
+                <template v-if="ultima">{{ fechaCorta(ultima.fecha) }} {{ ultima.hora }} · {{ detalleCorto(ultima.detalle) }}</template>
                 <template v-else-if="cargandoScan">Cargando…</template>
                 <template v-else>Todavía no se ha ejecutado</template>
               </div>
@@ -176,6 +176,7 @@ import { useAppStore } from '@/stores/appStore'
 import { useStatusStore } from '@/stores/statusStore'
 import MaintenanceDataService from '@/services/maintenance/maintenanceDataService'
 import { mensajeDeError } from '@/utils/errors'
+import { fechaCorta } from '@/utils/dates'
 import { showEventToast, queueToastForNextLoad } from '@/services/notifications/eventToasts'
 
 const appStore = useAppStore()

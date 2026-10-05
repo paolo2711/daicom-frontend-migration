@@ -40,6 +40,7 @@
 // veces con distintos nombres de variable.
 import { ref, computed } from 'vue'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
+import { fechaCorta } from '@/utils/dates'
 
 const props = defineProps({
   desde: { type: String, default: '' },
@@ -54,9 +55,9 @@ const abierto = ref(false)
 
 const texto = computed(() => {
   if (!props.desde && !props.hasta) return 'Cualquier fecha'
-  if (props.desde && !props.hasta) return `Desde el ${props.desde}`
-  if (!props.desde && props.hasta) return `Hasta el ${props.hasta}`
-  return `${props.desde} al ${props.hasta}`
+  if (props.desde && !props.hasta) return `Desde el ${fechaCorta(props.desde)}`
+  if (!props.desde && props.hasta) return `Hasta el ${fechaCorta(props.hasta)}`
+  return `${fechaCorta(props.desde)} al ${fechaCorta(props.hasta)}`
 })
 
 // El menu se cierra solo: quien lo usa se ocupa nada mas de recargar su tabla.

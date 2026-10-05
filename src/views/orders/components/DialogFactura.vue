@@ -111,6 +111,7 @@
             <date-picker
               label="Vence (*)"
               :date="facturaData.due_date"
+              :min="facturaData.invoice_date || undefined"
               @setPickedDate="(v) => (facturaData.due_date = v)"
             />
           </div>
@@ -164,7 +165,7 @@ const props = defineProps({
   order:         { type: Object, default: null },   // opcional: factura para UNA orden
   orders:        { type: Array,  default: null },   // opcional: UNA factura para VARIAS órdenes (selección)
   invoiceToEdit: { type: Object, default: null },   // opcional: editar una factura existente
-  prefill:       { type: Object, default: null },   // opcional: datos pre-extraídos (drag&drop)
+  pdf:           { type: File,   default: null },   // opcional: PDF soltado sobre el panel; se lee al abrir
   order_type:    { type: Number, default: null },   // tipo de la pestaña (1=servicio/2=alquiler): tipa la factura suelta al crearla
 })
 const emit = defineEmits(['update:modelValue', 'updateOrder', 'close'])
@@ -234,42 +235,6 @@ const resetForm = () => {
   monedaSuelta.value = 'PEN'
 }
 
-// Al abrir: cargar datos si es edición o si vienen pre-extraídos (drag&drop).
-// immediate + observar invoiceToEdit resuelve el caso en que el componente
-// se monta con v-if cuando el modal ya está abierto (el watch de modelValue
-// solo no alcanzaba a dispararse).
-const cargarDatosIniciales = () => {
-  if (!props.modelValue) return
-  if (props.invoiceToEdit) {
-    const inv = props.invoiceToEdit
-    facturaData.value = {
-      invoice_number: inv.invoice_number || '',
-      invoice_date: inv.invoice_date || '',
-      amount: inv.amount || '',
-      exchange_rate: inv.exchange_rate || '',
-      es_credito: inv.es_credito || false,
-      due_date: inv.due_date || '',
-      pdf: null,
-    }
-  } else if (props.prefill) {
-    facturaData.value = {
-      invoice_number: props.prefill.invoice_number || '',
-      invoice_date: props.prefill.invoice_date || '',
-      amount: props.prefill.amount || '',
-      exchange_rate: '',
-      es_credito: props.prefill.es_credito || false,
-      due_date: props.prefill.due_date || '',
-      pdf: props.prefill.pdf || null,
-    }
-  } else {
-    resetForm()
-  }
-}
-
-watch(() => props.modelValue, cargarDatosIniciales, { immediate: true })
-watch(() => props.invoiceToEdit, cargarDatosIniciales)
-watch(() => props.prefill, cargarDatosIniciales)
-
 const onPdfSelected = async (archivo) => {
   if (!archivo || editando.value || !extraerCorrelativo.value) return
   isExtracting.value = true
@@ -304,6 +269,32 @@ const pdfInvalido = () => {
   Toast.fire({ timer: 2500, icon: 'info', title: 'Suelta un archivo PDF.' })
 }
 
+// Al abrir: cargar datos si es edición, o leer el PDF si llegó soltado sobre el
+// panel. immediate + observar invoiceToEdit resuelve el caso en que el
+// componente se monta con v-if cuando el modal ya está abierto (el watch de
+// modelValue solo no alcanzaba a dispararse).
+const cargarDatosIniciales = () => {
+  if (!props.modelValue) return
+  if (props.invoiceToEdit) {
+    const inv = props.invoiceToEdit
+    facturaData.value = {
+      invoice_number: inv.invoice_number || '',
+      invoice_date: inv.invoice_date || '',
+      amount: inv.amount || '',
+      exchange_rate: inv.exchange_rate || '',
+      es_credito: inv.es_credito || false,
+      due_date: inv.due_date || '',
+      pdf: null,
+    }
+    return
+  }
+  resetForm()
+  if (props.pdf) onPdfDropped(props.pdf)
+}
+
+watch(() => props.modelValue, cargarDatosIniciales, { immediate: true })
+watch(() => props.invoiceToEdit, cargarDatosIniciales)
+
 const buildFormData = () => {
   const data = new FormData()
   data.append('invoice_number', facturaData.value.invoice_number || '')
@@ -334,6 +325,11 @@ const save = async () => {
   }
   if (facturaData.value.es_credito && !facturaData.value.due_date) {
     Swal.fire('Falta el vencimiento', 'A crédito, la fecha de vencimiento es obligatoria.', 'warning')
+    return
+  }
+  // El calendario no ofrece dias antes de la emision, pero la emision se puede cambiar despues.
+  if (facturaData.value.es_credito && facturaData.value.due_date < facturaData.value.invoice_date) {
+    Swal.fire('Vence antes de la emisión', 'La fecha de vencimiento no puede ser anterior a la de emisión.', 'warning')
     return
   }
 

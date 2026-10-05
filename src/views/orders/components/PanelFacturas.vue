@@ -125,7 +125,7 @@
             <span class="text-body-2 font-weight-medium text-truncate">{{ inv.invoice_number || 'Sin número' }}</span>
           </div>
           <div class="col-fecha text-caption">
-            <div class="text-medium-emphasis">{{ inv.invoice_date || '—' }}</div>
+            <div class="text-medium-emphasis">{{ fechaCorta(inv.invoice_date) || '—' }}</div>
             <div v-if="vencimiento(inv)" :class="`text-${vencimiento(inv).color}`">{{ vencimiento(inv).texto }}</div>
           </div>
           <div class="col-monto text-right">
@@ -213,7 +213,7 @@
               <span class="text-body-2 font-weight-medium text-truncate">{{ inv.invoice_number || 'Sin número' }}</span>
             </div>
             <div class="text-caption text-truncate">
-              <span class="text-medium-emphasis">{{ inv.invoice_date || '—' }}</span>
+              <span class="text-medium-emphasis">{{ fechaCorta(inv.invoice_date) || '—' }}</span>
               <span v-if="vencimiento(inv)" :class="`text-${vencimiento(inv).color}`"> · {{ vencimiento(inv).texto }}</span>
             </div>
           </div>
@@ -291,7 +291,7 @@
       v-model="modal_crear"
       :order="null"
       :order_type="order_type"
-      :prefill="prefill_data"
+      :pdf="pdf_soltado"
       @close="cerrarCrear"
       @updateOrder="onFacturaCreada"
     />
@@ -327,7 +327,8 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 import DialogFactura from './DialogFactura.vue'
 import DialogLiquidacion from './DialogLiquidacion.vue'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
-import { CREDITO, vencimiento } from '@/utils/orders/cobro'
+import { CREDITO, porVencer, vencimiento } from '@/utils/orders/cobro'
+import { fechaCorta } from '@/utils/dates'
 
 const props = defineProps({
   order_type:            { type: Number, required: true },
@@ -354,7 +355,7 @@ const search_query = computed(() => props.search || '')
 
 // Drag & drop + crear suelta
 const modal_crear = ref(false)
-const prefill_data = ref(null)
+const pdf_soltado = ref(null)
 
 const modal_editar = ref(false)
 const factura_editar = ref(null)
@@ -418,7 +419,7 @@ const montoMostrar = (inv) => {
 // null si está justo/pagado.
 const saldoInfo = (inv) => {
   const s = Number(inv.saldo_pendiente || 0)
-  if (s > 0) return { text: `Pdte ${money(s)}`, cls: inv.estado === CREDITO ? 'text-teal' : 'text-error' }
+  if (s > 0) return { text: `Pdte ${money(s)}`, cls: porVencer(inv) ? 'text-teal' : 'text-error' }
   if (s < 0) return { text: `Exc. ${money(-s)}`, cls: 'text-blue-darken-1' }
   return null
 }
@@ -609,8 +610,8 @@ const cerrarEditar = () => { modal_editar.value = false; factura_editar.value = 
 const onFacturaEditada = () => { cerrarEditar() }
 
 // ── Crear factura suelta (botón +) ──
-const abrirCrearSuelta = () => { prefill_data.value = null; modal_crear.value = true }
-const cerrarCrear = () => { modal_crear.value = false; prefill_data.value = null }
+const abrirCrearSuelta = () => { pdf_soltado.value = null; modal_crear.value = true }
+const cerrarCrear = () => { modal_crear.value = false; pdf_soltado.value = null }
 // WS (wss-reload-invoices) recarga la lista al crearse.
 const onFacturaCreada = () => { cerrarCrear() }
 
@@ -618,34 +619,10 @@ const onFacturaCreada = () => { cerrarCrear() }
 const pdfInvalido = () => {
   Toast.fire({ timer: 2500, icon: 'info', title: 'Suelta un archivo PDF.' })
 }
-// Recibe el File ya validado desde PdfDropZone: extrae datos y abre el modal
-// de crear factura pre-llenado.
-const onPdfDropped = async (file) => {
-  try {
-    const data = new FormData()
-    data.append('pdf', file)
-    const res = await OrderDataService.extractInvoiceData(data)
-    prefill_data.value = {
-      invoice_number: res.data.invoice_number || '',
-      invoice_date: res.data.invoice_date || '',
-      amount: res.data.amount || '',
-      es_credito: res.data.es_credito || false,
-      due_date: res.data.due_date || '',
-      pdf: file,
-    }
-    // Feedback de extracción (igual que el file-input del modal)
-    const algo = res.data.invoice_number || res.data.invoice_date || res.data.amount
-    if (res.data.warning) {
-      Toast.fire({ timer: 5000, icon: 'warning', title: 'Extracción parcial', text: res.data.warning })
-    } else if (algo) {
-      Toast.fire({ timer: 2500, icon: 'success', title: '¡Datos extraídos!' })
-    } else {
-      Toast.fire({ timer: 3000, icon: 'info', title: 'No se extrajo nada, complétalo a mano.' })
-    }
-  } catch (err) {
-    prefill_data.value = { pdf: file }
-    Toast.fire({ timer: 3500, icon: 'info', title: 'No se pudo leer el PDF. Complétalo a mano.' })
-  }
+// Recibe el File ya validado desde PdfDropZone y abre el modal de crear
+// factura con el; el modal lo lee.
+const onPdfDropped = (file) => {
+  pdf_soltado.value = file
   modal_crear.value = true
 }
 // "Sin factura" se movió a la barra flotante de selección (TabOrdersService),

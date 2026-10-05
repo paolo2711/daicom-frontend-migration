@@ -51,7 +51,7 @@
                    @click="abrirDoc(inv.pdf_url)">
             <div class="d-flex flex-column">
               <span class="text-body-2 font-weight-bold">{{ inv.invoice_number || 'Sin número' }}</span>
-              <span class="text-caption text-medium-emphasis">{{ inv.invoice_date || 'Sin fecha' }}</span>
+              <span class="text-caption text-medium-emphasis">{{ fechaCorta(inv.invoice_date) || 'Sin fecha' }}</span>
               <span v-if="vencimiento(inv)" class="text-caption" :class="`text-${vencimiento(inv).color}`">{{ vencimiento(inv).texto }}</span>
             </div>
             <div class="d-flex align-center">
@@ -94,7 +94,7 @@
               <v-icon size="small" :color="getColorPago(pay.payment_method)" class="mr-2">{{ getIconoPago(pay.payment_method) }}</v-icon>
               <div class="d-flex flex-column">
                 <span class="text-body-2 font-weight-bold text-capitalize">{{ (pay.payment_method || '').toLowerCase() }}</span>
-                <span class="text-caption text-medium-emphasis">{{ pay.payment_date }}</span>
+                <span class="text-caption text-medium-emphasis">{{ fechaCorta(pay.payment_date) }}</span>
               </div>
             </div>
             <div class="d-flex align-center">

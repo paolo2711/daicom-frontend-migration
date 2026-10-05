@@ -16,7 +16,7 @@
         <button type="button" class="nov-vieja" @click="abierta = abierta === v.clave ? null : v.clave">
           <v-icon size="14">{{ abierta === v.clave ? 'mdi-chevron-down' : 'mdi-chevron-right' }}</v-icon>
           <span class="nov-vers">v{{ v.etiqueta }}</span>
-          <span class="nov-fecha">{{ v.fecha }}</span>
+          <span class="nov-fecha">{{ fechaCorta(v.fecha) }}</span>
         </button>
 
         <v-expand-transition>
@@ -38,6 +38,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { CHANGELOG } from '@/data/changelog'
+import { fechaCorta } from '@/utils/dates'
 
 // El orden manda: primero lo que suma, despues lo que cambio, al final lo que
 // estaba roto. La seccion sin items no se dibuja.

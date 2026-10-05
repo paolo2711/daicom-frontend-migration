@@ -8,7 +8,7 @@
         <div class="log-text">
           <strong>{{ log.user_data.username }}</strong> {{ log.description }}
         </div>
-        <div class="log-time">{{ log.log_date }} · {{ log.log_time }}</div>
+        <div class="log-time">{{ fechaCorta(log.log_date) }} · {{ log.log_time }}</div>
       </div>
     </div>
 
@@ -37,6 +37,7 @@ import LogDataService from "@/services/logs/logDataService"
 import LogMappers from "@/mappers/logMappers"
 import { useAppStore } from '@/stores/appStore'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
+import { fechaCorta } from '@/utils/dates'
 
 const appStore = useAppStore()
 

@@ -63,7 +63,7 @@
               <tbody>
                 <tr v-for="d in docs[s.tipo]" :key="d.id">
                   <td class="font-weight-medium">{{ d.numero || 'S/N' }}</td>
-                  <td class="text-caption text-medium-emphasis">{{ (d.created_at || '').substring(0, 10) }}</td>
+                  <td class="text-caption text-medium-emphasis">{{ fechaCorta(d.created_at) }}</td>
                   <td class="text-right" style="width: 80px">
                     <v-btn icon="mdi-eye" size="x-small" variant="text" color="primary" @click="verUrl(d.pdf)" />
                     <v-btn icon="mdi-delete-outline" size="x-small" variant="text" color="error" @click="borrarDoc(d)" />
@@ -105,6 +105,7 @@ import { Toast } from '@/plugins/alerts'
 import { useTheme } from 'vuetify'
 import OrderDataService from "@/services/orders/orderDataService"
 import ClientSelect from '@/components/shared/ClientSelect.vue'
+import { fechaCorta } from '@/utils/dates'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },

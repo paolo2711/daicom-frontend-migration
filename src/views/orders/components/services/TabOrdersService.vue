@@ -218,12 +218,6 @@
         </template>
 
 
-        <template v-slot:item.created_at="{ item }">
-          <span :class="item.status === 4 ? 'text-grey' : ''">
-            {{ item.created_at ? item.created_at.substring(0, 10) : '---' }}
-          </span>
-        </template>
-
         <template v-slot:item.actions="{ item }">
           <v-tooltip location="bottom" color="primary">
             <template v-slot:activator="{ props }">
@@ -399,7 +393,6 @@ const headers = [
   { title: 'Cliente', key: 'client_data.name' },
   { title: 'Progreso', key: 'progress', align: 'center', sortable: false },
   { title: 'Estado Financiero', key: 'vinculo_financiero', align: 'center', sortable: false },
-  //{ title: 'F. Agregado', key: 'created_at', sortable: false },
   { title: 'Opciones', key: 'actions', align: 'center', sortable: false },
   { title: '', key: 'data-table-expand' },
 ]

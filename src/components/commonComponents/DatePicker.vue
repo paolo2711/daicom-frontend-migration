@@ -2,7 +2,7 @@
   <v-menu v-model="open_menu" :close-on-content-click="false" transition="scale-transition" offset-y min-width="auto">
     <template v-slot:activator="{ props }">
       <v-text-field
-        v-model="picked_date"
+        :model-value="fechaCorta(picked_date)"
         :label="label"
         density="compact"
         prepend-inner-icon="mdi-calendar"
@@ -18,6 +18,7 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
+import { fechaCorta, fechaISO } from '@/utils/dates'
 
 const props = defineProps({
   date: String,
@@ -42,7 +43,7 @@ watch(() => props.date, (val) => {
 
 const onDateChange = (val) => {
   if (val instanceof Date) {
-    const formatted = val.toISOString().substr(0, 10)
+    const formatted = fechaISO(val)
     picked_date.value = formatted
     emit('setPickedDate', formatted)
     open_menu.value = false

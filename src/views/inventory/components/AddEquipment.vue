@@ -170,7 +170,7 @@
                 </div>
                 <div class="d-flex justify-space-between align-center mb-2">
                   <span class="text-caption text-medium-emphasis">Emitido</span>
-                  <span class="font-weight-medium">{{ form.latest_certificate.emission_date || '---' }}</span>
+                  <span class="font-weight-medium">{{ fechaCorta(form.latest_certificate.emission_date) || '---' }}</span>
                 </div>
                 <div class="d-flex justify-space-between align-center">
                   <span class="text-caption text-medium-emphasis">Vence</span>
@@ -250,6 +250,7 @@ import InventoryDataService from '@/services/inventory/inventoryDataService'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import EquipmentDataService from '@/services/equipments/equipmentDataService'
 import { mensajeDeError } from '@/utils/errors'
+import { fechaCorta } from '@/utils/dates'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
 
 const emit = defineEmits(['saved'])
@@ -323,7 +324,7 @@ const certVigencia = computed(() => {
   const emis = new Date(cert.emission_date)
   if (isNaN(emis.getTime())) return r
   const vence = new Date(emis); vence.setFullYear(vence.getFullYear() + 1)
-  r.vence = vence.toISOString().slice(0, 10)
+  r.vence = fechaCorta(vence.toISOString())
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
   const dias = Math.round((vence - hoy) / 86400000)
   if (dias < 0) { r.chipColor = 'error'; r.icon = 'mdi-alert-decagram'; r.headline = 'EXPEDIENTE VENCIDO' }

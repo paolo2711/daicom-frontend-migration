@@ -100,6 +100,7 @@ import { useRouter } from 'vue-router'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { useAppStore } from '@/stores/appStore'
 import { iconForCategory as iconoCategoria, toneForCategory } from '@/services/notifications/categoryIcons'
+import { tiempoRelativo } from '@/utils/dates'
 
 const store = useNotificationStore()
 const appStore = useAppStore()
@@ -132,16 +133,6 @@ const grupos = computed(() => {
     { label: 'Anteriores', items: g.antes },
   ]
 })
-
-const tiempoRelativo = (iso) => {
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-  if (s < 60) return 'ahora'
-  const m = Math.floor(s / 60); if (m < 60) return `${m} min`
-  const h = Math.floor(m / 60); if (h < 24) return `${h} h`
-  const d = Math.floor(h / 24); if (d === 1) return 'ayer'
-  if (d < 30) return `${d} d`
-  return new Date(iso).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })
-}
 
 const onScroll = () => {
   const el = listEl.value

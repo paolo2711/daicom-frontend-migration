@@ -19,6 +19,31 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.7.0',
+    fecha: '2026-10-06',
+    nuevo: [
+      'Los equipos de una orden de servicio se pueden marcar y trabajar desde la barra de selección, sin ir a Certificados.',
+      'Con varios certificados u órdenes marcados se puede anular, restaurar, solicitar o cancelar firmas, eliminar de la nube, marcar sin comprobante o sin cargo y desvincular de la orden, todo de una vez.',
+      'Menú de acciones con click derecho o con el botón ⋮ de cada fila en Certificados, Servicios y Alquileres.',
+      'Una orden se puede vincular a una factura existente desde su menú.',
+    ],
+    cambio: [
+      '"Acciones en lote" de la orden se reemplaza por marcar sus equipos y usar la barra; los equipos se muestran en un recuadro dentro de la orden.',
+      'La barra de selección y el menú ofrecen las mismas acciones: lo que no corresponde no aparece y lo que todavía no se puede hacer se ve en gris.',
+      'Eliminar de la nube sigue en segundo plano y cada certificado muestra su resultado en el panel de subidas.',
+      'Anular varias órdenes es todo o nada: si alguna no se puede, se avisa cuál y por qué.',
+      'En el panel de subidas, un Excel por revisar se distingue a simple vista de uno ya guardado.',
+      'Todas las fechas se muestran en formato DD/MM/AAAA, sin importar el idioma del navegador.',
+    ],
+    arreglo: [
+      'El vencimiento de una factura a crédito ya no deja elegir un día anterior a su emisión.',
+      'Una factura a crédito con abono parcial ya no sale como pendiente en rojo antes de vencer.',
+      'La fecha que se propone en abonos, cotizaciones y formatos de ingreso ya no salta al día siguiente desde las 7 de la noche.',
+      'Una orden anulada ya no se puede marcar sin comprobante ni sin cargo.',
+      'Anular un certificado ahora también quita su solicitud de firma.',
+    ],
+  },
+  {
     version: '3.7.6.0',
     fecha: '2026-10-02',
     nuevo: [

@@ -1,5 +1,5 @@
 <template>
-  <v-card flat tile color="transparent" class="elevation-0">
+  <v-card flat class="recuadro-equipos border rounded-lg bg-surface mx-3 mt-1 mb-3">
     <v-toolbar density="compact" flat color="transparent" class="pl-3">
       <div class="d-flex align-center">
         <v-icon start color="primary">mdi-clipboard-list</v-icon>
@@ -27,7 +27,7 @@
     <v-table density="compact" :hover="false" v-else class="bg-transparent">
       <thead>
         <tr class="bg-transparent">
-          <th class="columna-casilla">
+          <th class="columna-casilla pr-0">
             <v-checkbox-btn density="compact" :disabled="!marcables.length"
                             :model-value="todosMarcados" :indeterminate="algunosMarcados"
                             @update:model-value="marcarTodos" />
@@ -36,15 +36,15 @@
           <th class="text-overline">EQUIPO</th>
           <th class="text-center text-overline">DOCUMENTACIÓN</th>
           <th class="text-center text-overline">ESTADO</th>
-          <th class="text-center text-overline"><v-icon size="small">mdi-dots-vertical</v-icon></th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="cert in order.certificates" :key="cert.id"
-            :class="{ 'fila-anulada': cert.status === ANULADO, 'fila-en-menu': estaEnElMenu(cert) }"
+            :class="{ 'fila-anulada': cert.status === ANULADO, 'fila-en-menu': estaEnElMenu(cert), 'cursor-pointer': vivo(cert) }"
             @click="alClicFila($event, cert)"
             @contextmenu="alClickDerecho($event, { item: cert })">
-          <td class="columna-casilla">
+          <td class="columna-casilla pr-0">
             <v-checkbox-btn density="compact" :disabled="!vivo(cert)" :model-value="estaMarcado(cert)"
                             @update:model-value="alternar(cert)" />
           </td>
@@ -236,9 +236,9 @@ function estadoCert (cert) {
 .fila-anulada {
   opacity: 0.5;
 }
+/* Lo justo para la casilla: el resto del ancho es para los datos. */
 .columna-casilla {
-  width: 40px;
-  padding-right: 0 !important;
+  width: 1%;
 }
 .text-overline {
   font-size: 0.7rem !important;

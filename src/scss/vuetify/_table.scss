@@ -18,6 +18,15 @@
   background-color: #0f1d31 !important;
 }
 
+// Los equipos de una orden abierta, en un recuadro dentro de ella (borde,
+// margen y fondo van como clases en el componente).
+// Su tabla crece con sus filas, asi que en vertical no se desplaza: con filas
+// de alto fraccionario el redondeo deja el contenido apenas mas alto que la
+// caja, y sin esto aparece una barra.
+.recuadro-equipos .v-table__wrapper {
+  overflow-y: hidden;
+}
+
 // La fila que el servidor rechazo al guardar una lista.
 .v-table .fila-con-error td {
   background: rgba(var(--v-theme-error), 0.08);

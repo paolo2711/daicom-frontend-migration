@@ -13,7 +13,7 @@
       </div>
       <v-spacer/>
       <v-btn size="x-small" color="primary" variant="flat" class="text-white"
-             @click="emit('add-extra')" :disabled="order.status === 4">
+             @click="emit('add-extra')" :disabled="!viva(order)">
         <v-icon start size="x-small">mdi-plus</v-icon> Añadir Equipo Extra
       </v-btn>
     </v-toolbar>
@@ -41,7 +41,7 @@
       </thead>
       <tbody>
         <tr v-for="cert in order.certificates" :key="cert.id"
-            :class="{ 'fila-anulada': cert.status === ANULADO, 'fila-en-menu': estaEnElMenu(cert), 'cursor-pointer': vivo(cert) }"
+            :class="{ 'fila-anulada': !vivo(cert), 'fila-en-menu': estaEnElMenu(cert), 'cursor-pointer': vivo(cert) }"
             @click="alClicFila($event, cert)"
             @contextmenu="alClickDerecho($event, { item: cert })">
           <td class="columna-casilla pr-0">
@@ -92,8 +92,8 @@
           </td>
 
           <td class="text-center">
-            <v-chip size="x-small" :color="estadoCert(cert).color" variant="outlined" label>
-              {{ estadoCert(cert).texto }}
+            <v-chip size="x-small" :color="avanceDe(cert).color" variant="outlined" label>
+              {{ avanceDe(cert).texto }}
             </v-chip>
           </td>
 
@@ -110,7 +110,7 @@
       </tbody>
     </v-table>
 
-    <action-menu :menu="menu" :acciones="accionesDe(menu.filas)"
+    <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
                  @accion="clave => ejecutarAccion(clave, menu.filas)" />
 
     <selection-bar :count="seleccion.length" label="equipo(s)"
@@ -127,10 +127,12 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { useCertificateActions } from '@/composables/useCertificateActions'
 import { accionesPara } from '@/utils/actions'
-import { ACCIONES_CERTIFICADO, algunoVivo, vivo } from '@/utils/certificates/acciones'
+import { ACCIONES_CERTIFICADO, algunoVivo } from '@/utils/certificates/acciones'
+import { avanceDe } from '@/utils/certificates/avance'
 import { estaEntregado } from '@/utils/certificates/entrega'
-import { ANULADO, ESTADOS, NUBE_DESACTUALIZADA } from '@/utils/certificates/estado'
+import { vivo } from '@/utils/certificates/estado'
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
+import { viva } from '@/utils/orders/estado'
 import { fechaCorta } from '@/utils/dates'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
@@ -218,17 +220,6 @@ function onNubeClick (event, cert) {
 
 function irACertificado (cert) {
   router.push({ path: '/certificates', query: { correlativo: cert.correlative } }).catch(() => {})
-}
-
-// Texto y color juntos: son el mismo estado.
-function estadoCert (cert) {
-  if (cert.status === ANULADO) return { texto: 'ANULADO', color: 'red-darken-2' }
-  if (cert.status === NUBE_DESACTUALIZADA) return ESTADOS[NUBE_DESACTUALIZADA]
-  if (estaEntregado(cert)) return { texto: 'Entregado', color: 'teal-darken-2' }
-  if (cert.uploaded) return { texto: 'Listo', color: 'success' }
-  if (cert.signature_requested) return { texto: 'Firma solicitada', color: 'warning' }
-  if (tieneExcelBase(cert)) return { texto: 'En Proceso', color: 'warning' }
-  return { texto: 'Borrador', color: 'grey-darken-1' }
 }
 </script>
 

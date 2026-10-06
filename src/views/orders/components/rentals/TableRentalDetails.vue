@@ -76,7 +76,7 @@
       </tbody>
     </v-table>
 
-    <action-menu :menu="menu" :acciones="accionesDe(menu.filas)"
+    <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
                  @accion="clave => ejecutarAccion(clave, menu.filas)" />
 
     <dialog-gestionar-alquiler ref="gestionarRef" />
@@ -97,6 +97,7 @@ import { useTheme } from 'vuetify'
 import OrderDataService from '@/services/orders/orderDataService'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import { ESTADOS_ALQUILER, FECHAS_ALQUILER, duracionDe, salidaDe } from '@/utils/orders/alquiler'
+import { viva } from '@/utils/orders/estado'
 import { fechaCorta } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 
@@ -114,8 +115,7 @@ const isDark = computed(() => theme.global.current.value.dark)
 const gestionarRef = ref(null)
 const addEquipmentRef = ref(null)
 
-const ANULADA = 4
-const anulada = computed(() => props.order.status === ANULADA)
+const anulada = computed(() => !viva(props.order))
 
 const filas = computed(() => (props.order.rentals || []).map(linea => ({
   ...linea,

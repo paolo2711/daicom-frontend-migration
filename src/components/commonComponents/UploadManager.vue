@@ -119,14 +119,21 @@
                           </v-icon>
                         </template>
 
+                        <!-- Por revisar todavia no esta listo: su boton se ve siempre,
+                             como el de una fallida, y no lleva el check de terminada. -->
+                        <v-tooltip v-else-if="esperandoRevision(task)" location="bottom" text="Revisar PDF">
+                          <template v-slot:activator="{ props: tooltipProps }">
+                            <v-btn v-bind="tooltipProps" icon variant="tonal" size="small" color="amber-darken-2" @click.stop="openPreview(task)">
+                              <v-icon>mdi-eye</v-icon>
+                            </v-btn>
+                          </template>
+                        </v-tooltip>
+
                         <template v-else-if="terminada(task)">
                           <template v-if="isHovering && !esBaja(task)">
                             <v-tooltip location="bottom">
                               <template v-slot:activator="{ props: tooltipProps }">
-                                <v-btn v-if="esperandoRevision(task)" v-bind="tooltipProps" icon variant="text" size="small" color="purple" @click.stop="openPreview(task)">
-                                  <v-icon>mdi-eye</v-icon>
-                                </v-btn>
-                                <v-btn v-else-if="esConversion(task)" v-bind="tooltipProps" icon variant="text" size="small" color="purple" :href="task.url_base" target="_blank" :disabled="!task.url_base">
+                                <v-btn v-if="esConversion(task)" v-bind="tooltipProps" icon variant="text" size="small" color="purple" :href="task.url_base" target="_blank" :disabled="!task.url_base">
                                   <v-icon>mdi-file-pdf-box</v-icon>
                                 </v-btn>
                                 <v-btn v-else v-bind="tooltipProps" icon variant="text" size="small" color="purple" :href="task.url" target="_blank" :disabled="!task.url">
@@ -308,14 +315,15 @@ function getStatusText(task) {
   return maps[task.type]?.[task.status] || '';
 }
 
+// Un Excel por revisar va en ambar, como su boton: el verde es de los guardados.
 function iconoDe(task) {
+  if (esperandoRevision(task)) return { icono: 'mdi-file-excel-box', color: 'amber-darken-2' }
   if (esConversion(task)) return { icono: 'mdi-file-excel-box', color: 'green-darken-2' }
   if (esBaja(task)) return { icono: 'mdi-cloud-remove-outline', color: 'blue-grey' }
   return { icono: 'mdi-file-pdf-box', color: 'red-darken-2' }
 }
 
 function getActionText(task) {
-  if (esperandoRevision(task)) return 'Revisar PDF'
   if (esConversion(task)) return task.url_base ? 'Ver PDF Base' : 'Guardado, preparando el enlace'
   return 'Ver PDF Subido'
 }

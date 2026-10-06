@@ -12,7 +12,7 @@
         hide-details="auto"
       />
     </template>
-    <v-date-picker v-model="dateObj" :min="min" @update:model-value="onDateChange" />
+    <v-date-picker :model-value="dateObj" :min="min" @update:model-value="onDateChange" />
   </v-menu>
 </template>
 
@@ -32,10 +32,7 @@ const emit = defineEmits(['setPickedDate'])
 const open_menu = ref(false)
 const picked_date = ref(props.date)
 
-const dateObj = computed({
-  get: () => picked_date.value ? new Date(picked_date.value.replace(/-/g, '/')) : null,
-  set: (val) => {}
-})
+const dateObj = computed(() => picked_date.value ? new Date(picked_date.value.replace(/-/g, '/')) : null)
 
 watch(() => props.date, (val) => {
   picked_date.value = val

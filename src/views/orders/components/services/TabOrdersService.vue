@@ -105,7 +105,7 @@
               <v-select
                 v-model="filter_status"
                 prepend-inner-icon="mdi-list-status"
-                :items="order_statuses"
+                :items="FILTRO_DE_ESTADO"
                 item-title="name"
                 item-value="id"
                 clearable
@@ -157,11 +157,11 @@
         </template>
 
         <template v-slot:item.client_data.name="{ item }">
-          <span :class="item.status === 4 ? 'anulado-atenuado' : ''">{{ item.client_data.name }}</span>
+          <span :class="viva(item) ? '' : 'anulado-atenuado'">{{ item.client_data.name }}</span>
         </template>
 
         <template v-slot:item.progress="{ item }">
-          <div v-if="item.status !== 4 && getProgreso(item).total > 0" class="mx-auto" style="width: 100px;">
+          <div v-if="viva(item) && getProgreso(item).total > 0" class="mx-auto w-75">
             <div class="text-caption mb-1 font-weight-medium text-center" :class="theme.global.current.value.dark ? 'text-grey-lighten-1' : 'text-grey-darken-2'">
               {{ getProgreso(item).listos }} / {{ getProgreso(item).total }} Equipos
             </div>
@@ -186,7 +186,7 @@
                   icon
                   variant="text"
                   density="compact"
-                  :disabled="item.status === 4"
+                  :disabled="!viva(item)"
                   :color="getColorSemaforoFinanciero(item)"
                   @click.stop="seleccionarFacturaEnPanel(item)"
                 >
@@ -245,7 +245,7 @@
       <v-col cols="12" :md="panel_expandido ? 12 : 4" class="pa-0 pl-md-2 transition-swing">
         <div class="panel-sticky-wrapper">
         <panel-facturas 
-          :order_type="1"
+          :order_type="SERVICIO"
           :ordenes_seleccionadas="ordenes_seleccionadas"
           :search="filter_invoice"
           :foco_order_id="foco_order_id"
@@ -271,13 +271,13 @@
       @clear="ordenes_seleccionadas = []"
     />
 
-    <action-menu :menu="menu" :acciones="accionesDe(menu.filas)"
+    <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
                  @accion="clave => ejecutarAccion(clave, menu.filas)" />
 
     <!-- MODALES -->
     <batch-action-modal ref="batchActionModalRef" />
 
-    <dialog-factura v-model="factura_modal" :order="selected_order" :orders="ordenes_factura_multi" :order_type="1" @updateOrder="onFacturaGuardada" @close="cerrarFacturaModal" />
+    <dialog-factura v-model="factura_modal" :order="selected_order" :orders="ordenes_factura_multi" :order_type="SERVICIO" @updateOrder="onFacturaGuardada" @close="cerrarFacturaModal" />
     <edit-order v-model="edit_order_modal" :order="selected_order" @updateOrder="updateSingleOrderInList" @close="edit_order_modal = false" />
     <add-extra-equipment v-model="dialog_extra" :order="selected_order" @close="dialog_extra = false" @reload="retrieveOrders" />
     <certificate-modal ref="certificateModalRef" />
@@ -296,7 +296,7 @@ import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import { useOrderActions } from '@/composables/useOrderActions'
-import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import { FILTRO_DE_ESTADO, SERVICIO, esDeServicio, viva } from '@/utils/orders/estado'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
 import { debounce } from '@/utils/debounce'
@@ -415,16 +415,6 @@ const filter_client_id = ref(null)
 const filter_date_gt = ref('')
 const filter_date_lt = ref('')
 const filter_status = ref('')
-// IDs según el backend (Order.OrderStatus): 4=Anulada, 5=Pagado. Antes estaban
-// cruzados (4=Pagado/5=Anulada) → filtrar "Pagado" traía las Anuladas.
-const order_statuses = [
-  { id: 1, name: 'En Proceso' },
-  { id: 2, name: 'Deuda' },
-  { id: 3, name: 'Abonado' },
-  { id: 5, name: 'Pagado' },
-  { id: 6, name: 'Excedido' },
-  { id: 4, name: 'Anulada' },
-]
 
 // Clientes
 
@@ -611,7 +601,7 @@ const idOrdenExpandida = () => (
 const refrescarFila = (orderId) => OrderDataService.getFila(orderId)
   .then(response => {
     const fila = response?.data
-    if (!fila || (fila.order_type !== 1 && fila.order_type)) return null
+    if (!fila || !esDeServicio(fila)) return null
 
     // Se vuelca tal cual: trae solo campos de fila, asi que no pisa los
     // equipos ni los abonos que la lista ya tenia.

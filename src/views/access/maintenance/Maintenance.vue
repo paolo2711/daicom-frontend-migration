@@ -172,14 +172,12 @@
 import { ref, onMounted } from 'vue'
 import Swal from 'sweetalert2'
 import { Toast } from '@/plugins/alerts'
-import { useAppStore } from '@/stores/appStore'
 import { useStatusStore } from '@/stores/statusStore'
 import MaintenanceDataService from '@/services/maintenance/maintenanceDataService'
 import { mensajeDeError } from '@/utils/errors'
 import { fechaCorta } from '@/utils/dates'
 import { showEventToast, queueToastForNextLoad } from '@/services/notifications/eventToasts'
 
-const appStore = useAppStore()
 const statusStore = useStatusStore()
 
 const loadingLogout = ref(false)
@@ -200,7 +198,7 @@ const cargarScan = async () => {
   try {
     const { data } = await MaintenanceDataService.scanStatus()
     ultima.value = data?.ultima || null
-  } catch (e) {
+  } catch {
     ultima.value = null
   } finally {
     cargandoScan.value = false

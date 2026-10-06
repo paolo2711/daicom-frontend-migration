@@ -1,7 +1,7 @@
 <template>
   <v-dialog width="1000" v-model="dialog" class="dialog-premium" persistent>
     <v-card style="max-height: 90vh; display: flex; flex-direction: column;">
-      <base-modal-header :title="`Generar Orden de ${order.order_type === 1 ? 'Servicio' : 'Alquiler'}`" icon="mdi-file-document-plus" @close="close">
+      <base-modal-header :title="`Generar Orden de ${esDeServicio(order) ? 'Servicio' : 'Alquiler'}`" icon="mdi-file-document-plus" @close="close">
         <span v-if="next_order_number">Sig. Orden: <span class="font-weight-bold text-primary ml-1">{{ next_order_number }}</span></span>
       </base-modal-header>
 
@@ -19,7 +19,7 @@
 
           <v-divider class="my-4" />
 
-          <form-order-service ref="formRef" v-if="order.order_type === 1" :key="'srv-'+dialog"
+          <form-order-service ref="formRef" v-if="esDeServicio(order)" :key="'srv-'+dialog"
                               @update-list="list => items_to_save = list" @update-config="c => config = c" />
           <form-order-rental ref="formRef" v-else :key="'alq-'+dialog" @update-list="list => items_to_save = list" />
 
@@ -28,7 +28,7 @@
 
       <!-- Agregamos un borde superior para delimitar los botones cuando el contenido hace scroll -->
       <v-card-actions class="px-6 pb-4 pt-2 border-t-thin flex-wrap ga-2">
-        <resumen-equipos :filas="items_to_save" :por-tipo="order.order_type === 1" />
+        <resumen-equipos :filas="items_to_save" :por-tipo="esDeServicio(order)" />
         <v-spacer />
         <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
         <v-btn color="primary" variant="flat" class="font-weight-bold px-4" @click="save"
@@ -46,6 +46,7 @@ import { ref, watch, nextTick, getCurrentInstance } from 'vue'
 import { useLocalDraft } from '@/composables/useLocalDraft'
 import { useSavedNumbers } from '@/composables/useSavedNumbers'
 import { mensajeDeError } from '@/utils/errors'
+import { SERVICIO, esAlquiler, esDeServicio } from '@/utils/orders/estado'
 import OrderDataService from '@/services/orders/orderDataService'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
@@ -60,7 +61,7 @@ const dialog                = ref(false)
 const is_on_sending_process = ref(false)
 const is_valid              = ref(false)
 const next_order_number     = ref('')
-const order                 = ref({ client: null, order_type: 1 })
+const order                 = ref({ client: null, order_type: SERVICIO })
 const items_to_save         = ref([])
 const config                = ref(null)
 const addOrderForm          = ref(null)
@@ -73,7 +74,7 @@ const borrador = useLocalDraft(() => 'daicom_borrador_orden_servicio')
 watch(() => order.value.order_type, () => { calculateNextNumber() })
 
 watch([items_to_save, config, () => order.value.client], ([items, elegido, client]) => {
-  if (order.value.order_type === 1) borrador.guardar({ client, items, config: elegido })
+  if (esDeServicio(order.value)) borrador.guardar({ client, items, config: elegido })
 }, { deep: true })
 
 async function open(tipo) {
@@ -106,7 +107,7 @@ async function save() {
 
   try {
     const payload_orden = { client: order.value.client, order_type: order.value.order_type }
-    if (order.value.order_type === 2 && order.value.client_order_reference) {
+    if (esAlquiler(order.value) && order.value.client_order_reference) {
       payload_orden.client_order_reference = order.value.client_order_reference
     }
     payload_orden.items = items_to_save.value
@@ -129,7 +130,7 @@ async function save() {
 }
 
 function close() {
-  if (order.value?.order_type === 1) borrador.descartar()
+  if (esDeServicio(order.value)) borrador.descartar()
   order.value.client = null
   items_to_save.value = []
   addOrderForm.value?.resetValidation()

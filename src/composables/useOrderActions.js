@@ -2,7 +2,8 @@ import Swal from 'sweetalert2'
 import { usePermissions } from '@/composables/usePermissions'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { accionesPara } from '@/utils/actions'
-import { ACCIONES_ORDEN, ALQUILER, VINCULAR, viva } from '@/utils/orders/acciones'
+import { ACCIONES_ORDEN, VINCULAR } from '@/utils/orders/acciones'
+import { esAlquiler, viva } from '@/utils/orders/estado'
 import { SIN_CARGO, SIN_COMPROBANTE, alternarMarca } from '@/utils/orders/sinFactura'
 import { anularOrdenes } from '@/utils/orders/anulacion'
 
@@ -29,7 +30,7 @@ export function useOrderActions(seleccion, { editar, agregarEquipo, facturar }) 
     const vivas = ordenes.filter(viva)
     const { isConfirmed } = await Swal.fire({
       title: vivas.length === 1 ? `¿Anular ${vivas[0].order_number}?` : `¿Anular ${vivas.length} órdenes?`,
-      text: vivas[0].order_type === ALQUILER
+      text: esAlquiler(vivas[0])
         ? 'Lo reservado vuelve a disponible. Con equipos en obra, primero se registra su devolución.'
         : 'Se anulan también todos sus equipos.',
       icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, anular', cancelButtonText: 'Cancelar',

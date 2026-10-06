@@ -105,7 +105,7 @@
               <v-select
                 v-model="filter_status"
                 prepend-inner-icon="mdi-list-status"
-                :items="order_statuses"
+                :items="FILTRO_DE_ESTADO"
                 item-title="name"
                 item-value="id"
                 clearable
@@ -166,7 +166,7 @@
         </template>
 
         <template v-slot:item.client_data.name="{ item }">
-          <span :class="item.status === 4 ? 'anulado-atenuado' : ''">{{ item.client_data.name }}</span>
+          <span :class="viva(item) ? '' : 'anulado-atenuado'">{{ item.client_data.name }}</span>
         </template>
 
         <template v-slot:item.vinculo_financiero="{ item }">
@@ -178,7 +178,7 @@
                   icon
                   variant="text"
                   density="compact"
-                  :disabled="item.status === 4"
+                  :disabled="!viva(item)"
                   :color="getColorSemaforoFinanciero(item)"
                   @click.stop="seleccionarFacturaEnPanel(item)"
                 >
@@ -265,7 +265,7 @@
       <v-col cols="12" :md="panel_expandido ? 12 : 4" class="pa-0 pl-md-2 transition-swing">
         <div class="panel-sticky-wrapper">
           <panel-facturas
-            :order_type="2"
+            :order_type="ALQUILER"
             :ordenes_seleccionadas="ordenes_seleccionadas"
             :search="filter_invoice"
             :foco_order_id="foco_order_id"
@@ -291,11 +291,11 @@
       @clear="ordenes_seleccionadas = []"
     />
 
-    <action-menu :menu="menu" :acciones="accionesDe(menu.filas)"
+    <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
                  @accion="clave => ejecutarAccion(clave, menu.filas)" />
 
     <!-- MODALES -->
-    <dialog-factura v-model="factura_modal" :order="selected_order" :orders="ordenes_factura_multi" :order_type="2" @updateOrder="onFacturaGuardada" @close="cerrarFacturaModal" />
+    <dialog-factura v-model="factura_modal" :order="selected_order" :orders="ordenes_factura_multi" :order_type="ALQUILER" @updateOrder="onFacturaGuardada" @close="cerrarFacturaModal" />
     <edit-order v-model="edit_order_modal" :order="selected_order" @updateOrder="updateSingleOrderInList" @close="edit_order_modal = false" />
     
     <add-extra-equipment v-model="dialog_extra" :order="selected_order" @close="dialog_extra = false" @reload="expanded = []; retrieveOrders()" />
@@ -314,7 +314,7 @@ import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import { useOrderActions } from '@/composables/useOrderActions'
-import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import { ALQUILER, FILTRO_DE_ESTADO, esAlquiler, viva } from '@/utils/orders/estado'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
 import { throttle } from '@/utils/throttle'
@@ -379,15 +379,6 @@ const filtro_falta_pago = ref(false)
 const filtro_a_credito = ref(false)
 const filtro_sin_factura = ref(false)
 
-// IDs según Order.OrderStatus del backend (4=Anulada, 5=Pagado).
-const order_statuses = [
-  { id: 1, name: 'En Proceso' },
-  { id: 2, name: 'Deuda' },
-  { id: 3, name: 'Abonado' },
-  { id: 5, name: 'Pagado' },
-  { id: 6, name: 'Excedido' },
-  { id: 4, name: 'Anulada' },
-]
 
 const loading_list = ref(false)
 const total_orders = ref(0)
@@ -461,7 +452,7 @@ const idOrdenExpandida = () => (
 const fetchAndInjectSingleOrder = (event) => {
   OrderDataService.getFila(event.detail).then(response => {
     const fila = response?.data
-    if (!fila || fila.order_type !== 2) return
+    if (!fila || !esAlquiler(fila)) return
 
     const index = orders.value.findIndex(o => o.id === fila.id)
     if (index !== -1) Object.assign(orders.value[index], fila)

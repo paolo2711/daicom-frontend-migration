@@ -327,7 +327,8 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 import DialogFactura from './DialogFactura.vue'
 import DialogLiquidacion from './DialogLiquidacion.vue'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
-import { CREDITO, porVencer, vencimiento } from '@/utils/orders/cobro'
+import { porVencer, vencimiento } from '@/utils/orders/cobro'
+import { ABONADO, ANULADA, CREDITO, DEUDA, EN_PROCESO, ESTADOS, EXCEDIDO, PAGADO } from '@/utils/orders/estado'
 import { fechaCorta } from '@/utils/dates'
 
 const props = defineProps({
@@ -375,15 +376,14 @@ const currency_options = [
   { title: 'Soles (PEN)', value: 'PEN' },
   { title: 'Dólares (USD)', value: 'USD' },
 ]
+const estadoFactura = (s) => ESTADOS[s] || ESTADOS[DEUDA]
+const estado_color = (s) => estadoFactura(s).color
+const estado_texto = (s) => estadoFactura(s).texto
+
 const estado_options = [
   { title: 'Todos los estados', value: null },
-  { title: 'En proceso', value: 1 },
-  { title: 'Deuda', value: 2 },
-  { title: 'Crédito', value: CREDITO },
-  { title: 'Abonado', value: 3 },
-  { title: 'Pagado', value: 5 },
-  { title: 'Excedido', value: 6 },
-  { title: 'Anulada', value: 4 },
+  ...[EN_PROCESO, DEUDA, CREDITO, ABONADO, PAGADO, EXCEDIDO, ANULADA]
+    .map(value => ({ title: ESTADOS[value].texto, value })),
 ]
 const detraccion_options = [
   { title: 'Todas', value: null },
@@ -400,13 +400,6 @@ const tipo_options = [
 const hay_filtros = computed(() => !!(currency_filter.value || estado_filter.value
   || detraccion_filter.value || tipo_filter.value))
 
-// 1 En proceso (gris), 2 Deuda (rojo), 3 Abonado (naranja), 4 Anulada (azul-gris,
-// distinto del gris de "En proceso"), 5 Pagado (verde), 6 Excedido (azul),
-// 8 Crédito (verde azulado).
-const ESTADO_COLORS = { 1: '#9e9e9e', 2: '#e53935', 3: '#fb8c00', 4: '#546e7a', 5: '#43a047', 6: '#1e88e5', [CREDITO]: '#00897b' }
-const estado_color = (s) => ESTADO_COLORS[s] || ESTADO_COLORS[2]
-const ESTADO_TEXTOS = { 1: 'En proceso', 2: 'Deuda', 3: 'Abonado', 4: 'Anulada', 5: 'Pagado', 6: 'Excedido', 7: 'Sin cargo', [CREDITO]: 'Crédito' }
-const estado_texto = (s) => ESTADO_TEXTOS[s] || 'Deuda'
 const simbolo = (c) => (c === 'USD' ? '$' : 'S/')
 const money = (v) => Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 // Facturas internas nacen en 0 (aún sin abono): mostramos "--" en vez de 0.00
@@ -444,7 +437,7 @@ const cargar = async () => {
     if (!isLatestLoad(token)) return
     facturas.value = (res.data.results || []).map(f => InvoiceMappers.getMap(f))
     total_items.value = res.data.count ?? facturas.value.length
-  } catch (e) {
+  } catch {
     if (!isLatestLoad(token)) return
     facturas.value = []
     total_items.value = 0

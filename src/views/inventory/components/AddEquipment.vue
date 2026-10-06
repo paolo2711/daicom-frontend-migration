@@ -251,6 +251,7 @@ import CertificateDataService from '@/services/certificates/certificateDataServi
 import EquipmentDataService from '@/services/equipments/equipmentDataService'
 import { mensajeDeError } from '@/utils/errors'
 import { fechaCorta } from '@/utils/dates'
+import { vivo } from '@/utils/certificates/estado'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
 
 const emit = defineEmits(['saved'])
@@ -477,13 +478,13 @@ const buscarCertificado = async () => {
 
   try {
     const res = await CertificateDataService.getFiltered({ page_size: 10, correlative: Number(correlative_search.value) })
-    const validos = res.data.results.filter(c => c.status !== 5)
+    const validos = res.data.results.filter(vivo)
     if (validos.length > 0) {
       foundCert.value = validos[0]
     } else {
       Swal.fire('No encontrado', 'No existe un certificado válido con ese correlativo.', 'warning')
     }
-  } catch (e) {
+  } catch {
     Swal.fire('Error', 'Hubo un problema al buscar.', 'error')
   } finally {
     searchingCert.value = false
@@ -499,7 +500,7 @@ const linkCertificate = async () => {
       form.latest_certificate = foundCert.value
       Swal.fire({ title: 'Vinculado', text: 'Certificado asociado exitosamente', icon: 'success', timer: 1500, showConfirmButton: false })
       emit('saved') // Refresca la tabla por detrás
-    } catch (e) {
+    } catch {
       Swal.fire('Error', 'No se pudo vincular', 'error')
     } finally {
       linkingCert.value = false
@@ -523,7 +524,7 @@ const unlinkCertificate = async () => {
       form.latest_certificate = null
       Swal.fire({ title: 'Desvinculado', text: 'El certificado fue retirado del equipo', icon: 'info', timer: 1500, showConfirmButton: false })
       emit('saved')
-    } catch (e) {
+    } catch {
       Swal.fire('Error', 'No se pudo desvincular', 'error')
     } finally {
       linkingCert.value = false

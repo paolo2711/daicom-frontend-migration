@@ -221,7 +221,7 @@ const formatMonto = (doc) => {
   return `${simbolo} ${monto.toFixed(2)}`
 }
 
-const handleUpdateDocumentRow = (event) => {
+const handleUpdateDocumentRow = () => {
   // Por ahora recargamos toda la tabla. En la Fase 2 optimizaremos 
   // esto para que solo inyecte la data de la fila usando get(id).
   fetchDocuments()

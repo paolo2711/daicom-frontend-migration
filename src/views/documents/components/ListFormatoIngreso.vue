@@ -196,7 +196,7 @@ const nombreCliente = (doc) => {
   return doc.client_name || 'Sin Cliente Registrado'
 }
 
-const handleUpdateDocumentRow = (event) => {
+const handleUpdateDocumentRow = () => {
   fetchDocuments()
 }
 

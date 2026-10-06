@@ -15,10 +15,10 @@
 
           <v-spacer />
 
-          <v-btn color="primary" class="mr-4" variant="flat" prepend-icon="mdi-folder-plus" v-if="route.name === 'orders-service'" @click="modalAddOrder?.open(1)">
+          <v-btn color="primary" class="mr-4" variant="flat" prepend-icon="mdi-folder-plus" v-if="route.name === 'orders-service'" @click="modalAddOrder?.open(SERVICIO)">
             NUEVO SERVICIO
           </v-btn>
-          <v-btn color="amber-darken-3" class="mr-4 text-white" variant="flat" prepend-icon="mdi-truck-plus" v-if="route.name === 'orders-rental'" @click="modalAddOrder?.open(2)">
+          <v-btn color="amber-darken-3" class="mr-4 text-white" variant="flat" prepend-icon="mdi-truck-plus" v-if="route.name === 'orders-rental'" @click="modalAddOrder?.open(ALQUILER)">
             NUEVO ALQUILER
           </v-btn>
         </div>
@@ -35,6 +35,7 @@
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AddOrder from '@/views/orders/components/AddOrder.vue'
+import { ALQUILER, SERVICIO } from '@/utils/orders/estado'
 
 const route = useRoute()
 const modalAddOrder = ref(null)

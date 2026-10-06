@@ -126,7 +126,7 @@
         :row-props="getRowProps"
         v-model="certificados_seleccionados"
         show-select
-        :item-selectable="(item) => item.status !== 5"
+        :item-selectable="vivo"
         item-value="id"
         return-object
         :loading="loading_list"
@@ -176,7 +176,7 @@
         <!-- ── Tipo abreviado ── -->
         <template v-slot:item.certificate_type_label="{ item }">
           <span class="text-no-wrap">
-            <span :class="item.status === 5 ? 'anulado-atenuado' : ''">
+            <span :class="vivo(item) ? '' : 'anulado-atenuado'">
               {{ siglaDelTipo(item.certificate_type) }}
             </span>
             <numeros-anteriores :numeros="item.previous_numbers" />
@@ -185,21 +185,21 @@
 
         <!-- ── Cliente ── -->
         <template v-slot:item.client_data.name="{ item }">
-          <span :class="item.status === 5 ? 'anulado-atenuado' : ''">
+          <span :class="vivo(item) ? '' : 'anulado-atenuado'">
             {{ item.client_data?.name }}
           </span>
         </template>
 
         <!-- ── Lab ── -->
         <template v-slot:item.lab_data.code="{ item }">
-          <span :class="item.status === 5 ? 'anulado-atenuado font-weight-medium' : 'font-weight-medium'">
+          <span :class="vivo(item) ? 'font-weight-medium' : 'anulado-atenuado font-weight-medium'">
             {{ item.lab_data?.code }}
           </span>
         </template>
 
         <!-- ── Nombre equipo ── -->
         <template v-slot:item.equipment="{ item }">
-          <span :class="item.status === 5 ? 'anulado-atenuado' : ''">
+          <span :class="vivo(item) ? '' : 'anulado-atenuado'">
             {{ item.equipment }}
           </span>
         </template>
@@ -241,7 +241,7 @@
                   v-if="item.uploaded_xls_url"
                   v-bind="props" icon variant="text" density="comfortable" color="primary"
                   :href="item.uploaded_xls_url" target="_blank"
-                  :disabled="item.status === 5" @click.stop
+                  :disabled="!vivo(item)" @click.stop
                 >
                   <v-icon>mdi-file-pdf-box</v-icon>
                 </v-btn>
@@ -291,7 +291,7 @@
                   <v-btn
                     v-bind="props" icon variant="text" density="comfortable" color="primary"
                     :href="linkDe(item)" target="_blank"
-                    :disabled="item.status === 5" @click.stop="onNubeClick($event, item)"
+                    :disabled="!vivo(item)" @click.stop="onNubeClick($event, item)"
                   >
                     <v-icon>{{ estaEntregado(item) ? 'mdi-cloud-check' : 'mdi-cloud' }}</v-icon>
                   </v-btn>
@@ -403,7 +403,7 @@
 
         <!-- ── Fecha ── -->
         <template v-slot:item.created_at="{ item }">
-          <span :class="item.status === 5 ? 'anulado-atenuado' : ''">
+          <span :class="vivo(item) ? '' : 'anulado-atenuado'">
             {{ fechaCorta(item.created_at) || '---' }}
           </span>
         </template>
@@ -444,14 +444,14 @@
       @clearSelection="certificados_seleccionados = []"
     />
 
-    <action-menu :menu="menu" :acciones="accionesDe(menu.filas)"
+    <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
                  @accion="clave => ejecutarAccion(clave, menu.filas)" />
 
   </v-container>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, defineAsyncComponent, mergeProps } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, defineAsyncComponent, mergeProps } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/appStore'
 
@@ -473,7 +473,8 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 import ClientSelect        from '@/components/shared/ClientSelect.vue'
 import { tieneExcelBase }  from '@/utils/certificates/excelBase'
 import { estaEntregado } from '@/utils/certificates/entrega'
-import { ANULADO, NUBE_DESACTUALIZADA, ESTADOS, estadoDe } from '@/utils/certificates/estado'
+import { NUBE_DESACTUALIZADA, ESTADOS, estadoDe, vivo } from '@/utils/certificates/estado'
+import { ANULADA } from '@/utils/orders/estado'
 import { TIPOS_CERTIFICADO, siglaDelTipo } from '@/utils/certificates/tipos'
 import { ACCIONES_CERTIFICADO } from '@/utils/certificates/acciones'
 import { accionesPara } from '@/utils/actions'
@@ -728,7 +729,7 @@ function aplicarFiltroFechas () {
 }
 
 function seleccionarTodaLaOrden (orderId) {
-  const certificadosDeOrden = certificates.value.filter(c => c.order === orderId && c.status !== 5)
+  const certificadosDeOrden = certificates.value.filter(c => c.order === orderId && vivo(c))
   
   certificadosDeOrden.forEach(cert => {
     if (!certificados_seleccionados.value.find(s => s.id === cert.id)) {
@@ -745,7 +746,7 @@ function seleccionarTodaLaOrden (orderId) {
 
 const getSemaforoColor = (item) => {
   const orden = ordenDe(item)
-  if (orden.order_status === 4) return 'grey-darken-3' // Anulada
+  if (orden.order_status === ANULADA) return 'grey-darken-3'
   // Sin cargo va en verde: no hay nada que facturar ni cobrar, o sea que por el
   // lado del dinero esta cerrado igual que una pagada.
   if (orden.order_requiere_pago === false) return 'success'
@@ -764,7 +765,7 @@ const getSemaforoColor = (item) => {
 
 const getSemaforoText = (item) => {
   const orden = ordenDe(item)
-  if (orden.order_status === 4) return 'Orden Anulada'
+  if (orden.order_status === ANULADA) return 'Orden Anulada'
   if (orden.order_requiere_pago === false) return 'Sin cargo, no se cobra'
 
   const hasInv = orden.order_has_invoices
@@ -783,7 +784,7 @@ const getSemaforoText = (item) => {
 
 // Un anulado no se marca: su menu es de el solo.
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } =
-  useContextMenu(certificados_seleccionados, { seMarca: cert => cert.status !== ANULADO })
+  useContextMenu(certificados_seleccionados, { seMarca: vivo })
 
 function handleRowClick (event, { item }) {
   // Prevenir selección si el clic fue en un botón, enlace o ícono interactivo
@@ -793,7 +794,7 @@ function handleRowClick (event, { item }) {
   const cert = item.raw || item 
   
   // No permitir selección de elementos anulados
-  if (cert.status === 5) return
+  if (!vivo(cert)) return
 
   // Verificar si ya está seleccionado para agregarlo o quitarlo del array
   const index = certificados_seleccionados.value.findIndex(c => c.id === cert.id)

@@ -14,7 +14,7 @@
         </v-row>
 
         <!-- ORDEN CERTIFICADO -->
-        <v-card variant="flat" class="border mt-2" v-if="order.order_type === 1 || !order.order_type" :color="isDark ? 'grey-darken-3' : 'grey-lighten-4'">
+        <v-card variant="flat" class="border mt-2" v-if="esDeServicio(order)" :color="isDark ? 'grey-darken-3' : 'grey-lighten-4'">
           <v-card-subtitle class="font-weight-bold pb-2">
             <v-icon size="small" start>mdi-link-variant</v-icon> Sincronizar dueño de Equipos
           </v-card-subtitle>
@@ -24,7 +24,7 @@
               v-for="cert in edit_order_certs"
               :key="cert.id"
               class="border-b-thin"
-              :disabled="cert.status === 5"
+              :disabled="!vivo(cert)"
             >
               <template #prepend>
                 <v-checkbox v-model="selected_certs_to_update" :value="cert.id" color="primary" class="mr-3" hide-details></v-checkbox>
@@ -36,7 +36,7 @@
         </v-card>
 
         <!-- ORDEN ALQUILER — hogar único de documentos -->
-        <div v-else-if="order.order_type === 2">
+        <div v-else-if="esAlquiler(order)">
 
           <!-- Cotización y guías (documento único c/u) -->
           <div class="doc-group mt-2">
@@ -106,6 +106,8 @@ import { useTheme } from 'vuetify'
 import OrderDataService from "@/services/orders/orderDataService"
 import ClientSelect from '@/components/shared/ClientSelect.vue'
 import { fechaCorta } from '@/utils/dates'
+import { vivo } from '@/utils/certificates/estado'
+import { esAlquiler, esDeServicio } from '@/utils/orders/estado'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -125,7 +127,7 @@ const selected_certs_to_update = ref([])
 const files_to_upload = ref({ quote_pdf: null, dispatch_guide_pdf: null, return_guide_pdf: null })
 const saving_edit_order = ref(false)
 
-const tituloModal = computed(() => props.order?.order_type === 2 ? 'Editar alquiler' : 'Editar orden')
+const tituloModal = computed(() => esAlquiler(props.order) ? 'Editar alquiler' : 'Editar orden')
 
 // Documentos únicos del alquiler (un PDF c/u) — se guardan con el form.
 const unicos = [
@@ -169,10 +171,10 @@ function initFields() {
 
   files_to_upload.value = { quote_pdf: null, dispatch_guide_pdf: null, return_guide_pdf: null }
 
-  if (props.order.order_type === 1 || !props.order.order_type) {
+  if (esDeServicio(props.order)) {
     edit_order_certs.value = JSON.parse(JSON.stringify(props.order.certificates))
-    selected_certs_to_update.value = edit_order_certs.value.filter(c => c.status !== 5).map(c => c.id)
-  } else if (props.order.order_type === 2) {
+    selected_certs_to_update.value = edit_order_certs.value.filter(vivo).map(c => c.id)
+  } else if (esAlquiler(props.order)) {
     cargarDocs()
   }
 }
@@ -228,7 +230,7 @@ function guardarEdicionOrden() {
   let data = new FormData()
   data.append('client', edit_order_data.value.client)
 
-  if (props.order.order_type === 1 || !props.order.order_type) {
+  if (esDeServicio(props.order)) {
     data.append('sync_certificates', selected_certs_to_update.value.join(','))
     OrderDataService.patch(edit_order_data.value.id, data).then(onSuccess).catch(onError)
   } else {

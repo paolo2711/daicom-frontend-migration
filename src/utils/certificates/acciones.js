@@ -1,13 +1,12 @@
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
-import { ANULADO } from '@/utils/certificates/estado'
+import { vivo } from '@/utils/certificates/estado'
 import { fechaCorta } from '@/utils/dates'
 
 // Lo que se puede hacer con certificados. De aca salen la barra de seleccion y
 // el menu (click derecho y boton de la fila), asi que una accion se agrega o
 // se cambia una sola vez. Los campos de cada una, en utils/actions.js.
 
-export const vivo = (cert) => cert.status !== ANULADO
 export const algunoVivo = (certs) => certs.some(vivo)
 const uno = (certs) => (certs.length === 1 ? certs[0] : null)
 

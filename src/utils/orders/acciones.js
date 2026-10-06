@@ -1,12 +1,10 @@
 import { SIN_CARGO, SIN_COMPROBANTE, marcaDe, puedeMarcarse } from '@/utils/orders/sinFactura'
+import { esAlquiler, viva } from '@/utils/orders/estado'
 
 // Lo que se puede hacer con ordenes. De aca salen la barra de seleccion y el
 // menu (click derecho y boton de la fila). Los campos de cada una, en
 // utils/actions.js. Una anulada no tiene ninguna.
 
-const ANULADA = 4  // Order.OrderStatus.CANCELLED
-export const ALQUILER = 2  // Order.OrderType.RENTAL
-export const viva = (orden) => orden.status !== ANULADA
 const algunaViva = (ordenes) => ordenes.some(viva)
 const quitaOPone = (marca, texto) => (ordenes) => (marcaDe(ordenes) === marca ? `Quitar ${texto.toLowerCase()}` : texto)
 
@@ -17,7 +15,7 @@ export const ACCIONES_ORDEN = [
     clave: 'editar', grupo: 'orden', varios: false,
     icono: 'mdi-pencil',
     // En alquileres el modal tambien lleva las OC y valorizaciones.
-    texto: ([orden]) => (orden.order_type === ALQUILER ? 'Editar alquiler' : 'Editar cliente'),
+    texto: ([orden]) => (esAlquiler(orden) ? 'Editar alquiler' : 'Editar cliente'),
     visible: algunaViva,
   },
   {

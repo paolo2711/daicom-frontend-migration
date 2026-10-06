@@ -38,6 +38,7 @@ import { ref, computed, watch, nextTick, getCurrentInstance } from 'vue'
 import { useLocalDraft } from '@/composables/useLocalDraft'
 import { useSavedNumbers } from '@/composables/useSavedNumbers'
 import { mensajeDeError } from '@/utils/errors'
+import { esAlquiler } from '@/utils/orders/estado'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
 import ResumenEquipos, { cuantosEquipos } from './ResumenEquipos.vue'
@@ -65,7 +66,7 @@ const dialogModel = computed({
 })
 
 // Computado para saber si la orden recibida es de Alquiler
-const isRental = computed(() => props.order && props.order.order_type === 2)
+const isRental = computed(() => esAlquiler(props.order))
 
 // Uno por orden: lo cargado para una no aparece al abrir otra.
 const borrador = useLocalDraft(() => `daicom_borrador_equipos_${props.order?.id}`)

@@ -148,7 +148,7 @@ const cargar = async () => {
     const { data } = await HomeDataService.vencimientos()
     datos.value = data
     if (!data.al_dia) await refrescar(true)
-  } catch (e) {
+  } catch {
     datos.value = null
   } finally {
     cargando.value = false

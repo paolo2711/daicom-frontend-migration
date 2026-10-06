@@ -29,12 +29,3 @@ export const formatoIngresoDefaultJSON = () => {
     ]
   }
 }
-
-// Helper para agregar un instrumento vacío desde el botón "+ Agregar" en Vue
-export const emptyInstrumentRow = () => ({
-  description: "",
-  brand: "",
-  model: "",
-  serial: "",
-  condition: ""
-})

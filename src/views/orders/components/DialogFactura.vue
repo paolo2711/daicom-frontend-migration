@@ -154,7 +154,6 @@ import { ref, computed, watch } from 'vue'
 import { Toast } from '@/plugins/alerts'
 import Swal from 'sweetalert2'
 import OrderDataService from '@/services/orders/orderDataService'
-import { useAppStore } from '@/stores/appStore'
 import { mensajeDeError } from '@/utils/errors'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
@@ -169,8 +168,6 @@ const props = defineProps({
   order_type:    { type: Number, default: null },   // tipo de la pestaña (1=servicio/2=alquiler): tipa la factura suelta al crearla
 })
 const emit = defineEmits(['update:modelValue', 'updateOrder', 'close'])
-
-const appStore = useAppStore()
 
 const dialogModel = computed({
   get: () => props.modelValue,

@@ -144,6 +144,7 @@ import EquipmentMappers from '@/mappers/equipmentMappers'
 import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal.vue'
 import CorrelativeDataService from '@/services/correlative/correlativeDataService'
 import { TIPOS_CERTIFICADO, nombreDelTipo } from '@/utils/certificates/tipos'
+import { vivo } from '@/utils/certificates/estado'
 import { useRowErrors } from '@/composables/useRowErrors'
 
 const emit = defineEmits(['update-list', 'update-config'])
@@ -228,13 +229,13 @@ async function buscarCertificadoHuerfano() {
   certificado_encontrado.value = null
   try {
     const res = await CertificateDataService.getFiltered({ page_size: 50, correlative: Number(temp_eq.value.correlative_busqueda) })
-    const validos = res.data.results.filter(c => !c.order && c.status !== 5)
+    const validos = res.data.results.filter(c => !c.order && vivo(c))
     if (validos.length > 0) {
       certificado_encontrado.value = validos[0]
     } else {
       $swal.fire('No encontrado', 'No se encontró un certificado suelto o válido con ese número.', 'warning')
     }
-  } catch (e) {
+  } catch {
     $swal.fire('Error', 'Hubo un problema al buscar el certificado.', 'error')
   } finally {
     buscando_cert.value = false

@@ -103,25 +103,11 @@ class OrderDataService {
         return axios.post(`orders/invoices/${invoice_id}/link`, { order_ids: ids }, { headers });
     }
 
-    /** Búsqueda liviana de órdenes por número (autocomplete). */
-    lookupOrders(query, excludeId = null, currency = null) {
-        let headers = authHeader();
-        let params = { q: query };
-        if (excludeId) params.exclude = excludeId;
-        if (currency)  params.currency = currency;
-        return axios.get(`orders/lookup`, { params, headers });
-    }
-
     /** Extrae los datos PDF */
     extractInvoiceData(data) {
         let headers = authHeader();
         headers['Content-Type'] = "multipart/form-data";
         return axios.post(`orders/invoices/extract`, data, { headers });
-    }
-
-    /** Lista todas las facturas de una orden */
-    getInvoices(order_id) {
-        return axios.get(`orders/${order_id}/invoices`, { headers: authHeader() });
     }
 
     /**

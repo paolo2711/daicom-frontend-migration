@@ -1,3 +1,5 @@
+import { DEUDA } from '@/utils/orders/estado'
+
 // Mapper de Facturas (OrderInvoice) — para el Panel de Finanzas.
 // Mismo patrón que orderMappers.js: protege contra "undefined.length" /
 // "undefined.toFixed" cuando el backend todavía no manda un campo, y le da
@@ -28,9 +30,9 @@ export default {
       due_date: element.due_date || null,
 
       // ─── ESTADO FINANCIERO (vive en la factura, ver OrderInvoice.status) ───
-      status: element.status ?? 2, // 2 = Deuda por defecto
-      // El que se muestra: igual a status, salvo Crédito (8) mientras no vence.
-      estado: element.estado ?? element.status ?? 2,
+      status: element.status ?? DEUDA,
+      // El que se muestra: igual a status, salvo Crédito mientras no vence.
+      estado: element.estado ?? element.status ?? DEUDA,
 
       // ─── CEREBRO FINANCIERO DE LA FACTURA ───
       total_pagado: element.total_pagado != null ? Number(element.total_pagado) : 0,

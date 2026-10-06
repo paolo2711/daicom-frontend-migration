@@ -16,6 +16,8 @@ export const ESTADOS = {
 
 export const estadoDe = (cert) => ESTADOS[cert?.status] || ESTADOS[BORRADOR]
 
+export const vivo = (cert) => cert?.status !== ANULADO
+
 // Firmar pone el QR y lo sube en el mismo paso: firmado es estar en la nube.
 export function estaFirmado(cert) {
   return cert?.status === EN_NUBE

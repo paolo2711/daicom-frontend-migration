@@ -599,10 +599,6 @@ onUnmounted(() => {
   border-color: #FFCA28;
 }
 
-.tabla-ordenes-alquiler tbody tr {
-  cursor: pointer;
-}
-
 /* ── Hover de filas normales ── */
 .v-theme--light .tabla-ordenes-alquiler tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
   background-color: rgba(0, 0, 0, 0.04) !important;

@@ -1,5 +1,5 @@
 <template>
-  <v-card flat tile color="transparent">
+  <v-card flat class="recuadro-equipos border rounded-lg bg-surface mx-3 mt-1 mb-3">
     <v-toolbar density="compact" flat color="transparent" class="pl-3">
       <v-icon start :color="isDark ? 'amber-darken-2' : 'amber-darken-3'" class="mr-2">mdi-truck-delivery</v-icon>
       <span class="text-subtitle-2 font-weight-bold" :class="isDark ? 'text-amber-lighten-2' : 'text-amber-darken-4'">
@@ -30,7 +30,7 @@
           <th class="text-center text-overline">{{ FECHAS_ALQUILER.expected_return_date }}</th>
           <th class="text-center text-overline">{{ FECHAS_ALQUILER.actual_return_date }}</th>
           <th class="text-center text-overline">ESTADO</th>
-          <th class="text-center text-overline"><v-icon size="small">mdi-dots-vertical</v-icon></th>
+          <th></th>
         </tr>
       </thead>
       <tbody>

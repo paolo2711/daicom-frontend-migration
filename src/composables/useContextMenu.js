@@ -9,10 +9,19 @@ import { ref } from 'vue'
 // sola y la seleccion queda vacia.
 // Con `marca: false` el menu nunca toca la seleccion, para las tablas donde
 // marcar hace algo mas que elegir filas.
+
+// Uno solo abierto en toda la pantalla, aunque haya tablas dentro de tablas
+// (ordenes y sus equipos): Vuetify cierra un menu con un click afuera, pero no
+// con un click derecho.
+let abierto = null
+
 export function useContextMenu(seleccion = null, { seMarca = () => true, marca = true } = {}) {
   const menu = ref({ show: false, x: 0, y: 0, filas: [] })
 
   function abrir (x, y, fila) {
+    if (abierto && abierto !== menu) abierto.value.show = false
+    abierto = menu
+
     const marcada = Boolean(seleccion?.value.some(f => f.id === fila.id))
     if (seleccion && marca && !marcada) seleccion.value = seMarca(fila) ? [fila] : []
 

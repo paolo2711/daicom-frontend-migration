@@ -220,13 +220,14 @@
 
         <template v-slot:item.actions="{ item }">
           <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" color="grey-darken-1"
-                 @click.stop="alBotonDeFila($event, item)" />
+                 :disabled="!accionesDe([item]).length" @click.stop="alBotonDeFila($event, item)" />
         </template>
 
         <template v-slot:expanded-row="{ columns, item }">
           <tr class="fila-activa">
             <td :colspan="columns.length" class="pa-0">
               <table-service-details
+                v-model:seleccion="equipos_seleccionados"
                 :order="item"
                 @reload="retrieveOrders"
                 @add-extra="prepareExtraEquipment(item)"
@@ -320,6 +321,11 @@ const appStore = useAppStore()
 
 // Estado UI Split-Screen
 const ordenes_seleccionadas = ref([])
+// Los de la orden abierta. Una sola seleccion a la vez: marcar equipos
+// desmarca las ordenes (y el panel sale de vincular), y al reves.
+const equipos_seleccionados = ref([])
+watch(ordenes_seleccionadas, (v) => { if (v.length) equipos_seleccionados.value = [] })
+watch(equipos_seleccionados, (v) => { if (v.length) ordenes_seleccionadas.value = [] })
 const panel_expandido = ref(false)
 
 // Nuevos estados UI de Filtros Avanzados y Chips
@@ -374,12 +380,13 @@ const isOrderExpanded = (item) => {
   return expanded.value.some(e => getSafeId(e) === targetId)
 }
 
-// Una sola orden abierta a la vez.
+// Una sola orden abierta a la vez. Sus equipos marcados se van con ella.
 watch(expanded, (newVal) => {
   if (newVal.length > 1) {
     expanded.value = [newVal[newVal.length - 1]]
     return
   }
+  equipos_seleccionados.value = []
   if (expanded.value.length === 1) {
     cargarItems(getSafeId(expanded.value[0]), { mostrarCarga: true })
   }

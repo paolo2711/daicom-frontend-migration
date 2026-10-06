@@ -91,6 +91,14 @@ export function useCertificateActions({ abrirLote, abrirFicha }) {
           boton: 'Sí, anular', llamar: () => CertificateDataService.anular(ids(certs)),
           exito: solo ? 'Certificado anulado' : 'Certificados anulados', fallo: 'No se pudo anular.',
         })
+      // Solo la ofrecen los equipos de una orden.
+      case 'desvincular':
+        return confirmarYLlamar({
+          titulo: `¿Desvincular ${cuales(certs)}?`,
+          texto: solo ? 'Queda sin orden y sale de esta.' : 'Quedan sin orden y salen de esta.',
+          boton: 'Sí, desvincular', llamar: () => CertificateDataService.desvincular(ids(certs)),
+          exito: solo ? 'Equipo desvinculado' : 'Equipos desvinculados', fallo: 'No se pudo desvincular.',
+        })
       case 'restaurar':
         return confirmarYLlamar({
           titulo: `¿Restaurar ${cuales(certs)}?`, texto: solo ? 'Vuelve a borrador.' : 'Vuelven a borrador.', icono: 'info',

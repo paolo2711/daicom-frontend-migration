@@ -12,14 +12,10 @@
         </span>
       </div>
       <v-spacer/>
-      <div class="d-flex align-center ga-2">
-        <action-group :acciones="accionesDeCertificados" etiqueta="Acciones en lote"
-                      @accion="clave => emit('accion-certificados', clave, order.certificates)" />
-        <v-btn size="x-small" color="primary" variant="flat" class="text-white"
-               @click="emit('add-extra')" :disabled="order.status === 4">
-          <v-icon start size="x-small">mdi-plus</v-icon> Añadir Equipo Extra
-        </v-btn>
-      </div>
+      <v-btn size="x-small" color="primary" variant="flat" class="text-white"
+             @click="emit('add-extra')" :disabled="order.status === 4">
+        <v-icon start size="x-small">mdi-plus</v-icon> Añadir Equipo Extra
+      </v-btn>
     </v-toolbar>
 
     <!-- Los equipos todavia en camino: null mientras se piden. -->
@@ -31,6 +27,11 @@
     <v-table density="compact" :hover="false" v-else class="bg-transparent">
       <thead>
         <tr class="bg-transparent">
+          <th class="columna-casilla">
+            <v-checkbox-btn density="compact" :disabled="!marcables.length"
+                            :model-value="todosMarcados" :indeterminate="algunosMarcados"
+                            @update:model-value="marcarTodos" />
+          </th>
           <th class="text-overline">EXPEDIENTE</th>
           <th class="text-overline">EQUIPO</th>
           <th class="text-center text-overline">DOCUMENTACIÓN</th>
@@ -41,7 +42,12 @@
       <tbody>
         <tr v-for="cert in order.certificates" :key="cert.id"
             :class="{ 'fila-anulada': cert.status === ANULADO, 'fila-en-menu': estaEnElMenu(cert) }"
+            @click="alClicFila($event, cert)"
             @contextmenu="alClickDerecho($event, { item: cert })">
+          <td class="columna-casilla">
+            <v-checkbox-btn density="compact" :disabled="!vivo(cert)" :model-value="estaMarcado(cert)"
+                            @update:model-value="alternar(cert)" />
+          </td>
           <td>
             <strong>{{ cert.registry_code }}</strong>
             <numeros-anteriores :numeros="cert.previous_numbers" />
@@ -93,11 +99,11 @@
 
           <td class="text-center">
             <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" size="x-small" color="grey-darken-1"
-                   @click.stop="alBotonDeFila($event, cert)" />
+                   :disabled="!accionesDe([cert]).length" @click.stop="alBotonDeFila($event, cert)" />
           </td>
         </tr>
         <tr v-if="!order.certificates || order.certificates.length === 0">
-          <td colspan="5" class="text-center text-grey py-6 font-weight-medium">
+          <td colspan="6" class="text-center text-grey py-6 font-weight-medium">
             No se encontraron equipos registrados en este expediente.
           </td>
         </tr>
@@ -106,27 +112,28 @@
 
     <action-menu :menu="menu" :acciones="accionesDe(menu.filas)"
                  @accion="clave => ejecutarAccion(clave, menu.filas)" />
+
+    <selection-bar :count="seleccion.length" label="equipo(s)"
+                   :acciones="accionesDe(seleccion)"
+                   @accion="clave => ejecutarAccion(clave, [...seleccion])"
+                   @clear="seleccion = []" />
   </v-card>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Toast } from '@/plugins/alerts'
-import CertificateDataService from '@/services/certificates/certificateDataService'
-import { useSwal } from '@/composables/useSwal'
 import { usePermissions } from '@/composables/usePermissions'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { useCertificateActions } from '@/composables/useCertificateActions'
 import { accionesPara } from '@/utils/actions'
-import { ACCIONES_CERTIFICADO } from '@/utils/certificates/acciones'
+import { ACCIONES_CERTIFICADO, algunoVivo, vivo } from '@/utils/certificates/acciones'
 import { estaEntregado } from '@/utils/certificates/entrega'
 import { ANULADO, ESTADOS, NUBE_DESACTUALIZADA } from '@/utils/certificates/estado'
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
-import { mensajeDeError } from '@/utils/errors'
 import { fechaCorta } from '@/utils/dates'
-import ActionGroup from '@/components/shared/ActionGroup.vue'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
+import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
 import NumerosAnteriores from '@/components/shared/NumerosAnteriores.vue'
 
 const props = defineProps({
@@ -134,47 +141,61 @@ const props = defineProps({
 })
 const emit = defineEmits(['add-extra', 'edit-certificate', 'accion-certificados'])
 
+// La guarda la pantalla de ordenes: marcar equipos y marcar ordenes se excluyen.
+const seleccion = defineModel('seleccion', { type: Array, required: true })
+
 const router = useRouter()
-const swal = useSwal()
 const { hasAction } = usePermissions()
 
-// `clave` tiene que coincidir con las de ACCIONES del modal de lote. Sin
-// `permiso`, la ven todos.
-const ACCIONES_EN_LOTE = [
-  { clave: 'notify',  texto: 'Solicitar Firmas',  icono: 'mdi-bell-ring',                    color: 'orange-darken-3', permiso: 1005 },
-  { clave: 'entrega', texto: 'Marcar Entregados', icono: 'mdi-package-variant-closed-check', color: 'teal-darken-2',   permiso: 1010 },
-  { clave: 'qr',      texto: 'Firmar QR',         icono: 'mdi-qrcode-scan',                  color: 'primary',         permiso: 1001 },
-  { clave: 'tipo',    texto: 'Corregir Tipo',     icono: 'mdi-swap-horizontal',              color: 'indigo' },
-]
+// Como en Certificados, un anulado no se marca.
+const marcables = computed(() => (props.order.certificates || []).filter(vivo))
+const estaMarcado = (cert) => seleccion.value.some(c => c.id === cert.id)
+const todosMarcados = computed(() => marcables.value.length > 0 && seleccion.value.length === marcables.value.length)
+const algunosMarcados = computed(() => seleccion.value.length > 0 && !todosMarcados.value)
 
-const accionesDeCertificados = computed(() => {
-  const sinEquipos = props.order.status === 4 || !props.order.certificates?.length
-  return ACCIONES_EN_LOTE.map(accion => ({
-    ...accion,
-    visible: !accion.permiso || hasAction(accion.permiso),
-    disabled: sinEquipos,
-  }))
+const marcarTodos = (si) => { seleccion.value = si ? [...marcables.value] : [] }
+
+function alternar (cert) {
+  if (!vivo(cert)) return
+  seleccion.value = estaMarcado(cert)
+    ? seleccion.value.filter(c => c.id !== cert.id)
+    : [...seleccion.value, cert]
+}
+
+function alClicFila (event, cert) {
+  if (event.target.closest('button, a, .v-btn, .v-selection-control')) return
+  alternar(cert)
+}
+
+// Los equipos llegan de nuevo cuando cambian: la seleccion pasa a los
+// actuales, y se van los que se anularon o salieron de la orden.
+watch(() => props.order.certificates, (certs) => {
+  const vivos = new Map((certs || []).filter(vivo).map(c => [c.id, c]))
+  const actuales = seleccion.value.map(c => vivos.get(c.id)).filter(Boolean)
+  if (actuales.length !== seleccion.value.length || actuales.some((c, i) => c !== seleccion.value[i])) {
+    seleccion.value = actuales
+  }
 })
 
 // Las de certificados, mas las que solo tienen sentido dentro de una orden.
-const vivo = (cert) => cert.status !== ANULADO
 const ACCIONES_EQUIPO = [
   {
     clave: 'ir', grupo: 'ver', varios: false,
     icono: 'mdi-open-in-new', texto: 'Ir al certificado',
-    disponible: ([cert]) => vivo(cert),
+    visible: algunoVivo,
   },
   ...ACCIONES_CERTIFICADO,
   {
-    clave: 'desvincular', grupo: 'peligro', varios: false,
+    clave: 'desvincular', grupo: 'peligro', varios: true,
     icono: 'mdi-link-variant-off', texto: 'Desvincular de la orden',
-    disponible: ([cert]) => vivo(cert),
+    visible: algunoVivo,
   },
 ]
 const accionesDe = (certs) => accionesPara(ACCIONES_EQUIPO, certs, hasAction)
 
-// Los equipos no se marcan: el menu es del que se toco.
-const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu()
+// El menu de un marcado es de todos los marcados; el de otro, solo de ese y
+// sin marcarlo.
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(seleccion, { marca: false })
 
 const { ejecutarAccion: accionDeCertificado, copiarLinks, linkDe } = useCertificateActions({
   abrirLote: (clave, certs) => emit('accion-certificados', clave, certs),
@@ -184,7 +205,6 @@ const { ejecutarAccion: accionDeCertificado, copiarLinks, linkDe } = useCertific
 function ejecutarAccion (clave, certs) {
   const [cert] = certs
   if (clave === 'ir') return irACertificado(cert)
-  if (clave === 'desvincular') return desvincular(cert)
   accionDeCertificado(clave, certs)
 }
 
@@ -210,27 +230,15 @@ function estadoCert (cert) {
   if (tieneExcelBase(cert)) return { texto: 'En Proceso', color: 'warning' }
   return { texto: 'Borrador', color: 'grey-darken-1' }
 }
-
-async function desvincular (cert) {
-  const { isConfirmed } = await swal.fire({
-    title: '¿Desvincular este equipo?',
-    text: `${cert.registry_code} quedará sin orden y saldrá de esta.`,
-    icon: 'warning', showCancelButton: true,
-    confirmButtonText: 'Sí, desvincular', cancelButtonText: 'Cancelar',
-  })
-  if (!isConfirmed) return
-  try {
-    await CertificateDataService.patch(cert.id, { order: null })
-    Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo desvinculado' })
-  } catch (err) {
-    swal.fire({ icon: 'error', title: 'Error', text: mensajeDeError(err, 'No se pudo desvincular el equipo.') })
-  }
-}
 </script>
 
 <style scoped>
 .fila-anulada {
   opacity: 0.5;
+}
+.columna-casilla {
+  width: 40px;
+  padding-right: 0 !important;
 }
 .text-overline {
   font-size: 0.7rem !important;

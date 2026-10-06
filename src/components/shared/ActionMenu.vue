@@ -7,14 +7,21 @@
 </template>
 
 <script setup>
+import { watch } from 'vue'
 import ActionList from './ActionList.vue'
 
 // El menu flotante de una tabla. El estado sale de useContextMenu; las
 // acciones, de la lista de cada pantalla.
-defineProps({
+const props = defineProps({
   menu: { type: Object, required: true },
   acciones: { type: Array, required: true },
 })
 
 const emit = defineEmits(['accion'])
+
+// Sobre una fila sin nada que hacer (una orden anulada) el click derecho no
+// abre nada.
+watch(() => props.menu.show && !props.acciones.length, (vacio) => {
+  if (vacio) props.menu.show = false
+})
 </script>

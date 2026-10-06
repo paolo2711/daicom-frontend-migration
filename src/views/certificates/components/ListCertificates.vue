@@ -339,7 +339,8 @@
             icon 
             variant="text" 
             density="comfortable" 
-            color="grey-darken-1" 
+            color="grey-darken-1"
+            :disabled="!accionesDe([item]).length"
             @click.stop="alBotonDeFila($event, item)"
           >
             <v-icon>mdi-dots-vertical</v-icon>

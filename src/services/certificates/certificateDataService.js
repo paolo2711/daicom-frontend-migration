@@ -125,6 +125,10 @@ export default {
     return axios.post('certificates/restaurar', { cert_ids: certIds }, { headers: authHeader() });
   },
 
+  desvincular(certIds) {
+    return axios.post('certificates/desvincular', { cert_ids: certIds }, { headers: authHeader() });
+  },
+
   cancelarSolicitudes(certIds) {
     return axios.post('certificates/cancelar-solicitudes', { cert_ids: certIds }, { headers: authHeader() });
   },

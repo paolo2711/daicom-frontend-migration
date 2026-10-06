@@ -129,17 +129,17 @@ const ACCIONES_LINEA = [
   {
     clave: 'ver', grupo: 'ver', varios: false,
     icono: 'mdi-eye', texto: 'Ver equipo',
-    disponible: () => true,
   },
   {
     clave: 'gestionar', grupo: 'trabajo', varios: false,
     icono: 'mdi-calendar-edit', texto: 'Salida, devolución y fechas',
-    disponible: ([linea]) => linea.estado !== 'anulado',
+    visible: ([linea]) => linea.estado !== 'anulado',
   },
+  // Lo que ya salio no se quita: se devuelve.
   {
     clave: 'quitar', grupo: 'peligro', varios: false,
     icono: 'mdi-minus-circle-outline', texto: 'Quitar de la orden',
-    disponible: ([linea]) => linea.estado === 'reservado' && !anulada.value,
+    visible: ([linea]) => linea.estado === 'reservado' && !anulada.value,
   },
 ]
 const accionesDe = (lineas) => accionesPara(ACCIONES_LINEA, lineas, () => true)

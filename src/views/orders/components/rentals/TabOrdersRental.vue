@@ -247,7 +247,7 @@
 
         <template v-slot:item.actions="{ item }">
           <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" color="grey-darken-1"
-                 @click.stop="alBotonDeFila($event, item)" />
+                 :disabled="!accionesDe([item]).length" @click.stop="alBotonDeFila($event, item)" />
         </template>
 
         <template v-slot:expanded-row="{ columns, item }">

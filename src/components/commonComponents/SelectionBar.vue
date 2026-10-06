@@ -1,5 +1,8 @@
 <template>
-  <!-- Píldora flotante de selección múltiple: conteo + desmarcar + acciones. -->
+  <!-- Píldora flotante de selección múltiple: conteo + desmarcar + acciones.
+       Va a la raíz de la app: dentro de una tabla (los equipos de una orden)
+       quedaría debajo de las filas que siguen, por más z-index que tenga. -->
+  <Teleport to=".v-application">
   <v-slide-y-reverse-transition>
     <v-card v-if="count > 0" class="selection-bar panel-flotante">
       <div class="d-flex align-center px-3 py-2" style="gap: 6px;">
@@ -39,6 +42,7 @@
       </div>
     </v-card>
   </v-slide-y-reverse-transition>
+  </Teleport>
 </template>
 
 <script setup>
@@ -72,8 +76,20 @@ const enMenu = computed(() => (props.acciones || []).filter(a => !enIconos.value
 // Avisa al ecosistema que hay una barra de seleccion activa (para que el Upload
 // Manager se aparte en ventanas angostas). Se apaga al vaciar o desmontar.
 const appStore = useAppStore()
-watch(() => props.count, (v) => { appStore.selectionActive = v > 0 }, { immediate: true })
-onUnmounted(() => { appStore.selectionActive = false })
+const yo = Symbol()
+const avisar = (activa) => {
+  if (activa) conSeleccion.add(yo)
+  else conSeleccion.delete(yo)
+  appStore.selectionActive = conSeleccion.size > 0
+}
+watch(() => props.count, (v) => avisar(v > 0), { immediate: true })
+onUnmounted(() => avisar(false))
+</script>
+
+<script>
+// Puede haber mas de una barra montada (las ordenes y sus equipos): cuenta si
+// alguna tiene algo, no la ultima que cambio.
+const conSeleccion = new Set()
 </script>
 
 <style scoped>

@@ -229,13 +229,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useTheme } from 'vuetify'
 import { Toast } from '@/plugins/alerts'
 import { useAppStore } from '@/stores/appStore'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import { mensajeDeError } from '@/utils/errors'
-import { cancelable, detenida, enCurso, esBaja, esConversion, esperandoRevision, fallida, reintentable, terminada } from '@/utils/uploadTasks'
+import { cancelable, detenida, enCurso, esBaja, esConversion, esperandoRevision, fallida, reintentable, terminada, yaRevisada } from '@/utils/uploadTasks'
 
 const appStore = useAppStore()
 const theme    = useTheme()
@@ -415,12 +415,25 @@ const releaseTemp = () =>
 
 // Descartar deja el rastro a la vista. Descargar ya entrego lo suyo: la tarea
 // se va, porque no queda nada a lo que volver.
+// Las otras pestañas lo tenian por revisar: el aviso les llega por el servidor,
+// que lo guarda para la que reconecte. Aprobar lo avisa el back al guardar.
 function discardPreview() {
-  const { id, type } = preview_task.value
+  const { id, type, code } = preview_task.value
   releaseTemp()
   appStore.updateUploadTask(id, type, { status: 'discarded', progress: 0, step: '', url: '' })
+  if (window.enviarProgresoWebSocket) {
+    window.enviarProgresoWebSocket(id, 0, 'discarded', code, 0, type)
+  }
   preview_modal.value = false
 }
+
+// Si otra pestaña lo aprobo o lo descarto mientras aca estaba abierto, no queda
+// nada que revisar.
+const tareaEnElVisor = computed(() => preview_task.value && tasks.value.find(
+  t => String(t.id) === String(preview_task.value.id) && t.type === preview_task.value.type))
+watch(() => tareaEnElVisor.value && yaRevisada(tareaEnElVisor.value), (revisada) => {
+  if (revisada && preview_modal.value && !guardando.value) preview_modal.value = false
+})
 
 // Por blob: es del mismo origen, asi que respeta el nombre elegido tambien en
 // dev, donde el PDF lo sirve otro puerto.

@@ -59,6 +59,7 @@ function processUploadProgress(data, appStore) {
       error_msg: data.error_msg,
       // El eco del progreso que manda el front viene sin link: no borra el que ya hay.
       ...(data.url && { url: data.url }),
+      ...(data.url_base && { url_base: data.url_base }),
       is_cloud_error: data.is_cloud_error || false,
       offline_url: data.offline_url || null,
     })

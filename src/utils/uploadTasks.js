@@ -38,5 +38,8 @@ export const esBaja = (tarea) => tarea.type === 'nube'
 export const esperandoRevision = (tarea) =>
   esConversion(tarea) && tarea.status === 'success'
 
+// Aprobada o descartada: su PDF temporal ya no existe.
+export const yaRevisada = (tarea) => ['saved', 'discarded'].includes(tarea.status)
+
 // Un archivo subido del navegador no se puede repetir: solo viajo una vez.
 export const reintentable = (tarea) => fallida(tarea) && tarea.source !== 'manual'

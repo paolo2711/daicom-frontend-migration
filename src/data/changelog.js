@@ -19,6 +19,13 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.7.7.1',
+    fecha: '2026-10-09',
+    arreglo: [
+      'Aprobar o descartar el PDF de un Excel se refleja en todas las pantallas abiertas: ya no queda como pendiente de revisar en las demás.',
+    ],
+  },
+  {
     version: '3.7.7.0',
     fecha: '2026-10-06',
     nuevo: [

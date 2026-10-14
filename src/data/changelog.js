@@ -19,6 +19,16 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.8.0.1',
+    fecha: '2026-10-14',
+    nuevo: [
+      'Al crear una cotización se ve el correlativo que va a tomar.',
+    ],
+    arreglo: [
+      'El PDF de una cotización de un cliente con nombre largo ya no da error al abrirlo.',
+    ],
+  },
+  {
     version: '3.8.0.0',
     fecha: '2026-10-14',
     nuevo: [

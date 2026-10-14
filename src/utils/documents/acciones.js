@@ -13,7 +13,7 @@ export const ACCIONES_DOCUMENTO = [
   {
     clave: 'editar', grupo: 'documento', varios: false,
     icono: 'mdi-pencil', texto: 'Editar',
-    detalle: ([documento]) => (editable(documento) ? '' : 'Formato anterior: solo se puede ver'),
+    detalle: ([documento]) => (editable(documento) ? '' : 'Solo lectura'),
     visible: ([documento]) => vivo(documento),
     disponible: ([documento]) => editable(documento),
   },

@@ -1,65 +1,42 @@
 <template>
   <v-dialog v-model="dialog" class="dialog-premium" width="1100" persistent>
     <v-card style="max-height: 95vh; display: flex; flex-direction: column;">
-      
-      <base-modal-header :title="docId ? 'Editar Cotización (FORD-022)' : 'Generar Cotización (FORD-022)'" icon="mdi-file-document-outline" @close="close">
-        <span>Borrador <span class="font-weight-bold text-primary ml-1">{{ docId ? 'Edición' : 'Nueva' }}</span></span>
+      <base-modal-header :title="numero ? `Editar ${numero}` : `Nueva cotización de ${tipo.texto.toLowerCase()}`"
+                         :icon="tipo.icono" @close="close">
+        <span>{{ tipo.texto }} · Total: <span class="font-weight-bold text-primary ml-1">{{ monto(totales.total, cotizacion.meta.currency) }}</span></span>
       </base-modal-header>
 
-      <!-- PESTAÑAS (TABS) -->
-      <v-tabs v-model="tab" bg-color="transparent" color="primary" class="border-b-thin mx-4 mt-2" style="flex-shrink: 0;">
-        <v-tab value="1"><v-icon start>mdi-domain</v-icon> 1. Cliente y Datos</v-tab>
-        <v-tab value="2"><v-icon start>mdi-format-list-bulleted</v-icon> 2. Servicios a Cotizar</v-tab>
-        <v-tab value="3"><v-icon start>mdi-script-text-outline</v-icon> 3. Términos y Anexos</v-tab>
+      <v-tabs v-model="tab" bg-color="transparent" color="primary" class="border-b-thin mx-4 mt-2 flex-shrink-0">
+        <v-tab value="datos" prepend-icon="mdi-domain">Cliente y condiciones</v-tab>
+        <v-tab value="servicios" prepend-icon="mdi-format-list-bulleted">
+          {{ tipo.etiquetaItems }}
+          <v-chip size="x-small" variant="tonal" class="ml-2" :color="hayErrores ? 'error' : undefined">{{ cotizacion.items.length }}</v-chip>
+        </v-tab>
+        <v-tab value="terminos" prepend-icon="mdi-script-text-outline">Términos</v-tab>
       </v-tabs>
 
-      <v-card-text class="pt-4 pb-0" style="overflow-y: auto; flex-grow: 1; min-height: 0; display: block;">
-        <v-form ref="formCotizacion" @submit.prevent>
-          <v-window v-model="tab" class="pa-1">
-            
-            <!-- PÁGINA 1 -->
-            <v-window-item value="1">
-              <BillingClientPanel 
-                :meta="cotizacion.meta" 
-                :billing="cotizacion.billing_client" 
-                :certificate="cotizacion.certificate_data" 
-                v-model:clientId="linkedClientId"
-              />
-            </v-window-item>
-
-            <!-- PÁGINA 2 -->
-            <v-window-item value="2">
-              <ServicesTable 
-                :items="cotizacion.items" 
-                :totals="cotizacion.totals" 
-                :currency="cotizacion.meta.currency"
-              />
-            </v-window-item>
-
-            <!-- PÁGINA 3 -->
-            <v-window-item value="3">
-              <CommercialTermsPanel :quote="cotizacion" />
-            </v-window-item>
-
-          </v-window>
-        </v-form>
+      <v-card-text class="pt-4" style="overflow-y: auto; flex-grow: 1; min-height: 0;">
+        <v-window v-model="tab">
+          <v-window-item value="datos">
+            <billing-client-panel v-model:meta="cotizacion.meta" v-model:billing="cotizacion.billing_client"
+                                  v-model:certificate="cotizacion.certificate_data" v-model:clientId="clienteId" />
+          </v-window-item>
+          <v-window-item value="servicios">
+            <services-table v-model:items="cotizacion.items" :totales="totales" :moneda="cotizacion.meta.currency"
+                            :igv="cotizacion.totals.igv_percent" :errores="errores" :tipo="tipo" />
+          </v-window-item>
+          <v-window-item value="terminos">
+            <commercial-terms-panel v-model:quote="cotizacion" />
+          </v-window-item>
+        </v-window>
       </v-card-text>
 
-      <!-- BOTONES DE NAVEGACIÓN Y GUARDADO -->
-      <v-card-actions class="px-6 pb-4 pt-3 border-top bg-surface" style="flex-shrink: 0;">
-        <v-btn v-if="tab > '1'" variant="tonal" color="primary" @click="tab = String(Number(tab) - 1)">
-          <v-icon start>mdi-arrow-left</v-icon> Anterior
-        </v-btn>
-        
+      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin flex-shrink-0">
         <v-spacer />
-        <v-btn variant="flat" class="font-weight-bold mr-3 px-4" @click="close">Cancelar</v-btn>
-        
-        <v-btn v-if="tab < '3'" color="primary" variant="flat" @click="tab = String(Number(tab) + 1)">
-          Siguiente <v-icon end>mdi-arrow-right</v-icon>
-        </v-btn>
-        
-        <v-btn v-if="tab === '3'" color="primary" variant="flat" prepend-icon="mdi-content-save" @click="guardarCotizacion" :loading="is_loading">
-          Guardar Cotización
+        <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
+        <v-btn color="primary" variant="flat" class="font-weight-bold px-4" prepend-icon="mdi-content-save"
+               :loading="guardando" :disabled="!clienteId || !cotizacion.items.length" @click="guardar">
+          Guardar cotización
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -67,118 +44,72 @@
 </template>
 
 <script setup>
-import { Toast } from '@/plugins/alerts'
-import { ref, reactive } from 'vue'
-import { inject } from 'vue'
+import { computed, ref } from 'vue'
+import DocumentsDataService from '@/services/documents/documentsDataService'
+import { useRowErrors } from '@/composables/useRowErrors'
+import { useSwal } from '@/composables/useSwal'
+import { avisarHecho } from '@/utils/documents/avisos'
+import { COTIZACION } from '@/utils/documents/estado'
+import { TIPOS_DE_COTIZACION, TIPO_POR_DEFECTO, cotizacionDe, quoteDefaultJSON, totalesDe } from '@/utils/documents/quoteDefaults'
+import { mensajeDeError } from '@/utils/errors'
+import { monto } from '@/utils/money'
 import BillingClientPanel from '../shared/BillingClientPanel.vue'
 import ServicesTable from '../shared/ServicesTable.vue'
 import CommercialTermsPanel from '../shared/CommercialTermsPanel.vue'
-import { quoteDefaultJSON } from '@/utils/documents/quoteDefaults'
-import DocumentsDataService from '@/services/documents/documentsDataService'
 
-const swal = inject('$swal')
-const emit = defineEmits(['reload'])
+const swal = useSwal()
 
 const dialog = ref(false)
-const tab = ref("1")
-const formCotizacion = ref(null)
-const is_loading = ref(false)
+const tab = ref('datos')
+const guardando = ref(false)
+const documentoId = ref(null)
+const numero = ref('')
+const clienteId = ref(null)
+const cotizacion = ref(quoteDefaultJSON())
 
-const docId = ref(null) 
-const linkedClientId = ref(null)
+const tipo = computed(() => TIPOS_DE_COTIZACION[cotizacion.value.meta.kind])
+const totales = computed(() => totalesDe(cotizacion.value))
+const { errores, marcarErrores } = useRowErrors(computed(() => cotizacion.value.items))
+const hayErrores = computed(() => Object.keys(errores.value).length > 0)
 
-// El JSON exacto definido 
-const cotizacion = reactive(quoteDefaultJSON())
-
-const open = (docExistente = null) => {
+// Una existente o una nueva del tipo elegido: el tipo no se cambia despues.
+function open (documento = null, kind = TIPO_POR_DEFECTO) {
+  documentoId.value = documento?.id || null
+  numero.value = documento?.document_number || ''
+  clienteId.value = documento?.client || null
+  cotizacion.value = documento ? cotizacionDe(documento.document_data) : quoteDefaultJSON(kind)
+  tab.value = 'datos'
   dialog.value = true
-  tab.value = "1"
-  if (docExistente) {
-    docId.value = docExistente.id
-    Object.assign(cotizacion, JSON.parse(JSON.stringify(docExistente.document_data)))
-    linkedClientId.value = docExistente.client || null
-  } else {
-    docId.value = null
-    Object.assign(cotizacion, quoteDefaultJSON())
-    linkedClientId.value = null
-  }
-}
-defineExpose({ open })
-
-const close = () => {
-  dialog.value = false
 }
 
-const guardarCotizacion = async () => {
-  // Validación básica antes de enviar
-  if (!cotizacion.billing_client.business_name || !cotizacion.billing_client.doc_number) {
-    swal.fire('Faltan Datos', 'Debe ingresar al menos el RUC/DNI y la Razón Social del cliente a facturar.', 'warning')
-    tab.value = "1"
-    return
-  }
+const close = () => { dialog.value = false }
 
-  if (cotizacion.items.length === 0) {
-    swal.fire('Sin Servicios', 'Debe agregar al menos un servicio a la cotización.', 'warning')
-    tab.value = "2"
-    return
-  }
-
-  // NUEVA VALIDACIÓN: Revisar que ninguna fila esté en blanco o tenga precio cero
-  for (let i = 0; i < cotizacion.items.length; i++) {
-    const item = cotizacion.items[i];
-    
-    if (!item.description || item.description.trim() === '') {
-      swal.fire('Falta Descripción', `El servicio del Ítem ${i + 1} no tiene descripción. Por favor complétela.`, 'warning')
-      tab.value = "2" // Lo mandamos a la pestaña 2 automáticamente
-      return
-    }
-    
-    if (!item.unit_price || parseFloat(item.unit_price) <= 0) {
-      swal.fire('Precio Inválido', `El valor unitario del Ítem ${i + 1} debe ser mayor a 0.`, 'warning')
-      tab.value = "2" // Lo mandamos a la pestaña 2 automáticamente
-      return
-    }
-  }
-
-  is_loading.value = true
-  
-  // Preparamos el payload envolviendo el JSON en el campo 'document_data' 
-  // y enviando los campos rápidos que necesita Django
+// El back revisa todo y calcula los totales: lo que rechace vuelve marcado.
+async function guardar () {
+  guardando.value = true
   const payload = {
-    document_type: 'COT',
-    total_amount: cotizacion.totals.total,
-    currency: cotizacion.meta.currency,
-    schema_version: cotizacion.meta.schema_version, // <- Asigna la versión a la columna de Django
-    document_data: cotizacion,
-    client: linkedClientId.value
+    document_type: COTIZACION,
+    schema_version: cotizacion.value.meta.schema_version,
+    document_data: cotizacion.value,
+    client: clienteId.value,
   }
-
-  is_loading.value = true
-
   try {
-    let response
-    if (docId.value) {
-      response = await DocumentsDataService.update(docId.value, payload)
-    } else {
-      response = await DocumentsDataService.create(payload)
-    }
-
-    if (response.status === 201 || response.status === 200 || response.status === 204) {
-      const msgSuccess = docId.value ? 'Cotización Actualizada' : 'Cotización Creada'
-      const detailSuccess = docId.value 
-        ? 'Los cambios se guardaron y el PDF fue regenerado exitosamente.' 
-        : `El documento ${response.data.document_number} se generó exitosamente.`
-      
-      Toast.fire({ timer: 2500, icon: 'success', title: msgSuccess, text: detailSuccess })
-      
-      emit('reload') // Le avisa a ListDocuments.vue que recargue la tabla
-      close()
-    }
+    const { data } = documentoId.value
+      ? await DocumentsDataService.update(documentoId.value, payload)
+      : await DocumentsDataService.create(payload)
+    avisarHecho(`${data.document_number} ${documentoId.value ? 'actualizada' : 'creada'}`, data)
+    close()
   } catch (error) {
-    console.error("Error al guardar:", error)
-    swal.fire('Error', 'Hubo un problema al generar la cotización o el PDF.', 'error')
+    const filas = error.response?.data?.filas
+    if (filas) {
+      marcarErrores(filas)
+      tab.value = 'servicios'
+    }
+    swal.fire({ icon: 'error', title: 'No se guardó la cotización', text: mensajeDeError(error, 'No se pudo guardar la cotización.') })
   } finally {
-    is_loading.value = false
+    guardando.value = false
   }
 }
+
+defineExpose({ open })
 </script>

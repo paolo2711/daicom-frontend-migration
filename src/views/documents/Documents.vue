@@ -7,24 +7,44 @@
           <h2 class="text-h5 font-weight-bold mb-0">Gestión de Documentos</h2>
         </div>
 
-        <div class="d-flex align-center w-100 mb-2 mt-2">
-          <v-tabs v-model="tab_activo" bg-color="transparent" color="primary" class="mx-2 font-weight-bold" style="width: auto;">
-            <v-tab value="0" prepend-icon="mdi-calculator-variant-outline">Cotizaciones</v-tab>
-            <v-tab value="1" prepend-icon="mdi-truck-delivery-outline">Formato de Ingreso</v-tab>
-            <v-tab value="2" prepend-icon="mdi-file-check-outline" disabled>Proximamente</v-tab>
+        <div class="d-flex flex-wrap align-center ga-2 w-100 mb-2 mt-2">
+          <v-tabs :model-value="route.name" bg-color="transparent" color="primary" class="mx-2 font-weight-bold">
+            <v-tab v-for="p in pestanas" :key="p.name" :value="p.name" :to="{ name: p.name }"
+                   :prepend-icon="p.meta.pestana.icono">
+              {{ p.meta.pestana.texto }}
+              <span v-if="esBeta(p)" class="text-caption text-warning ml-1">(beta)</span>
+            </v-tab>
           </v-tabs>
+
+          <v-spacer />
+
+          <v-menu v-if="route.meta.nuevo?.opciones" location="bottom end" offset="6">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" color="primary" class="mr-4" variant="flat"
+                     :prepend-icon="route.meta.nuevo.icono" append-icon="mdi-chevron-down">
+                {{ route.meta.nuevo.texto }}
+              </v-btn>
+            </template>
+            <v-list density="comfortable" class="elevation-4 border rounded-lg bg-surface py-1" nav>
+              <v-list-item v-for="opcion in route.meta.nuevo.opciones" :key="opcion.valor"
+                           :title="opcion.texto" :subtitle="opcion.detalle" @click="pestana?.nuevo(opcion.valor)">
+                <template #prepend>
+                  <v-avatar color="primary" variant="tonal" rounded="lg" size="small" class="mr-1">
+                    <v-icon :icon="opcion.icono" size="small" />
+                  </v-avatar>
+                </template>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+          <v-btn v-else-if="route.meta.nuevo" color="primary" class="mr-4" variant="flat" :prepend-icon="route.meta.nuevo.icono"
+                 @click="pestana?.nuevo()">
+            {{ route.meta.nuevo.texto }}
+          </v-btn>
         </div>
 
-        <v-window v-model="tab_activo" class="mt-2">
-          <v-window-item value="0">
-            <ListDocuments />
-          </v-window-item>
-          <v-window-item value="1">
-            <ListFormatosIngreso />
-          </v-window-item>
-          <v-window-item value="2">
-            </v-window-item>
-        </v-window>
+        <router-view v-slot="{ Component }">
+          <component :is="Component" ref="pestana" />
+        </router-view>
       </v-col>
     </v-row>
   </v-container>
@@ -32,8 +52,13 @@
 
 <script setup>
 import { ref } from 'vue'
-import ListDocuments from './components/ListDocuments.vue'
-import ListFormatosIngreso from './components/ListFormatoIngreso.vue'
+import { useRoute, useRouter } from 'vue-router'
+import { esBeta } from '@/utils/beta'
 
-const tab_activo = ref('0')
+const route = useRoute()
+// Las pestañas son las rutas hijas de Documentos (sin las beta, si el router
+// las saco). Un tipo de documento nuevo se agrega con su ruta.
+const pestanas = useRouter().getRoutes().find(r => r.name === 'documents').children
+// La pestaña abierta: el boton de arriba le pide un documento nuevo.
+const pestana = ref(null)
 </script>

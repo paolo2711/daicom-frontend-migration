@@ -156,6 +156,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useNotificationStore } from '@/stores/notificationStore'
 
 import SidebarItems from '@/layouts/full-layout/sidebar/SidebarItems'
+import { sinBeta } from '@/utils/beta'
 import BaseItem from '@/components/commonComponents/BaseItem.vue'
 import BaseItemGroup from '@/components/commonComponents/BaseItemGroup.vue'
 import NotificationsPanel from '@/components/commonComponents/NotificationsPanel.vue'
@@ -199,7 +200,7 @@ onMounted(() => { notifStore.fetchUnread() })
 
 const isRail = ref(localStorage.getItem('sidebarPinned') !== 'false')
 const isMenuOpen = ref(false)
-const items = ref(SidebarItems)
+const items = ref(sinBeta(SidebarItems))
 
 watch(isRail, (val) => {
   localStorage.setItem('sidebarPinned', val)

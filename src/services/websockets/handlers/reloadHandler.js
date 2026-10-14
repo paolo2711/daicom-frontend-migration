@@ -11,9 +11,22 @@ const RELOADS = {
   RELOAD_CERTIFICATES: 'wss-reload-certificates',
   RELOAD_ORDERS_service: 'wss-reload-orders-service',
   RELOAD_ORDERS_rental: 'wss-reload-orders-rental',
-  RELOAD_DOCUMENTS: 'wss-reload-documents',
+  RELOAD_DOCUMENTS: 'wss-reload-documents',     // todas las tablas de documentos
   RELOAD_INVOICES: 'wss-reload-invoices',
   RELOAD_INVENTORY: 'wss-reload-inventory',
+}
+
+// Recargas que llevan el tipo de su tabla: RELOAD_DOCUMENTS_COT sale como
+// 'wss-reload-documents' con 'COT', y cada tabla de documentos escucha el suyo.
+// Un tipo nuevo no se agrega aca.
+const POR_TIPO = {
+  RELOAD_DOCUMENTS_: 'wss-reload-documents',
+}
+
+function eventoDe(comando) {
+  if (RELOADS[comando]) return { nombre: RELOADS[comando] }
+  const prefijo = Object.keys(POR_TIPO).find((p) => comando.startsWith(p))
+  return prefijo ? { nombre: POR_TIPO[prefijo], tipo: comando.slice(prefijo.length) } : null
 }
 
 // `enLote` es el evento con la lista completa de ids, para las listas que ya
@@ -59,7 +72,8 @@ function contadores(appStore, aviso) {
 
 function recargar(appStore, comando) {
   contadores(appStore, comando)
-  emit(RELOADS[comando])
+  const { nombre, tipo } = eventoDe(comando)
+  emit(nombre, tipo)
 }
 
 // Con la pestaña oculta nada se parchea: se anota la recarga de esa tabla y al
@@ -70,7 +84,7 @@ function aplazar(appStore, recargas) {
 
 export function handleReload(data, appStore) {
   // Recargas por string.
-  if (typeof data.message === 'string' && RELOADS[data.message]) {
+  if (typeof data.message === 'string' && eventoDe(data.message)) {
     const comando = data.message
     if (pestanaOculta()) alVolverAVer(comando, () => recargar(appStore, comando))
     else recargar(appStore, comando)

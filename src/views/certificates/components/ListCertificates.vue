@@ -414,20 +414,7 @@
     <!-- ═══════════════════════════════════════════════════
          LEYENDA DE ESTADOS
     ════════════════════════════════════════════════════ -->
-    <v-card
-      variant="flat"
-      class="border mt-4 py-4 px-4 rounded-lg"
-    >
-      <v-row align="center" justify="center" no-gutters>
-        <span class="text-caption font-weight-bold mr-4 text-uppercase text-medium-emphasis">
-          Estados del Código:
-        </span>
-        <div class="d-flex flex-wrap justify-center">
-          <v-chip v-for="estado in ESTADOS" :key="estado.texto" size="small" :color="estado.color"
-                  class="mr-3 mb-1 text-white">{{ estado.texto }}</v-chip>
-        </div>
-      </v-row>
-    </v-card>
+    <state-legend titulo="Estados del Código:" :estados="ESTADOS" />
 
     <!-- ═══════════════════════════════════════════════════
          MODALES Y COMPONENTES EXTERNOS
@@ -471,6 +458,7 @@ import LabMappers          from '@/mappers/labMappers'
 import OrderSummaryCard    from './OrderSummaryCard.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import ClientSelect        from '@/components/shared/ClientSelect.vue'
+import StateLegend         from '@/components/shared/StateLegend.vue'
 import { tieneExcelBase }  from '@/utils/certificates/excelBase'
 import { estaEntregado } from '@/utils/certificates/entrega'
 import { NUBE_DESACTUALIZADA, ESTADOS, estadoDe, vivo } from '@/utils/certificates/estado'
@@ -954,15 +942,6 @@ function onNubeClick(event, cert) {
   70%      { transform: rotate(0deg); }
 }
 /* ── FIN TEMPORAL Antapaccay ── */
-
-
-/* =========================================================
-   ESTADO ANULADO
-   ========================================================= */
-.anulado-atenuado {
-  opacity: 0.3 !important;
-  pointer-events: none;
-}
 
 
 

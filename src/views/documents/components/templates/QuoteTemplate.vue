@@ -3,7 +3,12 @@
     <v-card style="max-height: 95vh; display: flex; flex-direction: column;">
       <base-modal-header :title="numero ? `Editar ${numero}` : `Nueva cotización de ${tipo.texto.toLowerCase()}`"
                          :icon="tipo.icono" @close="close">
-        <span>{{ tipo.texto }} · Total: <span class="font-weight-bold text-primary ml-1">{{ monto(totales.total, cotizacion.meta.currency) }}</span></span>
+        <span>
+          <template v-if="!numero && numeroNuevo">
+            Correlativo: <span class="font-weight-bold text-primary ml-1">{{ numeroNuevo }}</span> ·
+          </template>
+          {{ tipo.texto }} · Total: <span class="font-weight-bold text-primary ml-1">{{ monto(totales.total, cotizacion.meta.currency) }}</span>
+        </span>
       </base-modal-header>
 
       <v-tabs v-model="tab" bg-color="transparent" color="primary" class="border-b-thin mx-4 mt-2 flex-shrink-0">
@@ -64,6 +69,8 @@ const tab = ref('datos')
 const guardando = ref(false)
 const documentoId = ref(null)
 const numero = ref('')
+// El que tomaria al guardar; si otro guarda antes, sale el siguiente.
+const numeroNuevo = ref('')
 const clienteId = ref(null)
 const cotizacion = ref(quoteDefaultJSON())
 
@@ -76,6 +83,12 @@ const hayErrores = computed(() => Object.keys(errores.value).length > 0)
 function open (documento = null, kind = TIPO_POR_DEFECTO) {
   documentoId.value = documento?.id || null
   numero.value = documento?.document_number || ''
+  numeroNuevo.value = ''
+  if (!documento) {
+    DocumentsDataService.siguienteNumero(COTIZACION)
+      .then(({ data }) => { numeroNuevo.value = data.numero })
+      .catch(() => {})
+  }
   clienteId.value = documento?.client || null
   cotizacion.value = documento ? cotizacionDe(documento.document_data) : quoteDefaultJSON(kind)
   tab.value = 'datos'

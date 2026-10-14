@@ -21,8 +21,11 @@ class DocumentsDataService {
   update(id, data) { 
     return axios.put(`documents/${id}/`, data, { headers: authHeader() }); 
   }
-  cancel(id) { 
-    return axios.patch(`documents/${id}/anular/`, {}, { headers: authHeader() }); 
+  cancel(id) {
+    return axios.patch(`documents/${id}/anular/`, {}, { headers: authHeader() });
+  }
+  siguienteNumero(documentType) {
+    return axios.get("documents/siguiente-numero/", { params: { document_type: documentType }, headers: authHeader() });
   }
 }
 

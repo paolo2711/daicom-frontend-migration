@@ -19,6 +19,16 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.8.0.0',
+    fecha: '2026-10-14',
+    nuevo: [
+      'Cotizaciones desde la plataforma, de servicio o de alquiler, con su PDF listo para enviar.',
+      'Cada cotización guarda una copia de su PDF en la carpeta de cotizaciones del disco E, ordenada por año y moneda.',
+      'Las cotizaciones se filtran por número, tipo, fecha, cliente, estado y moneda.',
+      'Anular una cotización sella su PDF como anulado, también en la copia del disco E.',
+    ],
+  },
+  {
     version: '3.7.7.1',
     fecha: '2026-10-09',
     arreglo: [

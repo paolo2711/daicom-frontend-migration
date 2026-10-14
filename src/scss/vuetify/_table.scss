@@ -27,7 +27,14 @@
   overflow-y: hidden;
 }
 
-// La fila que el servidor rechazo al guardar una lista.
-.v-table .fila-con-error td {
+// El texto de lo anulado en una lista: se lee, pero no se toca.
+.anulado-atenuado {
+  opacity: 0.3 !important;
+  pointer-events: none;
+}
+
+// La fila que el servidor rechazo al guardar una lista, en tabla o en grilla.
+.v-table .fila-con-error td,
+div.fila-con-error {
   background: rgba(var(--v-theme-error), 0.08);
 }

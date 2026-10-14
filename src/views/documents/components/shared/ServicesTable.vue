@@ -1,128 +1,98 @@
 <template>
-  <v-card variant="flat" class="pa-2 bg-surface">
-    
+  <div>
     <div class="d-flex align-center mb-3">
       <div class="text-subtitle-1 font-weight-bold text-primary">
-        <v-icon size="small" class="mr-1">mdi-format-list-numbered</v-icon> Detalle de Servicios
+        <v-icon size="small" class="mr-1">mdi-format-list-numbered</v-icon> {{ tipo.etiquetaItems }}
       </div>
       <v-spacer />
-      <v-btn color="primary" variant="flat" density="compact" prepend-icon="mdi-plus" @click="addItem">
-        AÑADIR SERVICIO
+      <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" @click="items.push(itemVacio(tipo.unidad))">
+        Añadir ítem
       </v-btn>
     </div>
 
-    <v-table density="compact" class="tabla-mejorada rounded-lg mb-3">
-      <thead :class="$vuetify.theme.current.dark ? 'bg-grey-darken-4' : 'bg-grey-lighten-4'">
-        <tr>
-          <th width="50" class="text-center font-weight-bold">Item</th>
-          <th width="90" class="text-center font-weight-bold">Cant.</th>
-          <th width="100" class="text-center font-weight-bold">Und.</th>
-          <th class="text-left font-weight-bold">Descripción del Servicio</th>
-          <th width="130" class="text-right font-weight-bold">V. Unitario</th>
-          <th width="130" class="text-right font-weight-bold">V. Total</th>
-          <th width="60" class="text-center font-weight-bold">Acción</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-if="items.length === 0">
-          <td colspan="7" class="text-center text-medium-emphasis py-4">
-            No hay servicios agregados. Haga clic en "Añadir Servicio".
-          </td>
-        </tr>
-        
-        <tr v-for="(row, index) in items" :key="index">
-          <td class="text-center font-weight-bold text-grey-darken-1">{{ index + 1 }}</td>
-          <td class="py-1">
-            <v-text-field v-model.number="row.quantity" type="number" min="1" density="compact" variant="outlined" hide-details class="text-center" @input="calcularFila(row)" />
-          </td>
-          <td class="py-1">
-            <v-select v-model="row.unit" :items="['und', 'serv', 'glb', 'dias']" density="compact" variant="outlined" hide-details />
-          </td>
-          <td class="py-1">
-            <v-text-field v-model="row.description" density="compact" variant="outlined" hide-details placeholder="Ej: Servicio de calibración de Vernier" />
-            <!-- Observación vinculada estrictamente al item -->
-            <v-text-field v-model="row.observations" density="compact" variant="underlined" hide-details class="mt-1 text-caption text-grey" placeholder="Observación específica de este ítem (Opcional)" />
-          </td>
-          <td class="py-1">
-            <v-text-field v-model.number="row.unit_price" type="number" min="0" density="compact" variant="outlined" hide-details class="text-right" @input="calcularFila(row)" />
-          </td>
-          <td class="text-right font-weight-bold text-primary align-middle">
-            {{ currencySymbol }} {{ (row.row_total || 0).toFixed(2) }}
-          </td>
-          <td class="text-center">
-            <v-btn icon variant="text" size="small" color="error" @click="removeItem(index)">
-              <v-icon size="small">mdi-delete-outline</v-icon>
-            </v-btn>
-          </td>
-        </tr>
-      </tbody>
-    </v-table>
+    <!-- En pantalla ancha cada servicio va en una linea, como tabla; en angosta
+         los numeros bajan debajo de la descripcion. -->
+    <div class="border rounded-lg">
+      <v-row dense class="d-none d-md-flex px-3 py-2 ma-0 border-b-thin text-caption font-weight-bold text-medium-emphasis">
+        <v-col md="5" class="pl-8">Descripción y comentario</v-col>
+        <v-col md="1">Cant.</v-col>
+        <v-col md="2">Unidad</v-col>
+        <v-col md="2">P. unit.</v-col>
+        <v-col md="2" class="text-right pr-10">Total</v-col>
+      </v-row>
 
-    <div class="d-flex justify-end">
-      <div style="width: 250px;">
-        <div class="d-flex justify-space-between mb-1">
-          <span class="text-subtitle-2 text-medium-emphasis">Subtotal:</span>
-          <span class="text-subtitle-2">{{ currencySymbol }} {{ (totals.subtotal || 0).toFixed(2) }}</span>
-        </div>
-        <div class="d-flex justify-space-between mb-1">
-          <span class="text-subtitle-2 text-medium-emphasis">IGV ({{ totals.igv_percent }}%):</span>
-          <span class="text-subtitle-2">{{ currencySymbol }} {{ (totals.igv || 0).toFixed(2) }}</span>
-        </div>
-        <v-divider class="my-2"></v-divider>
-        <div class="d-flex justify-space-between align-center">
-          <span class="text-subtitle-1 font-weight-bold">Total General:</span>
-          <span class="text-h6 font-weight-bold text-primary">{{ currencySymbol }} {{ (totals.total || 0).toFixed(2) }}</span>
-        </div>
+      <div v-if="!items.length" class="text-center text-medium-emphasis py-4">
+        Sin ítems. Agregue uno con "Añadir ítem".
+      </div>
+
+      <div v-for="(fila, i) in items" :key="i" class="d-flex align-start px-3 py-2 border-b-thin"
+           :class="{ 'fila-con-error': errores[i] }">
+        <span class="text-medium-emphasis font-weight-bold pt-2 mr-3">{{ i + 1 }}</span>
+        <v-row dense class="ma-0 flex-grow-1">
+          <v-col cols="12" md="5">
+            <v-textarea v-model="fila.description" :placeholder="tipo.ejemploItem"
+                        :maxlength="LIMITES.descripcion" :counter="LIMITES.descripcion" rows="1" auto-grow
+                        density="compact" variant="outlined" hide-details="auto" />
+            <v-textarea v-model="fila.observations" placeholder="Comentario del ítem (opcional)"
+                        :maxlength="LIMITES.comentario" :counter="LIMITES.comentario" rows="1" auto-grow
+                        density="compact" variant="underlined" hide-details="auto" class="text-medium-emphasis" />
+            <div v-if="errores[i]" class="text-caption text-error">{{ errores[i] }}</div>
+          </v-col>
+          <v-col cols="4" md="1">
+            <v-text-field v-model.number="fila.quantity" type="number" min="1" :label="mdAndUp ? undefined : 'Cant.'"
+                          density="compact" variant="outlined" hide-details />
+          </v-col>
+          <v-col cols="4" md="2">
+            <v-select v-model="fila.unit" :items="UNIDADES" :label="mdAndUp ? undefined : 'Unidad'"
+                      density="compact" variant="outlined" hide-details />
+          </v-col>
+          <v-col cols="4" md="2">
+            <v-text-field v-model.number="fila.unit_price" type="number" min="0" :prefix="simboloDe(moneda)"
+                          :label="mdAndUp ? undefined : 'P. unit.'" density="compact" variant="outlined" hide-details />
+          </v-col>
+          <v-col cols="12" md="2" class="d-flex justify-end pt-md-3">
+            <span class="font-weight-bold text-no-wrap">{{ monto(totalDeFila(fila), moneda) }}</span>
+          </v-col>
+        </v-row>
+        <v-btn icon="mdi-delete-outline" variant="text" size="small" color="error" class="ml-1" @click="items.splice(i, 1)" />
       </div>
     </div>
-  </v-card>
+
+    <v-row class="mt-2">
+      <v-col cols="12" sm="6" md="4" class="ml-auto">
+        <div class="d-flex justify-space-between text-body-2 mb-1">
+          <span class="text-medium-emphasis">Subtotal</span><span>{{ monto(totales.subtotal, moneda) }}</span>
+        </div>
+        <div class="d-flex justify-space-between text-body-2 mb-1">
+          <span class="text-medium-emphasis">IGV ({{ igv }} %)</span><span>{{ monto(totales.igv, moneda) }}</span>
+        </div>
+        <v-divider class="my-2" />
+        <div class="d-flex justify-space-between align-center">
+          <span class="font-weight-bold">Total</span>
+          <span class="text-h6 font-weight-bold text-primary">{{ monto(totales.total, moneda) }}</span>
+        </div>
+      </v-col>
+    </v-row>
+  </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { useDisplay } from 'vuetify'
+import { LIMITES, UNIDADES, itemVacio, totalDeFila } from '@/utils/documents/quoteDefaults'
+import { monto, simboloDe } from '@/utils/money'
 
-const props = defineProps({
-  items: Array,
-  totals: Object,
-  currency: String
+// Sin la fila de titulos (pantalla angosta) cada numero lleva su etiqueta.
+const { mdAndUp } = useDisplay()
+
+// Los errores son los que el back marco por posicion al guardar.
+const items = defineModel('items', { type: Array, required: true })
+
+defineProps({
+  totales: { type: Object, required: true },
+  moneda: { type: String, default: 'PEN' },
+  igv: { type: Number, default: 18 },
+  errores: { type: Object, default: () => ({}) },
+  // El de TIPOS_DE_COTIZACION: titulo, unidad por defecto y ejemplo.
+  tipo: { type: Object, required: true },
 })
-
-const currencySymbol = computed(() => props.currency === 'USD' ? '$' : 'S/')
-
-const addItem = () => {
-  props.items.push({
-    item: props.items.length + 1,
-    is_note_row: false,
-    description: "",
-    quantity: 1,
-    unit: "und",
-    unit_price: 0.00,
-    row_total: 0.00,
-    observations: null
-  })
-  recalcularTodo()
-}
-
-const removeItem = (index) => {
-  props.items.splice(index, 1)
-  // Reordenar los índices
-  props.items.forEach((row, i) => { row.item = i + 1 })
-  recalcularTodo()
-}
-
-const calcularFila = (row) => {
-  const qty = parseFloat(row.quantity) || 0
-  const price = parseFloat(row.unit_price) || 0
-  row.row_total = qty * price
-  recalcularTodo()
-}
-
-const recalcularTodo = () => {
-  let sub = 0
-  props.items.forEach(row => { sub += (row.row_total || 0) })
-  
-  props.totals.subtotal = sub
-  props.totals.igv = sub * (props.totals.igv_percent / 100)
-  props.totals.total = props.totals.subtotal + props.totals.igv
-}
 </script>

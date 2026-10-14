@@ -579,11 +579,6 @@ onUnmounted(() => {
   z-index: 5;
 }
 
-.anulado-atenuado {
-  opacity: 0.25 !important;
-  pointer-events: none;
-}
-
 /* El ambar distingue Alquileres de Servicios de un vistazo. Pisa el marco
    comun de _table.scss a proposito. */
 .v-application .tabla-ordenes-alquiler {

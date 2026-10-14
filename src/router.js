@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from "vue-router";
 import NProgress from "nprogress";
 import "nprogress/nprogress.css";
 import { useAuthStore } from "@/stores/authStore";
+import { sinBeta } from "@/utils/beta";
+import { OPCIONES_NUEVA_COTIZACION } from "@/utils/documents/quoteDefaults";
 
 const routes = [
   {
@@ -46,7 +48,33 @@ const routes = [
       {
         name: "documents",
         path: "documentos",
+        redirect: { name: "documents-quotes" },
         component: () => import("@/views/documents/Documents.vue"),
+        // Cada hija es una pestaña de Documentos: `pestana` es su titulo e
+        // icono, `nuevo` el boton de la cabecera para crear uno de ese tipo.
+        // Con `nuevo.opciones` el boton abre un menu y la pestaña recibe la
+        // elegida.
+        children: [
+          {
+            name: "documents-quotes",
+            path: "cotizaciones",
+            meta: {
+              pestana: { texto: "Cotizaciones", icono: "mdi-calculator-variant-outline" },
+              nuevo: { texto: "Nueva cotización", icono: "mdi-file-document-plus-outline", opciones: OPCIONES_NUEVA_COTIZACION },
+            },
+            component: () => import("@/views/documents/components/TabQuotes.vue"),
+          },
+          {
+            name: "documents-intake",
+            path: "ingresos",
+            meta: {
+              beta: true,
+              pestana: { texto: "Formato de Ingreso", icono: "mdi-truck-delivery-outline" },
+              nuevo: { texto: "Nuevo ingreso", icono: "mdi-truck-plus-outline" },
+            },
+            component: () => import("@/views/documents/components/TabIntakeForms.vue"),
+          },
+        ],
       },
       {
         name: "labs",
@@ -127,7 +155,7 @@ const router = createRouter({
     }
     return { top: 0 };
   },
-  routes,
+  routes: sinBeta(routes),
 });
 
 router.beforeResolve((to) => {

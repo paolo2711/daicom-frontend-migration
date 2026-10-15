@@ -19,6 +19,23 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.8.0.2',
+    fecha: '2026-10-15',
+    nuevo: [
+      'En Cotizaciones, un clic en una fila muestra su PDF al lado de la lista; el ancho se ajusta arrastrando el divisor.',
+      'Los ítems de una cotización se pueden agrupar bajo un título, y se numeran de corrido.',
+      'Vista previa de la cotización antes de guardarla, desde donde también se guarda.',
+      'Si se cierra la pestaña mientras se arma una cotización, al volver a abrirla se puede recuperar lo escrito.',
+    ],
+    cambio: [
+      'El formulario de la cotización es más compacto: el comentario de cada ítem se agrega con su ícono.',
+      'Los botones que abren un PDF aparte dicen "Abrir en otra pestaña".',
+    ],
+    arreglo: [
+      'La cantidad y el precio de un ítem tienen tope: un número muy largo ya no se desborda ni sale en notación científica.',
+    ],
+  },
+  {
     version: '3.8.0.1',
     fecha: '2026-10-14',
     nuevo: [

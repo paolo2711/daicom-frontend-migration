@@ -187,41 +187,30 @@
       </v-card>
     </v-slide-y-reverse-transition>
 
-    <v-dialog v-model="preview_modal" fullscreen persistent transition="dialog-bottom-transition">
-      <v-card class="d-flex flex-column" style="height: 100vh; overflow: hidden; background-color: #525659;">
-        <v-toolbar flat height="64" class="flex-grow-0 flex-shrink-0">
-          <v-icon class="mr-2 d-none d-md-flex">mdi-file-pdf-box</v-icon>
-          <span class="text-subtitle-1 font-weight-bold mr-4 d-none d-md-flex">Nombre:</span>
-          
-          <v-text-field v-model="preview_final_name" density="compact" variant="outlined" hide-details 
-                        prepend-inner-icon="mdi-pencil" suffix=".pdf"
-                        class="font-weight-bold" style="max-width: 700px; width: 100%;"/>        
-          <v-spacer/>        
-          <v-btn variant="text" @click="discardPreview" class="mr-2 font-weight-bold"
-                 :color="isDark ? 'white' : 'grey-darken-3'" :disabled="guardando">
-            <v-icon start>mdi-close</v-icon> Descartar
-          </v-btn>
+    <pdf-preview-dialog v-model="preview_modal" :url="preview_url" :error="preview_error">
+      <template #encabezado>
+        <v-icon class="mr-2 d-none d-md-flex">mdi-file-pdf-box</v-icon>
+        <span class="text-subtitle-1 font-weight-bold mr-4 d-none d-md-flex">Nombre:</span>
+        <v-text-field v-model="preview_final_name" density="compact" variant="outlined" hide-details
+                      prepend-inner-icon="mdi-pencil" suffix=".pdf"
+                      class="font-weight-bold" style="max-width: 43.75rem; width: 100%;"/>
+      </template>
+      <template #acciones>
+        <v-btn variant="text" @click="discardPreview" class="mr-2 font-weight-bold"
+               :color="isDark ? 'white' : 'grey-darken-3'" :disabled="guardando">
+          <v-icon start>mdi-close</v-icon> Descartar
+        </v-btn>
 
-          <!-- El suelto no pertenece a ningun certificado: se lleva el PDF y listo. -->
-          <v-btn v-if="preview_task?.type === 'suelto'" color="primary" variant="flat" @click="downloadPreview" class="font-weight-bold px-4">
-            <v-icon start>mdi-download</v-icon> Descargar
-          </v-btn>
-          <v-btn v-else color="success" variant="flat" @click="approveSheet" class="font-weight-bold px-4"
-                 :loading="guardando">
-            <v-icon start>mdi-check-bold</v-icon> Aprobar y Guardar
-          </v-btn>
-        </v-toolbar>
-
-        <!-- El guardado fallo: el PDF sigue en pantalla para reintentar sin regenerarlo.
-             El flex va explicito: sin base auto, la franja colapsa a su padding. -->
-        <v-alert v-if="preview_error" type="error" density="compact" variant="flat" tile
-                 class="text-body-2" style="flex: 0 0 auto;">
-          {{ preview_error }}
-        </v-alert>
-
-        <pdf-preview class="flex-grow-1" :url="preview_url" />
-      </v-card>
-    </v-dialog>
+        <!-- El suelto no pertenece a ningun certificado: se lleva el PDF y listo. -->
+        <v-btn v-if="preview_task?.type === 'suelto'" color="primary" variant="flat" @click="downloadPreview" class="font-weight-bold px-4">
+          <v-icon start>mdi-download</v-icon> Descargar
+        </v-btn>
+        <v-btn v-else color="success" variant="flat" @click="approveSheet" class="font-weight-bold px-4"
+               :loading="guardando">
+          <v-icon start>mdi-check-bold</v-icon> Aprobar y Guardar
+        </v-btn>
+      </template>
+    </pdf-preview-dialog>
   </div>
 </template>
 
@@ -229,7 +218,7 @@
 import { ref, computed, watch } from 'vue'
 import { useTheme } from 'vuetify'
 import { Toast } from '@/plugins/alerts'
-import PdfPreview from '@/components/shared/PdfPreview.vue'
+import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
 import { useAppStore } from '@/stores/appStore'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import { mensajeDeError } from '@/utils/errors'

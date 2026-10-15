@@ -1,6 +1,6 @@
 import { hoyISO } from '@/utils/dates'
 
-export const CURRENT_QUOTE_SCHEMA = "1.0"
+export const CURRENT_QUOTE_SCHEMA = "1.1"
 
 // Los mismos topes que apps/documents/cotizacion.py: sin ellos una fila del PDF
 // podria ser mas alta que una hoja.
@@ -8,7 +8,23 @@ export const LIMITES = {
   descripcion: 300,
   comentario: 500,
   observacion: 500,
+  grupo: 120,
+  // Sin tope el campo pasa a notacion cientifica y el total no entra en su columna.
+  cantidad: 999,
+  precio: 999999.99,
 }
+
+// Lo que se escribe en un numero, sin pasar del tope ni de dos decimales.
+export const acotado = (valor, maximo) => {
+  if (valor === '' || valor === null || Number.isNaN(Number(valor))) return valor
+  return Math.min(Math.round(Number(valor) * 100) / 100, maximo)
+}
+
+// Una fila de items con este tipo es el titulo de un grupo: no suma ni se
+// numera. El mismo GRUPO de cotizacion.py.
+const GRUPO = "group"
+export const esGrupo = (fila) => fila?.type === GRUPO
+export const grupoVacio = () => ({ type: GRUPO, description: "" })
 
 export const UNIDADES = ['und', 'serv', 'glb', 'dias']
 
@@ -34,7 +50,7 @@ export const TIPOS_DE_COTIZACION = {
     plazo: "5 días hábiles",
     unidad: "und",
     etiquetaItems: "Servicios",
-    ejemploItem: "Ej: Servicio de calibración de vernier digital",
+    ejemploItem: "Ej: Calibración de vernier digital",
     entrada: "Le hacemos llegar nuestra propuesta económica por los servicios solicitados:",
     terms: [
       {
@@ -82,7 +98,7 @@ export const TIPOS_DE_COTIZACION = {
     plazo: "",
     unidad: "dias",
     etiquetaItems: "Equipos",
-    ejemploItem: "Ej: Alquiler de multímetro FLUKE 87V",
+    ejemploItem: "Ej: Multímetro FLUKE 87V",
     entrada: "Le hacemos llegar nuestra propuesta económica por el alquiler de los equipos solicitados:",
     terms: [
       {
@@ -198,7 +214,9 @@ export const quoteDefaultJSON = (kind = TIPO_POR_DEFECTO) => {
 
 // Lo que se ve mientras se edita. Los que quedan en la cotizacion los calcula el
 // back al guardar.
-export const totalDeFila = (item) => Math.round((Number(item.quantity) || 0) * (Number(item.unit_price) || 0) * 100) / 100
+export const totalDeFila = (item) => esGrupo(item)
+  ? 0
+  : Math.round((Number(item.quantity) || 0) * (Number(item.unit_price) || 0) * 100) / 100
 
 export const totalesDe = (cotizacion) => {
   const subtotal = cotizacion.items.reduce((suma, item) => suma + totalDeFila(item), 0)
@@ -221,7 +239,7 @@ export const cotizacionDe = (guardada) => {
     meta: { ...conLaForma(base.meta, copia.meta), kind },
     billing_client: conLaForma(base.billing_client, copia.billing_client),
     certificate_data: conLaForma(base.certificate_data, copia.certificate_data),
-    items: (copia.items || []).map(item => conLaForma(itemVacio(), item)),
+    items: (copia.items || []).map(item => esGrupo(item) ? conLaForma(grupoVacio(), item) : conLaForma(itemVacio(), item)),
     contact: base.contact,
   }
 }

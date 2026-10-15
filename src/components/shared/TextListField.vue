@@ -5,14 +5,15 @@
         :model-value="texto"
         :placeholder="placeholder"
         :maxlength="maxlength || undefined"
-        :counter="maxlength || false"
         rows="1"
         auto-grow
         density="compact"
         variant="outlined"
-        hide-details="auto"
+        hide-details
         @update:model-value="valor => lista[i] = valor"
-      />
+      >
+        <template v-if="maxlength" #append-inner><inner-counter :valor="texto" :max="maxlength" /></template>
+      </v-textarea>
       <v-btn icon="mdi-close" variant="text" size="small" color="error" @click="lista.splice(i, 1)" />
     </div>
     <v-btn variant="text" color="primary" size="small" prepend-icon="mdi-plus" @click="lista.push('')">
@@ -22,6 +23,8 @@
 </template>
 
 <script setup>
+import InnerCounter from '@/components/shared/InnerCounter.vue'
+
 // Una lista de textos que se agregan y se quitan (observaciones, clausulas,
 // notas). Edita el arreglo que recibe.
 const lista = defineModel({ type: Array, required: true })

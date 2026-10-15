@@ -4,6 +4,7 @@ import { useSwal } from '@/composables/useSwal'
 import { accionesPara } from '@/utils/actions'
 import { ACCIONES_DOCUMENTO } from '@/utils/documents/acciones'
 import { avisarHecho } from '@/utils/documents/avisos'
+import { abrirEnOtraPestana } from '@/utils/pdf'
 import { mensajeDeError } from '@/utils/errors'
 
 // Lo que hace cada accion de ACCIONES_DOCUMENTO, y el menu de la tabla. Cada
@@ -31,7 +32,7 @@ export function useDocumentActions({ editar }) {
 
   function ejecutarAccion (clave, [documento]) {
     switch (clave) {
-      case 'ver': return window.open(documento.pdf_file, '_blank', 'noopener')
+      case 'ver': return abrirEnOtraPestana(documento.pdf_file)
       case 'editar': return editar(documento)
       case 'anular': return anular(documento)
     }

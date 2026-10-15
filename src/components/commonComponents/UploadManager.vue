@@ -219,10 +219,7 @@
           {{ preview_error }}
         </v-alert>
 
-        <div class="flex-grow-1" style="width: 100%; position: relative;">
-          <iframe v-if="preview_url" :src="preview_url"
-                  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; display: block;"/>
-        </div>
+        <pdf-preview class="flex-grow-1" :url="preview_url" />
       </v-card>
     </v-dialog>
   </div>
@@ -232,6 +229,7 @@
 import { ref, computed, watch } from 'vue'
 import { useTheme } from 'vuetify'
 import { Toast } from '@/plugins/alerts'
+import PdfPreview from '@/components/shared/PdfPreview.vue'
 import { useAppStore } from '@/stores/appStore'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import { mensajeDeError } from '@/utils/errors'

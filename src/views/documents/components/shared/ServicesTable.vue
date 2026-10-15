@@ -81,8 +81,22 @@
             <span class="font-weight-bold text-no-wrap">{{ monto(totalDeFila(fila), moneda) }}</span>
           </v-col>
         </v-row>
+        <!-- El de comentario va primero: oculto (comentario abierto) deja su hueco
+             junto al total y no entre los demas. -->
         <v-btn icon="mdi-comment-plus-outline" variant="text" size="small" class="ml-1" title="Agregar comentario"
                :style="{ visibility: conComentario(fila) ? 'hidden' : 'visible' }" @click="abrirComentario(fila)" />
+        <v-menu v-if="acreditaciones.length" location="bottom end">
+          <template #activator="{ props: menu }">
+            <v-btn v-bind="menu" :icon="fila.accreditation ? 'mdi-certificate' : 'mdi-certificate-outline'" variant="text"
+                   size="small" class="ml-1" :color="fila.accreditation ? 'primary' : undefined"
+                   :title="fila.accreditation ? `Acreditado: ${fila.accreditation}` : 'Marcar como acreditado'" />
+          </template>
+          <v-list density="compact">
+            <v-list-item v-for="a in acreditaciones" :key="a.codigo" :active="fila.accreditation === a.codigo"
+                         :title="a.codigo" :subtitle="`${a.organismo} N.° ${a.numero}`" @click="fila.accreditation = a.codigo" />
+            <v-list-item title="Sin acreditación" @click="fila.accreditation = ''" />
+          </v-list>
+        </v-menu>
         </template>
         <v-btn icon="mdi-delete-outline" variant="text" size="small" color="error" class="ml-1" @click="items.splice(i, 1)" />
       </div>
@@ -107,8 +121,9 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useDisplay } from 'vuetify'
+import CompanyDataService from '@/services/company/companyDataService'
 import InnerCounter from '@/components/shared/InnerCounter.vue'
 import { LIMITES, UNIDADES, acotado, esGrupo, grupoVacio, itemVacio, totalDeFila } from '@/utils/documents/quoteDefaults'
 import { monto, simboloDe } from '@/utils/money'
@@ -126,6 +141,14 @@ defineProps({
   errores: { type: Object, default: () => ({}) },
   // El de TIPOS_DE_COTIZACION: titulo, unidad por defecto y ejemplo.
   tipo: { type: Object, required: true },
+})
+
+// Las acreditaciones que se pueden declarar hoy; sin ninguna, no hay boton.
+const acreditaciones = ref([])
+onMounted(() => {
+  CompanyDataService.acreditaciones()
+    .then(({ data }) => { acreditaciones.value = data })
+    .catch(() => {})
 })
 
 // Los items se numeran de corrido, saltando los grupos, como en el PDF.

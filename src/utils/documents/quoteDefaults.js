@@ -1,6 +1,6 @@
 import { hoyISO } from '@/utils/dates'
 
-export const CURRENT_QUOTE_SCHEMA = "1.1"
+export const CURRENT_QUOTE_SCHEMA = "1.2"
 
 // Los mismos topes que apps/documents/cotizacion.py: sin ellos una fila del PDF
 // podria ser mas alta que una hoja.
@@ -31,9 +31,14 @@ export const UNIDADES = ['und', 'serv', 'glb', 'dias']
 export const FORMAS_DE_PAGO = ['Contado', 'Crédito 15 días', 'Crédito 30 días']
 
 const ACEPTACION = "Para aceptar esta cotización, envíe su orden de compra, orden de servicio o confirmación por correo a ventas@daicomsac.com, indicando el N.° de cotización."
+// Confidencialidad y quejas cubren lo que pide la ISO/IEC 17025 (4.2 y 7.9).
 const CONFIDENCIALIDAD = {
   title: "Confidencialidad",
-  items: ["Toda la información del cliente y de los servicios realizados se trata como confidencial."]
+  items: ["Toda la información del cliente y de los servicios realizados se trata como confidencial y no se comparte con terceros sin su autorización. Si la ley nos obliga a entregarla, se le avisa antes, salvo que la ley lo prohíba."]
+}
+const QUEJAS = {
+  title: "Quejas",
+  items: ["Si tiene una queja sobre el servicio, escríbanos a ventas@daicomsac.com: le confirmamos la recepción y le informamos el avance y el resultado. Puede solicitar nuestro procedimiento de atención de quejas."]
 }
 
 // Las variantes de la cotizacion (meta.kind), las mismas que TIPOS en
@@ -85,7 +90,8 @@ export const TIPOS_DE_COTIZACION = {
         items: [
           "Los equipos no recogidos dentro de los 30 días siguientes al aviso de término quedan bajo responsabilidad del cliente."
         ]
-      }
+      },
+      QUEJAS
     ]
   },
   alquiler: {
@@ -138,7 +144,8 @@ export const TIPOS_DE_COTIZACION = {
           "El alquiler se paga por adelantado. Los días adicionales se valorizan al término."
         ]
       },
-      CONFIDENCIALIDAD
+      CONFIDENCIALIDAD,
+      QUEJAS
     ]
   }
 }
@@ -159,7 +166,9 @@ export const itemVacio = (unidad = "und") => ({
   unit: unidad,
   unit_price: 0,
   row_total: 0,
-  observations: ""
+  observations: "",
+  // El codigo de la acreditacion bajo la que se declara (apps/company/acreditaciones.py); vacio, ninguna.
+  accreditation: ""
 })
 
 export const quoteDefaultJSON = (kind = TIPO_POR_DEFECTO) => {
@@ -168,8 +177,6 @@ export const quoteDefaultJSON = (kind = TIPO_POR_DEFECTO) => {
     meta: {
       schema_version: CURRENT_QUOTE_SCHEMA,
       kind,
-      format_code: "FORD-022",
-      revision: "1",
       city: "Arequipa",
       date: hoyISO(),
       validity_days: 15,

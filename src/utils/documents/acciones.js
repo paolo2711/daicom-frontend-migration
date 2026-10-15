@@ -1,4 +1,5 @@
 import { editable, vivo } from '@/utils/documents/estado'
+import { OTRA_PESTANA } from '@/utils/pdf'
 
 // Lo que se puede hacer con un documento, para el menu de la tabla (click
 // derecho y boton de la fila). Los campos de cada una, en utils/actions.js.
@@ -7,7 +8,7 @@ import { editable, vivo } from '@/utils/documents/estado'
 export const ACCIONES_DOCUMENTO = [
   {
     clave: 'ver', grupo: 'documento', varios: false,
-    icono: 'mdi-file-pdf-box', texto: 'Ver PDF',
+    icono: 'mdi-open-in-new', texto: OTRA_PESTANA,
     disponible: ([documento]) => Boolean(documento.pdf_file),
   },
   {

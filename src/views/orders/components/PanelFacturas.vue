@@ -160,7 +160,8 @@
           </div>
           <div class="col-acciones d-flex justify-end" v-if="!modo_seleccion">
             <v-btn v-if="inv.pdf_url" icon size="x-small" variant="text" color="primary" :href="inv.pdf_url" target="_blank" @click.stop>
-              <v-icon size="18">mdi-file-eye-outline</v-icon>
+              <v-icon size="18">mdi-open-in-new</v-icon>
+              <v-tooltip activator="parent" location="top">{{ OTRA_PESTANA }}</v-tooltip>
             </v-btn>
             <v-btn icon size="x-small" variant="text" color="success" @click.stop="abrirAbonos(inv)">
               <v-icon size="18">mdi-cash-plus</v-icon>
@@ -240,8 +241,8 @@
 
           <div class="factura-acciones flex-shrink-0 d-flex justify-end" v-if="!modo_seleccion">
             <v-btn v-if="inv.pdf_url" icon size="small" variant="text" color="primary" :href="inv.pdf_url" target="_blank" @click.stop>
-              <v-icon size="18">mdi-file-eye-outline</v-icon>
-              <v-tooltip activator="parent" location="top">Ver PDF</v-tooltip>
+              <v-icon size="18">mdi-open-in-new</v-icon>
+              <v-tooltip activator="parent" location="top">{{ OTRA_PESTANA }}</v-tooltip>
             </v-btn>
             <v-btn icon size="small" variant="text" color="success" @click.stop="abrirAbonos(inv)">
               <v-icon size="18">mdi-cash-plus</v-icon>
@@ -327,6 +328,7 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 import DialogFactura from './DialogFactura.vue'
 import DialogLiquidacion from './DialogLiquidacion.vue'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
+import { OTRA_PESTANA } from '@/utils/pdf'
 import { porVencer, vencimiento } from '@/utils/orders/cobro'
 import { ABONADO, ANULADA, CREDITO, DEUDA, EN_PROCESO, ESTADOS, EXCEDIDO, PAGADO } from '@/utils/orders/estado'
 import { fechaCorta } from '@/utils/dates'

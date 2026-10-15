@@ -26,6 +26,7 @@
       </template>
     </filter-bar>
 
+    <pdf-split-view v-model="vista" :items="documentos" :pdf-de="d => d.pdf_file" :titulo-de="tituloDe" clave="documentos">
     <table-loading-overlay :loading="cargando" :isEmpty="documentos.length === 0">
       <v-data-table-server
         :headers="columnas"
@@ -37,8 +38,11 @@
         v-model:page="opciones.page"
         v-model:items-per-page="opciones.itemsPerPage"
         hide-default-footer
+        @click:row="(_, { item }) => { if (item.pdf_file) vista = item.id }"
         @contextmenu:row="alClickDerecho"
-        :row-props="({ item }) => ({ class: { 'fila-en-menu': estaEnElMenu(item) } })"
+        :row-props="({ item }) => ({ class: {
+          'fila-en-menu': estaEnElMenu(item), 'fila-con-pdf': item.pdf_file, 'fila-en-vista': item.id === vista,
+        } })"
       >
         <template #bottom>
           <fluent-pagination v-model:page="opciones.page" v-model:itemsPerPage="opciones.itemsPerPage" :totalItems="total" />
@@ -73,6 +77,7 @@
         </template>
       </v-data-table-server>
     </table-loading-overlay>
+    </pdf-split-view>
 
     <state-legend titulo="Estados del documento:" :estados="ESTADOS" />
 
@@ -91,6 +96,7 @@ import ClientSelect from '@/components/shared/ClientSelect.vue'
 import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import FilterBar from '@/components/shared/FilterBar.vue'
 import StateLegend from '@/components/shared/StateLegend.vue'
+import PdfSplitView from '@/components/shared/PdfSplitView.vue'
 import { useDocumentActions } from '@/composables/useDocumentActions'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { debounce } from '@/utils/debounce'
@@ -110,6 +116,8 @@ const props = defineProps({
 
 const emit = defineEmits(['editar'])
 
+// Con un PDF a la vista, la tabla se angosta: quedan numero, fecha, cliente y total.
+const EN_LA_LISTA_ANGOSTA = ['document_number', 'issue_date', 'client_name', 'total_amount']
 const columnas = computed(() => [
   { title: 'Documento', key: 'document_number', sortable: false },
   ...(props.variantes.length ? [{ title: 'Tipo', key: 'kind', sortable: false }] : []),
@@ -117,7 +125,7 @@ const columnas = computed(() => [
   { title: 'Cliente', key: 'client_name', sortable: false },
   ...(props.conTotal ? [{ title: 'Total', key: 'total_amount', align: 'end', sortable: false }] : []),
   { title: 'Opciones', key: 'acciones', align: 'center', sortable: false },
-])
+].filter(c => vista.value === null || EN_LA_LISTA_ANGOSTA.includes(c.key)))
 
 const documentos = ref([])
 const total = ref(0)
@@ -180,6 +188,10 @@ async function refrescarFila (event) {
 
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, ejecutarAccion } =
   useDocumentActions({ editar: documento => emit('editar', documento) })
+
+// El documento cuyo PDF se ve al lado de la lista (PdfSplitView).
+const vista = ref(null)
+const tituloDe = (documento) => `${documento.document_number} · ${documento.client_name || '—'}`
 
 // La recarga de su tipo, o la de todos los documentos (sin tipo).
 const alRecargar = (event) => {

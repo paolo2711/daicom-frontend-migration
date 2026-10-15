@@ -18,11 +18,14 @@ export const COTIZACION = 'COT'
 export const FORMATO_DE_INGRESO = 'FOI'
 
 // La version vigente del JSON de cada tipo, la misma que ESQUEMA_POR_TIPO en
-// el back. Uno de otra version se puede ver pero no editar.
+// el back. Se edita uno con el mismo primer numero (los cambios del segundo
+// solo agregan campos); uno con otro se puede ver pero no editar.
 const ESQUEMA_VIGENTE = {
   [COTIZACION]: CURRENT_QUOTE_SCHEMA,
   [FORMATO_DE_INGRESO]: CURRENT_FORMATO_INGRESO_SCHEMA,
 }
+const mayor = (version) => String(version ?? '').split('.')[0]
 
 export const vivo = (documento) => documento?.status !== ANULADO
-export const editable = (documento) => documento?.schema_version === ESQUEMA_VIGENTE[documento?.document_type]
+export const editable = (documento) =>
+  mayor(documento?.schema_version) === mayor(ESQUEMA_VIGENTE[documento?.document_type])

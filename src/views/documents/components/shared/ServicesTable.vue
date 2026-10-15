@@ -5,6 +5,9 @@
         <v-icon size="small" class="mr-1">mdi-format-list-numbered</v-icon> {{ tipo.etiquetaItems }}
       </div>
       <v-spacer />
+      <v-btn variant="outlined" prepend-icon="mdi-format-list-group" class="mr-2" @click="items.push(grupoVacio())">
+        Añadir grupo
+      </v-btn>
       <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" @click="items.push(itemVacio(tipo.unidad))">
         Añadir ítem
       </v-btn>
@@ -14,7 +17,7 @@
          los numeros bajan debajo de la descripcion. -->
     <div class="border rounded-lg">
       <v-row dense class="d-none d-md-flex px-3 py-2 ma-0 border-b-thin text-caption font-weight-bold text-medium-emphasis">
-        <v-col md="5" class="pl-8">Descripción y comentario</v-col>
+        <v-col md="5" class="pl-10">Descripción y comentario</v-col>
         <v-col md="1">Cant.</v-col>
         <v-col md="2">Unidad</v-col>
         <v-col md="2">P. unit.</v-col>
@@ -26,34 +29,61 @@
       </div>
 
       <div v-for="(fila, i) in items" :key="i" class="d-flex align-start px-3 py-2 border-b-thin"
-           :class="{ 'fila-con-error': errores[i] }">
-        <span class="text-medium-emphasis font-weight-bold pt-2 mr-3">{{ i + 1 }}</span>
+           :class="{ 'fila-con-error': errores[i], 'fila-grupo': esGrupo(fila) }">
+        <div class="d-flex flex-column mr-2">
+          <v-btn icon="mdi-chevron-up" variant="text" size="x-small" density="comfortable" :disabled="i === 0"
+                 title="Subir" @click="mover(i, -1)" />
+          <v-btn icon="mdi-chevron-down" variant="text" size="x-small" density="comfortable" :disabled="i === items.length - 1"
+                 title="Bajar" @click="mover(i, 1)" />
+        </div>
+        <template v-if="esGrupo(fila)">
+          <div class="flex-grow-1">
+            <v-text-field v-model="fila.description" placeholder="Ej: COLECTOR DE POLVO DC-001"
+                          :maxlength="LIMITES.grupo" prepend-inner-icon="mdi-format-list-group"
+                          density="compact" variant="outlined" hide-details class="font-weight-bold">
+              <template #append-inner><inner-counter :valor="fila.description" :max="LIMITES.grupo" /></template>
+            </v-text-field>
+            <div v-if="errores[i]" class="text-caption text-error">{{ errores[i] }}</div>
+          </div>
+        </template>
+        <template v-else>
+        <span class="text-medium-emphasis font-weight-bold pt-2 mr-3">{{ numeros[i] }}</span>
         <v-row dense class="ma-0 flex-grow-1">
           <v-col cols="12" md="5">
             <v-textarea v-model="fila.description" :placeholder="tipo.ejemploItem"
-                        :maxlength="LIMITES.descripcion" :counter="LIMITES.descripcion" rows="1" auto-grow
-                        density="compact" variant="outlined" hide-details="auto" />
-            <v-textarea v-model="fila.observations" placeholder="Comentario del ítem (opcional)"
-                        :maxlength="LIMITES.comentario" :counter="LIMITES.comentario" rows="1" auto-grow
-                        density="compact" variant="underlined" hide-details="auto" class="text-medium-emphasis" />
+                        :maxlength="LIMITES.descripcion" rows="1" auto-grow
+                        density="compact" variant="outlined" hide-details>
+              <template #append-inner><inner-counter :valor="fila.description" :max="LIMITES.descripcion" /></template>
+            </v-textarea>
+            <v-textarea v-if="conComentario(fila)" v-model="fila.observations" placeholder="Comentario del ítem (opcional)"
+                        :maxlength="LIMITES.comentario" rows="1" auto-grow :ref="el => campoDeComentario.set(fila, el)"
+                        density="compact" variant="underlined" hide-details class="text-medium-emphasis"
+                        @blur="cerrarSiVacio(fila)">
+              <template #append-inner><inner-counter :valor="fila.observations" :max="LIMITES.comentario" /></template>
+            </v-textarea>
             <div v-if="errores[i]" class="text-caption text-error">{{ errores[i] }}</div>
           </v-col>
           <v-col cols="4" md="1">
-            <v-text-field v-model.number="fila.quantity" type="number" min="1" :label="mdAndUp ? undefined : 'Cant.'"
-                          density="compact" variant="outlined" hide-details />
+            <v-text-field :model-value="fila.quantity" type="number" min="1" :max="LIMITES.cantidad"
+                          :label="mdAndUp ? undefined : 'Cant.'" density="compact" variant="outlined" hide-details
+                          @input="e => fijar(e, fila, 'quantity', LIMITES.cantidad)" />
           </v-col>
           <v-col cols="4" md="2">
             <v-select v-model="fila.unit" :items="UNIDADES" :label="mdAndUp ? undefined : 'Unidad'"
                       density="compact" variant="outlined" hide-details />
           </v-col>
           <v-col cols="4" md="2">
-            <v-text-field v-model.number="fila.unit_price" type="number" min="0" :prefix="simboloDe(moneda)"
-                          :label="mdAndUp ? undefined : 'P. unit.'" density="compact" variant="outlined" hide-details />
+            <v-text-field :model-value="fila.unit_price" type="number" min="0" :max="LIMITES.precio" :prefix="simboloDe(moneda)"
+                          :label="mdAndUp ? undefined : 'P. unit.'" density="compact" variant="outlined" hide-details
+                          @input="e => fijar(e, fila, 'unit_price', LIMITES.precio)" />
           </v-col>
           <v-col cols="12" md="2" class="d-flex justify-end pt-md-3">
             <span class="font-weight-bold text-no-wrap">{{ monto(totalDeFila(fila), moneda) }}</span>
           </v-col>
         </v-row>
+        <v-btn icon="mdi-comment-plus-outline" variant="text" size="small" class="ml-1" title="Agregar comentario"
+               :style="{ visibility: conComentario(fila) ? 'hidden' : 'visible' }" @click="abrirComentario(fila)" />
+        </template>
         <v-btn icon="mdi-delete-outline" variant="text" size="small" color="error" class="ml-1" @click="items.splice(i, 1)" />
       </div>
     </div>
@@ -77,8 +107,10 @@
 </template>
 
 <script setup>
+import { computed, nextTick, ref } from 'vue'
 import { useDisplay } from 'vuetify'
-import { LIMITES, UNIDADES, itemVacio, totalDeFila } from '@/utils/documents/quoteDefaults'
+import InnerCounter from '@/components/shared/InnerCounter.vue'
+import { LIMITES, UNIDADES, acotado, esGrupo, grupoVacio, itemVacio, totalDeFila } from '@/utils/documents/quoteDefaults'
 import { monto, simboloDe } from '@/utils/money'
 
 // Sin la fila de titulos (pantalla angosta) cada numero lleva su etiqueta.
@@ -95,4 +127,47 @@ defineProps({
   // El de TIPOS_DE_COTIZACION: titulo, unidad por defecto y ejemplo.
   tipo: { type: Object, required: true },
 })
+
+// Los items se numeran de corrido, saltando los grupos, como en el PDF.
+const numeros = computed(() => {
+  let n = 0
+  return items.value.map(fila => (esGrupo(fila) ? null : ++n))
+})
+
+// El comentario se ve si tiene texto o si se abrio con su boton; abierto y
+// dejado vacio, se cierra al salir. Se recuerda la fila (no la posicion):
+// sigue abierto aunque la fila se mueva.
+const comentariosAbiertos = ref(new Set())
+const campoDeComentario = new WeakMap()
+const conComentario = (fila) => Boolean(fila.observations) || comentariosAbiertos.value.has(fila)
+const abrirComentario = (fila) => {
+  comentariosAbiertos.value = new Set(comentariosAbiertos.value).add(fila)
+  nextTick(() => campoDeComentario.get(fila)?.$el.querySelector('textarea')?.focus())
+}
+const cerrarSiVacio = (fila) => {
+  if ((fila.observations || '').trim()) return
+  fila.observations = ''
+  const abiertos = new Set(comentariosAbiertos.value)
+  abiertos.delete(fila)
+  comentariosAbiertos.value = abiertos
+}
+
+// Cantidad y precio no pasan de su tope ni de dos decimales. Si se pasan, se
+// corrige tambien lo que se ve en el campo: con el valor ya en el tope, Vue no
+// lo redibujaria. Lo que se esta escribiendo ("1.") no se toca.
+const fijar = (evento, fila, campo, maximo) => {
+  const escrito = evento.target.value
+  const valor = acotado(escrito, maximo)
+  fila[campo] = valor === '' ? '' : Number(valor)
+  if (Number(escrito) > maximo || /\.\d{3,}/.test(escrito)) evento.target.value = valor
+}
+
+const mover = (i, paso) => {
+  const [fila] = items.value.splice(i, 1)
+  items.value.splice(i + paso, 0, fila)
+}
 </script>
+
+<style scoped>
+.fila-grupo { background-color: rgba(var(--v-theme-primary), 0.05); }
+</style>

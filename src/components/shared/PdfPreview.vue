@@ -19,8 +19,10 @@ const props = defineProps({
 })
 
 // Por su ruta, del mismo origen que la pagina: el back no deja mostrar sus
-// archivos dentro de otro sitio (X-Frame-Options SAMEORIGIN).
+// archivos dentro de otro sitio (X-Frame-Options SAMEORIGIN). Un blob ya es
+// de la pagina: va tal cual.
 const ruta = computed(() => {
+  if (props.url.startsWith('blob:')) return props.url
   const url = new URL(props.url, window.location.origin)
   return `${url.pathname}${url.search}${props.alAncho ? '#view=FitH' : ''}`
 })

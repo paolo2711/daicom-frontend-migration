@@ -1,8 +1,7 @@
 <template>
   <v-dialog v-model="dialog" class="dialog-premium" width="1100" persistent>
     <v-card style="max-height: 95vh; display: flex; flex-direction: column;">
-      <base-modal-header :title="numero ? `Editar ${numero}` : `Nueva cotización de ${tipo.texto.toLowerCase()}`"
-                         :icon="tipo.icono" @close="close">
+      <base-modal-header :title="titulo" :icon="tipo.icono" @close="close">
         <span>
           <template v-if="!numero && numeroNuevo">
             Correlativo: <span class="font-weight-bold text-primary ml-1">{{ numeroNuevo }}</span> ·
@@ -15,7 +14,7 @@
         <v-tab value="datos" prepend-icon="mdi-domain">Cliente y condiciones</v-tab>
         <v-tab value="servicios" prepend-icon="mdi-format-list-bulleted">
           {{ tipo.etiquetaItems }}
-          <v-chip size="x-small" variant="tonal" class="ml-2" :color="hayErrores ? 'error' : undefined">{{ cotizacion.items.length }}</v-chip>
+          <v-chip size="x-small" variant="tonal" class="ml-2" :color="hayErrores ? 'error' : undefined">{{ cantidadDeItems }}</v-chip>
         </v-tab>
         <v-tab value="terminos" prepend-icon="mdi-script-text-outline">Términos</v-tab>
       </v-tabs>
@@ -39,23 +38,47 @@
       <v-card-actions class="px-6 pb-4 pt-2 border-t-thin flex-shrink-0">
         <v-spacer />
         <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
+        <v-btn variant="outlined" class="font-weight-bold px-4" prepend-icon="mdi-file-eye-outline"
+               :loading="armandoVista" :disabled="!clienteId || !cantidadDeItems" @click="verVistaPrevia">
+          Vista previa
+        </v-btn>
         <v-btn color="primary" variant="flat" class="font-weight-bold px-4" prepend-icon="mdi-content-save"
-               :loading="guardando" :disabled="!clienteId || !cotizacion.items.length" @click="guardar">
+               :loading="guardando" :disabled="!clienteId || !cantidadDeItems" @click="guardar">
           Guardar cotización
         </v-btn>
       </v-card-actions>
+
+      <!-- El PDF tal como saldria, sin guardar: desde aca se guarda o se vuelve a editar. -->
+      <pdf-preview-dialog v-model="vistaPrevia" :url="urlDeVista">
+        <template #encabezado>
+          <v-icon class="mr-2">mdi-file-eye-outline</v-icon>
+          <span class="text-subtitle-1 font-weight-bold text-truncate">Vista previa · {{ titulo }}</span>
+        </template>
+        <template #acciones>
+          <v-btn variant="text" class="mr-2 font-weight-bold" prepend-icon="mdi-pencil" :disabled="guardando"
+                 @click="vistaPrevia = false">
+            Seguir editando
+          </v-btn>
+          <v-btn color="primary" variant="flat" class="font-weight-bold px-4" prepend-icon="mdi-content-save"
+                 :loading="guardando" @click="guardar">
+            Guardar cotización
+          </v-btn>
+        </template>
+      </pdf-preview-dialog>
     </v-card>
   </v-dialog>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import DocumentsDataService from '@/services/documents/documentsDataService'
+import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
+import { useLocalDraft } from '@/composables/useLocalDraft'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useSwal } from '@/composables/useSwal'
 import { avisarHecho } from '@/utils/documents/avisos'
 import { COTIZACION } from '@/utils/documents/estado'
-import { TIPOS_DE_COTIZACION, TIPO_POR_DEFECTO, cotizacionDe, quoteDefaultJSON, totalesDe } from '@/utils/documents/quoteDefaults'
+import { TIPOS_DE_COTIZACION, TIPO_POR_DEFECTO, cotizacionDe, esGrupo, quoteDefaultJSON, totalesDe } from '@/utils/documents/quoteDefaults'
 import { mensajeDeError } from '@/utils/errors'
 import { monto } from '@/utils/money'
 import BillingClientPanel from '../shared/BillingClientPanel.vue'
@@ -76,11 +99,29 @@ const cotizacion = ref(quoteDefaultJSON())
 
 const tipo = computed(() => TIPOS_DE_COTIZACION[cotizacion.value.meta.kind])
 const totales = computed(() => totalesDe(cotizacion.value))
+// Los grupos son titulos: se cuentan solo los items.
+const cantidadDeItems = computed(() => cotizacion.value.items.filter(fila => !esGrupo(fila)).length)
 const { errores, marcarErrores } = useRowErrors(computed(() => cotizacion.value.items))
 const hayErrores = computed(() => Object.keys(errores.value).length > 0)
 
+const titulo = computed(() => (numero.value ? `Editar ${numero.value}` : `Nueva cotización de ${tipo.value.texto.toLowerCase()}`))
+
+// Lo que se va escribiendo queda en el navegador hasta guardar o cancelar: si
+// se cierra la pestaña, se ofrece al volver a abrir la misma cotizacion.
+const borrador = useLocalDraft(
+  () => `daicom_borrador_cotizacion_${documentoId.value || `nueva_${cotizacion.value.meta.kind}`}`,
+  {
+    resumen: (guardado) => {
+      const items = (guardado.cotizacion?.items || []).filter(fila => !esGrupo(fila)).length
+      return items ? `Hay una cotización sin guardar con ${items} ítem(s) de una sesión anterior.` : ''
+    },
+  },
+)
+watch([cotizacion, clienteId], () => borrador.guardar({ cotizacion: cotizacion.value, clienteId: clienteId.value }),
+  { deep: true })
+
 // Una existente o una nueva del tipo elegido: el tipo no se cambia despues.
-function open (documento = null, kind = TIPO_POR_DEFECTO) {
+async function open (documento = null, kind = TIPO_POR_DEFECTO) {
   documentoId.value = documento?.id || null
   numero.value = documento?.document_number || ''
   numeroNuevo.value = ''
@@ -93,34 +134,76 @@ function open (documento = null, kind = TIPO_POR_DEFECTO) {
   cotizacion.value = documento ? cotizacionDe(documento.document_data) : quoteDefaultJSON(kind)
   tab.value = 'datos'
   dialog.value = true
+
+  const recuperado = await borrador.ofrecer()
+  if (recuperado) {
+    cotizacion.value = cotizacionDe(recuperado.cotizacion)
+    clienteId.value = recuperado.clienteId
+  }
 }
 
-const close = () => { dialog.value = false }
+const close = () => {
+  borrador.descartar()
+  dialog.value = false
+}
 
-// El back revisa todo y calcula los totales: lo que rechace vuelve marcado.
+const payload = () => ({
+  document_type: COTIZACION,
+  schema_version: cotizacion.value.meta.schema_version,
+  document_data: cotizacion.value,
+  client: clienteId.value,
+})
+
+// El back revisa todo: lo que rechace vuelve marcado en su fila, se haya
+// pedido al guardar o en la vista previa.
+function mostrarRechazo (error, encabezado, porDefecto) {
+  const filas = error.response?.data?.filas
+  if (filas) {
+    marcarErrores(filas)
+    tab.value = 'servicios'
+    vistaPrevia.value = false
+  }
+  swal.fire({ icon: 'error', title: encabezado, text: mensajeDeError(error, porDefecto) })
+}
+
 async function guardar () {
   guardando.value = true
-  const payload = {
-    document_type: COTIZACION,
-    schema_version: cotizacion.value.meta.schema_version,
-    document_data: cotizacion.value,
-    client: clienteId.value,
-  }
   try {
     const { data } = documentoId.value
-      ? await DocumentsDataService.update(documentoId.value, payload)
-      : await DocumentsDataService.create(payload)
+      ? await DocumentsDataService.update(documentoId.value, payload())
+      : await DocumentsDataService.create(payload())
     avisarHecho(`${data.document_number} ${documentoId.value ? 'actualizada' : 'creada'}`, data)
+    vistaPrevia.value = false
     close()
   } catch (error) {
-    const filas = error.response?.data?.filas
-    if (filas) {
-      marcarErrores(filas)
-      tab.value = 'servicios'
-    }
-    swal.fire({ icon: 'error', title: 'No se guardó la cotización', text: mensajeDeError(error, 'No se pudo guardar la cotización.') })
+    mostrarRechazo(error, 'No se guardó la cotización', 'No se pudo guardar la cotización.')
   } finally {
     guardando.value = false
+  }
+}
+
+// ── Vista previa: el PDF que armaria el back, sin guardar nada ──
+const vistaPrevia = ref(false)
+const urlDeVista = ref('')
+const armandoVista = ref(false)
+
+const soltarVista = () => {
+  if (urlDeVista.value) URL.revokeObjectURL(urlDeVista.value)
+  urlDeVista.value = ''
+}
+watch(vistaPrevia, (abierta) => { if (!abierta) soltarVista() })
+
+async function verVistaPrevia () {
+  armandoVista.value = true
+  try {
+    const pdf = await DocumentsDataService.vistaPrevia(payload())
+    soltarVista()
+    urlDeVista.value = URL.createObjectURL(pdf)
+    vistaPrevia.value = true
+  } catch (error) {
+    mostrarRechazo(error, 'No se pudo armar la vista previa', 'No se pudo armar la vista previa.')
+  } finally {
+    armandoVista.value = false
   }
 }
 

@@ -14,6 +14,13 @@ class CompanyDataService {
             headers: authHeader()
         })
     }
+
+    // Las acreditaciones que se pueden declarar hoy (apps/company/acreditaciones.py).
+    acreditaciones() {
+        return axios.get('company/acreditaciones', {
+            headers: authHeader()
+        })
+    }
 }
 
 export default new CompanyDataService();

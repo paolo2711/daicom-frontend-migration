@@ -19,6 +19,16 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.8.0.3',
+    fecha: '2026-10-15',
+    nuevo: [
+      'Cada ítem de una cotización se puede marcar como acreditado (PJLA); el PDF lo indica y agrega la leyenda de la acreditación.',
+    ],
+    cambio: [
+      'La cotización sale con su formato controlado FORD-022 Rev. 2 y términos de confidencialidad y quejas según la ISO/IEC 17025.',
+    ],
+  },
+  {
     version: '3.8.0.2',
     fecha: '2026-10-15',
     nuevo: [

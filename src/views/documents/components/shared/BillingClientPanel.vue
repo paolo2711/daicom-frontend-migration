@@ -10,31 +10,44 @@
       Este cliente está incompleto. Búsquelo por RUC/DNI en SUNAT/RENIEC con la barra de arriba para completarlo.
     </v-alert>
 
+    <!-- Todo el panel va en la misma reticula de 4 columnas (md="3" cada una):
+         los bordes coinciden de fila a fila. -->
     <v-row dense>
-      <!-- Razon social y documento salen del cliente elegido; el back los toma de ahi. -->
-      <v-col cols="12" md="8">
-        <v-text-field v-model="billing.business_name" label="Razón social / Nombre" disabled
-                      hint="Sale del cliente elegido" persistent-hint density="compact" variant="outlined" />
+      <!-- Razon social y documento salen del cliente elegido, como en una factura; el back los toma de ahi. -->
+      <v-col cols="12" md="9">
+        <v-text-field v-model="billing.business_name" label="Razón social (del cliente elegido)" disabled
+                      density="compact" variant="outlined" hide-details />
       </v-col>
-      <v-col cols="12" md="4">
+      <v-col cols="12" md="3">
         <v-text-field v-model="billing.doc_number" :label="billing.doc_type || 'Documento'" disabled
-                      density="compact" variant="outlined" hide-details="auto" />
+                      density="compact" variant="outlined" hide-details />
       </v-col>
       <v-col cols="12">
         <v-text-field v-model="billing.address" label="Dirección" :disabled="bloqueado"
-                      density="compact" variant="outlined" hide-details="auto" />
+                      density="compact" variant="outlined" hide-details />
       </v-col>
-      <v-col cols="12" md="4">
-        <v-text-field v-model="billing.contact_name" label="Atención (opcional)" prepend-inner-icon="mdi-account-outline"
-                      density="compact" variant="outlined" hide-details="auto" />
+    </v-row>
+
+    <div class="text-body-2 font-weight-bold text-medium-emphasis mt-4 mb-2">Contacto de esta cotización (opcional)</div>
+    <v-row dense>
+      <v-col cols="12" sm="6" md="3">
+        <v-text-field v-model="billing.area" label="Área o dependencia" placeholder="Ej: Facultad de Ingeniería"
+                      prepend-inner-icon="mdi-office-building-outline" :maxlength="LIMITES.area"
+                      density="compact" variant="outlined" hide-details>
+          <template #append-inner><inner-counter :valor="billing.area" :max="LIMITES.area" /></template>
+        </v-text-field>
       </v-col>
-      <v-col cols="12" md="4">
-        <v-text-field v-model="billing.phone" label="Teléfono (opcional)" prepend-inner-icon="mdi-phone-outline"
-                      density="compact" variant="outlined" hide-details="auto" />
+      <v-col cols="12" sm="6" md="3">
+        <v-text-field v-model="billing.contact_name" label="Atención" prepend-inner-icon="mdi-account-outline"
+                      density="compact" variant="outlined" hide-details />
       </v-col>
-      <v-col cols="12" md="4">
-        <v-text-field v-model="billing.email" label="Correo (opcional)" prepend-inner-icon="mdi-email-outline"
-                      density="compact" variant="outlined" hide-details="auto" />
+      <v-col cols="12" sm="6" md="3">
+        <v-text-field v-model="billing.phone" label="Teléfono" prepend-inner-icon="mdi-phone-outline"
+                      density="compact" variant="outlined" hide-details />
+      </v-col>
+      <v-col cols="12" sm="6" md="3">
+        <v-text-field v-model="billing.email" label="Correo" prepend-inner-icon="mdi-email-outline"
+                      density="compact" variant="outlined" hide-details />
       </v-col>
     </v-row>
 
@@ -75,7 +88,7 @@
                   density="compact" variant="outlined" hide-details="auto" />
       </v-col>
       <v-col cols="12" md="6">
-        <v-text-field v-model="meta.delivery_time" :label="tipo.etiquetaPlazo" :placeholder="tipo.ejemploPlazo"
+        <v-text-field v-model="meta.delivery_time" :label="`${tipo.etiquetaPlazo} (opcional)`" :placeholder="tipo.ejemploPlazo"
                       persistent-placeholder density="compact" variant="outlined" hide-details="auto" />
       </v-col>
     </v-row>
@@ -85,7 +98,8 @@
 <script setup>
 import { computed } from 'vue'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
-import { FORMAS_DE_PAGO, TIPOS_DE_COTIZACION } from '@/utils/documents/quoteDefaults'
+import InnerCounter from '@/components/shared/InnerCounter.vue'
+import { FORMAS_DE_PAGO, LIMITES, TIPOS_DE_COTIZACION } from '@/utils/documents/quoteDefaults'
 import { MONEDAS } from '@/utils/money'
 
 const meta = defineModel('meta', { type: Object, required: true })
@@ -98,14 +112,14 @@ const tipo = computed(() => TIPOS_DE_COTIZACION[meta.value.kind])
 // Sin un cliente con documento no se puede guardar: la direccion espera a que lo tenga.
 const bloqueado = computed(() => !clientId.value || !billing.value.doc_number?.trim())
 
+// Del cliente salen sus datos de factura. El telefono y el correo no: son del
+// contacto de esta cotizacion, que depende del area a la que va.
 const aplicarCliente = (c) => {
   Object.assign(billing.value, {
     business_name: c.name,
     doc_type: c.documentType_name || 'SIN DOCUMENTO',
     doc_number: c.document || '',
     address: c.address || '',
-    phone: c.phone || '',
-    ...(c.email && { email: c.email }),
   })
 }
 </script>

@@ -1,6 +1,6 @@
 import { hoyISO } from '@/utils/dates'
 
-export const CURRENT_QUOTE_SCHEMA = "1.2"
+export const CURRENT_QUOTE_SCHEMA = "1.3"
 
 // Los mismos topes que apps/documents/cotizacion.py: sin ellos una fila del PDF
 // podria ser mas alta que una hoja.
@@ -9,6 +9,7 @@ export const LIMITES = {
   comentario: 500,
   observacion: 500,
   grupo: 120,
+  area: 120,
   // Sin tope el campo pasa a notacion cientifica y el total no entra en su columna.
   cantidad: 999,
   precio: 999999.99,
@@ -52,7 +53,7 @@ export const TIPOS_DE_COTIZACION = {
     icono: "mdi-wrench-outline",
     etiquetaPlazo: "Plazo de entrega",
     ejemploPlazo: "Ej: 5 días hábiles",
-    plazo: "5 días hábiles",
+    plazo: "",
     unidad: "und",
     etiquetaItems: "Servicios",
     ejemploItem: "Ej: Calibración de vernier digital",
@@ -195,6 +196,9 @@ export const quoteDefaultJSON = (kind = TIPO_POR_DEFECTO) => {
       doc_type: "RUC",
       doc_number: "",
       address: "",
+      // El contacto de esta cotizacion: area o dependencia, persona, telefono y
+      // correo. No salen del cliente: dependen del area a la que va.
+      area: "",
       contact_name: "",
       phone: "",
       email: ""

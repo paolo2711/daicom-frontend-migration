@@ -20,7 +20,7 @@
       </v-tabs>
 
       <v-card-text class="pt-4" style="overflow-y: auto; flex-grow: 1; min-height: 0;">
-        <v-window v-model="tab">
+        <v-window v-model="tab" class="ventana-de-pestanas">
           <v-window-item value="datos">
             <billing-client-panel v-model:meta="cotizacion.meta" v-model:billing="cotizacion.billing_client"
                                   v-model:certificate="cotizacion.certificate_data" v-model:clientId="clienteId" />
@@ -209,3 +209,9 @@ async function verVistaPrevia () {
 
 defineExpose({ open })
 </script>
+
+<style scoped>
+/* v-window trae overflow: hidden, que no deja quedar fija ninguna barra adentro
+   (la de los items); clip recorta igual el cambio de pestaña. */
+.ventana-de-pestanas { overflow: clip; }
+</style>

@@ -102,7 +102,9 @@ a { text-decoration: none; }
 .dialog-premium .v-overlay__content > .v-card.v-theme--light {
   border: none !important;
   box-shadow: none !important;
-  background-color: #ffffff !important;
+  /* Lo que queda fijo adentro (una barra) se pinta con el mismo fondo. */
+  --fondo-del-dialogo: #ffffff;
+  background-color: var(--fondo-del-dialogo) !important;
 }
 .dialog-premium .v-card-title {
   padding-top: 20px !important;

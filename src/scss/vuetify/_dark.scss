@@ -11,6 +11,7 @@
   .dialog-premium .v-overlay__content > .v-card.v-theme--dark {
     border: none !important;
     box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.18) !important;
-    background-color: #1e1e1e !important;
+    --fondo-del-dialogo: #1e1e1e;
+    background-color: var(--fondo-del-dialogo) !important;
   }
 }

@@ -1,28 +1,32 @@
 <template>
   <div>
-    <div class="d-flex align-center mb-3">
-      <div class="text-subtitle-1 font-weight-bold text-primary">
-        <v-icon size="small" class="mr-1">mdi-format-list-numbered</v-icon> {{ tipo.etiquetaItems }}
+    <!-- Los botones de añadir y los titulos de columna quedan a la vista al bajar
+         por una lista larga. -->
+    <div class="encabezado-fijo">
+      <div class="d-flex align-center pb-3">
+        <div class="text-subtitle-1 font-weight-bold text-primary">
+          <v-icon size="small" class="mr-1">mdi-format-list-numbered</v-icon> {{ tipo.etiquetaItems }}
+        </div>
+        <v-spacer />
+        <v-btn variant="outlined" prepend-icon="mdi-format-list-group" class="mr-2" @click="items.push(grupoVacio())">
+          Añadir grupo
+        </v-btn>
+        <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" @click="items.push(itemVacio(tipo.unidad))">
+          Añadir ítem
+        </v-btn>
       </div>
-      <v-spacer />
-      <v-btn variant="outlined" prepend-icon="mdi-format-list-group" class="mr-2" @click="items.push(grupoVacio())">
-        Añadir grupo
-      </v-btn>
-      <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" @click="items.push(itemVacio(tipo.unidad))">
-        Añadir ítem
-      </v-btn>
-    </div>
-
-    <!-- En pantalla ancha cada servicio va en una linea, como tabla; en angosta
-         los numeros bajan debajo de la descripcion. -->
-    <div class="border rounded-lg">
-      <v-row dense class="d-none d-md-flex px-3 py-2 ma-0 border-b-thin text-caption font-weight-bold text-medium-emphasis">
+      <v-row dense class="d-none d-md-flex px-3 py-2 ma-0 border rounded-t-lg text-caption font-weight-bold text-medium-emphasis">
         <v-col md="5" class="pl-10">Descripción y comentario</v-col>
         <v-col md="1">Cant.</v-col>
         <v-col md="2">Unidad</v-col>
         <v-col md="2">P. unit.</v-col>
         <v-col md="2" class="text-right pr-10">Total</v-col>
       </v-row>
+    </div>
+
+    <!-- En pantalla ancha cada servicio va en una linea, como tabla; en angosta
+         los numeros bajan debajo de la descripcion. -->
+    <div class="border rounded-lg" :class="{ 'border-t-0 rounded-t-0': mdAndUp }">
 
       <div v-if="!items.length" class="text-center text-medium-emphasis py-4">
         Sin ítems. Agregue uno con "Añadir ítem".
@@ -40,7 +44,7 @@
           <div class="flex-grow-1">
             <v-text-field v-model="fila.description" placeholder="Ej: COLECTOR DE POLVO DC-001"
                           :maxlength="LIMITES.grupo" prepend-inner-icon="mdi-format-list-group"
-                          density="compact" variant="outlined" hide-details class="font-weight-bold">
+                          density="compact" variant="outlined" hide-details class="titulo-de-grupo font-weight-bold">
               <template #append-inner><inner-counter :valor="fila.description" :max="LIMITES.grupo" /></template>
             </v-text-field>
             <div v-if="errores[i]" class="text-caption text-error">{{ errores[i] }}</div>
@@ -192,5 +196,17 @@ const mover = (i, paso) => {
 </script>
 
 <style scoped>
+/* El contenedor que se desliza tiene 1rem de relleno arriba (pt-4): sin
+   subirla ese rem, las filas se ven pasar por encima de la barra. */
+.encabezado-fijo {
+  position: sticky;
+  top: -1rem;
+  margin-top: -1rem;
+  padding-top: 1rem;
+  z-index: 3;
+  background-color: var(--fondo-del-dialogo, rgb(var(--v-theme-surface)));
+}
 .fila-grupo { background-color: rgba(var(--v-theme-primary), 0.05); }
+/* Como sale en el PDF; lo guardado queda como se escribio. */
+.titulo-de-grupo :deep(input) { text-transform: uppercase; }
 </style>

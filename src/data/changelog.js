@@ -19,6 +19,20 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.8.0.4',
+    fecha: '2026-10-16',
+    nuevo: [
+      'La cotización tiene su propio contacto: área o dependencia, persona, teléfono y correo, que ya no se copian del cliente.',
+    ],
+    cambio: [
+      'En el PDF de la cotización los ítems van en un cuadro que llega al pie de la hoja, y los títulos de grupo salen en mayúsculas.',
+      'Los términos y condiciones salen en dos columnas, más fáciles de leer.',
+      'Los datos del cliente y las condiciones salen con su etiqueta al lado, y el PDF en negro.',
+      'El plazo de entrega viene vacío y es opcional: si no se llena, no sale en el PDF.',
+      'Al bajar por una lista larga de ítems, los botones para añadir y los títulos de columna quedan a la vista.',
+    ],
+  },
+  {
     version: '3.8.0.3',
     fecha: '2026-10-15',
     nuevo: [

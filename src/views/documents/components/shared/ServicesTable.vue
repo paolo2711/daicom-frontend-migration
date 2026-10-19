@@ -16,7 +16,7 @@
         </v-btn>
       </div>
       <v-row dense class="d-none d-md-flex px-3 py-2 ma-0 border rounded-t-lg text-caption font-weight-bold text-medium-emphasis">
-        <v-col md="5" class="pl-10">Descripción y comentario</v-col>
+        <v-col md="5" class="pl-15">Descripción y comentario</v-col>
         <v-col md="1">Cant.</v-col>
         <v-col md="2">Unidad</v-col>
         <v-col md="2">P. unit.</v-col>
@@ -32,13 +32,16 @@
         Sin ítems. Agregue uno con "Añadir ítem".
       </div>
 
-      <div v-for="(fila, i) in items" :key="i" class="d-flex align-start px-3 py-2 border-b-thin"
+      <div v-for="(fila, i) in items" :key="clave(fila)" v-bind="arrastrable(i)" class="d-flex align-start px-3 py-2 border-b-thin"
            :class="{ 'fila-con-error': errores[i], 'fila-grupo': esGrupo(fila) }">
-        <div class="d-flex flex-column mr-2">
-          <v-btn icon="mdi-chevron-up" variant="text" size="x-small" density="comfortable" :disabled="i === 0"
-                 title="Subir" @click="mover(i, -1)" />
-          <v-btn icon="mdi-chevron-down" variant="text" size="x-small" density="comfortable" :disabled="i === items.length - 1"
-                 title="Bajar" @click="mover(i, 1)" />
+        <div class="d-flex align-center mr-2">
+          <drag-handle v-bind="asa(i)" />
+          <div class="d-flex flex-column">
+            <v-btn icon="mdi-chevron-up" variant="text" size="x-small" density="comfortable" :disabled="i === 0"
+                   title="Subir" @click="mover(i, i - 1)" />
+            <v-btn icon="mdi-chevron-down" variant="text" size="x-small" density="comfortable" :disabled="i === items.length - 1"
+                   title="Bajar" @click="mover(i, i + 1)" />
+          </div>
         </div>
         <template v-if="esGrupo(fila)">
           <div class="flex-grow-1">
@@ -143,6 +146,8 @@ import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useDisplay } from 'vuetify'
 import CompanyDataService from '@/services/company/companyDataService'
 import InnerCounter from '@/components/shared/InnerCounter.vue'
+import DragHandle from '@/components/shared/DragHandle.vue'
+import { useRowDrag } from '@/composables/useRowDrag'
 import CatalogDescriptionField from './CatalogDescriptionField.vue'
 import { LIMITES, UNIDADES, acotado, esGrupo, grupoVacio, itemVacio, totalDeFila } from '@/utils/documents/quoteDefaults'
 import { monto, simboloDe } from '@/utils/money'
@@ -217,10 +222,7 @@ const fijar = (evento, fila, campo, maximo) => {
   if (Number(escrito) > maximo || /\.\d{3,}/.test(escrito)) evento.target.value = valor
 }
 
-const mover = (i, paso) => {
-  const [fila] = items.value.splice(i, 1)
-  items.value.splice(i + paso, 0, fila)
-}
+const { asa, arrastrable, clave, mover } = useRowDrag(items)
 </script>
 
 <style scoped>

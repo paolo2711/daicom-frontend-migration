@@ -85,8 +85,10 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(eq, index) in equipments" :key="index" :class="{ 'fila-con-error': errores[index] }">
-          <td>
+        <tr v-for="(eq, index) in equipments" :key="clave(eq)" v-bind="arrastrable(index)"
+            :class="{ 'fila-con-error': errores[index] }">
+          <td class="text-no-wrap">
+            <drag-handle v-bind="asa(index)" class="mr-1" />
             <span v-if="eq.modo === 'nuevo'" class="numero-estimado">{{ conCeros(estimadoDe(index)) }}</span>
             <span v-else class="font-weight-medium">{{ eq.registry_code }}</span>
           </td>
@@ -137,6 +139,7 @@ import { useTheme } from 'vuetify'
 import LabDataService from '@/services/labs/labDataService'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
+import DragHandle from '@/components/shared/DragHandle.vue'
 import LabMappers from '@/mappers/labMappers'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import EquipmentDataService from '@/services/equipments/equipmentDataService'
@@ -146,6 +149,7 @@ import CorrelativeDataService from '@/services/correlative/correlativeDataServic
 import { TIPOS_CERTIFICADO, nombreDelTipo } from '@/utils/certificates/tipos'
 import { vivo } from '@/utils/certificates/estado'
 import { useRowErrors } from '@/composables/useRowErrors'
+import { useRowDrag } from '@/composables/useRowDrag'
 
 const emit = defineEmits(['update-list', 'update-config'])
 
@@ -160,6 +164,7 @@ const buscando_cert          = ref(false)
 const base_correlatives      = ref({ 1: null, 2: null, 3: null })
 const equipments             = ref([])
 const { errores, marcarErrores } = useRowErrors(equipments)
+const { asa, arrastrable, clave } = useRowDrag(equipments)
 
 // Comboboxes server-side
 const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)

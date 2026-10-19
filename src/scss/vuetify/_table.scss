@@ -38,3 +38,18 @@
 div.fila-con-error {
   background: rgba(var(--v-theme-error), 0.08);
 }
+
+// Una lista que se ordena arrastrando (useRowDrag): la fila levantada y la
+// linea donde caeria. En una tabla la sombra va en las celdas: en la fila no se pinta.
+.v-table .fila-arrastrada td,
+div.fila-arrastrada {
+  opacity: 0.4;
+}
+.v-table .cae-antes td,
+div.cae-antes {
+  box-shadow: inset 0 0.125rem 0 rgb(var(--v-theme-primary));
+}
+.v-table .cae-despues td,
+div.cae-despues {
+  box-shadow: inset 0 -0.125rem 0 rgb(var(--v-theme-primary));
+}

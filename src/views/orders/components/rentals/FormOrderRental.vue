@@ -80,8 +80,9 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(item, index) in rentals" :key="index" :class="{ 'fila-con-error': errores[index] }">
-          <td><strong>{{ item.internal_id }}</strong></td>
+        <tr v-for="(item, index) in rentals" :key="clave(item)" v-bind="arrastrable(index)"
+            :class="{ 'fila-con-error': errores[index] }">
+          <td class="text-no-wrap"><drag-handle v-bind="asa(index)" class="mr-1" /><strong>{{ item.internal_id }}</strong></td>
           <td>
             {{ item.name }}
             <v-text-field v-model="item.delivery_notes" placeholder="Sin observaciones" variant="plain"
@@ -117,7 +118,9 @@ import { useTheme } from 'vuetify'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
+import DragHandle from '@/components/shared/DragHandle.vue'
 import { useRowErrors } from '@/composables/useRowErrors'
+import { useRowDrag } from '@/composables/useRowDrag'
 import { hoyISO } from '@/utils/dates'
 import { FECHAS_ALQUILER, reglaNoAntesDe, reglaNoFutura, salidaDe } from '@/utils/orders/alquiler'
 
@@ -141,6 +144,7 @@ const temp_rental = ref({
 })
 const rentals        = ref([])
 const { errores, marcarErrores } = useRowErrors(rentals)
+const { asa, arrastrable, clave } = useRowDrag(rentals)
 
 watch(rentals, (val) => { emit('update-list', val) }, { deep: true })
 

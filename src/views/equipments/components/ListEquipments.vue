@@ -107,7 +107,7 @@
                   <thead>
                     <tr>
                       <th class="text-overline">TIPO</th>
-                      <th class="text-overline">DESCRIPCIÓN COMERCIAL</th>
+                      <th class="text-overline">NOMBRE EN LA COTIZACIÓN</th>
                       <th class="text-right text-overline">P. ESTÁNDAR</th>
                       <th class="text-right text-overline">P. CORPORATIVO</th>
                       <th class="text-center text-overline"><v-icon size="small">mdi-dots-vertical</v-icon></th>
@@ -116,7 +116,7 @@
                   <tbody>
                     <tr v-for="serv in item.servicios" :key="serv.id">
                       <td><v-chip size="x-small" variant="outlined" color="primary">{{ serv.tipo_servicio_label }}</v-chip></td>
-                      <td style="max-width: 300px;" class="text-truncate" :title="serv.descripcion_comercial">{{ serv.descripcion_comercial }}</td>
+                      <td style="max-width: 300px;" class="text-truncate" :title="serv.nombre">{{ serv.nombre }}</td>
                       <td class="text-right font-weight-bold">S/ {{ formatMoney(serv.precio_estandar) }}</td>
                       <td class="text-right font-weight-bold text-primary">S/ {{ formatMoney(serv.precio_corporativo) }}</td>
                       <td class="text-center">

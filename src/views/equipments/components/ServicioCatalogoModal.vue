@@ -16,17 +16,21 @@
             :rules="[v => !!v || 'Requerido']" 
           />
           
-          <v-textarea 
-            v-model="form.descripcion_comercial" 
-            label="Descripción Comercial Larga (Para Cotizaciones) *"
-            placeholder="Ej: Servicio de calibración acreditada de balanza..." 
-            variant="outlined" 
-            density="compact" 
-            rows="3"
-            prepend-inner-icon="mdi-text"
-            :rules="[v => !!v || 'Requerido']" 
+          <!-- El nombre en la cotizacion lo arma el back con el tipo y el equipo; esto solo lo precisa. -->
+          <v-text-field
+            v-model="form.detalle"
+            label="Detalle (opcional)"
+            placeholder="Ej: 0 a 100 psi"
+            hint="Solo si el equipo tiene dos servicios del mismo tipo con distinto precio: un rango, un modelo."
+            persistent-hint
+            :maxlength="LARGO_DETALLE"
+            variant="outlined"
+            density="compact"
+            prepend-inner-icon="mdi-text-short"
             class="mt-3"
-          />
+          >
+            <template #append-inner><inner-counter :valor="form.detalle" :max="LARGO_DETALLE" /></template>
+          </v-text-field>
 
           <v-row class="mt-1">
             <v-col cols="12" md="6">
@@ -72,6 +76,7 @@ import { Toast } from '@/plugins/alerts'
 import { ref, reactive } from 'vue'
 import Swal from 'sweetalert2'
 import ServicioCatalogoDataService from '@/services/equipments/servicioCatalogoDataService'
+import InnerCounter from '@/components/shared/InnerCounter.vue'
 
 const emit = defineEmits(['reload'])
 const dialog = ref(false)
@@ -85,10 +90,13 @@ const tipos = [
   { title: 'Mantenimiento Preventivo', value: 2 },
   { title: 'Reparación', value: 3 },
   { title: 'Paquete Integral (Calibración + Mant.)', value: 4 },
-  { title: 'Otros Servicios', value: 5 }
+  { title: 'Otros Servicios', value: 5 },
+  { title: 'Verificación de Operatividad', value: 6 },
 ]
+// El mismo LARGO_DETALLE de ServicioCatalogo en el back.
+const LARGO_DETALLE = 120
 
-const form = reactive({ id: null, equipo: null, tipo_servicio: 1, descripcion_comercial: '', precio_estandar: 0, precio_corporativo: 0 })
+const form = reactive({ id: null, equipo: null, tipo_servicio: 1, detalle: '', precio_estandar: 0, precio_corporativo: 0 })
 
 const open = (item = null, equipoId = null) => {
   isEdit.value = !!item
@@ -96,14 +104,14 @@ const open = (item = null, equipoId = null) => {
     form.id = item.id
     form.equipo = item.equipo
     form.tipo_servicio = item.tipo_servicio
-    form.descripcion_comercial = item.descripcion_comercial
+    form.detalle = item.detalle || ''
     form.precio_estandar = item.precio_estandar
     form.precio_corporativo = item.precio_corporativo
   } else {
     form.id = null
     form.equipo = equipoId
     form.tipo_servicio = 1
-    form.descripcion_comercial = ''
+    form.detalle = ''
     form.precio_estandar = 0
     form.precio_corporativo = 0
   }

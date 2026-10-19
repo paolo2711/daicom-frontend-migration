@@ -5,7 +5,7 @@
            selector premium `.v-overlay__content > .v-card`. El overlay cubre
            toda la ventana igual. -->
       <pdf-drop-zone
-        label="Suelta el PDF del comprobante" @file="onPdfDropped" @invalid="pdfInvalido"
+        label="Suelta el PDF del comprobante" @file="onPdfDropped" @invalid="avisarSoloPdf"
         style="display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0;"
       >
       <base-modal-header
@@ -152,6 +152,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { Toast } from '@/plugins/alerts'
+import { avisarSoloPdf } from '@/utils/pdf'
 import Swal from 'sweetalert2'
 import OrderDataService from '@/services/orders/orderDataService'
 import { mensajeDeError } from '@/utils/errors'
@@ -261,9 +262,6 @@ const onPdfSelected = async (archivo) => {
 const onPdfDropped = (file) => {
   facturaData.value.pdf = file
   onPdfSelected(file)
-}
-const pdfInvalido = () => {
-  Toast.fire({ timer: 2500, icon: 'info', title: 'Suelta un archivo PDF.' })
 }
 
 // Al abrir: cargar datos si es edición, o leer el PDF si llegó soltado sobre el

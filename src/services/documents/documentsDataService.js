@@ -37,6 +37,10 @@ class DocumentsDataService {
       throw error;
     }
   }
+  // Una cotizacion hecha fuera del sistema: su PDF y los datos de la lista, en un FormData.
+  subirCotizacion(formulario) {
+    return axios.post("documents/subir-cotizacion/", formulario, { headers: authHeader() });
+  }
   siguienteNumero(documentType) {
     return axios.get("documents/siguiente-numero/", { params: { document_type: documentType }, headers: authHeader() });
   }

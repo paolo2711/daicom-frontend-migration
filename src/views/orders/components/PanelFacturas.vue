@@ -1,5 +1,5 @@
 <template>
-  <pdf-drop-zone label="Suelta el PDF para subir la factura" @file="onPdfDropped" @invalid="pdfInvalido">
+  <pdf-drop-zone label="Suelta el PDF para subir la factura" @file="onPdfDropped" @invalid="avisarSoloPdf">
   <v-card
     class="panel-facturas d-flex flex-column position-relative"
     elevation="0" rounded="lg" border
@@ -317,6 +317,7 @@
 
 <script setup>
 import { Toast } from '@/plugins/alerts'
+import { avisarSoloPdf } from '@/utils/pdf'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import Swal from 'sweetalert2'
 import OrderDataService from '@/services/orders/orderDataService'
@@ -611,9 +612,6 @@ const cerrarCrear = () => { modal_crear.value = false; pdf_soltado.value = null 
 const onFacturaCreada = () => { cerrarCrear() }
 
 // ── Drag & drop de PDF (UI en el común PdfDropZone) ──
-const pdfInvalido = () => {
-  Toast.fire({ timer: 2500, icon: 'info', title: 'Suelta un archivo PDF.' })
-}
 // Recibe el File ya validado desde PdfDropZone y abre el modal de crear
 // factura con el; el modal lo lee.
 const onPdfDropped = (file) => {

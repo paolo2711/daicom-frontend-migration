@@ -54,11 +54,8 @@
         <span class="text-medium-emphasis font-weight-bold pt-2 mr-3">{{ numeros[i] }}</span>
         <v-row dense class="ma-0 flex-grow-1">
           <v-col cols="12" md="5">
-            <v-textarea v-model="fila.description" :placeholder="tipo.ejemploItem"
-                        :maxlength="LIMITES.descripcion" rows="1" auto-grow
-                        density="compact" variant="outlined" hide-details>
-              <template #append-inner><inner-counter :valor="fila.description" :max="LIMITES.descripcion" /></template>
-            </v-textarea>
+            <catalog-description-field :fila="fila" :moneda="moneda" :placeholder="tipo.ejemploItem"
+                                       :maxlength="LIMITES.descripcion" @elegido="s => elegidos.set(fila, s)" />
             <v-textarea v-if="conComentario(fila)" v-model="fila.observations" placeholder="Comentario del ítem (opcional)"
                         :maxlength="LIMITES.comentario" rows="1" auto-grow :ref="el => campoDeComentario.set(fila, el)"
                         density="compact" variant="underlined" hide-details class="text-medium-emphasis"
@@ -79,7 +76,24 @@
           <v-col cols="4" md="2">
             <v-text-field :model-value="fila.unit_price" type="number" min="0" :max="LIMITES.precio" :prefix="simboloDe(moneda)"
                           :label="mdAndUp ? undefined : 'P. unit.'" density="compact" variant="outlined" hide-details
-                          @input="e => fijar(e, fila, 'unit_price', LIMITES.precio)" />
+                          @input="e => fijar(e, fila, 'unit_price', LIMITES.precio)">
+              <!-- Recien elegido del catalogo: sus dos precios, aunque se haya borrado o cambiado el precio. -->
+              <template v-if="preciosDelCatalogo(fila).length" #append-inner>
+                <v-menu location="bottom end">
+                  <template #activator="{ props: menu }">
+                    <v-icon v-bind="menu" size="small" class="cursor-pointer" title="Precios del catálogo">mdi-tag-multiple-outline</v-icon>
+                  </template>
+                  <v-list>
+                    <v-list-item v-for="precio in preciosDelCatalogo(fila)" :key="precio.titulo" :title="precio.titulo"
+                                 :subtitle="monto(precio.valor, moneda)" @click="fila.unit_price = precio.valor">
+                      <template #append>
+                        <v-icon v-if="Number(fila.unit_price) === precio.valor" size="small">mdi-check</v-icon>
+                      </template>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+              </template>
+            </v-text-field>
           </v-col>
           <v-col cols="12" md="2" class="d-flex justify-end pt-md-3">
             <span class="font-weight-bold text-no-wrap">{{ monto(totalDeFila(fila), moneda) }}</span>
@@ -125,10 +139,11 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useDisplay } from 'vuetify'
 import CompanyDataService from '@/services/company/companyDataService'
 import InnerCounter from '@/components/shared/InnerCounter.vue'
+import CatalogDescriptionField from './CatalogDescriptionField.vue'
 import { LIMITES, UNIDADES, acotado, esGrupo, grupoVacio, itemVacio, totalDeFila } from '@/utils/documents/quoteDefaults'
 import { monto, simboloDe } from '@/utils/money'
 
@@ -138,7 +153,7 @@ const { mdAndUp } = useDisplay()
 // Los errores son los que el back marco por posicion al guardar.
 const items = defineModel('items', { type: Array, required: true })
 
-defineProps({
+const props = defineProps({
   totales: { type: Object, required: true },
   moneda: { type: String, default: 'PEN' },
   igv: { type: Number, default: 18 },
@@ -146,6 +161,19 @@ defineProps({
   // El de TIPOS_DE_COTIZACION: titulo, unidad por defecto y ejemplo.
   tipo: { type: Object, required: true },
 })
+
+// El servicio recien elegido de cada fila, solo mientras se edita: no se guarda.
+// Al reabrir una cotizacion el precio es un campo normal. Si se cambio el texto
+// (sin equipo) ya no vale. Son en soles: en dolares no se ofrecen.
+const elegidos = reactive(new WeakMap())
+const preciosDelCatalogo = (fila) => {
+  const servicio = elegidos.get(fila)
+  if (props.moneda !== 'PEN' || !servicio || servicio.equipo !== fila.equipo) return []
+  return [
+    { titulo: 'Estándar', valor: Number(servicio.precio_estandar) },
+    { titulo: 'Corporativo', valor: Number(servicio.precio_corporativo) },
+  ]
+}
 
 // Las acreditaciones que se pueden declarar hoy; sin ninguna, no hay boton.
 const acreditaciones = ref([])

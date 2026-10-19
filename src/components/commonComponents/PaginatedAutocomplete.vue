@@ -20,13 +20,7 @@
     <template v-if="$slots.item" v-slot:item="s"><slot name="item" v-bind="s" /></template>
     <template v-if="$slots.append" v-slot:append><slot name="append" /></template>
 
-    <!-- Aviso GENERICO reutilizable: hay mas resultados de los mostrados. -->
-    <template v-if="hayMas" v-slot:append-item>
-      <div class="px-4 py-2 text-caption text-medium-emphasis">
-        <v-icon size="14" class="mr-1">mdi-magnify</v-icon>
-        Hay más resultados — escribe para afinar la búsqueda.
-      </div>
-    </template>
+    <template v-if="hayMas" v-slot:append-item><more-results-hint /></template>
   </v-autocomplete>
 </template>
 
@@ -36,6 +30,7 @@
 // sola vez. Cada combobox solo pasa su fetch, su label y sus slots si los necesita.
 import { computed, nextTick, ref, watch } from 'vue'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import MoreResultsHint from '@/components/shared/MoreResultsHint.vue'
 
 const props = defineProps({
   modelValue: { default: null },

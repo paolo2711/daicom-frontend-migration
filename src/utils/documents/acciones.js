@@ -19,6 +19,12 @@ export const ACCIONES_DOCUMENTO = [
     disponible: ([documento]) => editable(documento),
   },
   {
+    clave: 'crear-orden', grupo: 'documento', varios: false,
+    icono: 'mdi-file-document-plus', texto: 'Crear orden',
+    // Cuales pasan lo decide el back (pasa_a_orden en apps/documents/cotizacion.py).
+    visible: ([documento]) => documento.pasa_a_orden,
+  },
+  {
     clave: 'anular', grupo: 'peligro', varios: false,
     icono: 'mdi-cancel', texto: 'Anular',
     visible: ([documento]) => vivo(documento),

@@ -18,7 +18,7 @@
         <v-row dense>
           <v-col cols="12">
             <paginated-autocomplete ref="equipCatalogRef" v-model="temp_eq.name" :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
-                            recurso="equipos" :seed="semillaDeEquipo(temp_eq.name)"
+                            recurso="equipos" :seed="semillaDeEquipo(temp_eq.name)" @selected="conSuLaboratorio"
                             label="Equipo" :return-object="false" item-title="name" item-value="id"
                             density="compact" variant="outlined" hide-details="auto"
                             prepend-inner-icon="mdi-toolbox-outline" clearable>
@@ -175,6 +175,13 @@ const equipCatalogRef = ref(null)      // para recargar el catálogo tras crear 
 const labSeleccionado = ref(null)      // objeto del lab elegido, semilla de su desplegable
 const equipoMaestroModalRef = ref(null)
 
+// El equipo trae el laboratorio que lo calibra; sin uno, queda el ya elegido.
+function conSuLaboratorio(equipo) {
+  if (!equipo?.laboratorio) return
+  temp_eq.value.lab = equipo.laboratorio.id
+  labSeleccionado.value = equipo.laboratorio
+}
+
 
 const conCeros = (n) => (n == null ? '…' : String(n).padStart(8, '0'))
 
@@ -208,7 +215,8 @@ onMounted(() => {
   initCorrelatives()   // los comboboxes se auto-cargan solos
 })
 
-function inyectarBorrador({ items, config }) {
+// Las de un borrador, con lo elegido arriba, o las de una cotizacion.
+function cargarFilas({ items, config }) {
   equipments.value = items
   if (!config) return
   const { lab_data, ...elegido } = config
@@ -282,7 +290,7 @@ function addEquipmentToBatch() {
   temp_eq.value.name = null
 }
 
-defineExpose({ inyectarBorrador, marcarErrores, estimados })
+defineExpose({ cargarFilas, marcarErrores, estimados })
 </script>
 
 <style scoped>

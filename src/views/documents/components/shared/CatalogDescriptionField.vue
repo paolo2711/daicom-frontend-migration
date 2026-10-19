@@ -29,7 +29,8 @@ import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { monto } from '@/utils/money'
 
 // Busca en el catalogo mientras se escribe. Elegir copia nombre y precio y guarda
-// el id del equipo (lo usa la orden); cambiar el texto quita el vinculo.
+// el id del equipo y el tipo de servicio (los usa la orden); cambiar el texto
+// quita el vinculo.
 // 'elegido' lleva el servicio, para ofrecer sus precios mientras se edita.
 const emit = defineEmits(['elegido'])
 
@@ -54,7 +55,7 @@ const abierto = computed(() => enfocado.value && !cerrado.value && !props.fila.e
 
 function escribir (texto) {
   props.fila.description = texto
-  if (props.fila.equipo) props.fila.equipo = null
+  if (props.fila.equipo) Object.assign(props.fila, { equipo: null, tipo_servicio: null })
   cerrado.value = false
   const buscado = (texto || '').trim()
   if (buscado.length >= LETRAS_PARA_BUSCAR) searchQuery.value = buscado
@@ -63,6 +64,7 @@ function escribir (texto) {
 function elegir (servicio) {
   props.fila.description = servicio.nombre
   props.fila.equipo = servicio.equipo
+  props.fila.tipo_servicio = servicio.tipo_servicio
   emit('elegido', servicio)
   // Los precios del catalogo son en soles: en dolares no se ponen.
   if (props.moneda === 'PEN') props.fila.unit_price = Number(servicio.precio_estandar)

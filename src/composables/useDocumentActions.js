@@ -8,8 +8,8 @@ import { abrirEnOtraPestana } from '@/utils/pdf'
 import { mensajeDeError } from '@/utils/errors'
 
 // Lo que hace cada accion de ACCIONES_DOCUMENTO, y el menu de la tabla. Cada
-// tipo de documento dice como abre su formulario.
-export function useDocumentActions({ editar }) {
+// tipo de documento dice como abre su formulario y, la cotizacion, su orden.
+export function useDocumentActions({ editar, crearOrden }) {
   const swal = useSwal()
   const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu()
 
@@ -34,6 +34,7 @@ export function useDocumentActions({ editar }) {
     switch (clave) {
       case 'ver': return abrirEnOtraPestana(documento.pdf_file)
       case 'editar': return editar(documento)
+      case 'crear-orden': return crearOrden(documento)
       case 'anular': return anular(documento)
     }
   }

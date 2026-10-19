@@ -157,9 +157,15 @@ export const TIPO_POR_DEFECTO = "servicio"
 export const OPCIONES_DE_TIPO = Object.entries(TIPOS_DE_COTIZACION)
   .map(([value, tipo]) => ({ value, title: tipo.texto, sigla: tipo.sigla }))
 
+// Una hecha fuera del sistema (con el servidor caido): se sube su PDF.
+export const SUBIR_PDF = "subir-pdf"
+
 // Las opciones del boton "Nueva cotización" (meta.nuevo de su ruta).
-export const OPCIONES_NUEVA_COTIZACION = Object.entries(TIPOS_DE_COTIZACION)
-  .map(([valor, tipo]) => ({ valor, texto: tipo.texto, detalle: tipo.detalle, icono: tipo.icono }))
+export const OPCIONES_NUEVA_COTIZACION = [
+  ...Object.entries(TIPOS_DE_COTIZACION)
+    .map(([valor, tipo]) => ({ valor, texto: tipo.texto, detalle: tipo.detalle, icono: tipo.icono })),
+  { valor: SUBIR_PDF, texto: "Subir PDF", detalle: "Hecha fuera del sistema", icono: "mdi-file-upload-outline" },
+]
 
 export const itemVacio = (unidad = "und") => ({
   description: "",

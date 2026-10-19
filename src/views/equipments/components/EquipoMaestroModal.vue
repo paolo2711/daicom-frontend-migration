@@ -11,8 +11,13 @@
             variant="outlined" 
             density="compact" 
             prepend-inner-icon="mdi-format-title"
-            :rules="[v => !!v || 'Requerido']" 
+            :rules="[v => !!v || 'Requerido']"
           />
+          <paginated-autocomplete v-model="form.laboratorio" :fetch="fetchLabs" :mapper="LabMappers.getMap"
+                                  recurso="labs" :seed="laboratorio" @selected="l => laboratorio = l"
+                                  label="Laboratorio que lo calibra" :return-object="false" item-title="name" item-value="id"
+                                  prepend-inner-icon="mdi-flask-outline" variant="outlined" density="compact" clearable
+                                  hint="La orden y el certificado lo proponen al elegir este equipo" persistent-hint />
         </v-card-text>
         <v-card-actions class="px-6 pb-4 pt-2">
           <v-spacer/>
@@ -31,6 +36,9 @@ import { Toast } from '@/plugins/alerts'
 import { ref, reactive } from 'vue'
 import Swal from 'sweetalert2'
 import EquipmentDataService from '@/services/equipments/equipmentDataService'
+import LabDataService from '@/services/labs/labDataService'
+import LabMappers from '@/mappers/labMappers'
+import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 
 const emit = defineEmits(['reload'])
 const dialog = ref(false)
@@ -39,17 +47,17 @@ const is_valid = ref(false)
 const is_saving = ref(false)
 const formRef = ref(null)
 
-const form = reactive({ id: null, nombre_tecnico: '' })
+const form = reactive({ id: null, nombre_tecnico: '', laboratorio: null })
+// El laboratorio elegido, para que se vea sin buscarlo.
+const laboratorio = ref(null)
+const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)
 
 const open = (item = null) => {
   isEdit.value = !!item
-  if (item) {
-    form.id = item.id
-    form.nombre_tecnico = item.nombre_tecnico
-  } else {
-    form.id = null
-    form.nombre_tecnico = ''
-  }
+  form.id = item?.id ?? null
+  form.nombre_tecnico = item?.nombre_tecnico ?? ''
+  form.laboratorio = item?.laboratorio ?? null
+  laboratorio.value = item?.laboratorio_data ?? null
   dialog.value = true
   if (formRef.value) formRef.value.resetValidation()
 }
@@ -69,6 +77,7 @@ const save = async () => {
     }).catch(e => {
       let errorMsg = 'No se pudo guardar el equipo. Posible nombre duplicado.'
       if (e.response?.data?.nombre_tecnico) errorMsg = "Ese equipo ya existe en el diccionario."
+      if (e.response?.data?.laboratorio) errorMsg = e.response.data.laboratorio[0]
       Swal.fire({ icon: 'error', title: 'Error', text: errorMsg })
     }).finally(() => { is_saving.value = false })
   }

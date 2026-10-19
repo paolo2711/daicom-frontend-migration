@@ -57,7 +57,7 @@
                 v-model="form.equipment"
                 :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap" recurso="equipos"
                 :return-object="false" item-title="name" item-value="id"
-                :seed="equipSeed"
+                :seed="equipSeed" @selected="conSuLaboratorio"
                 label="Equipo"
                 density="compact" variant="outlined" hide-details="auto"
                 prepend-inner-icon="mdi-toolbox-outline"
@@ -71,7 +71,7 @@
 
             <v-col cols="12">
               <paginated-autocomplete ref="labComboRef" v-model="form.lab"
-                                      :fetch="fetchLabs" :mapper="LabMappers.getMap" :seed="ficha.lab_data" recurso="labs"
+                                      :fetch="fetchLabs" :mapper="LabMappers.getMap" :seed="labPropuesto || ficha.lab_data" recurso="labs"
                                       :return-object="false" item-title="name" item-value="id"
                                       density="compact" hide-details="auto"
                                       prepend-inner-icon="mdi-flask-outline"
@@ -162,6 +162,14 @@ const fetchEquipments = (page, size, query) => EquipmentDataService.getFiltered(
 // El equipo se guarda como texto, no como id del catalogo.
 const equipSeed = computed(() => ficha.value.equipment ? { id: ficha.value.equipment, name: ficha.value.equipment } : null)
 
+// El equipo trae el laboratorio que lo calibra; sin uno, queda el ya elegido.
+const labPropuesto = ref(null)
+function conSuLaboratorio(equipo) {
+  if (!equipo?.laboratorio) return
+  form.value.lab = equipo.laboratorio.id
+  labPropuesto.value = equipo.laboratorio
+}
+
 const NOMBRES = {
   client: 'Cliente', lab: 'Laboratorio', equipment: 'Equipo',
   emission_date: 'Fecha de emisión', observations: 'Observaciones',
@@ -202,6 +210,7 @@ const anteriores = computed(() => (ficha.value.previous_numbers || [])
 const open = async (item = null) => {
   isEdit.value = Boolean(item)
   ficha.value = {}
+  labPropuesto.value = null
   form.value = { client: null, lab: null, equipment: null, emission_date: hoyISO(), observations: '' }
   dialog.value = true
 

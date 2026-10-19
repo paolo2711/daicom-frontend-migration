@@ -14,6 +14,10 @@
             </v-col>
           </v-row>
 
+          <div v-if="sinPasar.length" class="text-caption text-medium-emphasis mt-2">
+            No pasaron a la orden: {{ sinPasar.join(', ') }}
+          </div>
+
           <!-- Documentos del alquiler (cotización, OC, guías, valorizaciones) se
                gestionan luego en Editar → hogar único de documentos. Crear queda mínimo. -->
 
@@ -67,29 +71,43 @@ const config                = ref(null)
 const addOrderForm          = ref(null)
 
 const formRef               = ref(null)
+// Los items de la cotizacion de la que sale que no pasan a la orden.
+const sinPasar              = ref([])
 
-// Solo servicio: los equipos de un alquiler se eligen del inventario.
+// Solo servicio: los equipos de un alquiler se eligen del inventario. La que
+// sale de una cotizacion no usa borrador, para no pisar el que quedo en Ordenes:
+// se vuelve a armar desde la cotizacion.
 const borrador = useLocalDraft(() => 'daicom_borrador_orden_servicio')
+const desdeCotizacion = ref(false)
+const conBorrador = () => esDeServicio(order.value) && !desdeCotizacion.value
 
 watch(() => order.value.order_type, () => { calculateNextNumber() })
 
 watch([items_to_save, config, () => order.value.client], ([items, elegido, client]) => {
-  if (esDeServicio(order.value)) borrador.guardar({ client, items, config: elegido })
+  if (conBorrador()) borrador.guardar({ client, items, config: elegido })
 }, { deep: true })
 
-async function open(tipo) {
+// `cotizacion`, la orden que el back arma desde una (documents/<id>/orden).
+async function open(tipo, cotizacion = null) {
   items_to_save.value = []
   config.value = null
-  order.value = { client: null, order_type: tipo }
+  order.value = { client: cotizacion?.client ?? null, order_type: tipo }
+  sinPasar.value = cotizacion?.sin_pasar ?? []
+  desdeCotizacion.value = Boolean(cotizacion)
   dialog.value = true
   calculateNextNumber()
 
+  if (cotizacion) {
+    await nextTick()
+    formRef.value?.cargarFilas({ items: cotizacion.filas })
+    return
+  }
   if (tipo !== 1) return
   const recuperado = await borrador.ofrecer()
   if (!recuperado) return
   order.value.client = recuperado.client
   await nextTick()
-  formRef.value?.inyectarBorrador(recuperado)
+  formRef.value?.cargarFilas(recuperado)
 }
 
 async function calculateNextNumber() {
@@ -130,7 +148,7 @@ async function save() {
 }
 
 function close() {
-  if (esDeServicio(order.value)) borrador.descartar()
+  if (conBorrador()) borrador.descartar()
   order.value.client = null
   items_to_save.value = []
   addOrderForm.value?.resetValidation()

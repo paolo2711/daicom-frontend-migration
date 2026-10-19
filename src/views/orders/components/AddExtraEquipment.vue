@@ -85,7 +85,7 @@ watch(dialogModel, async (abierto) => {
   const recuperado = await borrador.ofrecer()
   if (!recuperado) return
   await nextTick()
-  formRef.value?.inyectarBorrador(recuperado)
+  formRef.value?.cargarFilas(recuperado)
 })
 
 async function saveExtraEquipments() {

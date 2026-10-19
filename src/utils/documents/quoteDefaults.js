@@ -1,6 +1,6 @@
 import { hoyISO } from '@/utils/dates'
 
-export const CURRENT_QUOTE_SCHEMA = "1.4"
+export const CURRENT_QUOTE_SCHEMA = "1.5"
 
 // Los mismos topes que apps/documents/cotizacion.py: sin ellos una fila del PDF
 // podria ser mas alta que una hoja.
@@ -176,9 +176,11 @@ export const itemVacio = (unidad = "und") => ({
   observations: "",
   // El codigo de la acreditacion bajo la que se declara (apps/company/acreditaciones.py); vacio, ninguna.
   accreditation: "",
-  // El id del equipo maestro, si se eligio del catalogo: lo usa la orden. El
-  // nombre y el precio quedan como se eligieron. null si se escribio a mano.
-  equipo: null
+  // El id del equipo maestro y el tipo de servicio, si se eligio del catalogo:
+  // los usa la orden. El nombre y el precio quedan como se eligieron. null si
+  // se escribio a mano.
+  equipo: null,
+  tipo_servicio: null
 })
 
 export const quoteDefaultJSON = (kind = TIPO_POR_DEFECTO) => {

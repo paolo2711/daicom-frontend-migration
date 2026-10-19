@@ -48,6 +48,10 @@
           <span class="font-weight-bold">{{ item.nombre_tecnico }}</span>
         </template>
 
+        <template v-slot:item.laboratorio="{ item }">
+          <span :class="{ 'text-medium-emphasis': !item.laboratorio_data }">{{ item.laboratorio_data?.name || '—' }}</span>
+        </template>
+
         <template v-slot:item.servicios_count="{ item }">
           <v-chip size="small" :color="item.servicios?.length > 0 ? 'info' : 'grey'" variant="tonal" class="font-weight-bold">
             {{ item.servicios?.length || 0 }} Servicios
@@ -173,6 +177,7 @@ const servicioModalRef = ref(null)
 const headers = [
   { title: 'ID', key: 'id', width: '80px' },
   { title: 'Nombre Técnico del Equipo', key: 'nombre_tecnico' },
+  { title: 'Laboratorio', key: 'laboratorio' },
   { title: 'Catálogo', key: 'servicios_count', align: 'center' },
   { title: 'Opciones', key: 'actions', align: 'center', sortable: false },
   { title: '', key: 'data-table-expand' }

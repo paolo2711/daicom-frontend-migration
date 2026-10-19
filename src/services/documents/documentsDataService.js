@@ -24,6 +24,10 @@ class DocumentsDataService {
   cancel(id) {
     return axios.patch(`documents/${id}/anular/`, {}, { headers: authHeader() });
   }
+  // La orden de servicio que sale de una cotizacion: { client, filas, sin_pasar }.
+  orden(id) {
+    return axios.get(`documents/${id}/orden/`, { headers: authHeader() });
+  }
   // El PDF sin guardar, como archivo. Si el back lo rechaza, su respuesta se
   // lee como JSON: el error llega con la misma forma que al guardar.
   async vistaPrevia(data) {

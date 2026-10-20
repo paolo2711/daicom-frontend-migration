@@ -19,6 +19,24 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.8.1.0',
+    fecha: '2026-10-20',
+    nuevo: [
+      'Al escribir un ítem de la cotización se busca en el catálogo de precios y se pone su precio estándar; el corporativo queda a un clic.',
+      'Desde una cotización de servicio se crea la orden ya armada: un equipo por unidad, con su laboratorio y su tipo de certificado.',
+      'En Equipos los precios se descargan en Excel, se llenan filtrando por servicio y se suben para actualizarlos.',
+      'Cada equipo tiene el laboratorio que lo calibra: la orden y el certificado lo ponen solos al elegir el equipo.',
+      'Una cotización hecha fuera del sistema se puede subir en PDF y toma el correlativo que sigue.',
+      'Nuevos tipos de servicio en el catálogo: Verificación de operatividad y Alquiler (por día).',
+    ],
+    cambio: [
+      'Cambiar el catálogo de equipos (crear, editar, borrar y subir precios) necesita el permiso "Editar Catálogo de Equipos"; sin él tampoco se crean equipos desde Órdenes ni Certificados.',
+      'Las filas de la cotización y de la orden se ordenan arrastrándolas.',
+      'El nombre de cada servicio del catálogo se arma solo con su tipo, su equipo y su detalle.',
+      'En el PDF de la cotización las líneas son más suaves y el logo sale a su tamaño.',
+    ],
+  },
+  {
     version: '3.8.0.4',
     fecha: '2026-10-16',
     nuevo: [

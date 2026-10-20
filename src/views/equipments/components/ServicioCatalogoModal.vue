@@ -6,7 +6,7 @@
         <v-card-text class="pt-6">
           <v-select 
             v-model="form.tipo_servicio" 
-            :items="tipos" 
+            :items="tiposDeServicio" 
             item-title="title" 
             item-value="value"
             label="Tipo de Servicio *" 
@@ -77,6 +77,7 @@ import { ref, reactive } from 'vue'
 import Swal from 'sweetalert2'
 import ServicioCatalogoDataService from '@/services/equipments/servicioCatalogoDataService'
 import InnerCounter from '@/components/shared/InnerCounter.vue'
+import { useServiceTypes } from '@/composables/useServiceTypes'
 
 const emit = defineEmits(['reload'])
 const dialog = ref(false)
@@ -84,15 +85,8 @@ const isEdit = ref(false)
 const is_valid = ref(false)
 const is_saving = ref(false)
 const formRef = ref(null)
+const tiposDeServicio = useServiceTypes()
 
-const tipos = [
-  { title: 'Calibración', value: 1 },
-  { title: 'Mantenimiento Preventivo', value: 2 },
-  { title: 'Reparación', value: 3 },
-  { title: 'Paquete Integral (Calibración + Mant.)', value: 4 },
-  { title: 'Otros Servicios', value: 5 },
-  { title: 'Verificación de Operatividad', value: 6 },
-]
 // El mismo LARGO_DETALLE de ServicioCatalogo en el back.
 const LARGO_DETALLE = 120
 

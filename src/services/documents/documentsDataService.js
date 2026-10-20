@@ -1,5 +1,6 @@
 import axios from "axios";
 import authHeader from "@/services/auth-header";
+import { archivoDe } from "@/utils/files";
 
 class DocumentsDataService {
   create(data) {
@@ -28,18 +29,9 @@ class DocumentsDataService {
   orden(id) {
     return axios.get(`documents/${id}/orden/`, { headers: authHeader() });
   }
-  // El PDF sin guardar, como archivo. Si el back lo rechaza, su respuesta se
-  // lee como JSON: el error llega con la misma forma que al guardar.
-  async vistaPrevia(data) {
-    try {
-      const { data: pdf } = await axios.post("documents/vista-previa/", data, { headers: authHeader(), responseType: "blob" });
-      return pdf;
-    } catch (error) {
-      if (error.response?.data instanceof Blob) {
-        try { error.response.data = JSON.parse(await error.response.data.text()); } catch { /* no era JSON */ }
-      }
-      throw error;
-    }
+  // El PDF sin guardar, como archivo.
+  vistaPrevia(data) {
+    return archivoDe(axios.post("documents/vista-previa/", data, { headers: authHeader(), responseType: "blob" }));
   }
   // Una cotizacion hecha fuera del sistema: su PDF y los datos de la lista, en un FormData.
   subirCotizacion(formulario) {

@@ -3,6 +3,10 @@ import authHeader from "@/services/auth-header";
 
 class ServicioCatalogoDataService {
     // Los servicios activos que coinciden con el texto, paginados como espera usePaginatedSearch.
+    // ServicioCatalogo.TipoServicio: [{ value, title }].
+    tipos() {
+        return axios.get("equipments/servicios/tipos/", { headers: authHeader() });
+    }
     getFiltered(page, size, texto) {
         return axios.get("equipments/servicios/", { params: { page, page_size: size, search: texto }, headers: authHeader() });
     }

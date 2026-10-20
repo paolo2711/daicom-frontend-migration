@@ -222,6 +222,7 @@ import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
 import { useAppStore } from '@/stores/appStore'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import { mensajeDeError } from '@/utils/errors'
+import { guardarArchivo } from '@/utils/files'
 import { cancelable, detenida, enCurso, esBaja, esConversion, esperandoRevision, fallida, reintentable, terminada, yaRevisada } from '@/utils/uploadTasks'
 
 const appStore = useAppStore()
@@ -422,17 +423,10 @@ watch(() => tareaEnElVisor.value && yaRevisada(tareaEnElVisor.value), (revisada)
   if (revisada && preview_modal.value && !guardando.value) preview_modal.value = false
 })
 
-// Por blob: es del mismo origen, asi que respeta el nombre elegido tambien en
-// dev, donde el PDF lo sirve otro puerto.
 async function downloadPreview() {
   try {
     const respuesta = await fetch(preview_url.value)
-    const url = URL.createObjectURL(await respuesta.blob())
-    const enlace = document.createElement('a')
-    enlace.href = url
-    enlace.download = preview_final_name.value + '.pdf'
-    enlace.click()
-    URL.revokeObjectURL(url)
+    guardarArchivo(await respuesta.blob(), preview_final_name.value + '.pdf')
   } catch {
     window.open(preview_url.value, '_blank')
   }

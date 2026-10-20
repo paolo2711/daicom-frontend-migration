@@ -22,7 +22,7 @@
                             label="Equipo" :return-object="false" item-title="name" item-value="id"
                             density="compact" variant="outlined" hide-details="auto"
                             prepend-inner-icon="mdi-toolbox-outline" clearable>
-              <template #append>
+              <template v-if="puedeCrearEquipo" #append>
                 <add-new-button texto="Nuevo equipo en el catálogo" @click="equipoMaestroModalRef?.open()" />
               </template>
             </paginated-autocomplete>
@@ -150,6 +150,8 @@ import { TIPOS_CERTIFICADO, nombreDelTipo } from '@/utils/certificates/tipos'
 import { vivo } from '@/utils/certificates/estado'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useRowDrag } from '@/composables/useRowDrag'
+import { usePermissions } from '@/composables/usePermissions'
+import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
 
 const emit = defineEmits(['update-list', 'update-config'])
 
@@ -174,6 +176,8 @@ const semillaDeEquipo = (nombre) => (nombre ? { id: nombre, name: nombre } : nul
 const equipCatalogRef = ref(null)      // para recargar el catálogo tras crear un equipo
 const labSeleccionado = ref(null)      // objeto del lab elegido, semilla de su desplegable
 const equipoMaestroModalRef = ref(null)
+// Un equipo nuevo en el catalogo es parte de editarlo: sin el permiso, se pide a quien lo tenga.
+const puedeCrearEquipo = usePermissions().hasAction(EDITAR_CATALOGO)
 
 // El equipo trae el laboratorio que lo calibra; sin uno, queda el ya elegido.
 function conSuLaboratorio(equipo) {

@@ -63,7 +63,7 @@
                 prepend-inner-icon="mdi-toolbox-outline"
                 clearable
               >
-                <template #append>
+                <template v-if="puedeCrearEquipo" #append>
                   <add-new-button texto="Nuevo equipo en el catálogo" @click="equipoMaestroModalRef?.open()" />
                 </template>
               </paginated-autocomplete>
@@ -123,6 +123,8 @@ import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal.vue'
 import EquipmentDataService from '@/services/equipments/equipmentDataService.js'
 import EquipmentMappers from '@/mappers/equipmentMappers.js'
+import { usePermissions } from '@/composables/usePermissions'
+import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
 import LabDataService from '@/services/labs/labDataService.js'
 import LabMappers from '@/mappers/labMappers.js'
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
@@ -154,6 +156,8 @@ const tipoNuevo = ref(1)
 const correlativoNuevo = ref('')
 
 const equipoMaestroModalRef = ref(null)
+// Un equipo nuevo en el catalogo es parte de editarlo: sin el permiso, se pide a quien lo tenga.
+const puedeCrearEquipo = usePermissions().hasAction(EDITAR_CATALOGO)
 const batchActionModalRef = ref(null)
 const equipCatalogRef = ref(null)
 const labComboRef = ref(null)

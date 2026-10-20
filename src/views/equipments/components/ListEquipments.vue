@@ -12,9 +12,17 @@
         style="max-width: 300px;"
       />
       <v-spacer />
-      <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" @click="equipoModalRef?.open()">
-        NUEVO EQUIPO MAESTRO
-      </v-btn>
+      <template v-if="puedeEditar">
+        <v-btn variant="outlined" prepend-icon="mdi-file-download-outline" class="mr-2" @click="descargaModalRef?.open()">
+          Descargar precios
+        </v-btn>
+        <v-btn variant="outlined" prepend-icon="mdi-file-upload-outline" class="mr-2" @click="preciosModalRef?.open()">
+          Subir precios
+        </v-btn>
+        <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" @click="equipoModalRef?.open()">
+          NUEVO EQUIPO MAESTRO
+        </v-btn>
+      </template>
     </div>
 
     <table-loading-overlay :loading="loading" :isEmpty="equipos.length === 0">
@@ -102,7 +110,7 @@
                     Menú Comercial: {{ item.nombre_tecnico }}
                   </span>
                   <v-spacer/>
-                  <v-btn size="x-small" color="secondary" variant="flat" class="text-white" @click="servicioModalRef?.open(null, item.id)">
+                  <v-btn v-if="puedeEditar" size="x-small" color="secondary" variant="flat" class="text-white" @click="servicioModalRef?.open(null, item.id)">
                     <v-icon start size="x-small">mdi-plus</v-icon> Añadir Servicio
                   </v-btn>
                 </v-toolbar>
@@ -114,7 +122,7 @@
                       <th class="text-overline">NOMBRE EN LA COTIZACIÓN</th>
                       <th class="text-right text-overline">P. ESTÁNDAR</th>
                       <th class="text-right text-overline">P. CORPORATIVO</th>
-                      <th class="text-center text-overline"><v-icon size="small">mdi-dots-vertical</v-icon></th>
+                      <th v-if="puedeEditar" class="text-center text-overline"><v-icon size="small">mdi-dots-vertical</v-icon></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -123,7 +131,7 @@
                       <td style="max-width: 300px;" class="text-truncate" :title="serv.nombre">{{ serv.nombre }}</td>
                       <td class="text-right font-weight-bold">S/ {{ formatMoney(serv.precio_estandar) }}</td>
                       <td class="text-right font-weight-bold text-primary">S/ {{ formatMoney(serv.precio_corporativo) }}</td>
-                      <td class="text-center">
+                      <td v-if="puedeEditar" class="text-center">
                         <v-btn icon variant="text" density="comfortable" size="x-small" color="primary" @click="servicioModalRef?.open(serv, item.id)">
                           <v-icon>mdi-pencil</v-icon>
                         </v-btn>
@@ -147,6 +155,8 @@
     <!-- Modales -->
     <equipo-maestro-modal ref="equipoModalRef" @reload="retrieveAll" />
     <servicio-catalogo-modal ref="servicioModalRef" @reload="retrieveAll" />
+    <descargar-precios-modal ref="descargaModalRef" />
+    <subir-precios-modal ref="preciosModalRef" @reload="retrieveAll" />
   </v-card>
 </template>
 
@@ -158,10 +168,14 @@ import FluentPagination from '@/components/commonComponents/FluentPagination.vue
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import EquipoMaestroModal from './EquipoMaestroModal.vue'
 import ServicioCatalogoModal from './ServicioCatalogoModal.vue'
+import DescargarPreciosModal from './DescargarPreciosModal.vue'
+import SubirPreciosModal from './SubirPreciosModal.vue'
 
 import EquipmentDataService from '@/services/equipments/equipmentDataService'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import ServicioCatalogoDataService from '@/services/equipments/servicioCatalogoDataService'
+import { usePermissions } from '@/composables/usePermissions'
+import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
 
 const search = ref('')
 const loading = ref(false)
@@ -173,13 +187,18 @@ let debounceSearch = null
 
 const equipoModalRef = ref(null)
 const servicioModalRef = ref(null)
+const preciosModalRef = ref(null)
+const descargaModalRef = ref(null)
+
+// Ver el catalogo es para todos; cambiarlo, con el permiso.
+const puedeEditar = usePermissions().hasAction(EDITAR_CATALOGO)
 
 const headers = [
   { title: 'ID', key: 'id', width: '80px' },
   { title: 'Nombre Técnico del Equipo', key: 'nombre_tecnico' },
   { title: 'Laboratorio', key: 'laboratorio' },
   { title: 'Catálogo', key: 'servicios_count', align: 'center' },
-  { title: 'Opciones', key: 'actions', align: 'center', sortable: false },
+  ...(puedeEditar ? [{ title: 'Opciones', key: 'actions', align: 'center', sortable: false }] : []),
   { title: '', key: 'data-table-expand' }
 ]
 

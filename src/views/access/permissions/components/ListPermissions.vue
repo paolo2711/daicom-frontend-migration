@@ -82,6 +82,7 @@ import { useAppStore } from '@/stores/appStore'
 import SidebarItems from '@/layouts/full-layout/sidebar/SidebarItems'
 import PermissionDataService from '@/services/permissions/permissionDataService'
 import { mensajeDeError } from '@/utils/errors'
+import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
 
 const theme = useTheme()
 const appStore = useAppStore()
@@ -111,6 +112,9 @@ const ACCIONES_CATEGORIAS = [
   ]},
   { name: 'Inventario', acciones: [
     { id: 1007, name: 'Eliminar Equipos', endpoint: 'ELIMINAR_EQUIPO' },
+  ]},
+  { name: 'Equipos', acciones: [
+    { id: EDITAR_CATALOGO, name: 'Editar Catálogo de Equipos', endpoint: 'EDITAR_CATALOGO_EQUIPOS' },
   ]},
   { name: 'Administración', soloSuperAdmin: true, acciones: [
     { id: 1008, name: 'Gestionar Usuarios', endpoint: 'GESTIONAR_USUARIOS' },

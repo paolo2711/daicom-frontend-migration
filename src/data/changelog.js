@@ -19,6 +19,19 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.8.1.1',
+    fecha: '2026-10-21',
+    cambio: [
+      'En una cotización con muchos ítems la pantalla ya no se congela al escribir ni al arrastrar.',
+      'La pestaña de ítems se abre completa: mientras se prepara, la pestaña muestra un círculo de carga.',
+      'La ventana de la cotización mantiene su tamaño al cambiar de pestaña.',
+      'La lista de documentos se ordena por fecha y número.',
+    ],
+    arreglo: [
+      'Al arrastrar un ítem hacia arriba, la lista se desplaza sola, igual que hacia abajo.',
+    ],
+  },
+  {
     version: '3.8.1.0',
     fecha: '2026-10-20',
     nuevo: [

@@ -24,6 +24,13 @@ export default defineConfig([
   js.configs.recommended,
   ...pluginVue.configs['flat/essential'],
 
+  {
+    rules: {
+      // Una fila edita los campos de su item; reemplazar el prop entero si es error.
+      'vue/no-mutating-props': ['error', { shallowOnly: true }],
+    },
+  },
+
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),
 
   skipFormatting,

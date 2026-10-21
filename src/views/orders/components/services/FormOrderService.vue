@@ -85,46 +85,10 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(eq, index) in equipments" :key="clave(eq)" v-bind="arrastrable(index)"
-            :class="{ 'fila-con-error': errores[index] }">
-          <td class="text-no-wrap">
-            <drag-handle v-bind="asa(index)" class="mr-1" />
-            <span v-if="eq.modo === 'nuevo'" class="numero-estimado">{{ conCeros(estimadoDe(index)) }}</span>
-            <span v-else class="font-weight-medium">{{ eq.registry_code }}</span>
-          </td>
-          <td>
-            <paginated-autocomplete v-if="eq.modo === 'nuevo'" v-model="eq.name" :fetch="fetchEquipments"
-                                    :mapper="EquipmentMappers.getMap" recurso="equipos" :seed="semillaDeEquipo(eq.name)"
-                                    :return-object="false" item-title="name" item-value="id"
-                                    variant="plain" density="compact" hide-details />
-            <template v-else>
-              <span class="text-subtitle-2">{{ eq.name }}</span>
-              <span class="text-caption text-medium-emphasis"> · vinculado</span>
-            </template>
-            <div v-if="errores[index]" class="text-caption text-error">{{ errores[index] }}</div>
-          </td>
-          <template v-if="eq.modo === 'nuevo'">
-            <td>
-              <paginated-autocomplete v-model="eq.lab" :fetch="fetchLabs" :mapper="LabMappers.getMap"
-                                      recurso="labs" :seed="eq.lab_data" @selected="l => eq.lab_data = l"
-                                      :return-object="false" item-title="name" item-value="id"
-                                      variant="plain" density="compact" hide-details />
-            </td>
-            <td>
-              <v-select v-model="eq.certificate_type" :items="TIPOS_CERTIFICADO"
-                        variant="plain" density="compact" hide-details />
-            </td>
-          </template>
-          <template v-else>
-            <td class="text-medium-emphasis">{{ eq.lab_data?.name || '—' }}</td>
-            <td class="text-medium-emphasis">{{ nombreDelTipo(eq.certificate_type) }}</td>
-          </template>
-          <td class="text-right">
-            <v-btn icon size="x-small" variant="text" color="red" density="comfortable" @click="equipments.splice(index, 1)">
-              <v-icon>mdi-delete</v-icon>
-            </v-btn>
-          </td>
-        </tr>
+        <row-order-service v-for="(eq, index) in equipments" :key="clave(eq)"
+                           v-bind="arrastrable(index)" :class="claseDe(index)" :eq="eq" :indice="index"
+                           :estimado="numerosEstimados[index]" :error="errores[index]" :asa="asa(index)"
+                           @borrar="borrarFila" />
       </tbody>
     </v-table>
 
@@ -139,14 +103,14 @@ import { useTheme } from 'vuetify'
 import LabDataService from '@/services/labs/labDataService'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
-import DragHandle from '@/components/shared/DragHandle.vue'
+import RowOrderService from './RowOrderService.vue'
 import LabMappers from '@/mappers/labMappers'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import EquipmentDataService from '@/services/equipments/equipmentDataService'
 import EquipmentMappers from '@/mappers/equipmentMappers'
 import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal.vue'
 import CorrelativeDataService from '@/services/correlative/correlativeDataService'
-import { TIPOS_CERTIFICADO, nombreDelTipo } from '@/utils/certificates/tipos'
+import { TIPOS_CERTIFICADO } from '@/utils/certificates/tipos'
 import { vivo } from '@/utils/certificates/estado'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useRowDrag } from '@/composables/useRowDrag'
@@ -166,7 +130,8 @@ const buscando_cert          = ref(false)
 const base_correlatives      = ref({ 1: null, 2: null, 3: null })
 const equipments             = ref([])
 const { errores, marcarErrores } = useRowErrors(equipments)
-const { asa, arrastrable, clave } = useRowDrag(equipments)
+const { asa, arrastrable, claseDe, clave } = useRowDrag(equipments)
+const borrarFila = (indice) => equipments.value.splice(indice, 1)
 
 // Comboboxes server-side
 const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)
@@ -206,6 +171,7 @@ const siguienteEstimado = computed(() => {
 })
 
 const estimados = () => equipments.value.map((e, i) => (e.modo === 'nuevo' ? estimadoDe(i) : null))
+const numerosEstimados = computed(() => estimados().map(n => conCeros(n)))
 
 watch(equipments, (val) => { emit('update-list', val) }, { deep: true })
 
@@ -296,10 +262,3 @@ function addEquipmentToBatch() {
 
 defineExpose({ cargarFilas, marcarErrores, estimados })
 </script>
-
-<style scoped>
-.numero-estimado {
-  font-family: monospace;
-  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
-}
-</style>

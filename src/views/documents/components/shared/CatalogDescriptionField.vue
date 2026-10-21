@@ -1,7 +1,7 @@
 <template>
   <div ref="campo" class="position-relative">
-    <v-textarea :model-value="fila.description" :placeholder="placeholder" :maxlength="maxlength" rows="1" auto-grow
-                density="compact" variant="outlined" hide-details :loading="loading && abierto"
+    <v-textarea :model-value="fila.description" :placeholder="placeholder" :maxlength="maxlength" rows="1" no-resize
+                density="compact" variant="outlined" hide-details class="crece-con-texto" :loading="loading && abierto"
                 @update:model-value="escribir" @focus="enfocado = true" @blur="enfocado = false"
                 @keydown.esc="cerrado = true">
       <template v-if="fila.equipo" #prepend-inner>
@@ -10,7 +10,7 @@
       <template #append-inner><inner-counter :valor="fila.description" :max="maxlength" /></template>
     </v-textarea>
     <v-menu :model-value="abierto" activator="parent" :open-on-click="false" location="bottom start"
-            :width="campo?.offsetWidth" max-height="320">
+            :width="anchoDelMenu" max-height="320">
       <v-list>
         <v-list-item v-for="s in items" :key="s.id" :title="s.nombre" @mousedown.prevent @click="elegir(s)"
                      :subtitle="`Estándar ${monto(s.precio_estandar)} · Corporativo ${monto(s.precio_corporativo)}`" />
@@ -21,7 +21,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import InnerCounter from '@/components/shared/InnerCounter.vue'
 import MoreResultsHint from '@/components/shared/MoreResultsHint.vue'
 import ServicioCatalogoDataService from '@/services/equipments/servicioCatalogoDataService'
@@ -52,6 +52,10 @@ const cerrado = ref(false)
 const termino = computed(() => (props.fila.description || '').trim())
 const abierto = computed(() => enfocado.value && !cerrado.value && !props.fila.equipo
   && termino.value.length >= LETRAS_PARA_BUSCAR && searchQuery.value === termino.value && items.value.length > 0)
+
+// Se mide al abrir: leer el ancho en cada dibujo obliga a recalcular toda la pagina.
+const anchoDelMenu = ref(undefined)
+watch(abierto, (si) => { if (si) anchoDelMenu.value = campo.value?.offsetWidth })
 
 function escribir (texto) {
   props.fila.description = texto

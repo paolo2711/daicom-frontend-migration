@@ -53,3 +53,15 @@ div.cae-antes {
 div.cae-despues {
   box-shadow: inset 0 -0.125rem 0 rgb(var(--v-theme-primary));
 }
+
+// Crece con su texto y lo calcula el navegador: en una lista larga no se mide
+// cada campo con JavaScript al abrir.
+.crece-con-texto textarea {
+  field-sizing: content;
+}
+
+// El numero que tomaria un certificado al guardar la orden.
+.numero-estimado {
+  font-family: monospace;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}

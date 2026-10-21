@@ -80,32 +80,9 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(item, index) in rentals" :key="clave(item)" v-bind="arrastrable(index)"
-            :class="{ 'fila-con-error': errores[index] }">
-          <td class="text-no-wrap"><drag-handle v-bind="asa(index)" class="mr-1" /><strong>{{ item.internal_id }}</strong></td>
-          <td>
-            {{ item.name }}
-            <v-text-field v-model="item.delivery_notes" placeholder="Sin observaciones" variant="plain"
-                          density="compact" hide-details class="observaciones" />
-            <div v-if="errores[index]" class="text-caption text-error">{{ errores[index] }}</div>
-          </td>
-          <td>{{ item.series || '—' }}</td>
-          <td>
-            <v-text-field v-model="item.departure_date" type="date" :max="hoy" :rules="[reglaNoFutura(hoy)]"
-                          :hint="item.departure_date ? '' : salidaDe(item)" persistent-hint
-                          variant="plain" density="compact" hide-details="auto" />
-          </td>
-          <td>
-            <v-text-field v-model="item.expected_return_date" type="date" :min="item.departure_date || undefined"
-                          :rules="[reglaNoAntesDe(item.departure_date)]"
-                          variant="plain" density="compact" hide-details="auto" />
-          </td>
-          <td class="text-right">
-            <v-btn icon size="x-small" variant="text" color="red" density="comfortable" @click="rentals.splice(index, 1)">
-              <v-icon>mdi-delete</v-icon>
-            </v-btn>
-          </td>
-        </tr>
+        <row-order-rental v-for="(item, index) in rentals" :key="clave(item)"
+                          v-bind="arrastrable(index)" :class="claseDe(index)" :item="item" :indice="index"
+                          :error="errores[index]" :asa="asa(index)" @borrar="borrarFila" />
       </tbody>
     </v-table>
   <add-equipment ref="addEquipmentModalRef" @saved="equipComboRef?.reload()" />
@@ -118,11 +95,11 @@ import { useTheme } from 'vuetify'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
-import DragHandle from '@/components/shared/DragHandle.vue'
+import RowOrderRental from './RowOrderRental.vue'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useRowDrag } from '@/composables/useRowDrag'
 import { hoyISO } from '@/utils/dates'
-import { FECHAS_ALQUILER, reglaNoAntesDe, reglaNoFutura, salidaDe } from '@/utils/orders/alquiler'
+import { FECHAS_ALQUILER, reglaNoAntesDe, reglaNoFutura } from '@/utils/orders/alquiler'
 
 const AddEquipment = defineAsyncComponent(() => import('@/views/inventory/components/AddEquipment.vue'))
 const addEquipmentModalRef = ref(null)
@@ -144,7 +121,8 @@ const temp_rental = ref({
 })
 const rentals        = ref([])
 const { errores, marcarErrores } = useRowErrors(rentals)
-const { asa, arrastrable, clave } = useRowDrag(rentals)
+const { asa, arrastrable, claseDe, clave } = useRowDrag(rentals)
+const borrarFila = (indice) => rentals.value.splice(indice, 1)
 
 watch(rentals, (val) => { emit('update-list', val) }, { deep: true })
 
@@ -187,10 +165,3 @@ function addRentalToBatch() {
 defineExpose({ marcarErrores })
 </script>
 
-<style scoped>
-.observaciones :deep(input) {
-  font-size: 0.75rem;
-  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
-  padding-top: 0;
-}
-</style>

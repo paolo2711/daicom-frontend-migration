@@ -1,6 +1,6 @@
 <template>
-  <v-dialog v-model="dialog" class="dialog-premium" width="1100" persistent>
-    <v-card style="max-height: 95vh; display: flex; flex-direction: column;">
+  <v-dialog v-model="dialog" class="dialog-premium" width="1100" height="min(95vh, 900px)" persistent>
+    <v-card style="display: flex; flex-direction: column;">
       <base-modal-header :title="titulo" :icon="tipo.icono" @close="close">
         <span>
           <template v-if="!numero && numeroNuevo">
@@ -10,29 +10,29 @@
         </span>
       </base-modal-header>
 
-      <v-tabs v-model="tab" bg-color="transparent" color="primary" class="border-b-thin mx-4 mt-2 flex-shrink-0">
+      <v-tabs :model-value="tab" bg-color="transparent" color="primary" class="border-b-thin mx-4 mt-2 flex-shrink-0"
+              @update:model-value="irA">
         <v-tab value="datos" prepend-icon="mdi-domain">Cliente y condiciones</v-tab>
         <v-tab value="servicios" prepend-icon="mdi-format-list-bulleted">
           {{ tipo.etiquetaItems }}
-          <v-chip size="x-small" variant="tonal" class="ml-2" :color="hayErrores ? 'error' : undefined">{{ cantidadDeItems }}</v-chip>
+          <span v-if="armando" class="circulo-de-carga ml-2" />
+          <v-chip v-else size="x-small" variant="tonal" class="ml-2" :color="hayErrores ? 'error' : undefined">{{ cantidadDeItems }}</v-chip>
         </v-tab>
         <v-tab value="terminos" prepend-icon="mdi-script-text-outline">Términos</v-tab>
       </v-tabs>
 
       <v-card-text class="pt-4" style="overflow-y: auto; flex-grow: 1; min-height: 0;">
-        <v-window v-model="tab" class="ventana-de-pestanas">
-          <v-window-item value="datos">
-            <billing-client-panel v-model:meta="cotizacion.meta" v-model:billing="cotizacion.billing_client"
-                                  v-model:certificate="cotizacion.certificate_data" v-model:clientId="clienteId" />
-          </v-window-item>
-          <v-window-item value="servicios">
-            <services-table v-model:items="cotizacion.items" :totales="totales" :moneda="cotizacion.meta.currency"
-                            :igv="cotizacion.totals.igv_percent" :errores="errores" :tipo="tipo" />
-          </v-window-item>
-          <v-window-item value="terminos">
-            <commercial-terms-panel v-model:quote="cotizacion" />
-          </v-window-item>
-        </v-window>
+        <div class="pestana" :class="{ 'pestana--oculta': tab !== 'datos' }">
+          <billing-client-panel v-model:meta="cotizacion.meta" v-model:billing="cotizacion.billing_client"
+                                v-model:certificate="cotizacion.certificate_data" v-model:clientId="clienteId" />
+        </div>
+        <div class="pestana" :class="{ 'pestana--oculta': tab !== 'servicios' }">
+          <services-table v-if="tablaArmada" v-model:items="cotizacion.items" :totales="totales" :moneda="cotizacion.meta.currency"
+                          :igv="cotizacion.totals.igv_percent" :errores="errores" :tipo="tipo" />
+        </div>
+        <div class="pestana" :class="{ 'pestana--oculta': tab !== 'terminos' }">
+          <commercial-terms-panel v-model:quote="cotizacion" />
+        </div>
       </v-card-text>
 
       <v-card-actions class="px-6 pb-4 pt-2 border-t-thin flex-shrink-0">
@@ -106,6 +106,23 @@ const hayErrores = computed(() => Object.keys(errores.value).length > 0)
 
 const titulo = computed(() => (numero.value ? `Editar ${numero.value}` : `Nueva cotización de ${tipo.value.texto.toLowerCase()}`))
 
+// Los items se arman en la pestaña oculta y recien ahi se cambia: con muchas
+// filas no se ve ni se usa a medio armar.
+const tablaArmada = ref(false)
+const armando = ref(false)
+const trasPintar = () => new Promise(listo => requestAnimationFrame(() => setTimeout(listo)))
+async function irA (pestana) {
+  if (armando.value) return
+  if (pestana === 'servicios' && !tablaArmada.value) {
+    armando.value = true
+    await trasPintar()
+    tablaArmada.value = true
+    await trasPintar()
+    armando.value = false
+  }
+  tab.value = pestana
+}
+
 // Lo que se va escribiendo queda en el navegador hasta guardar o cancelar: si
 // se cierra la pestaña, se ofrece al volver a abrir la misma cotizacion.
 const borrador = useLocalDraft(
@@ -133,6 +150,7 @@ async function open (documento = null, kind = TIPO_POR_DEFECTO) {
   clienteId.value = documento?.client || null
   cotizacion.value = documento ? cotizacionDe(documento.document_data) : quoteDefaultJSON(kind)
   tab.value = 'datos'
+  tablaArmada.value = false
   dialog.value = true
 
   const recuperado = await borrador.ofrecer()
@@ -160,7 +178,7 @@ function mostrarRechazo (error, encabezado, porDefecto) {
   const filas = error.response?.data?.filas
   if (filas) {
     marcarErrores(filas)
-    tab.value = 'servicios'
+    irA('servicios')
     vistaPrevia.value = false
   }
   swal.fire({ icon: 'error', title: encabezado, text: mensajeDeError(error, porDefecto) })
@@ -211,7 +229,9 @@ defineExpose({ open })
 </script>
 
 <style scoped>
-/* v-window trae overflow: hidden, que no deja quedar fija ninguna barra adentro
-   (la de los items); clip recorta igual el cambio de pestaña. */
-.ventana-de-pestanas { overflow: clip; }
+/* La oculta sigue armada y medida: mostrarla no recalcula sus filas. */
+.pestana--oculta { visibility: hidden; height: 0; overflow: hidden; }
+/* La opacidad la anima el navegador aparte, sin redibujar las filas. */
+.pestana:not(.pestana--oculta) { animation: aparecer 0.15s ease-out; }
+@keyframes aparecer { from { opacity: 0; } }
 </style>

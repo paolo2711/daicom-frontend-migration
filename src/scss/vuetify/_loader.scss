@@ -38,15 +38,27 @@
     right: 50%;
   }
   .spinner-icon {
+    @extend %circulo-que-gira;
     width: 40px;
     height: 40px;
-    box-sizing: border-box;
-    border: solid 2px transparent;
-    border-top-color: $primary;
-    border-left-color: $primary;
-    border-radius: 50%;
-    animation: nprogress-spinner 400ms linear infinite;
+    color: $primary;
   }
+}
+
+// Solo anima transform: el navegador lo gira aparte, aunque la pagina este ocupada.
+%circulo-que-gira {
+  display: inline-block;
+  box-sizing: border-box;
+  border: solid 2px transparent;
+  border-top-color: currentColor;
+  border-left-color: currentColor;
+  border-radius: 50%;
+  animation: nprogress-spinner 400ms linear infinite;
+}
+.circulo-de-carga {
+  @extend %circulo-que-gira;
+  width: 16px;
+  height: 16px;
 }
 .nprogress-custom-parent {
   overflow: hidden;

@@ -1,4 +1,7 @@
-import { getCurrentInstance } from 'vue'
+import { getCurrentInstance, onBeforeUnmount } from 'vue'
+import { debounce } from '@/utils/debounce'
+
+const ESPERA = 1000
 
 // Sin almacenamiento (modo privado, bloqueado) simplemente no hay borrador.
 const intentar = (accion) => {
@@ -18,15 +21,29 @@ export function useLocalDraft(clave, { resumen = equiposSinGuardar } = {}) {
   // Hasta ofrecer el anterior no se guarda nada: el modal vacio que se abre lo pisaria.
   let activo = false
 
-  const guardar = (datos) => activo && intentar(() => localStorage.setItem(clave(), JSON.stringify(datos)))
+  // Se escribe al dejar de editar: serializar todo en cada tecla traba las listas largas.
+  const escribir = debounce((llave, datos) => {
+    if (activo) intentar(() => localStorage.setItem(llave, JSON.stringify(datos)))
+  }, ESPERA)
+  const guardar = (datos) => activo && escribir(clave(), datos)
   const descartar = () => {
     activo = false
+    escribir.cancelar()
     intentar(() => localStorage.removeItem(clave()))
   }
+
+  // Lo pendiente no se pierde al cerrar la pestaña ni al cambiar de pagina.
+  const alOcultar = () => { if (document.visibilityState === 'hidden') escribir.ya() }
+  document.addEventListener('visibilitychange', alOcultar)
+  onBeforeUnmount(() => {
+    escribir.ya()
+    document.removeEventListener('visibilitychange', alOcultar)
+  })
   const leer = () => intentar(() => JSON.parse(localStorage.getItem(clave())))
 
   // El borrador si tiene algo y el usuario lo quiere; si no, se descarta.
   const ofrecer = async () => {
+    escribir.ya()
     activo = false
     const borrador = leer()
     const texto = borrador ? resumen(borrador) : ''

@@ -1,7 +1,7 @@
 <template>
   <span v-if="filas.length" class="text-body-2 text-medium-emphasis">
     <span class="font-weight-bold text-high-emphasis">{{ cuantosEquipos(filas.length) }}</span>
-    <template v-if="porTipo"> · {{ resumenPorTipo(filas) }}</template>
+    <template v-if="porTipo && resumenPorTipo(filas)"> · {{ resumenPorTipo(filas) }}</template>
   </span>
 </template>
 

@@ -49,6 +49,10 @@ class OrderDataService {
         return axios.post(`orders/${id}/equipos`, { items }, { headers });
     }
 
+    servicios() {
+        return axios.get('orders/servicios', { headers: authHeader() });
+    }
+
     siguienteNumero(orderType) {
         return axios.get('orders/siguiente-numero', { params: { order_type: orderType }, headers: authHeader() });
     }

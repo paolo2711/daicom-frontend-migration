@@ -1,9 +1,12 @@
 <template>
-  <v-dialog v-model="dialogModel" class="dialog-premium" width="950" persistent>
-    <v-card style="max-height: 90vh; display: flex; flex-direction: column;">
+  <v-dialog v-model="dialogModel" class="dialog-premium" :fullscreen="pantallaCompleta"
+            width="92%" :max-width="pantallaCompleta ? undefined : '80rem'" persistent>
+    <v-card class="d-flex flex-column" :style="pantallaCompleta ? 'height: 100%;' : 'max-height: 90vh;'">
       <base-modal-header title="Añadir Equipos Extra a la Orden" icon="mdi-plus-box-multiple" @close="close" />
 
-      <v-card-text class="pt-4 pb-2 bg-surface" style="overflow-y: auto; flex-grow: 1;">
+      <v-card-text class="pt-4 pb-2 d-flex flex-column" :class="pantallaCompleta ? 'pantalla-de-trabajo' : 'bg-surface'"
+                   style="flex-grow: 1; min-height: 0;"
+                   :style="{ overflowY: pantallaCompleta ? 'hidden' : 'auto' }">
         <form-order-rental
           v-if="isRental"
           ref="formRef"
@@ -13,21 +16,23 @@
 
         <form-order-service
           v-else
+          class="columna-de-trabajo"
           ref="formRef"
           :key="'extra-service-' + dialogModel"
           @update-list="list => items_to_save = list"
-          @update-config="c => config = c"
         />
       </v-card-text>
 
-      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin flex-wrap ga-2">
-        <resumen-equipos :filas="items_to_save" :por-tipo="!isRental" />
-        <v-spacer/>
-        <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
-        <v-btn color="primary" variant="flat" class="font-weight-bold px-4" @click="saveExtraEquipments"
-               :disabled="items_to_save.length === 0" :loading="loading_extra">
-          Guardar equipos
-        </v-btn>
+      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin">
+        <div class="d-flex flex-wrap align-center ga-2" :class="pantallaCompleta ? 'columna-de-trabajo' : 'w-100'">
+          <resumen-equipos :filas="items_to_save" :por-tipo="!isRental" />
+          <v-spacer/>
+          <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
+          <v-btn color="primary" variant="flat" class="font-weight-bold px-4" @click="saveExtraEquipments"
+                 :disabled="items_to_save.length === 0 || (!isRental && sinServicio(items_to_save))" :loading="loading_extra">
+            Guardar equipos
+          </v-btn>
+        </div>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -42,6 +47,7 @@ import { esAlquiler } from '@/utils/orders/estado'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
 import ResumenEquipos, { cuantosEquipos } from './ResumenEquipos.vue'
+import { sinServicio } from '@/composables/useOrderServices'
 import OrderDataService from "@/services/orders/orderDataService"
 
 const props = defineProps({
@@ -57,7 +63,6 @@ const avisarNumeros = useSavedNumbers()
 
 const loading_extra = ref(false)
 const items_to_save = ref([])
-const config = ref(null)
 const formRef = ref(null)
 
 const dialogModel = computed({
@@ -67,18 +72,18 @@ const dialogModel = computed({
 
 // Computado para saber si la orden recibida es de Alquiler
 const isRental = computed(() => esAlquiler(props.order))
+const pantallaCompleta = computed(() => !isRental.value)
 
 // Uno por orden: lo cargado para una no aparece al abrir otra.
 const borrador = useLocalDraft(() => `daicom_borrador_equipos_${props.order?.id}`)
 
-watch([items_to_save, config], ([items, elegido]) => {
-  if (!isRental.value) borrador.guardar({ items, config: elegido })
+watch(items_to_save, (items) => {
+  if (!isRental.value) borrador.guardar({ items })
 }, { deep: true })
 
 watch(dialogModel, async (abierto) => {
   if (!abierto) {
     items_to_save.value = []
-    config.value = null
     return
   }
   if (isRental.value) return

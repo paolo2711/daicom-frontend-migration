@@ -1,44 +1,50 @@
 <template>
-  <v-dialog width="1000" v-model="dialog" class="dialog-premium" persistent>
-    <v-card style="max-height: 90vh; display: flex; flex-direction: column;">
+  <v-dialog v-model="dialog" class="dialog-premium" :fullscreen="pantallaCompleta"
+            width="92%" :max-width="pantallaCompleta ? undefined : '80rem'" persistent>
+    <v-card class="d-flex flex-column" :style="pantallaCompleta ? 'height: 100%;' : 'max-height: 90vh;'">
       <base-modal-header :title="`Generar Orden de ${esDeServicio(order) ? 'Servicio' : 'Alquiler'}`" icon="mdi-file-document-plus" @close="close">
         <span v-if="next_order_number">Sig. Orden: <span class="font-weight-bold text-primary ml-1">{{ next_order_number }}</span></span>
       </base-modal-header>
 
-      <v-card-text class="pt-4" style="overflow-y: auto; flex-grow: 1;">
-        <v-form ref="addOrderForm" v-model="is_valid" @submit.prevent>
+      <v-card-text class="pt-4 d-flex flex-column" :class="{ 'pantalla-de-trabajo': pantallaCompleta }"
+                   style="flex-grow: 1; min-height: 0;"
+                   :style="{ overflowY: pantallaCompleta ? 'hidden' : 'auto' }">
+        <v-form ref="addOrderForm" v-model="is_valid" class="d-flex flex-column flex-grow-1"
+                :class="{ 'columna-de-trabajo': pantallaCompleta }" style="min-height: 0;"
+                @submit.prevent>
 
-          <v-row align="start" dense>
-            <v-col cols="12">
-              <ClientLookupBar v-model="order.client" creatable />
-            </v-col>
-          </v-row>
-
-          <div v-if="sinPasar.length" class="text-caption text-medium-emphasis mt-2">
-            No pasaron a la orden: {{ sinPasar.join(', ') }}
-          </div>
+          <form-order-service ref="formRef" v-if="esDeServicio(order)" :key="'srv-'+dialog"
+                              @update-list="list => items_to_save = list">
+            <template #orden="{ apilado }">
+              <ClientLookupBar v-model="order.client" creatable :forma="apilado ? 'apilada' : 'ajustada'" />
+              <div v-if="sinPasar.length" class="text-caption text-medium-emphasis mt-2">
+                No pasaron a la orden: {{ sinPasar.join(', ') }}
+              </div>
+            </template>
+          </form-order-service>
 
           <!-- Documentos del alquiler (cotización, OC, guías, valorizaciones) se
                gestionan luego en Editar → hogar único de documentos. Crear queda mínimo. -->
-
-          <v-divider class="my-4" />
-
-          <form-order-service ref="formRef" v-if="esDeServicio(order)" :key="'srv-'+dialog"
-                              @update-list="list => items_to_save = list" @update-config="c => config = c" />
-          <form-order-rental ref="formRef" v-else :key="'alq-'+dialog" @update-list="list => items_to_save = list" />
+          <template v-else>
+            <ClientLookupBar v-model="order.client" creatable />
+            <v-divider class="my-4" />
+            <form-order-rental ref="formRef" :key="'alq-'+dialog" @update-list="list => items_to_save = list" />
+          </template>
 
         </v-form>
       </v-card-text>
 
       <!-- Agregamos un borde superior para delimitar los botones cuando el contenido hace scroll -->
-      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin flex-wrap ga-2">
-        <resumen-equipos :filas="items_to_save" :por-tipo="esDeServicio(order)" />
-        <v-spacer />
-        <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
-        <v-btn color="primary" variant="flat" class="font-weight-bold px-4" @click="save"
-               :disabled="!is_valid || items_to_save.length === 0" :loading="is_on_sending_process">
-          Guardar orden
-        </v-btn>
+      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin">
+        <div class="d-flex flex-wrap align-center ga-2" :class="pantallaCompleta ? 'columna-de-trabajo' : 'w-100'">
+          <resumen-equipos :filas="items_to_save" :por-tipo="esDeServicio(order)" />
+          <v-spacer />
+          <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
+          <v-btn color="primary" variant="flat" class="font-weight-bold px-4" @click="save"
+                 :disabled="!is_valid || items_to_save.length === 0 || (esDeServicio(order) && sinServicio(items_to_save))" :loading="is_on_sending_process">
+            Guardar orden
+          </v-btn>
+        </div>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -46,7 +52,7 @@
 
 <script setup>
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
-import { ref, watch, nextTick, getCurrentInstance } from 'vue'
+import { ref, computed, watch, nextTick, getCurrentInstance } from 'vue'
 import { useLocalDraft } from '@/composables/useLocalDraft'
 import { useSavedNumbers } from '@/composables/useSavedNumbers'
 import { mensajeDeError } from '@/utils/errors'
@@ -55,6 +61,7 @@ import OrderDataService from '@/services/orders/orderDataService'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
 import ResumenEquipos from './ResumenEquipos.vue'
+import { sinServicio } from '@/composables/useOrderServices'
 
 
 const { appContext } = getCurrentInstance()
@@ -67,10 +74,11 @@ const is_valid              = ref(false)
 const next_order_number     = ref('')
 const order                 = ref({ client: null, order_type: SERVICIO })
 const items_to_save         = ref([])
-const config                = ref(null)
 const addOrderForm          = ref(null)
 
 const formRef               = ref(null)
+// La de servicio es una pantalla de trabajo; la de alquiler sigue en su dialogo.
+const pantallaCompleta      = computed(() => esDeServicio(order.value))
 // Los items de la cotizacion de la que sale que no pasan a la orden.
 const sinPasar              = ref([])
 
@@ -83,14 +91,13 @@ const conBorrador = () => esDeServicio(order.value) && !desdeCotizacion.value
 
 watch(() => order.value.order_type, () => { calculateNextNumber() })
 
-watch([items_to_save, config, () => order.value.client], ([items, elegido, client]) => {
-  if (conBorrador()) borrador.guardar({ client, items, config: elegido })
+watch([items_to_save, () => order.value.client], ([items, client]) => {
+  if (conBorrador()) borrador.guardar({ client, items })
 }, { deep: true })
 
 // `cotizacion`, la orden que el back arma desde una (documents/<id>/orden).
 async function open(tipo, cotizacion = null) {
   items_to_save.value = []
-  config.value = null
   order.value = { client: cotizacion?.client ?? null, order_type: tipo }
   sinPasar.value = cotizacion?.sin_pasar ?? []
   desdeCotizacion.value = Boolean(cotizacion)

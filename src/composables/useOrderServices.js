@@ -1,10 +1,11 @@
 import { ref } from 'vue'
 import OrderDataService from '@/services/orders/orderDataService'
 
-// Lo que se elige en cada equipo de una orden y el largo de lo anotado al recibir, como
+// Lo que se elige en cada equipo de una orden y el largo de lo que se anota al recibir, como
 // lo define el back. Se pide una vez por pestaña: no cambia mientras se usa la app.
 const opciones = ref([])
 const largos = ref({})
+const largoDeObservacion = ref(0)
 let pedido = null
 
 export function useOrderServices() {
@@ -13,10 +14,11 @@ export function useOrderServices() {
       .then(({ data }) => {
         opciones.value = data.opciones
         largos.value = data.largos_de_recepcion
+        largoDeObservacion.value = data.largo_de_observacion
       })
       .catch(() => { pedido = null })
   }
-  return { opciones, largos }
+  return { opciones, largos, largoDeObservacion }
 }
 
 const claveDe = (tipoServicio, tipoCertificado) => `${tipoServicio}-${tipoCertificado ?? ''}`

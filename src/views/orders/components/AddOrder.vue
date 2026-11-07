@@ -20,6 +20,8 @@
               <div v-if="sinPasar.length" class="text-caption text-medium-emphasis mt-2">
                 No pasaron a la orden: {{ sinPasar.join(', ') }}
               </div>
+              <div class="text-body-2 font-weight-medium mt-3 mb-2">Observaciones</div>
+              <text-list-field v-model="observaciones" texto-agregar="Añadir observación" :maxlength="largoDeObservacion" />
             </template>
           </form-order-service>
 
@@ -61,7 +63,8 @@ import OrderDataService from '@/services/orders/orderDataService'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
 import ResumenEquipos from './ResumenEquipos.vue'
-import { sinServicio } from '@/composables/useOrderServices'
+import TextListField from '@/components/shared/TextListField.vue'
+import { sinServicio, useOrderServices } from '@/composables/useOrderServices'
 
 
 const { appContext } = getCurrentInstance()
@@ -73,6 +76,9 @@ const is_on_sending_process = ref(false)
 const is_valid              = ref(false)
 const next_order_number     = ref('')
 const order                 = ref({ client: null, order_type: SERVICIO })
+// Las de la orden de servicio: van al JSON del ingreso.
+const observaciones         = ref([])
+const { largoDeObservacion } = useOrderServices()
 const items_to_save         = ref([])
 const addOrderForm          = ref(null)
 
@@ -91,13 +97,14 @@ const conBorrador = () => esDeServicio(order.value) && !desdeCotizacion.value
 
 watch(() => order.value.order_type, () => { calculateNextNumber() })
 
-watch([items_to_save, () => order.value.client], ([items, client]) => {
-  if (conBorrador()) borrador.guardar({ client, items })
+watch([items_to_save, () => order.value.client, observaciones], ([items, client]) => {
+  if (conBorrador()) borrador.guardar({ client, items, observaciones: observaciones.value })
 }, { deep: true })
 
 // `cotizacion`, la orden que el back arma desde una (documents/<id>/orden).
 async function open(tipo, cotizacion = null) {
   items_to_save.value = []
+  observaciones.value = []
   order.value = { client: cotizacion?.client ?? null, order_type: tipo }
   sinPasar.value = cotizacion?.sin_pasar ?? []
   desdeCotizacion.value = Boolean(cotizacion)
@@ -113,6 +120,7 @@ async function open(tipo, cotizacion = null) {
   const recuperado = await borrador.ofrecer()
   if (!recuperado) return
   order.value.client = recuperado.client
+  observaciones.value = recuperado.observaciones || []
   await nextTick()
   formRef.value?.cargarFilas(recuperado)
 }
@@ -136,6 +144,7 @@ async function save() {
       payload_orden.client_order_reference = order.value.client_order_reference
     }
     payload_orden.items = items_to_save.value
+    if (esDeServicio(order.value)) payload_orden.ingreso = { observaciones: observaciones.value }
 
     const filas = items_to_save.value
     const estimados = formRef.value?.estimados?.()

@@ -24,7 +24,8 @@ export default {
       progreso: element.progreso || { total: 0, listos: 0 },
 
       // ─── RELACIONES (Protección contra "undefined.length") ───
-      certificates: element.certificates || [],
+      // La fila no las trae: null hasta que se piden sus lineas.
+      items: element.items ?? null,
       // La fila no las trae: null hasta que se piden sus lineas.
       rentals: element.rentals ?? null,
       facturas: element.facturas || { cantidad: 0, numero: '', tiene_fiscal: false, no_factura: '', vence: null },

@@ -108,6 +108,7 @@ import ClientSelect from '@/components/shared/ClientSelect.vue'
 import { fechaCorta } from '@/utils/dates'
 import { vivo } from '@/utils/certificates/estado'
 import { esAlquiler, esDeServicio } from '@/utils/orders/estado'
+import { certificadosDe } from '@/utils/orders/lineas'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -172,7 +173,7 @@ function initFields() {
   files_to_upload.value = { quote_pdf: null, dispatch_guide_pdf: null, return_guide_pdf: null }
 
   if (esDeServicio(props.order)) {
-    edit_order_certs.value = JSON.parse(JSON.stringify(props.order.certificates))
+    edit_order_certs.value = JSON.parse(JSON.stringify(certificadosDe(props.order.items)))
     selected_certs_to_update.value = edit_order_certs.value.filter(vivo).map(c => c.id)
   } else if (esAlquiler(props.order)) {
     cargarDocs()

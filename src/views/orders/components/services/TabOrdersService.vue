@@ -233,6 +233,7 @@
                 @add-extra="prepareExtraEquipment(item)"
                 @edit-certificate="openCertificateModal"
                 @accion-certificados="abrirBatchModal"
+                @lineas-cambiaron="alCambiarLineas(item)"
               />
             </td>
           </tr>
@@ -297,6 +298,7 @@ import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import { useOrderActions } from '@/composables/useOrderActions'
 import { FILTRO_DE_ESTADO, SERVICIO, esDeServicio, viva } from '@/utils/orders/estado'
+import { lineaAnulada } from '@/utils/orders/lineas'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
 import { debounce } from '@/utils/debounce'
@@ -367,7 +369,11 @@ const headers = [
 // Datos de tabla
 const orders = ref([])
 const expanded = ref([])
-const { cargarItems, actualizarItems, reemplazarOrdenes } = useOrderItems(orders, 'certificates')
+// Los avisos de equipos llegan por certificado: una linea se reconoce por el suyo.
+const { cargarItems, actualizarItems, reemplazarOrdenes } = useOrderItems(orders, 'items', {
+  clave: linea => linea.certificate?.id,
+  anulado: lineaAnulada,
+})
 
 // --- LÓGICA DE EXPANSIÓN ROBUSTA (Resiliencia a return-object) ---
 const getSafeId = (val) => {
@@ -630,9 +636,15 @@ const updateSingleOrderInList = (updatedOrder) => {
   const index = orders.value.findIndex(o => o.id === updatedOrder.id)
   if (index !== -1) {
     // Los equipos los trae useOrderItems; el resto de la orden no los pisa.
-    const equipos = orders.value[index].certificates
-    Object.assign(orders.value[index], OrderMappers.getMap(updatedOrder), { certificates: equipos })
+    const equipos = orders.value[index].items
+    Object.assign(orders.value[index], OrderMappers.getMap(updatedOrder), { items: equipos })
   }
+}
+
+// Una linea sin certificado no avisa sola: se recargan sus equipos y la barra de la fila.
+function alCambiarLineas (orden) {
+  cargarItems(orden.id)
+  refrescarFila(orden.id)
 }
 
 const handleWssReload = () => {

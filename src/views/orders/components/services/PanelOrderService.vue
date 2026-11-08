@@ -2,7 +2,7 @@
   <div class="d-flex flex-column fill-height">
     <div class="titulo-de-hoja bg-primary flex-shrink-0">
       <span>Equipo {{ indice + 1 }}</span>
-      <span v-if="eq.modo === 'existente'" class="text-caption ml-2">· Certificado {{ eq.registry_code }}</span>
+      <span v-if="eq.registry_code" class="text-caption ml-2">· Certificado {{ eq.registry_code }}</span>
       <span v-else-if="eq.certificate_type" class="text-caption ml-2">· N° estimado {{ estimado }}</span>
       <v-spacer />
       <v-btn icon="mdi-check" color="white" variant="flat" size="x-small" class="text-primary" title="Listo (Enter)"
@@ -18,7 +18,10 @@
                                 v-bind="CAMPO" />
         <v-text-field v-else :model-value="eq.name" label="Equipo" readonly v-bind="CAMPO" />
         <v-textarea v-for="campo in CAMPOS" :key="campo.clave" v-model="eq[campo.clave]"
-                    :label="campo.etiqueta" :maxlength="largos[campo.clave]" v-bind="TEXTO" />
+                    :label="campo.etiqueta" :maxlength="largos[campo.clave]" :readonly="eq.publicado" v-bind="TEXTO" />
+        <div v-if="eq.publicado" class="text-caption text-medium-emphasis">
+          Su certificado está en la nube: marca, modelo, serie y titular ya no cambian.
+        </div>
       </section>
 
       <section class="seccion">
@@ -31,6 +34,12 @@
                                 label="Laboratorio" :return-object="false" item-title="name" item-value="id"
                                 v-bind="CAMPO" />
         <v-text-field v-else :model-value="eq.lab_data?.name || '—'" label="Laboratorio" readonly v-bind="CAMPO" />
+        <template v-if="eq.certificate_type">
+          <div class="text-caption text-medium-emphasis mt-1">Certificado a nombre de</div>
+          <client-select :model-value="eq.titular ?? cliente?.id" :seed="eq.titular_data ?? cliente"
+                         :label="cliente || eq.titular ? 'Cliente' : 'El cliente de la orden'" :disabled="eq.publicado"
+                         @update:model-value="conTitular" @selected="conTitularElegido" />
+        </template>
       </section>
 
       <section class="seccion">
@@ -45,7 +54,9 @@
       <v-btn variant="outlined" prepend-icon="mdi-content-copy" title="Mismo equipo, marca, modelo y servicio, sin serie"
              @click="emit('otro-igual')">Otro igual</v-btn>
       <v-spacer />
-      <v-btn variant="text" color="red" prepend-icon="mdi-delete" @click="emit('borrar', indice)">Quitar</v-btn>
+      <v-btn v-if="seQuita(eq)" variant="text" color="red" prepend-icon="mdi-delete" @click="emit('borrar', indice)">
+        Quitar
+      </v-btn>
     </div>
   </div>
 </template>
@@ -57,7 +68,8 @@ import EquipmentDataService from '@/services/equipments/equipmentDataService'
 import LabDataService from '@/services/labs/labDataService'
 import EquipmentMappers from '@/mappers/equipmentMappers'
 import LabMappers from '@/mappers/labMappers'
-import { conOpcion, itemsDeSeleccion, opcionDe, tituloDe, useOrderServices } from '@/composables/useOrderServices'
+import ClientSelect from '@/components/shared/ClientSelect.vue'
+import { conOpcion, itemsDeSeleccion, opcionDe, seQuita, tituloDe, useOrderServices } from '@/composables/useOrderServices'
 
 // Todo lo de un equipo de FormOrderService, en una columna. Enter lo cierra y
 // Shift+Enter baja de linea.
@@ -66,6 +78,8 @@ const props = defineProps({
   indice: { type: Number, required: true },
   estimado: { type: String, default: '' },
   error: { type: String, default: '' },
+  // El cliente de la orden, {id, name}.
+  cliente: { type: Object, default: null },
 })
 const emit = defineEmits(['cerrar', 'otro-igual', 'borrar'])
 
@@ -94,6 +108,19 @@ const opcion = computed({
   get: () => opcionDe(props.eq),
   set: (clave) => conOpcion(props.eq, clave, opciones.value),
 })
+
+// Sin titular, o con el mismo cliente de la orden, el certificado sale a nombre de la orden.
+function conTitular(id) {
+  if (id && id !== props.cliente?.id) return
+  props.eq.titular = null
+  props.eq.titular_data = null
+}
+
+function conTitularElegido(cliente) {
+  if (!cliente || cliente.id === props.cliente?.id) return
+  props.eq.titular = cliente.id
+  props.eq.titular_data = { id: cliente.id, name: cliente.name }
+}
 
 // El equipo trae el laboratorio que lo calibra; sin uno, queda el ya elegido.
 function conSuLaboratorio(equipo) {

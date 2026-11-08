@@ -51,7 +51,7 @@
               <ClientLookupBar v-model="form.client" :seed="ficha.client_data" creatable />
             </v-col>
 
-            <v-col cols="12">
+            <v-col cols="12" :class="{ 'sin-boton': !puedeCrearEquipo }">
               <paginated-autocomplete
                 ref="equipCatalogRef"
                 v-model="form.equipment"
@@ -82,13 +82,30 @@
               </paginated-autocomplete>
             </v-col>
 
-            <v-col cols="12" md="4">
-              <date-picker :date="form.emission_date" label="Fecha de emisión" @setPickedDate="(value) => form.emission_date = value" />
+            <v-col cols="12" class="sin-boton">
+              <v-row dense>
+                <v-col v-for="campo in DEL_EQUIPO" :key="campo.clave" cols="12" md="4">
+                  <v-text-field v-model="form[campo.clave]" :label="campo.etiqueta" :prepend-inner-icon="campo.icono"
+                                maxlength="256" :readonly="publicado" density="compact" variant="outlined"
+                                hide-details="auto" />
+                </v-col>
+                <v-col v-if="publicado" cols="12" class="text-caption text-medium-emphasis pt-0">
+                  Está en la nube: marca, modelo y serie ya no cambian.
+                </v-col>
+              </v-row>
             </v-col>
-            <v-col cols="12" md="8">
-              <v-textarea v-model="form.observations" label="Observaciones internas" maxlength="256"
-                          density="compact" variant="outlined" hide-details="auto" rows="1" auto-grow
-                          prepend-inner-icon="mdi-comment-text-outline" @keypress="isValidCharacter"/>
+
+            <v-col cols="12" class="sin-boton">
+              <v-row dense>
+                <v-col cols="12" md="4">
+                  <date-picker :date="form.emission_date" label="Fecha de emisión" @setPickedDate="(value) => form.emission_date = value" />
+                </v-col>
+                <v-col cols="12" md="8">
+                  <v-textarea v-model="form.observations" label="Observaciones internas" maxlength="256"
+                              density="compact" variant="outlined" hide-details="auto" rows="1" auto-grow
+                              prepend-inner-icon="mdi-comment-text-outline" @keypress="isValidCharacter"/>
+                </v-col>
+              </v-row>
             </v-col>
           </v-row>
         </v-form>
@@ -132,7 +149,7 @@ import CertificateMappers from '@/mappers/certificateMappers.js'
 import CorrelativeDataService from '@/services/correlative/correlativeDataService.js'
 import Characters from '@/validators/commonValidators/characters.js'
 import { TIPOS_CERTIFICADO, nombreDelTipo, siglaDelTipo } from '@/utils/certificates/tipos'
-import { ANULADO, estaFirmado, estadoDe } from '@/utils/certificates/estado'
+import { ANULADO, estaFirmado, estaPublicado, estadoDe } from '@/utils/certificates/estado'
 import { estaEntregado } from '@/utils/certificates/entrega'
 import { fechaCorta, hoyISO } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
@@ -174,8 +191,15 @@ function conSuLaboratorio(equipo) {
   labPropuesto.value = equipo.laboratorio
 }
 
+const DEL_EQUIPO = [
+  { clave: 'brand', etiqueta: 'Marca', icono: 'mdi-tag-outline' },
+  { clave: 'model', etiqueta: 'Modelo', icono: 'mdi-shape-outline' },
+  { clave: 'serie', etiqueta: 'Serie / Código', icono: 'mdi-barcode' },
+]
+const publicado = computed(() => estaPublicado(ficha.value))
+
 const NOMBRES = {
-  client: 'Cliente', lab: 'Laboratorio', equipment: 'Equipo',
+  client: 'Cliente', lab: 'Laboratorio', equipment: 'Equipo', brand: 'Marca', model: 'Modelo', serie: 'Serie',
   emission_date: 'Fecha de emisión', observations: 'Observaciones',
 }
 
@@ -215,7 +239,8 @@ const open = async (item = null) => {
   isEdit.value = Boolean(item)
   ficha.value = {}
   labPropuesto.value = null
-  form.value = { client: null, lab: null, equipment: null, emission_date: hoyISO(), observations: '' }
+  form.value = { client: null, lab: null, equipment: null, brand: '', model: '', serie: '', emission_date: hoyISO(),
+                 observations: '' }
   dialog.value = true
 
   if (!item) {
@@ -279,3 +304,8 @@ const save = async () => {
 
 defineExpose({ open })
 </script>
+
+<style scoped>
+/* Las filas sin "+" dejan su lugar (el boton y su margen): todos los campos terminan en el mismo borde. */
+.sin-boton { padding-inline-end: calc(3.5rem + 4px) !important; }
+</style>

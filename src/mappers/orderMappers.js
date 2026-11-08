@@ -20,6 +20,7 @@ export default {
       // ─── CLIENTE ───
       client: element.client,
       client_data: element.client_data || {},
+      observaciones: element.observaciones || '',
       
       progreso: element.progreso || { total: 0, listos: 0 },
 

@@ -34,6 +34,7 @@
             <tr>
               <th style="width: 9rem;">N° estimado</th>
               <th style="width: 26%;">Equipo</th>
+              <th style="width: 4.5rem;">Lab</th>
               <th>Marca</th>
               <th>Modelo</th>
               <th>Serie / Código</th>
@@ -45,7 +46,7 @@
             <row-order-service v-for="(eq, index) in equipments" :key="clave(eq)"
                                v-bind="arrastrable(index)" :class="claseDe(index)" :eq="eq" :indice="index"
                                :estimado="numerosEstimados[index]" :error="errores[index]" :asa="asa(index)"
-                               :elegida="eq === elegida" @elegir="elegida = eq" @borrar="borrarFila" />
+                               :cliente="cliente" :elegida="eq === elegida" @elegir="elegida = eq" @borrar="borrarFila" />
           </tbody>
         </v-table>
         <div v-else class="d-flex flex-column align-center justify-center fill-height ga-2 pa-8 text-medium-emphasis">
@@ -58,7 +59,7 @@
 
     <template #detalle>
       <panel-order-service :eq="elegida" :indice="indiceElegida" :estimado="numerosEstimados[indiceElegida]"
-                           :error="errores[indiceElegida]" @cerrar="cerrarPanel" @otro-igual="otroIgual"
+                           :error="errores[indiceElegida]" :cliente="cliente" @cerrar="cerrarPanel" @otro-igual="otroIgual"
                            @borrar="borrarFila" />
     </template>
 
@@ -82,12 +83,16 @@ import EquipmentMappers from '@/mappers/equipmentMappers'
 import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal.vue'
 import CorrelativeDataService from '@/services/correlative/correlativeDataService'
 import { useOrderServices } from '@/composables/useOrderServices'
-import { vivo } from '@/utils/certificates/estado'
+import { estaPublicado, vivo } from '@/utils/certificates/estado'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useRowDrag } from '@/composables/useRowDrag'
 import { usePermissions } from '@/composables/usePermissions'
 import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
 
+const props = defineProps({
+  // El cliente de la orden, {id, name}: el titular de los certificados que no dicen otro.
+  cliente: { type: Object, default: null },
+})
 const emit = defineEmits(['update-list'])
 
 const { appContext } = getCurrentInstance()
@@ -160,8 +165,9 @@ function agregar(equipo) {
 }
 
 function otroIgual() {
-  const { name, lab, lab_data, tipo_servicio, certificate_type, marca, modelo } = elegida.value
-  abrir({ modo: 'nuevo', name, lab, lab_data, tipo_servicio, certificate_type, marca, modelo }, indiceElegida.value)
+  const { name, lab, lab_data, tipo_servicio, certificate_type, marca, modelo, titular, titular_data } = elegida.value
+  abrir({ modo: 'nuevo', name, lab, lab_data, tipo_servicio, certificate_type, marca, modelo, titular, titular_data },
+        indiceElegida.value)
 }
 
 function cerrarPanel() {
@@ -169,8 +175,13 @@ function cerrarPanel() {
   nextTick(() => buscador.value?.$el.querySelector('input')?.focus())
 }
 
+// Las lineas guardadas que se borran de la lista salen de la orden al guardar.
+const quitadas = ref([])
+
 function borrarFila(indice) {
-  if (equipments.value[indice] === elegida.value) elegida.value = null
+  const fila = equipments.value[indice]
+  if (fila === elegida.value) elegida.value = null
+  if (fila.modo === 'linea') quitadas.value.push(fila.id)
   equipments.value.splice(indice, 1)
 }
 
@@ -204,6 +215,8 @@ async function vincular() {
       marca: cert.brand,
       modelo: cert.model,
       serie: cert.serie,
+      titular: cert.client_data.id,
+      titular_data: cert.client_data,
     })
     correlativo.value = ''
   } catch {
@@ -218,11 +231,46 @@ function cargarFilas({ items }) {
   equipments.value = [...items]
 }
 
-defineExpose({ cargarFilas, marcarErrores, estimados })
+// Las lineas vivas de una orden guardada, para editarla. `titular` queda en null si es el cliente de la orden.
+function cargarLineas(lineas) {
+  quitadas.value = []
+  equipments.value = lineas.filter(l => vivo(l.certificate)).map(({ certificate: cert, ...linea }) => ({
+    modo: 'linea',
+    id: linea.id,
+    cert_id: cert?.id ?? null,
+    registry_code: cert?.registry_code,
+    name: linea.equipo,
+    tipo_servicio: linea.tipo_servicio,
+    certificate_type: cert?.certificate_type ?? null,
+    lab: linea.lab,
+    lab_data: linea.lab_data,
+    marca: linea.marca,
+    modelo: linea.modelo,
+    serie: linea.serie,
+    comentario: linea.comentario,
+    titular: cert?.client_data?.id ?? null,
+    titular_data: cert?.client_data ?? null,
+    publicado: estaPublicado(cert),
+  }))
+}
+
+// Lo que manda la orden editada: de las lineas guardadas solo lo que se corrige.
+function paraGuardar() {
+  const items = equipments.value.map((fila) => {
+    if (fila.modo !== 'linea') return fila
+    const { id, cert_id, marca, modelo, serie, comentario, titular } = fila
+    return { id, marca, modelo, serie, comentario, ...(cert_id && { titular: titular ?? props.cliente?.id }) }
+  })
+  return { items, quitar: quitadas.value }
+}
+
+defineExpose({ cargarFilas, cargarLineas, paraGuardar, marcarErrores, estimados })
 </script>
 
 <style scoped>
 .buscador-de-equipo { width: 22rem; flex: 0 1 22rem; }
+.lista-de-equipos :deep(.v-table__wrapper) { padding: 0 0.5rem; }
+.lista-de-equipos :deep(table) { border-spacing: 0 0.375rem; }
 .lista-de-equipos thead th {
   font-size: 0.75rem;
   text-transform: uppercase;

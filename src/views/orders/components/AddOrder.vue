@@ -2,8 +2,10 @@
   <v-dialog v-model="dialog" class="dialog-premium" :fullscreen="pantallaCompleta"
             width="92%" :max-width="pantallaCompleta ? undefined : '80rem'" persistent>
     <v-card class="d-flex flex-column" :style="pantallaCompleta ? 'height: 100%;' : 'max-height: 90vh;'">
-      <base-modal-header :title="`Generar Orden de ${esDeServicio(order) ? 'Servicio' : 'Alquiler'}`" icon="mdi-file-document-plus" @close="close">
-        <span v-if="next_order_number">Sig. Orden: <span class="font-weight-bold text-primary ml-1">{{ next_order_number }}</span></span>
+      <base-modal-header :title="titulo" icon="mdi-file-document-plus" @close="close">
+        <span v-if="!editando && next_order_number">
+          Sig. Orden: <span class="font-weight-bold text-primary ml-1">{{ next_order_number }}</span>
+        </span>
       </base-modal-header>
 
       <v-card-text class="pt-4 d-flex flex-column" :class="{ 'pantalla-de-trabajo': pantallaCompleta }"
@@ -13,10 +15,12 @@
                 :class="{ 'columna-de-trabajo': pantallaCompleta }" style="min-height: 0;"
                 @submit.prevent>
 
-          <form-order-service ref="formRef" v-if="esDeServicio(order)" :key="'srv-'+dialog"
+          <form-order-service ref="formRef" v-if="esDeServicio(order)" :key="'srv-'+dialog" :cliente="clienteOrden"
                               @update-list="list => items_to_save = list">
             <template #orden="{ apilado }">
-              <ClientLookupBar v-model="order.client" creatable :forma="apilado ? 'apilada' : 'ajustada'" />
+              <ClientLookupBar v-model="order.client" creatable :seed="clienteOrden"
+                               :forma="apilado ? 'apilada' : 'ajustada'"
+                               @client-selected="c => (clienteOrden = { id: c.id, name: c.name })" />
               <div v-if="sinPasar.length" class="text-caption text-medium-emphasis mt-2">
                 No pasaron a la orden: {{ sinPasar.join(', ') }}
               </div>
@@ -50,6 +54,7 @@
         </div>
       </v-card-actions>
     </v-card>
+    <dialog-certificate-owners :cambio="cambioDeCliente" @volver="volverAlCliente" @aplicado="aceptarCliente" />
   </v-dialog>
 </template>
 
@@ -64,12 +69,15 @@ import OrderDataService from '@/services/orders/orderDataService'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
 import ResumenEquipos from './ResumenEquipos.vue'
+import DialogCertificateOwners from './services/DialogCertificateOwners.vue'
+import ClientDataService from '@/services/clients/clientDataService'
 import { sinServicio, useOrderServices } from '@/composables/useOrderServices'
 
 
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
 const avisarNumeros = useSavedNumbers()
+const emit = defineEmits(['guardada'])
 
 const dialog                = ref(false)
 const is_on_sending_process = ref(false)
@@ -87,13 +95,47 @@ const formRef               = ref(null)
 const pantallaCompleta      = computed(() => esDeServicio(order.value))
 // Los items de la cotizacion de la que sale que no pasan a la orden.
 const sinPasar              = ref([])
+// La orden de servicio que se edita; null al crear una.
+const editando              = ref(null)
+const titulo = computed(() => (editando.value
+  ? `Editar Orden ${editando.value.order_number}`
+  : `Generar Orden de ${esDeServicio(order.value) ? 'Servicio' : 'Alquiler'}`))
+
+// El cliente de la orden con su nombre: el panel lo muestra como titular de los certificados.
+const clienteOrden          = ref(null)
+watch(() => order.value.client, async (id) => {
+  if (!id || clienteOrden.value?.id === id) return
+  const { data } = await ClientDataService.get(id)
+  if (order.value.client === id && clienteOrden.value?.id !== id) clienteOrden.value = { id, name: data.name }
+})
+
+// Editando, cambiar el cliente pregunta a nombre de quien queda cada certificado ya guardado.
+const clienteAceptado       = ref(null)
+const cambioDeCliente       = ref(null)
+watch(clienteOrden, (nuevo) => {
+  if (!editando.value || !nuevo || [clienteAceptado.value?.id, cambioDeCliente.value?.nuevo.id].includes(nuevo.id)) return
+  const filas = items_to_save.value.filter(f => f.modo === 'linea' && f.cert_id)
+  if (filas.length) cambioDeCliente.value = { anterior: clienteAceptado.value, nuevo, filas }
+  else clienteAceptado.value = nuevo
+})
+
+function volverAlCliente() {
+  cambioDeCliente.value = null
+  clienteOrden.value = clienteAceptado.value
+  order.value.client = clienteAceptado.value.id
+}
+
+function aceptarCliente() {
+  clienteAceptado.value = cambioDeCliente.value.nuevo
+  cambioDeCliente.value = null
+}
 
 // Solo servicio: los equipos de un alquiler se eligen del inventario. La que
 // sale de una cotizacion no usa borrador, para no pisar el que quedo en Ordenes:
 // se vuelve a armar desde la cotizacion.
 const borrador = useLocalDraft(() => 'daicom_borrador_orden_servicio')
 const desdeCotizacion = ref(false)
-const conBorrador = () => esDeServicio(order.value) && !desdeCotizacion.value
+const conBorrador = () => esDeServicio(order.value) && !desdeCotizacion.value && !editando.value
 
 watch(() => order.value.order_type, () => { calculateNextNumber() })
 
@@ -103,6 +145,8 @@ watch([items_to_save, () => order.value.client, observaciones], ([items, client]
 
 // `cotizacion`, la orden que el back arma desde una (documents/<id>/orden).
 async function open(tipo, cotizacion = null) {
+  editando.value = null
+  clienteOrden.value = null
   items_to_save.value = []
   observaciones.value = ''
   order.value = { client: cotizacion?.client ?? null, order_type: tipo }
@@ -125,6 +169,18 @@ async function open(tipo, cotizacion = null) {
   formRef.value?.cargarFilas(recuperado)
 }
 
+// Una orden de servicio guardada, como la manda su fila, con sus lineas.
+async function editar(orden) {
+  const { data: lineas } = await OrderDataService.getEquipos(orden.id)
+  editando.value = orden
+  clienteOrden.value = clienteAceptado.value = { id: orden.client_data.id, name: orden.client_data.name }
+  observaciones.value = orden.observaciones || ''
+  order.value = { client: orden.client_data.id, order_type: SERVICIO }
+  dialog.value = true
+  await nextTick()
+  formRef.value?.cargarLineas(lineas)
+}
+
 async function calculateNextNumber() {
   try {
     const { data } = await OrderDataService.siguienteNumero(order.value.order_type)
@@ -139,6 +195,10 @@ async function save() {
   is_on_sending_process.value = true
 
   try {
+    if (editando.value) {
+      await guardarEdicion()
+      return
+    }
     const payload_orden = { client: order.value.client, order_type: order.value.order_type }
     if (esAlquiler(order.value) && order.value.client_order_reference) {
       payload_orden.client_order_reference = order.value.client_order_reference
@@ -163,6 +223,20 @@ async function save() {
   }
 }
 
+async function guardarEdicion() {
+  const { items, quitar } = formRef.value.paraGuardar()
+  const estimados = formRef.value.estimados()
+  const nuevas = items_to_save.value.map((fila, i) => [fila, estimados[i]]).filter(([fila]) => fila.modo !== 'linea')
+  const { data } = await OrderDataService.patch(editando.value.id, {
+    client: order.value.client, observaciones: observaciones.value, items, quitar,
+  })
+  const orden = editando.value
+  close()
+  avisarNumeros(`${data.order_number} guardada`, nuevas.map(([fila]) => fila), data.codigos,
+                nuevas.map(([, estimado]) => estimado))
+  emit('guardada', orden)
+}
+
 function close() {
   if (conBorrador()) borrador.descartar()
   order.value.client = null
@@ -171,6 +245,6 @@ function close() {
   dialog.value = false
 }
 
-defineExpose({ open })
+defineExpose({ open, editar })
 </script>
 

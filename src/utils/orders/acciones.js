@@ -15,7 +15,7 @@ export const ACCIONES_ORDEN = [
     clave: 'editar', grupo: 'orden', varios: false,
     icono: 'mdi-pencil',
     // En alquileres el modal tambien lleva las OC y valorizaciones.
-    texto: ([orden]) => (esAlquiler(orden) ? 'Editar alquiler' : 'Editar cliente'),
+    texto: ([orden]) => (esAlquiler(orden) ? 'Editar alquiler' : 'Editar orden'),
     visible: algunaViva,
   },
   {

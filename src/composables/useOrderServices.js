@@ -31,6 +31,9 @@ export const tituloDe = (fila, opciones) =>
 
 export const sinServicio = (filas) => filas.some(f => !f.tipo_servicio)
 
+// Una linea guardada con certificado sale de la orden anulandolo o desvinculandolo.
+export const seQuita = (fila) => !(fila.modo === 'linea' && fila.cert_id)
+
 export function conOpcion(fila, clave, opciones) {
   const opcion = opciones.find(o => claveDe(o.tipo_servicio, o.certificate_type) === clave)
   if (!opcion) return

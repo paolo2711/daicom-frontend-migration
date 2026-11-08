@@ -279,7 +279,7 @@
     <batch-action-modal ref="batchActionModalRef" />
 
     <dialog-factura v-model="factura_modal" :order="selected_order" :orders="ordenes_factura_multi" :order_type="SERVICIO" @updateOrder="onFacturaGuardada" @close="cerrarFacturaModal" />
-    <edit-order v-model="edit_order_modal" :order="selected_order" @updateOrder="updateSingleOrderInList" @close="edit_order_modal = false" />
+    <add-order ref="editarOrdenRef" @guardada="alCambiarLineas" />
     <add-extra-equipment v-model="dialog_extra" :order="selected_order" @close="dialog_extra = false" @reload="retrieveOrders" />
     <certificate-modal ref="certificateModalRef" />
   </div>
@@ -307,7 +307,7 @@ import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemafor
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
 import DialogFactura from '../DialogFactura.vue'
-import EditOrder from '../EditOrder.vue'
+import AddOrder from '../AddOrder.vue'
 import AddExtraEquipment from '../AddExtraEquipment.vue'
 import TableServiceDetails from './TableServiceDetails.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
@@ -339,7 +339,6 @@ const filtro_sin_factura = ref(false)
 // Texto computado para el calendario elegante
 
 // Estados de modales
-const edit_order_modal = ref(false)
 const dialog_extra = ref(false)
 const factura_modal = ref(false)
 const ordenes_factura_multi = ref(null) // órdenes para crear UNA factura por selección
@@ -578,16 +577,8 @@ const prepareExtraEquipment = (o) => {
   dialog_extra.value = true
 }
 
-const abrirEditarOrden = (o) => {
-  // El modal solo usa los equipos con su dueño; el resto ya lo tiene la fila.
-  OrderDataService.getEquipos(o.id).then(response => {
-    selected_order.value = { ...o, certificates: response.data || [] }
-    edit_order_modal.value = true
-  }).catch(() => {
-    selected_order.value = { ...o, certificates: [] }
-    edit_order_modal.value = true
-  })
-}
+const editarOrdenRef = ref(null)
+const abrirEditarOrden = (o) => editarOrdenRef.value?.editar(o)
 
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, ejecutarAccion } =
   useOrderActions(ordenes_seleccionadas, {

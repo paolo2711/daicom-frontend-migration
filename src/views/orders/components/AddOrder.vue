@@ -24,9 +24,14 @@
               <div v-if="sinPasar.length" class="text-caption text-medium-emphasis mt-2">
                 No pasaron a la orden: {{ sinPasar.join(', ') }}
               </div>
-              <div class="text-body-2 font-weight-medium mt-3 mb-2">Observaciones</div>
+              <div class="d-flex align-center mt-3 mb-2">
+                <span class="text-body-2 font-weight-medium">Observaciones</span>
+                <v-spacer />
+                <versions-order-service v-if="editando && !apilado" :orden-id="editando.id" compacto />
+              </div>
               <v-textarea v-model="observaciones" :maxlength="largoDeObservacion" rows="3" auto-grow
                           density="compact" variant="outlined" rounded="lg" hide-details />
+              <versions-order-service v-if="editando && apilado" :orden-id="editando.id" />
             </template>
           </form-order-service>
 
@@ -47,12 +52,40 @@
           <resumen-equipos :filas="items_to_save" :por-tipo="esDeServicio(order)" />
           <v-spacer />
           <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
-          <v-btn color="primary" variant="flat" class="font-weight-bold px-4" @click="save"
-                 :disabled="!is_valid || items_to_save.length === 0 || (esDeServicio(order) && sinServicio(items_to_save))" :loading="is_on_sending_process">
+          <template v-if="esDeServicio(order)">
+            <v-btn variant="outlined" class="font-weight-bold px-4" prepend-icon="mdi-file-eye-outline"
+                   :loading="armandoVista" :disabled="!sePuedeGuardar" @click="verVistaPrevia">
+              Vista previa
+            </v-btn>
+            <v-btn variant="outlined" class="font-weight-bold px-4" prepend-icon="mdi-printer"
+                   :disabled="!sePuedeGuardar || is_on_sending_process" @click="save(true)">
+              Guardar e imprimir
+            </v-btn>
+          </template>
+          <v-btn color="primary" variant="flat" class="font-weight-bold px-4" @click="save()"
+                 :disabled="!sePuedeGuardar" :loading="is_on_sending_process">
             Guardar orden
           </v-btn>
         </div>
       </v-card-actions>
+
+      <!-- El ingreso tal como saldria, sin guardar: desde aca se guarda o se vuelve a editar. -->
+      <pdf-preview-dialog v-model="vistaPrevia" :url="urlDeVista">
+        <template #encabezado>
+          <v-icon class="mr-2">mdi-file-eye-outline</v-icon>
+          <span class="text-subtitle-1 font-weight-bold text-truncate">Vista previa · {{ titulo }}</span>
+        </template>
+        <template #acciones>
+          <v-btn variant="text" class="mr-2 font-weight-bold" prepend-icon="mdi-pencil"
+                 :disabled="is_on_sending_process" @click="vistaPrevia = false">
+            Seguir editando
+          </v-btn>
+          <v-btn color="primary" variant="flat" class="font-weight-bold px-4" prepend-icon="mdi-printer"
+                 :loading="is_on_sending_process" @click="save(true)">
+            Guardar e imprimir
+          </v-btn>
+        </template>
+      </pdf-preview-dialog>
     </v-card>
     <dialog-certificate-owners :cambio="cambioDeCliente" @volver="volverAlCliente" @aplicado="aceptarCliente" />
   </v-dialog>
@@ -70,6 +103,9 @@ import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
 import ResumenEquipos from './ResumenEquipos.vue'
 import DialogCertificateOwners from './services/DialogCertificateOwners.vue'
+import VersionsOrderService from './services/VersionsOrderService.vue'
+import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
+import { abrirIngreso } from '@/utils/orders/ingreso'
 import ClientDataService from '@/services/clients/clientDataService'
 import { sinServicio, useOrderServices } from '@/composables/useOrderServices'
 
@@ -88,6 +124,8 @@ const order                 = ref({ client: null, order_type: SERVICIO })
 const observaciones         = ref('')
 const { largoDeObservacion } = useOrderServices()
 const items_to_save         = ref([])
+const sePuedeGuardar = computed(() => is_valid.value && items_to_save.value.length > 0
+  && !(esDeServicio(order.value) && sinServicio(items_to_save.value)))
 const addOrderForm          = ref(null)
 
 const formRef               = ref(null)
@@ -98,7 +136,7 @@ const sinPasar              = ref([])
 // La orden de servicio que se edita; null al crear una.
 const editando              = ref(null)
 const titulo = computed(() => (editando.value
-  ? `Editar Orden ${editando.value.order_number}`
+  ? `Orden ${editando.value.order_number}`
   : `Generar Orden de ${esDeServicio(order.value) ? 'Servicio' : 'Alquiler'}`))
 
 // El cliente de la orden con su nombre: el panel lo muestra como titular de los certificados.
@@ -190,13 +228,16 @@ async function calculateNextNumber() {
   }
 }
 
-async function save() {
+// Con `imprimir`, despues de guardar abre el PDF del ingreso.
+async function save(imprimir = false) {
   if (items_to_save.value.length === 0) return
   is_on_sending_process.value = true
 
   try {
     if (editando.value) {
+      const id = editando.value.id
       await guardarEdicion()
+      if (imprimir) await imprimirIngreso(id)
       return
     }
     const payload_orden = { client: order.value.client, order_type: order.value.order_type }
@@ -214,6 +255,7 @@ async function save() {
 
     close()
     avisarNumeros(`${data.order_number} creada`, filas, data.codigos, estimados)
+    if (imprimir) await imprimirIngreso(data.id)
   } catch (error) {
     const data = error.response?.data
     formRef.value?.marcarErrores(data?.filas)
@@ -237,7 +279,37 @@ async function guardarEdicion() {
   emit('guardada', orden)
 }
 
+// Ya guardada: si el PDF falla, la orden sigue guardada y se imprime desde su menu.
+const imprimirIngreso = (id) => abrirIngreso(id).catch(error => $swal.fire('La orden se guardó',
+  mensajeDeError(error, 'No se pudo abrir el ingreso: imprímalo desde el menú de la orden.'), 'warning'))
+
+// ── Vista previa: el ingreso que armaria el back, sin guardar nada ──
+const vistaPrevia = ref(false)
+const urlDeVista = ref('')
+const armandoVista = ref(false)
+
+const soltarVista = () => {
+  if (urlDeVista.value) URL.revokeObjectURL(urlDeVista.value)
+  urlDeVista.value = ''
+}
+watch(vistaPrevia, (abierta) => { if (!abierta) soltarVista() })
+
+async function verVistaPrevia() {
+  armandoVista.value = true
+  try {
+    const pdf = await OrderDataService.vistaPreviaIngreso({ client: order.value.client, items: items_to_save.value })
+    soltarVista()
+    urlDeVista.value = URL.createObjectURL(pdf)
+    vistaPrevia.value = true
+  } catch (error) {
+    $swal.fire('No se pudo armar la vista previa', mensajeDeError(error, 'No se pudo armar la vista previa.'), 'error')
+  } finally {
+    armandoVista.value = false
+  }
+}
+
 function close() {
+  vistaPrevia.value = false
   if (conBorrador()) borrador.descartar()
   order.value.client = null
   items_to_save.value = []

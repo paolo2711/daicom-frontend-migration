@@ -289,6 +289,9 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTheme } from 'vuetify'
 import { useAppStore } from '@/stores/appStore'
+import { Toast } from '@/plugins/alerts'
+import { mensajeDeError } from '@/utils/errors'
+import { abrirIngreso } from '@/utils/orders/ingreso'
 import OrderDataService from '@/services/orders/orderDataService'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
 import FilterPill from '@/components/shared/FilterPill.vue'
@@ -572,9 +575,14 @@ const getProgreso = (o) => {
 const editarOrdenRef = ref(null)
 const abrirEditarOrden = (o) => editarOrdenRef.value?.editar(o)
 
+const imprimirIngreso = (o) => abrirIngreso(o.id)
+  .catch(error => Toast.fire({ ...appStore.toastErrorRed,
+                               title: mensajeDeError(error, 'No se pudo abrir el ingreso.') }))
+
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, ejecutarAccion } =
   useOrderActions(ordenes_seleccionadas, {
     editar: abrirEditarOrden,
+    imprimirIngreso,
     facturar,
   })
 

@@ -99,7 +99,7 @@ const edit_order_data = ref(null)
 const files_to_upload = ref({ quote_pdf: null, dispatch_guide_pdf: null, return_guide_pdf: null })
 const saving_edit_order = ref(false)
 
-const tituloModal = computed(() => esAlquiler(props.order) ? 'Editar alquiler' : 'Editar orden')
+const tituloModal = 'Editar alquiler'
 
 // Documentos únicos del alquiler (un PDF c/u) — se guardan con el form.
 const unicos = [

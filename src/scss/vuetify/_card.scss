@@ -3,3 +3,53 @@
     -webkit-box-shadow: 1px 1px 5px rgba(0,0,0,.05);
     -moz-box-shadow: 1px 1px 5px rgba(0,0,0,.05);
 }
+// Una pantalla de trabajo a pantalla completa, en tres planos: el fondo atras, las hojas encima
+// y los campos dentro. Los colores son del tema (plugins/vuetify.js), en claro y oscuro.
+.pantalla-de-trabajo {
+  background: rgb(var(--v-theme-fondo_de_trabajo));
+}
+.hoja {
+  background: rgb(var(--v-theme-hoja));
+  border: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 0.75rem;
+  box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.08);
+}
+.v-theme--dark .hoja {
+  box-shadow: 0 0.125rem 0.75rem rgba(0, 0, 0, 0.45);
+}
+.hoja-de-apoyo,
+.v-theme--dark .hoja-de-apoyo {
+  background: rgb(var(--v-theme-hoja_de_apoyo));
+  box-shadow: none;
+}
+// El titulo de cada hoja: misma altura y letra en todas, para que las zonas se lean parejas.
+.titulo-de-hoja {
+  display: flex;
+  align-items: center;
+  min-height: 3rem;
+  padding: 0 1rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.titulo-principal {
+  font-size: 1.0625rem;
+}
+// Una tabla dentro de una hoja toma el fondo de la hoja, tambien en el encabezado fijo.
+.hoja .v-table {
+  background: transparent;
+}
+.hoja .v-table > .v-table__wrapper > table > thead > tr > th {
+  background: rgb(var(--v-theme-hoja));
+}
+// En pantalla completa el contenido va en una columna centrada de ancho maximo:
+// en un monitor muy grande sobra fondo a los lados, no campos estirados.
+.columna-de-trabajo {
+  width: 100%;
+  max-width: 112rem;
+  margin-inline: auto;
+}
+// Un campo de pocas cifras (RUC, N.° de certificado), con su boton "+" al lado.
+.campo-corto {
+  width: 22rem;
+  flex: 0 0 auto;
+}

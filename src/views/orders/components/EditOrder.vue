@@ -13,30 +13,8 @@
           </v-col>
         </v-row>
 
-        <!-- ORDEN CERTIFICADO -->
-        <v-card variant="flat" class="border mt-2" v-if="esDeServicio(order)" :color="isDark ? 'grey-darken-3' : 'grey-lighten-4'">
-          <v-card-subtitle class="font-weight-bold pb-2">
-            <v-icon size="small" start>mdi-link-variant</v-icon> Sincronizar dueño de Equipos
-          </v-card-subtitle>
-          <v-divider></v-divider>
-          <v-list density="compact" class="pa-0" :color="isDark ? 'grey-darken-3' : 'transparent'">
-            <v-list-item
-              v-for="cert in edit_order_certs"
-              :key="cert.id"
-              class="border-b-thin"
-              :disabled="!vivo(cert)"
-            >
-              <template #prepend>
-                <v-checkbox v-model="selected_certs_to_update" :value="cert.id" color="primary" class="mr-3" hide-details></v-checkbox>
-              </template>
-              <v-list-item-title class="font-weight-medium">{{ cert.equipment }}</v-list-item-title>
-              <v-list-item-subtitle>Dueño actual: {{ duenoDe(cert) }}</v-list-item-subtitle>
-            </v-list-item>
-          </v-list>
-        </v-card>
-
         <!-- ORDEN ALQUILER — hogar único de documentos -->
-        <div v-else-if="esAlquiler(order)">
+        <div v-if="esAlquiler(order)">
 
           <!-- Cotización y guías (documento único c/u) -->
           <div class="doc-group mt-2">
@@ -102,12 +80,10 @@
 <script setup>
 import { ref, reactive, computed, watch, getCurrentInstance } from 'vue'
 import { Toast } from '@/plugins/alerts'
-import { useTheme } from 'vuetify'
 import OrderDataService from "@/services/orders/orderDataService"
 import ClientSelect from '@/components/shared/ClientSelect.vue'
 import { fechaCorta } from '@/utils/dates'
-import { vivo } from '@/utils/certificates/estado'
-import { esAlquiler, esDeServicio } from '@/utils/orders/estado'
+import { esAlquiler } from '@/utils/orders/estado'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -118,12 +94,8 @@ const emit = defineEmits(['update:modelValue', 'close'])
 
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
 
 const edit_order_data = ref(null)
-const edit_order_certs = ref([])
-const selected_certs_to_update = ref([])
 const files_to_upload = ref({ quote_pdf: null, dispatch_guide_pdf: null, return_guide_pdf: null })
 const saving_edit_order = ref(false)
 
@@ -147,9 +119,6 @@ const subiendoDoc = reactive({ 1: false, 2: false })
 
 const cliente_actual = ref(null)
 
-// El equipo trae dueño propio solo cuando no es el cliente de la orden.
-const duenoDe = (cert) => (cert.client_data || cliente_actual.value)?.name || '---'
-
 const dialogModel = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val)
@@ -171,12 +140,7 @@ function initFields() {
 
   files_to_upload.value = { quote_pdf: null, dispatch_guide_pdf: null, return_guide_pdf: null }
 
-  if (esDeServicio(props.order)) {
-    edit_order_certs.value = JSON.parse(JSON.stringify(props.order.certificates))
-    selected_certs_to_update.value = edit_order_certs.value.filter(vivo).map(c => c.id)
-  } else if (esAlquiler(props.order)) {
-    cargarDocs()
-  }
+  cargarDocs()
 }
 
 // ── Documentos múltiples (OC / valorizaciones) ──
@@ -230,16 +194,11 @@ function guardarEdicionOrden() {
   let data = new FormData()
   data.append('client', edit_order_data.value.client)
 
-  if (esDeServicio(props.order)) {
-    data.append('sync_certificates', selected_certs_to_update.value.join(','))
-    OrderDataService.patch(edit_order_data.value.id, data).then(onSuccess).catch(onError)
-  } else {
-    if (files_to_upload.value.quote_pdf) data.append('quote_pdf', files_to_upload.value.quote_pdf)
-    if (files_to_upload.value.dispatch_guide_pdf) data.append('dispatch_guide_pdf', files_to_upload.value.dispatch_guide_pdf)
-    if (files_to_upload.value.return_guide_pdf) data.append('return_guide_pdf', files_to_upload.value.return_guide_pdf)
+  if (files_to_upload.value.quote_pdf) data.append('quote_pdf', files_to_upload.value.quote_pdf)
+  if (files_to_upload.value.dispatch_guide_pdf) data.append('dispatch_guide_pdf', files_to_upload.value.dispatch_guide_pdf)
+  if (files_to_upload.value.return_guide_pdf) data.append('return_guide_pdf', files_to_upload.value.return_guide_pdf)
 
-    OrderDataService.uploadInvoice(edit_order_data.value.id, data).then(onSuccess).catch(onError)
-  }
+  OrderDataService.uploadInvoice(edit_order_data.value.id, data).then(onSuccess).catch(onError)
 }
 
 function onSuccess() {

@@ -1,7 +1,8 @@
 <template>
   <v-row dense align="center">
-    <v-col cols="12" md="7">
+    <v-col cols="12" :md="COLUMNAS[forma].cliente">
       <client-select
+        :class="{ 'cliente-que-baja': forma === 'apilada' }"
         :model-value="modelValue"
         :seed="clienteSembrado"
         label="Cliente (nombre o documento)"
@@ -11,9 +12,10 @@
       />
     </v-col>
 
-    <v-col cols="12" md="5">
+    <v-col cols="12" :md="COLUMNAS[forma].documento">
       <v-text-field
         v-model="documentoBuscar"
+        :class="{ 'campo-corto': forma === 'ajustada' }"
         label="RUC/DNI en SUNAT/RENIEC"
         density="compact"
         variant="outlined"
@@ -54,7 +56,16 @@ const props = defineProps({
   // El cliente vinculado, si quien abre el formulario ya lo tiene. Sin esto hay
   // que ir a buscarlo por su id.
   seed: { type: Object, default: null },
+  // 'mitades': cliente y RUC/DNI en 7/5 de la fila. 'ajustada': el RUC/DNI mide lo que su dato
+  // (11 cifras) y el cliente toma el resto. 'apilada': uno debajo del otro, para una columna angosta.
+  forma: { type: String, default: 'mitades' },
 })
+
+const COLUMNAS = {
+  mitades: { cliente: 7, documento: 5 },
+  ajustada: { cliente: true, documento: 'auto' },
+  apilada: { cliente: 12, documento: 12 },
+}
 
 const emit = defineEmits(['update:modelValue', 'client-selected'])
 
@@ -112,3 +123,13 @@ const onBuscarReniec = async () => {
   documentoBuscar.value = ''
 }
 </script>
+
+<style scoped>
+/* En una columna angosta el nombre elegido baja de linea; al escribir para buscar, vuelve a una. */
+.cliente-que-baja:not(:focus-within) :deep(.v-autocomplete__selection),
+.cliente-que-baja:not(:focus-within) :deep(.v-autocomplete__selection-text) {
+  white-space: normal;
+  overflow: visible;
+  height: auto;
+}
+</style>

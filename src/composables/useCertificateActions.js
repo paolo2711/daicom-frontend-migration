@@ -1,17 +1,15 @@
-import { Toast } from '@/plugins/alerts'
 import CertificateDataService from '@/services/certificates/certificateDataService'
-import { useSwal } from '@/composables/useSwal'
+import { useActionCall } from '@/composables/useActionCall'
 import { useUploadState } from '@/composables/useUploadState'
 import { estaEntregado } from '@/utils/certificates/entrega'
 import { copiarConAviso } from '@/utils/clipboard'
-import { mensajeDeError } from '@/utils/errors'
 
 // Lo que hace cada accion de ACCIONES_CERTIFICADO, sobre uno o varios. Lo usa
 // toda pantalla con certificados; cada una dice como abre su modal de lote y
 // la ficha de un certificado.
 export function useCertificateActions({ abrirLote, abrirFicha }) {
-  const swal = useSwal()
   const { tareaDe } = useUploadState()
+  const { llamarSinPreguntar, confirmarYLlamar } = useActionCall()
 
   // Recien firmado, el link llega en la tarea antes que la fila se actualice.
   const linkDe = (cert) => cert.link_nube || tareaDe(cert.id, 'qr')?.url || ''
@@ -30,23 +28,6 @@ export function useCertificateActions({ abrirLote, abrirFicha }) {
 
   const ids = (certs) => certs.map(c => c.id)
 
-  // El toast si salio, el cartel si no.
-  async function llamarSinPreguntar (llamar, exito, fallo) {
-    try {
-      await llamar()
-      Toast.fire({ timer: 2400, icon: 'success', title: exito })
-    } catch (err) {
-      swal.fire({ icon: 'error', title: 'Error', text: mensajeDeError(err, fallo) })
-    }
-  }
-
-  async function confirmarYLlamar ({ titulo, texto, boton, llamar, exito, fallo, icono = 'warning' }) {
-    const { isConfirmed } = await swal.fire({
-      title: titulo, text: texto, icon: icono,
-      showCancelButton: true, confirmButtonText: boton, cancelButtonText: 'Cancelar',
-    })
-    if (isConfirmed) await llamarSinPreguntar(llamar, exito, fallo)
-  }
 
   function ejecutarAccion (clave, certs) {
     const [cert] = certs

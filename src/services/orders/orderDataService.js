@@ -49,6 +49,22 @@ class OrderDataService {
         return axios.post(`orders/${id}/equipos`, { items }, { headers });
     }
 
+    servicios() {
+        return axios.get('orders/servicios', { headers: authHeader() });
+    }
+
+    completarLinea(id, completado) {
+        return axios.post(`orders/lineas/${id}/completada`, { completado }, { headers: authHeader() });
+    }
+
+    cambiarServicioDeLinea(id, { tipo_servicio, certificate_type, lab }) {
+        return axios.post(`orders/lineas/${id}/servicio`, { tipo_servicio, certificate_type, lab }, { headers: authHeader() });
+    }
+
+    eliminarLinea(id) {
+        return axios.delete(`orders/lineas/${id}`, { headers: authHeader() });
+    }
+
     siguienteNumero(orderType) {
         return axios.get('orders/siguiente-numero', { params: { order_type: orderType }, headers: authHeader() });
     }

@@ -1,199 +1,123 @@
 <template>
-  <div>
-    <v-card variant="flat" class="border pa-4 rounded-lg" :color="isDark ? '#1E1E1E' : 'grey-lighten-4'">
-      <div class="d-flex align-center mb-3">
-        <div class="text-subtitle-1 font-weight-bold" :class="isDark ? 'text-white' : 'text-grey-darken-3'">
-          <v-icon size="small" class="mr-1">mdi-plus-circle</v-icon> Configurar Equipo
+  <workspace-layout :detalle-abierto="Boolean(elegida)" @cerrar="cerrarPanel">
+    <template v-if="$slots.orden" #apoyo="{ apilado }">
+      <div class="titulo-de-hoja">Orden</div>
+      <div class="px-3 pb-3">
+        <slot name="orden" :apilado="apilado" />
+      </div>
+    </template>
+
+    <template #lista>
+      <div class="titulo-de-hoja titulo-principal flex-wrap ga-2 py-2">
+        <span class="mr-auto">Equipos <span class="text-medium-emphasis font-weight-regular">({{ equipments.length }})</span></span>
+        <paginated-autocomplete ref="buscador" v-model="buscado" :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
+                                recurso="equipos" label="Agregar equipo del catálogo" :return-object="false"
+                                item-title="name" item-value="id" prepend-inner-icon="mdi-magnify"
+                                density="compact" variant="outlined" hide-details class="buscador-de-equipo"
+                                @selected="agregar" />
+        <v-text-field v-model="correlativo" label="Certificado existente" type="number" class="campo-corto"
+                      density="compact" variant="outlined" hide-details @keyup.enter="vincular">
+          <template #append-inner>
+            <v-btn icon size="small" variant="text" color="primary" :loading="buscandoCertificado" @click="vincular">
+              <v-icon>mdi-magnify</v-icon>
+            </v-btn>
+          </template>
+          <template v-if="puedeCrearEquipo" #append>
+            <add-new-button texto="Nuevo equipo en el catálogo" @click="equipoMaestroModalRef?.open()" />
+          </template>
+        </v-text-field>
+      </div>
+
+      <div class="flex-grow-1 overflow-y-auto" style="min-height: 0;">
+        <v-table v-if="equipments.length > 0" density="compact" class="lista-de-equipos" fixed-header>
+          <thead>
+            <tr>
+              <th style="width: 9rem;">N° estimado</th>
+              <th style="width: 26%;">Equipo</th>
+              <th style="width: 4.5rem;">Lab</th>
+              <th>Marca</th>
+              <th>Modelo</th>
+              <th>Serie / Código</th>
+              <th>Servicio</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <row-order-service v-for="(eq, index) in equipments" :key="clave(eq)"
+                               v-bind="arrastrable(index)" :class="claseDe(index)" :eq="eq" :indice="index"
+                               :estimado="numerosEstimados[index]" :error="errores[index]" :asa="asa(index)"
+                               :cliente="cliente" :elegida="eq === elegida" @elegir="elegida = eq" @borrar="borrarFila" />
+          </tbody>
+        </v-table>
+        <div v-else class="d-flex flex-column align-center justify-center fill-height ga-2 pa-8 text-medium-emphasis">
+          <v-icon size="x-large">mdi-toolbox-outline</v-icon>
+          Agrega un equipo con el buscador de arriba.
         </div>
-        
-        <v-spacer />
-
-        <v-radio-group v-model="temp_eq.modo" inline density="compact" hide-details class="mt-0 pt-0" style="flex: 0 0 auto;">
-          <v-radio label="Crear Nuevo" value="nuevo" color="primary" />
-          <v-radio label="Vincular" value="existente" color="secondary" class="ml-4" />
-        </v-radio-group>
       </div>
+      <equipo-maestro-modal ref="equipoMaestroModalRef" @reload="buscador?.reload()" />
+    </template>
 
-      <template v-if="temp_eq.modo === 'nuevo'">
-        <v-row dense>
-          <v-col cols="12">
-            <paginated-autocomplete ref="equipCatalogRef" v-model="temp_eq.name" :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
-                            recurso="equipos" :seed="semillaDeEquipo(temp_eq.name)" @selected="conSuLaboratorio"
-                            label="Equipo" :return-object="false" item-title="name" item-value="id"
-                            density="compact" variant="outlined" hide-details="auto"
-                            prepend-inner-icon="mdi-toolbox-outline" clearable>
-              <template v-if="puedeCrearEquipo" #append>
-                <add-new-button texto="Nuevo equipo en el catálogo" @click="equipoMaestroModalRef?.open()" />
-              </template>
-            </paginated-autocomplete>
-          </v-col>
-
-          <v-col cols="12" md="5">
-            <paginated-autocomplete v-model="temp_eq.lab" :fetch="fetchLabs" :mapper="LabMappers.getMap"
-                            recurso="labs" :seed="labSeleccionado"
-                            @selected="l => labSeleccionado = l"
-                            label="Laboratorio" :return-object="false" item-title="name" item-value="id"
-                            prepend-inner-icon="mdi-flask-outline"
-                            density="compact" variant="outlined" hide-details="auto" />
-          </v-col>
-          <v-col cols="12" md="4">
-            <v-select v-model="temp_eq.certificate_type" :items="TIPOS_CERTIFICADO" density="compact" variant="outlined"
-                      hide-details="auto" label="Tipo de Certificación" />
-          </v-col>
-          <v-col v-if="siguienteEstimado" cols="12" md="3" class="text-caption text-medium-emphasis align-self-center">
-            Siguiente estimado: <span class="numero-estimado">{{ siguienteEstimado }}</span>
-          </v-col>
-        </v-row>
-      </template>
-
-      <v-row dense v-else align="center">
-        <v-col cols="12">
-          <v-text-field v-model="temp_eq.correlative_busqueda" label="Nro. Correlativo (Ej: 15)"
-                        type="number" variant="outlined" density="compact" hide-details
-                        @keyup.enter="buscarCertificadoHuerfano">
-            <template #append-inner>
-              <v-btn icon size="small" variant="text" color="primary" :loading="buscando_cert" @click="buscarCertificadoHuerfano">
-                <v-icon>mdi-magnify</v-icon>
-              </v-btn>
-            </template>
-          </v-text-field>
-        </v-col>
-        <v-col cols="12" v-if="certificado_encontrado" class="mt-1">
-          <v-chip color="success" variant="outlined" label class="justify-center font-weight-bold" style="height: 38px; width: 100%;">
-            <template #prepend><v-icon size="small">mdi-check-circle</v-icon></template>
-            {{ certificado_encontrado.equipment }} ({{ certificado_encontrado.registry_code }})
-          </v-chip>
-        </v-col>
-      </v-row>
-
-      <div class="text-right mt-3">
-        <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" @click="addEquipmentToBatch"
-               :disabled="(temp_eq.modo === 'nuevo' && (!temp_eq.name || !temp_eq.lab || !temp_eq.certificate_type)) || (temp_eq.modo === 'existente' && !certificado_encontrado)">
-          Añadir a la lista
-        </v-btn>
-      </div>
-    </v-card>
-
-    <v-table density="compact" class="mt-4 tabla-mejorada" v-if="equipments.length > 0">
-      <thead>
-        <tr :class="isDark ? 'bg-grey-darken-3' : 'bg-grey-lighten-3'">
-          <th style="width: 9rem;">N° estimado</th>
-          <th>Equipo</th>
-          <th style="width: 30%;">Laboratorio</th>
-          <th style="width: 22%;">Tipo</th>
-          <th class="text-right">Acción</th>
-        </tr>
-      </thead>
-      <tbody>
-        <row-order-service v-for="(eq, index) in equipments" :key="clave(eq)"
-                           v-bind="arrastrable(index)" :class="claseDe(index)" :eq="eq" :indice="index"
-                           :estimado="numerosEstimados[index]" :error="errores[index]" :asa="asa(index)"
+    <template #detalle>
+      <panel-order-service :eq="elegida" :indice="indiceElegida" :estimado="numerosEstimados[indiceElegida]"
+                           :error="errores[indiceElegida]" :cliente="cliente" @cerrar="cerrarPanel" @otro-igual="otroIgual"
                            @borrar="borrarFila" />
-      </tbody>
-    </v-table>
+    </template>
 
-    
-  <equipo-maestro-modal ref="equipoMaestroModalRef" @reload="equipCatalogRef?.reload()" />
-  </div>
+    <template #sin-detalle>
+      <div class="titulo-de-hoja">Equipo</div>
+      <div class="px-4 text-body-2 text-medium-emphasis">Elige un equipo de la lista para ver y llenar sus datos.</div>
+    </template>
+  </workspace-layout>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, getCurrentInstance } from 'vue'
-import { useTheme } from 'vuetify'
-import LabDataService from '@/services/labs/labDataService'
+import { ref, computed, watch, nextTick, onMounted, getCurrentInstance } from 'vue'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
+import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import RowOrderService from './RowOrderService.vue'
-import LabMappers from '@/mappers/labMappers'
+import PanelOrderService from './PanelOrderService.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import EquipmentDataService from '@/services/equipments/equipmentDataService'
 import EquipmentMappers from '@/mappers/equipmentMappers'
 import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal.vue'
 import CorrelativeDataService from '@/services/correlative/correlativeDataService'
-import { TIPOS_CERTIFICADO } from '@/utils/certificates/tipos'
-import { vivo } from '@/utils/certificates/estado'
+import { useOrderServices } from '@/composables/useOrderServices'
+import { estaPublicado, vivo } from '@/utils/certificates/estado'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useRowDrag } from '@/composables/useRowDrag'
 import { usePermissions } from '@/composables/usePermissions'
 import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
 
-const emit = defineEmits(['update-list', 'update-config'])
+const props = defineProps({
+  // El cliente de la orden, {id, name}: el titular de los certificados que no dicen otro.
+  cliente: { type: Object, default: null },
+})
+const emit = defineEmits(['update-list'])
 
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
 
-const temp_eq = ref({ modo: 'nuevo', name: null, lab: null, certificate_type: null, correlative_busqueda: '' })
-const certificado_encontrado = ref(null)
-const buscando_cert          = ref(false)
-const base_correlatives      = ref({ 1: null, 2: null, 3: null })
-const equipments             = ref([])
+const { opciones } = useOrderServices()
+const base_correlatives = ref({ 1: null, 2: null, 3: null })
+const equipments = ref([])
 const { errores, marcarErrores } = useRowErrors(equipments)
 const { asa, arrastrable, claseDe, clave } = useRowDrag(equipments)
-const borrarFila = (indice) => equipments.value.splice(indice, 1)
 
-// Comboboxes server-side
-const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)
+// La fila abierta en el panel.
+const elegida = ref(null)
+const indiceElegida = computed(() => equipments.value.indexOf(elegida.value))
+
 const fetchEquipments = (page, size, query) => EquipmentDataService.getFiltered(page, size, query)
-// El equipo se guarda como su nombre, que en el catalogo es tambien el id.
-const semillaDeEquipo = (nombre) => (nombre ? { id: nombre, name: nombre } : null)
-const equipCatalogRef = ref(null)      // para recargar el catálogo tras crear un equipo
-const labSeleccionado = ref(null)      // objeto del lab elegido, semilla de su desplegable
+const buscador = ref(null)
+const buscado = ref(null)
 const equipoMaestroModalRef = ref(null)
 // Un equipo nuevo en el catalogo es parte de editarlo: sin el permiso, se pide a quien lo tenga.
 const puedeCrearEquipo = usePermissions().hasAction(EDITAR_CATALOGO)
 
-// El equipo trae el laboratorio que lo calibra; sin uno, queda el ya elegido.
-function conSuLaboratorio(equipo) {
-  if (!equipo?.laboratorio) return
-  temp_eq.value.lab = equipo.laboratorio.id
-  labSeleccionado.value = equipo.laboratorio
-}
-
-
-const conCeros = (n) => (n == null ? '…' : String(n).padStart(8, '0'))
-
-// El numero que tomaria una fila nueva si nadie mas toma numeros antes de guardar.
-function estimadoDe(index, filas = equipments.value) {
-  const fila = filas[index]
-  const base = base_correlatives.value[fila.certificate_type]
-  if (!base) return null
-  const antes = filas.slice(0, index).filter(e => e.modo === 'nuevo' && e.certificate_type === fila.certificate_type)
-  return Number(base) + antes.length
-}
-
-const siguienteEstimado = computed(() => {
-  if (!temp_eq.value.certificate_type) return ''
-  const filas = [...equipments.value, { modo: 'nuevo', certificate_type: temp_eq.value.certificate_type }]
-  const numero = estimadoDe(filas.length - 1, filas)
-  return numero == null ? '' : conCeros(numero)
-})
-
-const estimados = () => equipments.value.map((e, i) => (e.modo === 'nuevo' ? estimadoDe(i) : null))
-const numerosEstimados = computed(() => estimados().map(n => conCeros(n)))
-
 watch(equipments, (val) => { emit('update-list', val) }, { deep: true })
 
-// Lo elegido arriba sigue elegido entre fila y fila, y vuelve con el borrador.
-watch([temp_eq, labSeleccionado], () => {
-  const { modo, name, lab, certificate_type } = temp_eq.value
-  emit('update-config', { modo, name, lab, certificate_type, lab_data: labSeleccionado.value })
-}, { deep: true })
-
-onMounted(() => {
-  initCorrelatives()   // los comboboxes se auto-cargan solos
-})
-
-// Las de un borrador, con lo elegido arriba, o las de una cotizacion.
-function cargarFilas({ items, config }) {
-  equipments.value = items
-  if (!config) return
-  const { lab_data, ...elegido } = config
-  Object.assign(temp_eq.value, elegido)
-  labSeleccionado.value = lab_data
-}
-
+onMounted(initCorrelatives)
 
 async function initCorrelatives() {
   try {
@@ -204,61 +128,153 @@ async function initCorrelatives() {
   }
 }
 
+const conCeros = (n) => (n == null ? '…' : String(n).padStart(8, '0'))
 
+// El numero que tomaria una fila nueva si nadie mas toma numeros antes de guardar.
+function estimadoDe(index) {
+  const fila = equipments.value[index]
+  const base = base_correlatives.value[fila.certificate_type]
+  if (!base) return null
+  const antes = equipments.value.slice(0, index).filter(e => e.modo === 'nuevo' && e.certificate_type === fila.certificate_type)
+  return Number(base) + antes.length
+}
 
-async function buscarCertificadoHuerfano() {
-  if (!temp_eq.value.correlative_busqueda) return
-  buscando_cert.value = true
-  certificado_encontrado.value = null
+const estimados = () => equipments.value.map((e, i) => (e.modo === 'nuevo' ? estimadoDe(i) : null))
+const numerosEstimados = computed(() => estimados().map(n => conCeros(n)))
+
+function abrir(fila, despuesDe = equipments.value.length - 1) {
+  equipments.value.splice(despuesDe + 1, 0, fila)
+  elegida.value = fila
+}
+
+// El servicio se repite del ultimo equipo agregado. El laboratorio es el del equipo, o el
+// del ultimo si es el mismo equipo.
+function agregar(equipo) {
+  if (!equipo) return
+  const anterior = equipments.value.findLast(e => e.modo === 'nuevo')
+  const igual = anterior?.name === equipo.name ? anterior : null
+  abrir({
+    modo: 'nuevo',
+    name: equipo.name,
+    lab: equipo.laboratorio?.id ?? igual?.lab ?? null,
+    lab_data: equipo.laboratorio ?? igual?.lab_data ?? null,
+    tipo_servicio: anterior?.tipo_servicio ?? null,
+    certificate_type: anterior?.certificate_type ?? null,
+  })
+  nextTick(() => { buscado.value = null })
+}
+
+function otroIgual() {
+  const { name, lab, lab_data, tipo_servicio, certificate_type, marca, modelo, titular, titular_data } = elegida.value
+  abrir({ modo: 'nuevo', name, lab, lab_data, tipo_servicio, certificate_type, marca, modelo, titular, titular_data },
+        indiceElegida.value)
+}
+
+function cerrarPanel() {
+  elegida.value = null
+  nextTick(() => buscador.value?.$el.querySelector('input')?.focus())
+}
+
+// Las lineas guardadas que se borran de la lista salen de la orden al guardar.
+const quitadas = ref([])
+
+function borrarFila(indice) {
+  const fila = equipments.value[indice]
+  if (fila === elegida.value) elegida.value = null
+  if (fila.modo === 'linea') quitadas.value.push(fila.id)
+  equipments.value.splice(indice, 1)
+}
+
+const correlativo = ref('')
+const buscandoCertificado = ref(false)
+
+async function vincular() {
+  if (!correlativo.value) return
+  buscandoCertificado.value = true
   try {
-    const res = await CertificateDataService.getFiltered({ page_size: 50, correlative: Number(temp_eq.value.correlative_busqueda) })
-    const validos = res.data.results.filter(c => !c.order && vivo(c))
-    if (validos.length > 0) {
-      certificado_encontrado.value = validos[0]
-    } else {
+    const res = await CertificateDataService.getFiltered({ page_size: 50, correlative: Number(correlativo.value) })
+    const cert = res.data.results.find(c => !c.order && vivo(c))
+    if (!cert) {
       $swal.fire('No encontrado', 'No se encontró un certificado suelto o válido con ese número.', 'warning')
+      return
     }
+    if (equipments.value.some(e => e.modo === 'existente' && e.cert_id === cert.id)) {
+      $swal.fire('Atención', 'Este certificado ya está en la lista.', 'warning')
+      return
+    }
+    abrir({
+      modo: 'existente',
+      cert_id: cert.id,
+      name: cert.equipment,
+      registry_code: cert.registry_code,
+      lab: cert.lab,
+      lab_data: cert.lab_data,
+      certificate_type: cert.certificate_type,
+      // El servicio de un certificado suelto es el primero que lleva su tipo, como lo decide el back.
+      tipo_servicio: opciones.value.find(o => o.certificate_type === cert.certificate_type)?.tipo_servicio,
+      marca: cert.brand,
+      modelo: cert.model,
+      serie: cert.serie,
+      titular: cert.client_data.id,
+      titular_data: cert.client_data,
+    })
+    correlativo.value = ''
   } catch {
     $swal.fire('Error', 'Hubo un problema al buscar el certificado.', 'error')
   } finally {
-    buscando_cert.value = false
+    buscandoCertificado.value = false
   }
 }
 
-function addEquipmentToBatch() {
-  if (temp_eq.value.modo === 'nuevo') {
-    if (!temp_eq.value.name || !temp_eq.value.lab || !temp_eq.value.certificate_type) return
-    equipments.value.push({
-      modo:             'nuevo',
-      name:             temp_eq.value.name,
-      lab:              temp_eq.value.lab,
-      lab_data:         labSeleccionado.value,
-      certificate_type: temp_eq.value.certificate_type,
-    })
-  } else {
-    if (!certificado_encontrado.value) return
-    
-    // UX: Prevenir que el usuario agregue el mismo equipo existente dos veces a la lista
-    const yaExiste = equipments.value.some(e => e.modo === 'existente' && e.cert_id === certificado_encontrado.value.id)
-    if (yaExiste) {
-      $swal.fire('Atención', 'Este equipo ya está en la lista para ser añadido.', 'warning')
-      return
-    }
-
-    equipments.value.push({
-      modo:             'existente',
-      cert_id:          certificado_encontrado.value.id,
-      name:             certificado_encontrado.value.equipment,
-      registry_code:    certificado_encontrado.value.registry_code,
-      lab:              certificado_encontrado.value.lab,
-      lab_data:         certificado_encontrado.value.lab_data,
-      certificate_type: certificado_encontrado.value.certificate_type,
-    })
-    certificado_encontrado.value = null
-    temp_eq.value.correlative_busqueda = ''
-  }
-  temp_eq.value.name = null
+// Las de un borrador o las de una cotizacion.
+function cargarFilas({ items }) {
+  equipments.value = [...items]
 }
 
-defineExpose({ cargarFilas, marcarErrores, estimados })
+// Las lineas vivas de una orden guardada, para editarla. `titular` queda en null si es el cliente de la orden.
+function cargarLineas(lineas) {
+  quitadas.value = []
+  equipments.value = lineas.filter(l => vivo(l.certificate)).map(({ certificate: cert, ...linea }) => ({
+    modo: 'linea',
+    id: linea.id,
+    cert_id: cert?.id ?? null,
+    registry_code: cert?.registry_code,
+    name: linea.equipo,
+    tipo_servicio: linea.tipo_servicio,
+    certificate_type: cert?.certificate_type ?? null,
+    lab: linea.lab,
+    lab_data: linea.lab_data,
+    marca: linea.marca,
+    modelo: linea.modelo,
+    serie: linea.serie,
+    comentario: linea.comentario,
+    titular: cert?.client_data?.id ?? null,
+    titular_data: cert?.client_data ?? null,
+    publicado: estaPublicado(cert),
+  }))
+}
+
+// Lo que manda la orden editada: de las lineas guardadas solo lo que se corrige.
+function paraGuardar() {
+  const items = equipments.value.map((fila) => {
+    if (fila.modo !== 'linea') return fila
+    const { id, cert_id, marca, modelo, serie, comentario, titular } = fila
+    return { id, marca, modelo, serie, comentario, ...(cert_id && { titular: titular ?? props.cliente?.id }) }
+  })
+  return { items, quitar: quitadas.value }
+}
+
+defineExpose({ cargarFilas, cargarLineas, paraGuardar, marcarErrores, estimados })
 </script>
+
+<style scoped>
+.buscador-de-equipo { width: 22rem; flex: 0 1 22rem; }
+.lista-de-equipos :deep(.v-table__wrapper) { padding: 0 0.5rem; }
+.lista-de-equipos :deep(table) { border-spacing: 0 0.375rem; }
+.lista-de-equipos thead th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)) !important;
+}
+</style>

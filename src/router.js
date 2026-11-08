@@ -64,16 +64,6 @@ const routes = [
             },
             component: () => import("@/views/documents/components/TabQuotes.vue"),
           },
-          {
-            name: "documents-intake",
-            path: "ingresos",
-            meta: {
-              beta: true,
-              pestana: { texto: "Formato de Ingreso", icono: "mdi-truck-delivery-outline" },
-              nuevo: { texto: "Nuevo ingreso", icono: "mdi-truck-plus-outline" },
-            },
-            component: () => import("@/views/documents/components/TabIntakeForms.vue"),
-          },
         ],
       },
       {

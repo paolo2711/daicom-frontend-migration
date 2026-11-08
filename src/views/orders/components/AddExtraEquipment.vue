@@ -30,7 +30,7 @@ import FormOrderRental from './rentals/FormOrderRental.vue'
 import ResumenEquipos, { cuantosEquipos } from './ResumenEquipos.vue'
 import OrderDataService from "@/services/orders/orderDataService"
 
-// Solo alquiler: en servicio los equipos se agregan desde Editar orden.
+// Solo alquiler: en servicio los equipos se agregan desde Ver y editar.
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   order: { type: Object, default: null }

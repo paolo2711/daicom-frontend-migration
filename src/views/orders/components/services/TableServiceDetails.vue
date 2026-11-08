@@ -14,7 +14,7 @@
       <v-spacer/>
       <v-btn size="x-small" color="primary" variant="flat" class="text-white"
              @click="emit('editar')" :disabled="!viva(order)">
-        <v-icon start size="x-small">mdi-pencil</v-icon> Editar orden
+        <v-icon start size="x-small">mdi-pencil</v-icon> Ver y editar
       </v-btn>
     </v-toolbar>
 

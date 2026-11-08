@@ -1,5 +1,6 @@
 import axios from "axios";
 import authHeader from "@/services/auth-header";
+import { archivoDe } from "@/utils/files";
 
 class OrderDataService {
 
@@ -40,6 +41,17 @@ class OrderDataService {
     getEquipos(id, ids = null) {
         const params = ids ? { ids: ids.join(',') } : {};
         return axios.get(`orders/${id}/equipos`, { headers: authHeader(), params });
+    }
+
+    // El PDF del ingreso sin guardar, como archivo: { client, items }.
+    vistaPreviaIngreso(data) {
+        const opciones = { headers: authHeader(), responseType: 'blob' };
+        return archivoDe(axios.post('orders/vista-previa-ingreso', data, opciones));
+    }
+
+    // Donde esta el PDF del ingreso; la orden que todavia no lo tiene, se lo arma.
+    ingreso(id) {
+        return axios.get(`orders/${id}/ingreso`, { headers: authHeader() });
     }
 
     // Todos o ninguno: si una fila no se puede, responde cuales y no guarda nada.

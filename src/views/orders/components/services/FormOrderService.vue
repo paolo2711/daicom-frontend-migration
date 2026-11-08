@@ -155,17 +155,13 @@ function agregar(equipo) {
     lab_data: equipo.laboratorio ?? igual?.lab_data ?? null,
     tipo_servicio: anterior?.tipo_servicio ?? null,
     certificate_type: anterior?.certificate_type ?? null,
-    recepcion: {},
   })
   nextTick(() => { buscado.value = null })
 }
 
 function otroIgual() {
-  const { name, lab, lab_data, tipo_servicio, certificate_type, recepcion } = elegida.value
-  abrir({
-    modo: 'nuevo', name, lab, lab_data, tipo_servicio, certificate_type,
-    recepcion: { marca: recepcion.marca, modelo: recepcion.modelo },
-  }, indiceElegida.value)
+  const { name, lab, lab_data, tipo_servicio, certificate_type, marca, modelo } = elegida.value
+  abrir({ modo: 'nuevo', name, lab, lab_data, tipo_servicio, certificate_type, marca, modelo }, indiceElegida.value)
 }
 
 function cerrarPanel() {
@@ -205,7 +201,9 @@ async function vincular() {
       certificate_type: cert.certificate_type,
       // El servicio de un certificado suelto es el primero que lleva su tipo, como lo decide el back.
       tipo_servicio: opciones.value.find(o => o.certificate_type === cert.certificate_type)?.tipo_servicio,
-      recepcion: {},
+      marca: cert.brand,
+      modelo: cert.model,
+      serie: cert.serie,
     })
     correlativo.value = ''
   } catch {
@@ -217,7 +215,7 @@ async function vincular() {
 
 // Las de un borrador o las de una cotizacion.
 function cargarFilas({ items }) {
-  equipments.value = items.map(fila => ({ ...fila, recepcion: fila.recepcion || {} }))
+  equipments.value = [...items]
 }
 
 defineExpose({ cargarFilas, marcarErrores, estimados })

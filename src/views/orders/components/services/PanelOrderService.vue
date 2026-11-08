@@ -17,7 +17,7 @@
                                 label="Equipo" :return-object="false" item-title="name" item-value="id"
                                 v-bind="CAMPO" />
         <v-text-field v-else :model-value="eq.name" label="Equipo" readonly v-bind="CAMPO" />
-        <v-textarea v-for="campo in CAMPOS" :key="campo.clave" v-model="eq.recepcion[campo.clave]"
+        <v-textarea v-for="campo in CAMPOS" :key="campo.clave" v-model="eq[campo.clave]"
                     :label="campo.etiqueta" :maxlength="largos[campo.clave]" v-bind="TEXTO" />
       </section>
 
@@ -35,7 +35,7 @@
 
       <section class="seccion">
         <div class="titulo-de-seccion">Comentario</div>
-        <v-textarea v-model="eq.recepcion.comentario" label="Estado, accesorios" :maxlength="largos.comentario" v-bind="TEXTO" />
+        <v-textarea v-model="eq.comentario" label="Estado, accesorios" :maxlength="largos.comentario" v-bind="TEXTO" />
       </section>
 
       <div v-if="error" class="text-caption text-error">{{ error }}</div>

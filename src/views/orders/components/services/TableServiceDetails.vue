@@ -59,7 +59,7 @@
           </td>
           <td>
             <div>{{ linea.equipo }}</div>
-            <div v-if="recepcionDe(linea)" class="text-caption text-medium-emphasis">{{ recepcionDe(linea) }}</div>
+            <div v-if="delEquipo(linea)" class="text-caption text-medium-emphasis">{{ delEquipo(linea) }}</div>
           </td>
           <td class="text-medium-emphasis">{{ tituloDe(servicioDe(linea), opciones) }}</td>
 
@@ -169,7 +169,7 @@ const { hasAction } = usePermissions()
 const { opciones } = useOrderServices()
 
 const certificados = computed(() => certificadosDe(props.order.items))
-const recepcionDe = (linea) => ['marca', 'modelo', 'serie'].map(c => linea.recepcion?.[c]).filter(Boolean).join(' · ')
+const delEquipo = (linea) => [linea.marca, linea.modelo, linea.serie].filter(Boolean).join(' · ')
 
 // Como en Certificados, un anulado no se marca.
 const marcables = computed(() => certificados.value.filter(vivo))

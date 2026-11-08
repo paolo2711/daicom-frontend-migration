@@ -21,7 +21,8 @@
                 No pasaron a la orden: {{ sinPasar.join(', ') }}
               </div>
               <div class="text-body-2 font-weight-medium mt-3 mb-2">Observaciones</div>
-              <text-list-field v-model="observaciones" texto-agregar="Añadir observación" :maxlength="largoDeObservacion" />
+              <v-textarea v-model="observaciones" :maxlength="largoDeObservacion" rows="3" auto-grow
+                          density="compact" variant="outlined" rounded="lg" hide-details />
             </template>
           </form-order-service>
 
@@ -63,7 +64,6 @@ import OrderDataService from '@/services/orders/orderDataService'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
 import ResumenEquipos from './ResumenEquipos.vue'
-import TextListField from '@/components/shared/TextListField.vue'
 import { sinServicio, useOrderServices } from '@/composables/useOrderServices'
 
 
@@ -76,8 +76,8 @@ const is_on_sending_process = ref(false)
 const is_valid              = ref(false)
 const next_order_number     = ref('')
 const order                 = ref({ client: null, order_type: SERVICIO })
-// Las de la orden de servicio: van al JSON del ingreso.
-const observaciones         = ref([])
+// Solo las de servicio.
+const observaciones         = ref('')
 const { largoDeObservacion } = useOrderServices()
 const items_to_save         = ref([])
 const addOrderForm          = ref(null)
@@ -104,7 +104,7 @@ watch([items_to_save, () => order.value.client, observaciones], ([items, client]
 // `cotizacion`, la orden que el back arma desde una (documents/<id>/orden).
 async function open(tipo, cotizacion = null) {
   items_to_save.value = []
-  observaciones.value = []
+  observaciones.value = ''
   order.value = { client: cotizacion?.client ?? null, order_type: tipo }
   sinPasar.value = cotizacion?.sin_pasar ?? []
   desdeCotizacion.value = Boolean(cotizacion)
@@ -120,7 +120,7 @@ async function open(tipo, cotizacion = null) {
   const recuperado = await borrador.ofrecer()
   if (!recuperado) return
   order.value.client = recuperado.client
-  observaciones.value = recuperado.observaciones || []
+  observaciones.value = recuperado.observaciones || ''
   await nextTick()
   formRef.value?.cargarFilas(recuperado)
 }
@@ -144,7 +144,7 @@ async function save() {
       payload_orden.client_order_reference = order.value.client_order_reference
     }
     payload_orden.items = items_to_save.value
-    if (esDeServicio(order.value)) payload_orden.ingreso = { observaciones: observaciones.value }
+    if (esDeServicio(order.value)) payload_orden.observaciones = observaciones.value
 
     const filas = items_to_save.value
     const estimados = formRef.value?.estimados?.()

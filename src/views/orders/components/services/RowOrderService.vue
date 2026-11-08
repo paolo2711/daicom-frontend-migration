@@ -7,11 +7,11 @@
     </td>
     <td class="text-break">
       <div class="font-weight-bold text-high-emphasis">{{ eq.name }}</div>
-      <div v-if="recepcion.comentario" class="text-caption text-medium-emphasis comentario">{{ recepcion.comentario }}</div>
+      <div v-if="eq.comentario" class="text-caption text-medium-emphasis comentario">{{ eq.comentario }}</div>
       <div v-if="error" class="text-caption text-error">{{ error }}</div>
     </td>
     <td v-for="campo in CAMPOS" :key="campo" class="text-break">
-      <span v-if="recepcion[campo]">{{ recepcion[campo] }}</span>
+      <span v-if="eq[campo]">{{ eq[campo] }}</span>
       <span v-else class="text-disabled text-no-wrap">No indica</span>
     </td>
     <td>
@@ -43,7 +43,6 @@ const props = defineProps({
 const emit = defineEmits(['elegir', 'borrar'])
 
 const CAMPOS = ['marca', 'modelo', 'serie']
-const recepcion = computed(() => props.eq.recepcion || {})
 const { opciones } = useOrderServices()
 const tituloDelServicio = computed(() => tituloDe(props.eq, opciones.value))
 </script>

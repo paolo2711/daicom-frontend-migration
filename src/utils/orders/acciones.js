@@ -18,10 +18,11 @@ export const ACCIONES_ORDEN = [
     texto: ([orden]) => (esAlquiler(orden) ? 'Editar alquiler' : 'Editar orden'),
     visible: algunaViva,
   },
+  // En servicio los equipos se agregan desde Editar orden.
   {
     clave: 'equipo', grupo: 'orden', varios: false,
     icono: 'mdi-plus', texto: 'Añadir equipo extra',
-    visible: algunaViva,
+    visible: (ordenes) => algunaViva(ordenes) && ordenes.every(esAlquiler),
   },
   {
     clave: VINCULAR, grupo: 'cobro', varios: false,

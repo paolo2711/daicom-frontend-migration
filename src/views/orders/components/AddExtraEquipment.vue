@@ -1,35 +1,19 @@
 <template>
-  <v-dialog v-model="dialogModel" class="dialog-premium" :fullscreen="pantallaCompleta"
-            width="92%" :max-width="pantallaCompleta ? undefined : '80rem'" persistent>
-    <v-card class="d-flex flex-column" :style="pantallaCompleta ? 'height: 100%;' : 'max-height: 90vh;'">
+  <v-dialog v-model="dialogModel" class="dialog-premium" width="92%" max-width="80rem" persistent>
+    <v-card class="d-flex flex-column" style="max-height: 90vh;">
       <base-modal-header title="Añadir Equipos Extra a la Orden" icon="mdi-plus-box-multiple" @close="close" />
 
-      <v-card-text class="pt-4 pb-2 d-flex flex-column" :class="pantallaCompleta ? 'pantalla-de-trabajo' : 'bg-surface'"
-                   style="flex-grow: 1; min-height: 0;"
-                   :style="{ overflowY: pantallaCompleta ? 'hidden' : 'auto' }">
-        <form-order-rental
-          v-if="isRental"
-          ref="formRef"
-          :key="'extra-rental-' + dialogModel"
-          @update-list="list => items_to_save = list"
-        />
-
-        <form-order-service
-          v-else
-          class="columna-de-trabajo"
-          ref="formRef"
-          :key="'extra-service-' + dialogModel"
-          @update-list="list => items_to_save = list"
-        />
+      <v-card-text class="pt-4 pb-2 bg-surface" style="flex-grow: 1; min-height: 0; overflow-y: auto;">
+        <form-order-rental ref="formRef" :key="'extra-rental-' + dialogModel" @update-list="list => items_to_save = list" />
       </v-card-text>
 
       <v-card-actions class="px-6 pb-4 pt-2 border-t-thin">
-        <div class="d-flex flex-wrap align-center ga-2" :class="pantallaCompleta ? 'columna-de-trabajo' : 'w-100'">
-          <resumen-equipos :filas="items_to_save" :por-tipo="!isRental" />
+        <div class="d-flex flex-wrap align-center ga-2 w-100">
+          <resumen-equipos :filas="items_to_save" />
           <v-spacer/>
           <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
           <v-btn color="primary" variant="flat" class="font-weight-bold px-4" @click="saveExtraEquipments"
-                 :disabled="items_to_save.length === 0 || (!isRental && sinServicio(items_to_save))" :loading="loading_extra">
+                 :disabled="items_to_save.length === 0" :loading="loading_extra">
             Guardar equipos
           </v-btn>
         </div>
@@ -39,17 +23,14 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, getCurrentInstance } from 'vue'
-import { useLocalDraft } from '@/composables/useLocalDraft'
+import { ref, computed, watch, getCurrentInstance } from 'vue'
 import { useSavedNumbers } from '@/composables/useSavedNumbers'
 import { mensajeDeError } from '@/utils/errors'
-import { esAlquiler } from '@/utils/orders/estado'
-import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
 import ResumenEquipos, { cuantosEquipos } from './ResumenEquipos.vue'
-import { sinServicio } from '@/composables/useOrderServices'
 import OrderDataService from "@/services/orders/orderDataService"
 
+// Solo alquiler: en servicio los equipos se agregan desde Editar orden.
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   order: { type: Object, default: null }
@@ -70,27 +51,8 @@ const dialogModel = computed({
   set: (val) => emit('update:modelValue', val)
 })
 
-// Computado para saber si la orden recibida es de Alquiler
-const isRental = computed(() => esAlquiler(props.order))
-const pantallaCompleta = computed(() => !isRental.value)
-
-// Uno por orden: lo cargado para una no aparece al abrir otra.
-const borrador = useLocalDraft(() => `daicom_borrador_equipos_${props.order?.id}`)
-
-watch(items_to_save, (items) => {
-  if (!isRental.value) borrador.guardar({ items })
-}, { deep: true })
-
-watch(dialogModel, async (abierto) => {
-  if (!abierto) {
-    items_to_save.value = []
-    return
-  }
-  if (isRental.value) return
-  const recuperado = await borrador.ofrecer()
-  if (!recuperado) return
-  await nextTick()
-  formRef.value?.cargarFilas(recuperado)
+watch(dialogModel, (abierto) => {
+  if (!abierto) items_to_save.value = []
 })
 
 async function saveExtraEquipments() {
@@ -99,9 +61,8 @@ async function saveExtraEquipments() {
 
   try {
     const filas = items_to_save.value
-    const estimados = formRef.value?.estimados?.()
     const { data } = await OrderDataService.agregarEquipos(props.order.id, filas)
-    avisarNumeros(cuantosEquipos(filas.length, 'añadido'), filas, data.codigos, estimados)
+    avisarNumeros(cuantosEquipos(filas.length, 'añadido'), filas, data.codigos)
     emit('reload')
     close()
   } catch (error) {
@@ -114,7 +75,6 @@ async function saveExtraEquipments() {
 }
 
 function close() {
-  if (!isRental.value) borrador.descartar()
   emit('close')
 }
 </script>

@@ -13,8 +13,8 @@
       </div>
       <v-spacer/>
       <v-btn size="x-small" color="primary" variant="flat" class="text-white"
-             @click="emit('add-extra')" :disabled="!viva(order)">
-        <v-icon start size="x-small">mdi-plus</v-icon> Añadir Equipo Extra
+             @click="emit('editar')" :disabled="!viva(order)">
+        <v-icon start size="x-small">mdi-pencil</v-icon> Editar orden
       </v-btn>
     </v-toolbar>
 
@@ -158,7 +158,7 @@ import DialogServicioDeLinea from './DialogServicioDeLinea.vue'
 const props = defineProps({
   order: { type: Object, required: true },
 })
-const emit = defineEmits(['add-extra', 'edit-certificate', 'accion-certificados', 'lineas-cambiaron'])
+const emit = defineEmits(['editar', 'edit-certificate', 'accion-certificados', 'lineas-cambiaron'])
 
 // La guarda la pantalla de ordenes: marcar equipos y marcar ordenes se excluyen.
 // Se marcan certificados: las acciones en lote son de certificados.

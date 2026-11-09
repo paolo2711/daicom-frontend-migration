@@ -61,7 +61,9 @@
               </v-col>
 
               <v-col cols="12" md="4">
-                <v-text-field v-model="company.admission_form_correlative" label="Correlativo Formato de Ingreso" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+                <v-text-field v-model="company.valuation_correlative" label="Correlativo de Valorización"
+                              density="compact" variant="outlined" type="number" min="1" hide-details="auto"
+                              :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
               </v-col>
 
               <v-col cols="12" md="4">
@@ -207,7 +209,7 @@ const company = reactive({
   non_accredited_correlative: '',
   operationality_correlative: '',
   quote_correlative: '',
-  admission_form_correlative: '',
+  valuation_correlative: '',
   order_service_correlative: '',
   order_rental_correlative: '',
   inventory_correlative: '',

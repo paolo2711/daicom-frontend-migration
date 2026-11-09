@@ -58,6 +58,9 @@ export default {
       client: element.client,
       lab: element.lab,
       equipment: element.equipment,
+      brand: element.brand,
+      model: element.model,
+      serie: element.serie,
       emission_date: element.emission_date,
       observations: element.observations,
     };

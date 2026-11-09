@@ -64,7 +64,7 @@
             <v-col cols="12" :md="esUSD ? 6 : 12">
               <v-text-field
                 v-model="facturaData.amount"
-                :label="`Monto total (${simbolo}) (*)`"
+                :label="`Monto total (${simboloDe(monedaActual)}) (*)`"
                 variant="outlined" density="compact"
                 type="number" step="0.01"
                 prepend-inner-icon="mdi-cash"
@@ -93,8 +93,7 @@
             <div v-if="!editando">
               <div class="text-caption text-medium-emphasis mb-1">Moneda de la factura</div>
               <v-btn-toggle v-model="monedaSuelta" mandatory density="compact" color="primary" variant="outlined">
-                <v-btn value="PEN" size="small">Soles (S/)</v-btn>
-                <v-btn value="USD" size="small">Dólares ($)</v-btn>
+                <v-btn v-for="m in MONEDAS" :key="m.value" :value="m.value" size="small">{{ m.title }}</v-btn>
               </v-btn-toggle>
             </div>
 
@@ -124,7 +123,7 @@
             :icon="detraccionEstimada > 0 ? 'mdi-bank-outline' : 'mdi-check-circle-outline'"
           >
             <template v-if="detraccionEstimada > 0">
-              Esta factura tendrá detracción: <strong>{{ simbolo }} {{ detraccionEstimada.toFixed(2) }}</strong>
+              Esta factura tendrá detracción: <strong>{{ monto(detraccionEstimada, monedaActual) }}</strong>
               ({{ esUSD ? '10%' : (tipoOrden === 2 ? '10%' : '12%') }} sobre el total).
             </template>
             <template v-else>
@@ -156,6 +155,7 @@ import { avisarSoloPdf } from '@/utils/pdf'
 import Swal from 'sweetalert2'
 import OrderDataService from '@/services/orders/orderDataService'
 import { mensajeDeError } from '@/utils/errors'
+import { MONEDAS, monto, simboloDe } from '@/utils/money'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
@@ -194,7 +194,6 @@ const monedaActual = computed(() => {
   return monedaSuelta.value
 })
 const esUSD = computed(() => monedaActual.value === 'USD')
-const simbolo = computed(() => (esUSD.value ? '$' : 'S/'))
 
 // Tipo de la orden (para la tasa). Si es factura suelta sin orden, no
 // sabemos el tipo aún (lo adoptará al vincular); asumimos servicio (12%)
@@ -205,16 +204,16 @@ const tipoOrden = computed(() => props.order?.order_type ?? props.orders?.[0]?.o
 // soles con el tipo de cambio para el umbral de 700, pero el monto de la
 // detracción queda en la moneda de la factura — igual que el backend.
 const detraccionEstimada = computed(() => {
-  const monto = parseFloat(facturaData.value.amount)
+  const total = parseFloat(facturaData.value.amount)
   const fecha = facturaData.value.invoice_date
-  if (!fecha || isNaN(monto) || monto <= 0) return null
+  if (!fecha || isNaN(total) || total <= 0) return null
   const exchange = parseFloat(facturaData.value.exchange_rate) || 0
   if (esUSD.value && exchange <= 0) return null
 
   const tasa = tipoOrden.value === 2 ? 0.10 : 0.12
   const UMBRAL = 700
-  const valorSoles = esUSD.value ? monto * exchange : monto
-  return valorSoles <= UMBRAL ? 0 : parseFloat((monto * tasa).toFixed(2))
+  const valorSoles = esUSD.value ? total * exchange : total
+  return valorSoles <= UMBRAL ? 0 : parseFloat((total * tasa).toFixed(2))
 })
 
 const facturaData = ref({

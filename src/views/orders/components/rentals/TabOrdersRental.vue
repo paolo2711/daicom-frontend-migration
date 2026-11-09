@@ -208,7 +208,7 @@
                   <v-icon size="x-small" class="mr-1">mdi-file-document</v-icon>{{ item.documentos.oc_count }}
                 </v-chip>
               </template>
-              <span>Abrir última OC ({{ item.documentos.oc_count }} en total · todas en Editar)</span>
+              <span>Abrir última OC ({{ item.documentos.oc_count }} en total · todas en Ver y editar)</span>
             </v-tooltip>
 
             <v-tooltip location="top" v-if="item.documentos && item.documentos.val_count > 0">
@@ -218,7 +218,9 @@
                   <v-icon size="x-small" class="mr-1">mdi-cash-multiple</v-icon>{{ item.documentos.val_count }}
                 </v-chip>
               </template>
-              <span>Abrir última valorización ({{ item.documentos.val_count }} en total · todas en Editar)</span>
+              <span>
+                Abrir última valorización ({{ item.documentos.val_count }} en total · todas en Ver y editar)
+              </span>
             </v-tooltip>
 
             <v-tooltip location="top" v-if="item.dispatch_guide_pdf">
@@ -253,7 +255,8 @@
         <template v-slot:expanded-row="{ columns, item }">
           <tr class="fila-activa">
             <td :colspan="columns.length" class="pa-0">
-              <table-rental-details :order="item" @add-rental="prepareExtraEquipment(item)" @reload="expanded = []; retrieveOrders()" />
+              <table-rental-details :order="item" @editar="abrirEditarOrden(item)"
+                                    @reload="expanded = []; retrieveOrders()" />
             </td>
           </tr>
         </template>
@@ -296,9 +299,8 @@
 
     <!-- MODALES -->
     <dialog-factura v-model="factura_modal" :order="selected_order" :orders="ordenes_factura_multi" :order_type="ALQUILER" @updateOrder="onFacturaGuardada" @close="cerrarFacturaModal" />
-    <edit-order v-model="edit_order_modal" :order="selected_order" @updateOrder="updateSingleOrderInList" @close="edit_order_modal = false" />
+    <add-order ref="editarOrdenRef" @guardada="o => fetchAndInjectSingleOrder({ detail: o.id })" />
     
-    <add-extra-equipment v-model="dialog_extra" :order="selected_order" @close="dialog_extra = false" @reload="expanded = []; retrieveOrders()" />
   </div>
 </template>
 
@@ -321,8 +323,7 @@ import { throttle } from '@/utils/throttle'
 import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemaforoFinanciero } from '@/utils/orders/cobro'
 import { useAppStore } from '@/stores/appStore'
 import DialogFactura from '../DialogFactura.vue'
-import EditOrder from '../EditOrder.vue'
-import AddExtraEquipment from '../AddExtraEquipment.vue'
+import AddOrder from '../AddOrder.vue'
 import TableRentalDetails from './TableRentalDetails.vue'
 import PanelFacturas from '../PanelFacturas.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
@@ -334,9 +335,7 @@ const appStore = useAppStore()
 const filter_client_id = ref(null)
 
 // ── Estado UI (modales + split-screen del panel de facturas) ──
-const edit_order_modal = ref(false)
 const factura_modal = ref(false)
-const dialog_extra = ref(false)
 const selected_order = ref(null)
 const ordenes_seleccionadas = ref([])
 const panel_expandido = ref(false)
@@ -496,8 +495,8 @@ const seleccionarFacturaEnPanel = (o) => {
 }
 
 // ── Acciones ──
-const abrirEditarOrden = (o) => { selected_order.value = o; edit_order_modal.value = true }
-const prepareExtraEquipment = (o) => { selected_order.value = o; dialog_extra.value = true }
+const editarOrdenRef = ref(null)
+const abrirEditarOrden = (o) => editarOrdenRef.value?.editar(o)
 
 // Una sola factura para todas: DialogFactura la crea y les vincula las ordenes.
 // La moneda se elige ahi, la orden no tiene.
@@ -510,7 +509,6 @@ const facturar = (ordenes) => {
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, ejecutarAccion } =
   useOrderActions(ordenes_seleccionadas, {
     editar: abrirEditarOrden,
-    agregarEquipo: prepareExtraEquipment,
     facturar,
   })
 

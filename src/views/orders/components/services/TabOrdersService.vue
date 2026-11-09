@@ -207,7 +207,7 @@
                 variant="tonal" 
                 class="font-weight-bold px-3 text-caption"
               >
-                {{ getCurrencySymbol(item.detraccion.moneda) }} {{ item.detraccion.monto.toFixed(2) }}
+                {{ monto(item.detraccion.monto, item.detraccion.moneda) }}
                 <v-tooltip activator="parent" location="top">
                   Detracción {{ item.detraccion.tasa }}% · SUNAT
                 </v-tooltip>
@@ -230,9 +230,10 @@
                 v-model:seleccion="equipos_seleccionados"
                 :order="item"
                 @reload="retrieveOrders"
-                @add-extra="prepareExtraEquipment(item)"
+                @editar="abrirEditarOrden(item)"
                 @edit-certificate="openCertificateModal"
                 @accion-certificados="abrirBatchModal"
+                @lineas-cambiaron="alCambiarLineas(item)"
               />
             </td>
           </tr>
@@ -278,8 +279,7 @@
     <batch-action-modal ref="batchActionModalRef" />
 
     <dialog-factura v-model="factura_modal" :order="selected_order" :orders="ordenes_factura_multi" :order_type="SERVICIO" @updateOrder="onFacturaGuardada" @close="cerrarFacturaModal" />
-    <edit-order v-model="edit_order_modal" :order="selected_order" @updateOrder="updateSingleOrderInList" @close="edit_order_modal = false" />
-    <add-extra-equipment v-model="dialog_extra" :order="selected_order" @close="dialog_extra = false" @reload="retrieveOrders" />
+    <add-order ref="editarOrdenRef" @guardada="alCambiarLineas" />
     <certificate-modal ref="certificateModalRef" />
   </div>
 </template>
@@ -289,6 +289,10 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTheme } from 'vuetify'
 import { useAppStore } from '@/stores/appStore'
+import { Toast } from '@/plugins/alerts'
+import { mensajeDeError } from '@/utils/errors'
+import { monto } from '@/utils/money'
+import { abrirIngreso } from '@/utils/orders/ingreso'
 import OrderDataService from '@/services/orders/orderDataService'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
 import FilterPill from '@/components/shared/FilterPill.vue'
@@ -297,6 +301,7 @@ import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import { useOrderActions } from '@/composables/useOrderActions'
 import { FILTRO_DE_ESTADO, SERVICIO, esDeServicio, viva } from '@/utils/orders/estado'
+import { lineaAnulada } from '@/utils/orders/lineas'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
 import { debounce } from '@/utils/debounce'
@@ -305,8 +310,7 @@ import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemafor
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
 import DialogFactura from '../DialogFactura.vue'
-import EditOrder from '../EditOrder.vue'
-import AddExtraEquipment from '../AddExtraEquipment.vue'
+import AddOrder from '../AddOrder.vue'
 import TableServiceDetails from './TableServiceDetails.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import CertificateModal from '@/views/certificates/components/CertificateModal.vue'
@@ -337,8 +341,6 @@ const filtro_sin_factura = ref(false)
 // Texto computado para el calendario elegante
 
 // Estados de modales
-const edit_order_modal = ref(false)
-const dialog_extra = ref(false)
 const factura_modal = ref(false)
 const ordenes_factura_multi = ref(null) // órdenes para crear UNA factura por selección
 const selected_order = ref(null)
@@ -367,7 +369,11 @@ const headers = [
 // Datos de tabla
 const orders = ref([])
 const expanded = ref([])
-const { cargarItems, actualizarItems, reemplazarOrdenes } = useOrderItems(orders, 'certificates')
+// Los avisos de equipos llegan por certificado: una linea se reconoce por el suyo.
+const { cargarItems, actualizarItems, reemplazarOrdenes } = useOrderItems(orders, 'items', {
+  clave: linea => linea.certificate?.id,
+  anulado: lineaAnulada,
+})
 
 // --- LÓGICA DE EXPANSIÓN ROBUSTA (Resiliencia a return-object) ---
 const getSafeId = (val) => {
@@ -516,12 +522,6 @@ const manejarClicFila = (event, { item }) => {
   }
 }
 
-
-const getCurrencySymbol = (currency) => {
-  const symbols = { 'PEN': 'S/', 'USD': '$', 'EUR': '€' }
-  return symbols[currency] || 'S/'
-}
-
 // Clic en el semáforo: si la orden tiene factura(s), enfoca el panel en
 // TODAS ellas (por order_id, no por número — así una orden con 2+ facturas
 // las muestra todas). Si está libre, la selecciona para vincular.
@@ -567,26 +567,17 @@ const getProgreso = (o) => {
   return o.progreso || { total: 0, listos: 0 }
 }
 
-const prepareExtraEquipment = (o) => {
-  selected_order.value = o
-  dialog_extra.value = true
-}
+const editarOrdenRef = ref(null)
+const abrirEditarOrden = (o) => editarOrdenRef.value?.editar(o)
 
-const abrirEditarOrden = (o) => {
-  // El modal solo usa los equipos con su dueño; el resto ya lo tiene la fila.
-  OrderDataService.getEquipos(o.id).then(response => {
-    selected_order.value = { ...o, certificates: response.data || [] }
-    edit_order_modal.value = true
-  }).catch(() => {
-    selected_order.value = { ...o, certificates: [] }
-    edit_order_modal.value = true
-  })
-}
+const imprimirIngreso = (o) => abrirIngreso(o.id)
+  .catch(error => Toast.fire({ ...appStore.toastErrorRed,
+                               title: mensajeDeError(error, 'No se pudo abrir el ingreso.') }))
 
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, ejecutarAccion } =
   useOrderActions(ordenes_seleccionadas, {
     editar: abrirEditarOrden,
-    agregarEquipo: prepareExtraEquipment,
+    imprimirIngreso,
     facturar,
   })
 
@@ -630,9 +621,15 @@ const updateSingleOrderInList = (updatedOrder) => {
   const index = orders.value.findIndex(o => o.id === updatedOrder.id)
   if (index !== -1) {
     // Los equipos los trae useOrderItems; el resto de la orden no los pisa.
-    const equipos = orders.value[index].certificates
-    Object.assign(orders.value[index], OrderMappers.getMap(updatedOrder), { certificates: equipos })
+    const equipos = orders.value[index].items
+    Object.assign(orders.value[index], OrderMappers.getMap(updatedOrder), { items: equipos })
   }
+}
+
+// Una linea sin certificado no avisa sola: se recargan sus equipos y la barra de la fila.
+function alCambiarLineas (orden) {
+  cargarItems(orden.id)
+  refrescarFila(orden.id)
 }
 
 const handleWssReload = () => {

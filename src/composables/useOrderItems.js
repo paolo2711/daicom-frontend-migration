@@ -1,12 +1,12 @@
 import OrderDataService from '@/services/orders/orderDataService'
 import { ANULADO } from '@/utils/certificates/estado'
 
-// Los equipos de la orden abierta en la tabla de ordenes, en `fila[campo]`: los
-// certificados de un servicio o las lineas de un alquiler.
+// Los equipos de la orden abierta en la tabla de ordenes, en `fila[campo]`. Los avisos
+// llegan por `clave` (el certificado de una linea de servicio) y `anulado` dice si salio.
 //
 // Un pedido a la vez por orden. Lo que llega mientras tanto se junta y sale en
 // uno solo al terminar el anterior: una respuesta vieja nunca pisa a una nueva.
-export function useOrderItems(orders, campo) {
+export function useOrderItems(orders, campo, { clave = item => item.id, anulado = item => item.status === ANULADO } = {}) {
   const pendientes = new Map()
 
   const filaDe = (orderId) => orders.value.find(o => String(o.id) === String(orderId))
@@ -88,13 +88,13 @@ export function useOrderItems(orders, campo) {
 
     const actuales = filaDe(orderId)?.[campo]
     if (!Array.isArray(actuales)) return true
-    const posicion = new Map(actuales.map((item, i) => [String(item.id), i]))
-    const llegaron = new Set(data.map(item => String(item.id)))
-    const indice = (item) => posicion.get(String(item.id))
+    const posicion = new Map(actuales.map((item, i) => [String(clave(item)), i]))
+    const llegaron = new Set(data.map(item => String(clave(item))))
+    const indice = (item) => posicion.get(String(clave(item)))
 
     if (data.some(item => indice(item) === undefined)) return false          // entro
     if (ids.some(id => posicion.has(id) && !llegaron.has(id))) return false  // salio
-    if (data.some(item => (item.status === ANULADO) !== (actuales[indice(item)].status === ANULADO))) return false
+    if (data.some(item => anulado(item) !== anulado(actuales[indice(item)]))) return false
 
     // La fila entera: un dato que dejo de venir (el dueño, por ejemplo) no queda pegado.
     data.forEach(item => actuales.splice(indice(item), 1, item))

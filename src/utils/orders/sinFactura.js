@@ -2,6 +2,7 @@ import Swal from 'sweetalert2'
 import { Toast } from '@/plugins/alerts'
 import OrderDataService from '@/services/orders/orderDataService'
 import { mensajeDeError } from '@/utils/errors'
+import { MONEDAS } from '@/utils/money'
 
 // Las dos formas de NO facturar una orden, y la de volver a facturarla. Son las
 // marcas de /orders/marcar-comprobante.
@@ -50,7 +51,7 @@ async function marcarSinComprobante (ordenes) {
     html: `Se cobra pero no lleva factura. Elige la moneda del registro interno de abonos:`,
     icon: 'question',
     input: 'select',
-    inputOptions: { PEN: 'Soles (S/)', USD: 'Dólares ($)' },
+    inputOptions: Object.fromEntries(MONEDAS.map(m => [m.value, m.title])),
     inputValue: 'PEN',
     showCancelButton: true,
     confirmButtonText: 'Sí, sin comprobante', cancelButtonText: 'Cancelar',

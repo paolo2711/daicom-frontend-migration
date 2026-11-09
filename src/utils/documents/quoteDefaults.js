@@ -1,4 +1,5 @@
 import { hoyISO } from '@/utils/dates'
+import { COTIZACION, VALORIZACION } from './tipos'
 
 export const CURRENT_QUOTE_SCHEMA = "1.5"
 
@@ -29,7 +30,7 @@ export const grupoVacio = () => ({ type: GRUPO, description: "" })
 
 export const UNIDADES = ['und', 'serv', 'glb', 'dias']
 
-export const FORMAS_DE_PAGO = ['Contado', 'Crédito 15 días', 'Crédito 30 días']
+export const FORMAS_DE_PAGO = ['Contado', 'Crédito 15 días', 'Crédito 30 días', '100% Adelantado', '50% Adelantado']
 
 const ACEPTACION = "Para aceptar esta cotización, envíe su orden de compra, orden de servicio o confirmación por correo a ventas@daicomsac.com, indicando el N.° de cotización."
 // Confidencialidad y quejas cubren lo que pide la ISO/IEC 17025 (4.2 y 7.9).
@@ -153,6 +154,85 @@ export const TIPOS_DE_COTIZACION = {
 
 export const TIPO_POR_DEFECTO = "servicio"
 
+const conformidad = (detalle) => ({
+  title: "Conformidad",
+  items: [
+    `Esta valorización detalla ${detalle} según lo cotizado y la orden de compra o de servicio del cliente.`,
+    "Revise la valorización al recibirla: si tiene observaciones, comuníquelas a ventas@daicomsac.com dentro de los 5 días hábiles; pasado ese plazo, se considera conforme."
+  ]
+})
+const FACTURA_CONFORME = "La factura electrónica se emite a nombre del cliente por el monto de esta valorización, una vez dada la conformidad."
+
+// La valorizacion es la cotizacion con otro nombre (DOCUMENTOS en apps/documents/cotizacion.py):
+// cambian su entrada, sus condiciones, la etiqueta del plazo y que no tiene validez.
+export const DOCUMENTOS = {
+  [COTIZACION]: {
+    nombre: "cotización",
+    plural: "Cotizaciones",
+    conValidez: true,
+    porTipo: TIPOS_DE_COTIZACION,
+    indicacionDePago: "Envíe el comprobante de pago junto con su orden de compra u orden de servicio, indicando el N.° de cotización. La factura electrónica se emite a nombre del cliente y se envía por correo."
+  },
+  [VALORIZACION]: {
+    nombre: "valorización",
+    plural: "Valorizaciones",
+    conValidez: false,
+    etiquetaPlazo: "Periodo valorizado",
+    ejemploPlazo: "Ej: del 01/11/2026 al 30/11/2026",
+    porTipo: {
+      servicio: {
+        entrada: "Le hacemos llegar la valorización de los servicios realizados:",
+        terms: [
+          conformidad("los servicios realizados"),
+          {
+            title: "Servicio",
+            items: [
+              "Se valorizan los servicios terminados; los que siguen en curso se valorizan cuando terminen.",
+              "En servicios en campo se valorizan los días efectivos de trabajo."
+            ]
+          },
+          {
+            title: "Facturación y pago",
+            items: [FACTURA_CONFORME, "El pago se realiza según la forma de pago indicada."]
+          },
+          CONFIDENCIALIDAD,
+          QUEJAS
+        ]
+      },
+      alquiler: {
+        entrada: "Le hacemos llegar la valorización del alquiler de los equipos en el periodo indicado:",
+        terms: [
+          {
+            title: "Periodo valorizado",
+            items: [
+              "Cada equipo se valoriza desde su salida de nuestras instalaciones hasta su devolución o hasta la fecha de corte de esta valorización.",
+              "Los días que pasen del periodo cotizado se valorizan a la tarifa acordada.",
+              "Los equipos que sigan en obra después de la fecha de corte entran en la siguiente valorización."
+            ]
+          },
+          {
+            title: "Daños y faltantes",
+            items: ["Los daños o faltantes encontrados al recibir el equipo no están incluidos: se valorizan aparte, al costo de reparación o reposición."]
+          },
+          conformidad("el alquiler de los equipos"),
+          {
+            title: "Facturación y pago",
+            items: [FACTURA_CONFORME, "Lo pagado por adelantado se descuenta del total."]
+          },
+          CONFIDENCIALIDAD,
+          QUEJAS
+        ]
+      }
+    },
+    indicacionDePago: "Envíe el comprobante de pago indicando el N.° de valorización. La factura electrónica se emite a nombre del cliente y se envía por correo."
+  }
+}
+
+export const etiquetaDelPlazo = (tipoDeDocumento, kind) =>
+  DOCUMENTOS[tipoDeDocumento].etiquetaPlazo || TIPOS_DE_COTIZACION[kind].etiquetaPlazo
+export const ejemploDelPlazo = (tipoDeDocumento, kind) =>
+  DOCUMENTOS[tipoDeDocumento].ejemploPlazo || TIPOS_DE_COTIZACION[kind].ejemploPlazo
+
 // Para un select o un filtro, con la sigla de la tabla: [{ value, title, sigla }].
 export const OPCIONES_DE_TIPO = Object.entries(TIPOS_DE_COTIZACION)
   .map(([value, tipo]) => ({ value, title: tipo.texto, sigla: tipo.sigla }))
@@ -160,8 +240,8 @@ export const OPCIONES_DE_TIPO = Object.entries(TIPOS_DE_COTIZACION)
 // Una hecha fuera del sistema (con el servidor caido): se sube su PDF.
 export const SUBIR_PDF = "subir-pdf"
 
-// Las opciones del boton "Nueva cotización" (meta.nuevo de su ruta).
-export const OPCIONES_NUEVA_COTIZACION = [
+// Las opciones del boton "Nueva cotización" y "Nueva valorización" (meta.nuevo de su ruta).
+export const OPCIONES_NUEVO_DOCUMENTO = [
   ...Object.entries(TIPOS_DE_COTIZACION)
     .map(([valor, tipo]) => ({ valor, texto: tipo.texto, detalle: tipo.detalle, icono: tipo.icono })),
   { valor: SUBIR_PDF, texto: "Subir PDF", detalle: "Hecha fuera del sistema", icono: "mdi-file-upload-outline" },
@@ -183,15 +263,17 @@ export const itemVacio = (unidad = "und") => ({
   tipo_servicio: null
 })
 
-export const quoteDefaultJSON = (kind = TIPO_POR_DEFECTO) => {
+export const quoteDefaultJSON = (kind = TIPO_POR_DEFECTO, tipoDeDocumento = COTIZACION) => {
   const tipo = TIPOS_DE_COTIZACION[kind]
+  const documento = DOCUMENTOS[tipoDeDocumento]
+  const textos = documento.porTipo[kind]
   return {
     meta: {
       schema_version: CURRENT_QUOTE_SCHEMA,
       kind,
       city: "Arequipa",
       date: hoyISO(),
-      validity_days: 15,
+      validity_days: documento.conValidez ? 15 : null,
       payment_terms: "Contado",
       currency: "PEN",
       delivery_time: tipo.plazo
@@ -220,8 +302,8 @@ export const quoteDefaultJSON = (kind = TIPO_POR_DEFECTO) => {
       business_name: "",
       address: ""
     },
-    intro_text: tipo.entrada,
-    items: [],
+    intro_text: textos.entrada,
+    items: [itemVacio(tipo.unidad)],
     totals: {
       subtotal: 0,
       igv_percent: 18,
@@ -229,8 +311,8 @@ export const quoteDefaultJSON = (kind = TIPO_POR_DEFECTO) => {
       total: 0
     },
     observations: [],
-    payment_note: "Envíe el comprobante de pago junto con su orden de compra u orden de servicio, indicando el N.° de cotización. La factura electrónica se emite a nombre del cliente y se envía por correo.",
-    terms: JSON.parse(JSON.stringify(tipo.terms))
+    payment_note: documento.indicacionDePago,
+    terms: JSON.parse(JSON.stringify(textos.terms))
   }
 }
 
@@ -249,13 +331,13 @@ export const totalesDe = (cotizacion) => {
 const conLaForma = (base, guardado = {}) =>
   Object.fromEntries(Object.keys(base).map(campo => [campo, guardado[campo] ?? base[campo]]))
 
-// Una cotizacion guardada, con la forma de quoteDefaultJSON: los campos que no
+// Una cotizacion o valorizacion guardada, con la forma de quoteDefaultJSON: los campos que no
 // estan en ella se descartan y los que faltan salen de los valores por defecto
 // de su tipo. El contacto es siempre el vigente.
-export const cotizacionDe = (guardada) => {
+export const cotizacionDe = (guardada, tipoDeDocumento = COTIZACION) => {
   const copia = JSON.parse(JSON.stringify(guardada || {}))
   const kind = TIPOS_DE_COTIZACION[copia.meta?.kind] ? copia.meta.kind : TIPO_POR_DEFECTO
-  const base = quoteDefaultJSON(kind)
+  const base = quoteDefaultJSON(kind, tipoDeDocumento)
   return {
     ...conLaForma(base, copia),
     meta: { ...conLaForma(base.meta, copia.meta), kind },

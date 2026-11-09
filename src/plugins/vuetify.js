@@ -15,7 +15,11 @@ const dark_theme = {
         error: '#fc4b6c',
         default: '#563dea',
         modal_header: '#1F4690',
-        modal_warning: '#E65100'
+        modal_warning: '#E65100',
+        // Los tres planos de una pantalla de trabajo: el fondo, la hoja principal y las de apoyo.
+        fondo_de_trabajo: '#141414',
+        hoja: '#272727',
+        hoja_de_apoyo: '#1E1E1E'
     }
 }
 
@@ -29,7 +33,10 @@ const light_theme = {
         error: '#fc4b6c',
         default: '#563dea',
         modal_header: '#1F4690',
-        modal_warning: '#F57C00'
+        modal_warning: '#F57C00',
+        fondo_de_trabajo: '#EEF1F6',
+        hoja: '#FFFFFF',
+        hoja_de_apoyo: '#F8F9FC'
     }
 }
 

@@ -1,5 +1,6 @@
 import axios from "axios";
 import authHeader from "@/services/auth-header";
+import { archivoDe } from "@/utils/files";
 
 class OrderDataService {
 
@@ -42,11 +43,31 @@ class OrderDataService {
         return axios.get(`orders/${id}/equipos`, { headers: authHeader(), params });
     }
 
-    // Todos o ninguno: si una fila no se puede, responde cuales y no guarda nada.
-    agregarEquipos(id, items) {
-        let headers = authHeader();
-        headers['Content-Type'] = "application/json";
-        return axios.post(`orders/${id}/equipos`, { items }, { headers });
+    // El PDF del ingreso sin guardar, como archivo: { client, items }.
+    vistaPreviaIngreso(data) {
+        const opciones = { headers: authHeader(), responseType: 'blob' };
+        return archivoDe(axios.post('orders/vista-previa-ingreso', data, opciones));
+    }
+
+    // Donde esta el PDF del ingreso; la orden que todavia no lo tiene, se lo arma.
+    ingreso(id) {
+        return axios.get(`orders/${id}/ingreso`, { headers: authHeader() });
+    }
+
+    servicios() {
+        return axios.get('orders/servicios', { headers: authHeader() });
+    }
+
+    completarLinea(id, completado) {
+        return axios.post(`orders/lineas/${id}/completada`, { completado }, { headers: authHeader() });
+    }
+
+    cambiarServicioDeLinea(id, { tipo_servicio, certificate_type, lab }) {
+        return axios.post(`orders/lineas/${id}/servicio`, { tipo_servicio, certificate_type, lab }, { headers: authHeader() });
+    }
+
+    eliminarLinea(id) {
+        return axios.delete(`orders/lineas/${id}`, { headers: authHeader() });
     }
 
     siguienteNumero(orderType) {

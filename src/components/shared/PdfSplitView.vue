@@ -2,11 +2,11 @@
   <!-- Una lista con el PDF de la fila elegida al lado. La lista va en el slot;
        sus filas marcan `fila-con-pdf` (clic) y `fila-en-vista` (la elegida). -->
   <div ref="contenedor" class="d-flex align-start" :class="{ arrastrando }">
-    <div ref="lista" :class="enVista ? 'flex-shrink-0' : 'flex-grow-1'" :style="enVista ? { width: `${ancho}%` } : null">
+    <div ref="lista" :class="alLado ? 'flex-shrink-0' : 'flex-grow-1'" :style="alLado ? { width: `${ancho}%` } : null">
       <slot />
     </div>
 
-    <template v-if="enVista">
+    <template v-if="alLado">
       <div class="divisor" title="Arrastre para cambiar el ancho" @pointerdown="empezarArrastre" />
 
       <v-card ref="visor" class="visor d-flex flex-column flex-grow-1" rounded="lg" border elevation="0"
@@ -23,6 +23,20 @@
         <pdf-preview class="flex-grow-1" :url="pdfDe(enVista)" :titulo="tituloDe(enVista)" al-ancho />
       </v-card>
     </template>
+
+    <pdf-preview-dialog :model-value="Boolean(enVista) && !alLado" :url="enVista ? pdfDe(enVista) : ''">
+      <template #encabezado>
+        <v-icon class="ml-4 mr-2">mdi-file-pdf-box</v-icon>
+        <span class="text-subtitle-1 font-weight-bold text-truncate">{{ enVista && tituloDe(enVista) }}</span>
+      </template>
+      <template #acciones>
+        <v-btn variant="text" class="mr-2 font-weight-bold" prepend-icon="mdi-open-in-new"
+               :href="enVista ? pdfDe(enVista) : undefined" target="_blank">
+          {{ OTRA_PESTANA }}
+        </v-btn>
+        <v-btn icon="mdi-close" variant="text" @click="cerrar" />
+      </template>
+    </pdf-preview-dialog>
   </div>
 </template>
 
@@ -31,7 +45,8 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import PdfPreview from '@/components/shared/PdfPreview.vue'
 import { debounce } from '@/utils/debounce'
-import { OTRA_PESTANA, abrirEnOtraPestana } from '@/utils/pdf'
+import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
+import { OTRA_PESTANA } from '@/utils/pdf'
 
 const props = defineProps({
   // El id de la fila cuyo PDF se ve; null, ninguna.
@@ -54,19 +69,14 @@ const margen = `${MARGEN}rem`
 
 const { mdAndUp } = useDisplay()
 const enVista = computed(() => props.items.find(i => i.id === props.modelValue) || null)
+// Sigue al ancho mientras esta abierto: al lado si entra; si no, el mismo PDF a pantalla completa.
+const alLado = computed(() => Boolean(enVista.value) && mdAndUp.value)
 const cerrar = () => emit('update:modelValue', null)
 
-// En pantallas chicas no entra al lado: se abre aparte. Si la fila deja la
-// lista (otra pagina, un filtro), la vista se cierra y no vuelve sola.
-watch(enVista, (fila) => {
-  if (!fila) {
-    if (props.modelValue !== null) cerrar()
-  } else if (!mdAndUp.value) {
-    abrirEnOtraPestana(props.pdfDe(fila))
-    cerrar()
-  } else {
-    nextTick(medirVisor)
-  }
+// Si la fila deja la lista (otra pagina, un filtro), la vista se cierra y no vuelve sola.
+watch([enVista, alLado], ([fila, lado]) => {
+  if (!fila && props.modelValue !== null) cerrar()
+  else if (lado) nextTick(medirVisor)
 })
 
 // ── El ancho: lo elige cada uno arrastrando el divisor, en % del espacio, y

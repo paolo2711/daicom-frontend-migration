@@ -2,15 +2,15 @@
   <v-dialog v-model="dialog" class="dialog-premium" width="640" persistent>
     <v-card style="max-height: 95vh; display: flex; flex-direction: column;">
       <!-- PdfDropZone va dentro del card para no romper el selector premium `.v-overlay__content > .v-card`. -->
-      <pdf-drop-zone label="Suelta el PDF de la cotización" @file="f => (pdf = f)" @invalid="avisarSoloPdf"
+      <pdf-drop-zone :label="`Suelta el PDF de la ${nombre}`" @file="f => (pdf = f)" @invalid="avisarSoloPdf"
                      style="display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0;">
-        <base-modal-header title="Subir cotización en PDF" icon="mdi-file-upload-outline" @close="close">
+        <base-modal-header :title="`Subir ${nombre} en PDF`" icon="mdi-file-upload-outline" @close="close">
           <span v-if="numero">Se registrará como <span class="font-weight-bold text-primary ml-1">{{ numero }}</span></span>
         </base-modal-header>
 
         <v-card-text class="pt-4" style="overflow-y: auto; flex-grow: 1; min-height: 0;">
           <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-            Para una cotización hecha fuera del sistema. Queda de solo lectura: no se podrá editar.
+            Para una {{ nombre }} hecha fuera del sistema. Queda de solo lectura: no se podrá editar.
           </v-alert>
 
           <client-lookup-bar v-model="clienteId" class="mb-4" />
@@ -33,7 +33,7 @@
                             :prefix="simboloDe(moneda)" density="compact" variant="outlined" hide-details />
             </v-col>
             <v-col cols="12">
-              <v-file-input v-model="pdf" label="PDF de la cotización" accept="application/pdf"
+              <v-file-input v-model="pdf" :label="`PDF de la ${nombre}`" accept="application/pdf"
                             prepend-icon="" prepend-inner-icon="mdi-file-pdf-box" show-size clearable
                             density="compact" variant="outlined" hide-details />
             </v-col>
@@ -45,7 +45,7 @@
           <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
           <v-btn color="primary" variant="flat" class="font-weight-bold px-4" prepend-icon="mdi-upload"
                  :loading="subiendo" :disabled="!completo" @click="subir">
-            Subir cotización
+            Subir {{ nombre }}
           </v-btn>
         </v-card-actions>
       </pdf-drop-zone>
@@ -60,14 +60,17 @@ import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
 import { useSwal } from '@/composables/useSwal'
 import { avisarHecho } from '@/utils/documents/avisos'
-import { COTIZACION } from '@/utils/documents/estado'
-import { OPCIONES_DE_TIPO, TIPO_POR_DEFECTO } from '@/utils/documents/quoteDefaults'
+import { DOCUMENTOS, OPCIONES_DE_TIPO, TIPO_POR_DEFECTO } from '@/utils/documents/quoteDefaults'
+import { COTIZACION } from '@/utils/documents/tipos'
 import { hoyISO } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 import { MONEDAS, simboloDe } from '@/utils/money'
 import { avisarSoloPdf } from '@/utils/pdf'
 
+const props = defineProps({ tipoDeDocumento: { type: String, default: COTIZACION } })
+const nombre = computed(() => DOCUMENTOS[props.tipoDeDocumento].nombre)
 const swal = useSwal()
+const emit = defineEmits(['subida'])
 
 const dialog = ref(false)
 const subiendo = ref(false)
@@ -82,14 +85,14 @@ const pdf = ref(null)
 
 const completo = computed(() => clienteId.value && fecha.value && Number(total.value) > 0 && pdf.value)
 
-function open () {
+function open ({ cliente = null, tipoInicial = TIPO_POR_DEFECTO } = {}) {
   numero.value = ''
-  DocumentsDataService.siguienteNumero(COTIZACION)
+  DocumentsDataService.siguienteNumero(props.tipoDeDocumento)
     .then(({ data }) => { numero.value = data.numero })
     .catch(() => {})
-  clienteId.value = null
+  clienteId.value = cliente
   fecha.value = hoyISO()
-  tipo.value = TIPO_POR_DEFECTO
+  tipo.value = tipoInicial
   moneda.value = 'PEN'
   total.value = ''
   pdf.value = null
@@ -100,6 +103,7 @@ const close = () => { dialog.value = false }
 
 async function subir () {
   const formulario = new FormData()
+  formulario.append('document_type', props.tipoDeDocumento)
   formulario.append('client', clienteId.value)
   formulario.append('date', fecha.value)
   formulario.append('kind', tipo.value)
@@ -108,11 +112,13 @@ async function subir () {
   formulario.append('pdf', pdf.value)
   subiendo.value = true
   try {
-    const { data } = await DocumentsDataService.subirCotizacion(formulario)
+    const { data } = await DocumentsDataService.subir(formulario)
     avisarHecho(`${data.document_number} subida`, data)
+    emit('subida', data)
     close()
   } catch (error) {
-    swal.fire({ icon: 'error', title: 'No se subió la cotización', text: mensajeDeError(error, 'No se pudo subir la cotización.') })
+    swal.fire({ icon: 'error', title: `No se subió la ${nombre.value}`,
+                text: mensajeDeError(error, `No se pudo subir la ${nombre.value}.`) })
   } finally {
     subiendo.value = false
   }

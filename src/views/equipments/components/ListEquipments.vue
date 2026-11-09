@@ -129,8 +129,8 @@
                     <tr v-for="serv in item.servicios" :key="serv.id">
                       <td><v-chip size="x-small" variant="outlined" color="primary">{{ serv.tipo_servicio_label }}</v-chip></td>
                       <td style="max-width: 300px;" class="text-truncate" :title="serv.nombre">{{ serv.nombre }}</td>
-                      <td class="text-right font-weight-bold">S/ {{ formatMoney(serv.precio_estandar) }}</td>
-                      <td class="text-right font-weight-bold text-primary">S/ {{ formatMoney(serv.precio_corporativo) }}</td>
+                      <td class="text-right font-weight-bold">{{ monto(serv.precio_estandar) }}</td>
+                      <td class="text-right font-weight-bold text-primary">{{ monto(serv.precio_corporativo) }}</td>
                       <td v-if="puedeEditar" class="text-center">
                         <v-btn icon variant="text" density="comfortable" size="x-small" color="primary" @click="servicioModalRef?.open(serv, item.id)">
                           <v-icon>mdi-pencil</v-icon>
@@ -176,6 +176,7 @@ import { useLatestRequest } from '@/composables/useLatestRequest'
 import ServicioCatalogoDataService from '@/services/equipments/servicioCatalogoDataService'
 import { usePermissions } from '@/composables/usePermissions'
 import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
+import { monto } from '@/utils/money'
 
 const search = ref('')
 const loading = ref(false)
@@ -201,10 +202,6 @@ const headers = [
   ...(puedeEditar ? [{ title: 'Opciones', key: 'actions', align: 'center', sortable: false }] : []),
   { title: '', key: 'data-table-expand' }
 ]
-
-const formatMoney = (val) => {
-  return parseFloat(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
 
 // Server-side: pide solo la pagina actual, filtrando por 'search' en el backend
 // (mismo endpoint/parametros que EquipmentDataService.getFiltered ya usa en los autocompletes)

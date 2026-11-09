@@ -34,8 +34,8 @@ class DocumentsDataService {
     return archivoDe(axios.post("documents/vista-previa/", data, { headers: authHeader(), responseType: "blob" }));
   }
   // Una cotizacion hecha fuera del sistema: su PDF y los datos de la lista, en un FormData.
-  subirCotizacion(formulario) {
-    return axios.post("documents/subir-cotizacion/", formulario, { headers: authHeader() });
+  subir(formulario) {
+    return axios.post("documents/subir/", formulario, { headers: authHeader() });
   }
   siguienteNumero(documentType) {
     return axios.get("documents/siguiente-numero/", { params: { document_type: documentType }, headers: authHeader() });

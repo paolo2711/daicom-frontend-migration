@@ -1,68 +1,62 @@
 <template>
-  <tr :class="{ 'fila-con-error': error }">
+  <tr :class="{ 'fila-con-error': error, 'fila-elegida': elegida }" class="fila-tarjeta" @click="emit('elegir')">
     <td class="text-no-wrap">
-      <drag-handle v-bind="asa" class="mr-1" />
-      <span v-if="eq.modo === 'nuevo'" class="numero-estimado">{{ estimado }}</span>
-      <span v-else class="font-weight-medium">{{ eq.registry_code }}</span>
+      <drag-handle v-bind="asa" class="mr-1" @click.stop />
+      <span v-if="eq.registry_code" class="font-weight-medium">{{ eq.registry_code }}</span>
+      <span v-else-if="eq.certificate_type" class="numero-estimado">{{ estimado }}</span>
     </td>
-    <td>
-      <paginated-autocomplete v-if="eq.modo === 'nuevo'" v-model="eq.name" :fetch="fetchEquipments"
-                              :mapper="EquipmentMappers.getMap" recurso="equipos" :seed="semillaDeEquipo"
-                              :return-object="false" item-title="name" item-value="id"
-                              variant="plain" density="compact" hide-details />
-      <template v-else>
-        <span class="text-subtitle-2">{{ eq.name }}</span>
-        <span class="text-caption text-medium-emphasis"> · vinculado</span>
-      </template>
+    <td class="text-break">
+      <div class="font-weight-bold text-high-emphasis">{{ eq.name }}</div>
+      <div v-if="eq.comentario" class="text-caption text-medium-emphasis comentario">{{ eq.comentario }}</div>
       <div v-if="error" class="text-caption text-error">{{ error }}</div>
     </td>
-    <template v-if="eq.modo === 'nuevo'">
-      <td>
-        <paginated-autocomplete v-model="eq.lab" :fetch="fetchLabs" :mapper="LabMappers.getMap"
-                                recurso="labs" :seed="eq.lab_data" @selected="l => (eq.lab_data = l)"
-                                :return-object="false" item-title="name" item-value="id"
-                                variant="plain" density="compact" hide-details />
-      </td>
-      <td>
-        <v-select v-model="eq.certificate_type" :items="TIPOS_CERTIFICADO"
-                  variant="plain" density="compact" hide-details />
-      </td>
-    </template>
-    <template v-else>
-      <td class="text-medium-emphasis">{{ eq.lab_data?.name || '—' }}</td>
-      <td class="text-medium-emphasis">{{ nombreDelTipo(eq.certificate_type) }}</td>
-    </template>
+    <td class="text-truncate" :title="eq.lab_data?.name">{{ eq.lab_data?.code || eq.lab_data?.name || '—' }}</td>
+    <td v-for="campo in CAMPOS" :key="campo" class="text-break">
+      <span v-if="eq[campo]">{{ eq[campo] }}</span>
+      <span v-else class="text-disabled text-no-wrap">No indica</span>
+    </td>
+    <td>
+      <span v-if="tituloDelServicio">{{ tituloDelServicio }}</span>
+      <span v-else class="text-error">Elegir servicio</span>
+      <div v-if="otroTitular">
+        <v-chip size="x-small" color="info" variant="tonal" prepend-icon="mdi-certificate-outline" class="titular mt-1"
+                :title="`Certificado a nombre de ${eq.titular_data?.name}`">{{ eq.titular_data?.name }}</v-chip>
+      </div>
+    </td>
     <td class="text-right">
-      <v-btn icon size="x-small" variant="text" color="red" density="comfortable" @click="emit('borrar', indice)">
-        <v-icon>mdi-delete</v-icon>
-      </v-btn>
+      <v-btn v-if="seQuita(eq)" icon="mdi-delete" variant="text" size="x-small" color="red" density="comfortable"
+             title="Quitar" @click.stop="emit('borrar', indice)" />
     </td>
   </tr>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import DragHandle from '@/components/shared/DragHandle.vue'
-import EquipmentDataService from '@/services/equipments/equipmentDataService'
-import LabDataService from '@/services/labs/labDataService'
-import EquipmentMappers from '@/mappers/equipmentMappers'
-import LabMappers from '@/mappers/labMappers'
-import { TIPOS_CERTIFICADO, nombreDelTipo } from '@/utils/certificates/tipos'
+import { seQuita, tituloDe, useOrderServices } from '@/composables/useOrderServices'
 
-// Una fila de FormOrderService. Es su propio componente para que editarla no redibuje las demas.
+// Una fila de FormOrderService, como sale en el PDF del ingreso mas el servicio. Se edita en PanelOrderService.
 const props = defineProps({
   eq: { type: Object, required: true },
   indice: { type: Number, required: true },
   estimado: { type: String, default: '' },
   error: { type: String, default: '' },
+  elegida: { type: Boolean, default: false },
+  // El cliente de la orden: el titular solo se muestra si es otro.
+  cliente: { type: Object, default: null },
   // El asa(i) de useRowDrag.
   asa: { type: Object, required: true },
 })
-const emit = defineEmits(['borrar'])
+const emit = defineEmits(['elegir', 'borrar'])
 
-const fetchEquipments = (page, size, query) => EquipmentDataService.getFiltered(page, size, query)
-const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)
-// El equipo se guarda como su nombre, que en el catalogo es tambien el id.
-const semillaDeEquipo = computed(() => (props.eq.name ? { id: props.eq.name, name: props.eq.name } : null))
+const CAMPOS = ['marca', 'modelo', 'serie']
+const { opciones } = useOrderServices()
+const tituloDelServicio = computed(() => tituloDe(props.eq, opciones.value))
+const otroTitular = computed(() => props.eq.titular && props.eq.titular !== props.cliente?.id)
 </script>
+
+<style scoped>
+.titular { max-width: 12rem; }
+.titular :deep(.v-chip__content) { display: block; overflow: hidden; text-overflow: ellipsis; }
+.comentario { white-space: pre-line; }
+</style>

@@ -30,7 +30,7 @@ export const grupoVacio = () => ({ type: GRUPO, description: "" })
 
 export const UNIDADES = ['und', 'serv', 'glb', 'dias']
 
-export const FORMAS_DE_PAGO = ['Contado', 'Crédito 15 días', 'Crédito 30 días']
+export const FORMAS_DE_PAGO = ['Contado', 'Crédito 15 días', 'Crédito 30 días', '100% Adelantado', '50% Adelantado']
 
 const ACEPTACION = "Para aceptar esta cotización, envíe su orden de compra, orden de servicio o confirmación por correo a ventas@daicomsac.com, indicando el N.° de cotización."
 // Confidencialidad y quejas cubren lo que pide la ISO/IEC 17025 (4.2 y 7.9).

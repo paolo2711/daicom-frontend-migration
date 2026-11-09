@@ -35,13 +35,19 @@
 
     <!-- En pantalla ancha cada servicio va en una linea, como tabla; en angosta
          los numeros bajan debajo de la descripcion. -->
-    <div class="border rounded-lg" :class="{ 'border-t-0 rounded-t-0': mdAndUp }">
+    <div v-if="!listo" class="border rounded-lg pa-6 text-center text-medium-emphasis"
+         :class="{ 'border-t-0 rounded-t-0': mdAndUp }">
+      <div class="text-body-2 mb-2">Cargando ítems… {{ hasta }} de {{ items.length }}</div>
+      <v-progress-linear :model-value="100 * hasta / items.length" color="primary" rounded />
+    </div>
+    <!-- Se arma oculta y medida: al mostrarla no recalcula sus filas. -->
+    <div class="border rounded-lg" :class="{ 'border-t-0 rounded-t-0': mdAndUp, 'armando': !listo }">
 
       <div v-if="!items.length" class="text-center text-medium-emphasis py-4">
         Sin ítems. Agregue uno con "Añadir ítem".
       </div>
 
-      <service-row v-for="(fila, i) in items" :key="clave(fila)" v-bind="arrastrable(i)" :class="claseDe(i)"
+      <service-row v-for="(fila, i) in visibles" :key="clave(fila)" v-bind="arrastrable(i)" :class="claseDe(i)"
                    :fila="fila" :indice="i" :numero="numeros[i]" :primera="i === 0" :ultima="i === items.length - 1"
                    :error="errores[i]" :moneda="moneda" :tipo="tipo" :acreditaciones="acreditaciones" :asa="asa(i)"
                    @mover="moverFila" @borrar="borrarFila" />
@@ -69,6 +75,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useDisplay } from 'vuetify'
 import CompanyDataService from '@/services/company/companyDataService'
+import { useBatchedRender } from '@/composables/useBatchedRender'
 import { useRowDrag } from '@/composables/useRowDrag'
 import ServiceRow from './ServiceRow.vue'
 import { esGrupo, grupoVacio, itemVacio } from '@/utils/documents/quoteDefaults'
@@ -102,6 +109,7 @@ const numeros = computed(() => {
   return items.value.map(fila => (esGrupo(fila) ? null : ++n))
 })
 
+const { visibles, hasta, listo } = useBatchedRender(items)
 const { asa, arrastrable, claseDe, clave, mover } = useRowDrag(items)
 const moverFila = (indice, paso) => mover(indice, indice + paso)
 const borrarFila = (indice) => items.value.splice(indice, 1)
@@ -109,6 +117,7 @@ const borrarFila = (indice) => items.value.splice(indice, 1)
 
 <style scoped>
 .sin-verse { visibility: hidden; }
+.armando { visibility: hidden; height: 0; overflow: hidden; }
 /* El contenedor que se desliza tiene 1rem de relleno arriba (pt-4): sin
    subirla ese rem, las filas se ven pasar por encima de la barra. */
 .encabezado-fijo {

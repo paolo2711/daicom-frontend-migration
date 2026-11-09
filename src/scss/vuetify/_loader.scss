@@ -55,11 +55,6 @@
   border-radius: 50%;
   animation: nprogress-spinner 400ms linear infinite;
 }
-.circulo-de-carga {
-  @extend %circulo-que-gira;
-  width: 16px;
-  height: 16px;
-}
 .nprogress-custom-parent {
   overflow: hidden;
   position: relative;

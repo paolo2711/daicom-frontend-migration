@@ -133,12 +133,12 @@
             <div v-if="saldoInfo(inv)" class="text-caption" :class="saldoInfo(inv).cls">{{ saldoInfo(inv).text }}</div>
           </div>
           <div class="col-detr text-right">
-            <span v-if="inv.detraccion_applies" class="text-deep-orange text-body-2 font-weight-medium">{{ simbolo(inv.currency) }} {{ money(inv.detraccion_amount) }}</span>
+            <span v-if="inv.detraccion_applies" class="text-deep-orange text-body-2 font-weight-medium">{{ monto(inv.detraccion_amount, inv.currency) }}</span>
             <span v-else class="text-disabled">—</span>
           </div>
           <div class="col-abonado text-right">
             <template v-if="inv.total_pagado > 0">
-              <div class="text-success text-body-2 font-weight-medium">{{ simbolo(inv.currency) }} {{ money(inv.total_pagado) }}</div>
+              <div class="text-success text-body-2 font-weight-medium">{{ monto(inv.total_pagado, inv.currency) }}</div>
               <div class="text-medium-emphasis text-caption">{{ (inv.payments || []).length }} abono(s)</div>
             </template>
             <span v-else class="text-disabled">—</span>
@@ -331,6 +331,7 @@ import DialogLiquidacion from './DialogLiquidacion.vue'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
 import { OTRA_PESTANA } from '@/utils/pdf'
 import { porVencer, vencimiento } from '@/utils/orders/cobro'
+import { MONEDAS, importe, monto } from '@/utils/money'
 import { ABONADO, ANULADA, CREDITO, DEUDA, EN_PROCESO, ESTADOS, EXCEDIDO, PAGADO } from '@/utils/orders/estado'
 import { fechaCorta } from '@/utils/dates'
 
@@ -374,11 +375,7 @@ const facturas_mostradas = computed(() =>
   modo_seleccion.value ? facturas.value.filter(f => f.es_fiscal) : facturas.value
 )
 
-const currency_options = [
-  { title: 'Todas las monedas', value: null },
-  { title: 'Soles (PEN)', value: 'PEN' },
-  { title: 'Dólares (USD)', value: 'USD' },
-]
+const currency_options = [{ title: 'Todas las monedas', value: null }, ...MONEDAS]
 const estadoFactura = (s) => ESTADOS[s] || ESTADOS[DEUDA]
 const estado_color = (s) => estadoFactura(s).color
 const estado_texto = (s) => estadoFactura(s).texto
@@ -403,20 +400,18 @@ const tipo_options = [
 const hay_filtros = computed(() => !!(currency_filter.value || estado_filter.value
   || detraccion_filter.value || tipo_filter.value))
 
-const simbolo = (c) => (c === 'USD' ? '$' : 'S/')
-const money = (v) => Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 // Facturas internas nacen en 0 (aún sin abono): mostramos "--" en vez de 0.00
 const montoMostrar = (inv) => {
   const v = Number(inv.amount || 0)
-  return v > 0 ? `${simbolo(inv.currency)} ${money(v)}` : '—'
+  return v > 0 ? monto(v, inv.currency) : '—'
 }
 // Resto de la factura: "Pdte X" si falta cobrar (rojo, o verde azulado si es
 // crédito que no vence), "Exc. X" (azul, color de Excedido) si pagaron de más,
 // null si está justo/pagado.
 const saldoInfo = (inv) => {
   const s = Number(inv.saldo_pendiente || 0)
-  if (s > 0) return { text: `Pdte ${money(s)}`, cls: porVencer(inv) ? 'text-teal' : 'text-error' }
-  if (s < 0) return { text: `Exc. ${money(-s)}`, cls: 'text-blue-darken-1' }
+  if (s > 0) return { text: `Pdte ${importe(s)}`, cls: porVencer(inv) ? 'text-teal' : 'text-error' }
+  if (s < 0) return { text: `Exc. ${importe(-s)}`, cls: 'text-blue-darken-1' }
   return null
 }
 

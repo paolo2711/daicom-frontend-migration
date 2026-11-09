@@ -38,7 +38,7 @@
                 v-model.number="form.precio_estandar" 
                 type="number" 
                 label="Precio Estándar (Contado) *"
-                prefix="S/" 
+                :prefix="simboloDe('PEN')"
                 variant="outlined" 
                 density="compact" 
                 prepend-inner-icon="mdi-cash"
@@ -50,7 +50,7 @@
                 v-model.number="form.precio_corporativo" 
                 type="number" 
                 label="Precio Corporativo (Crédito) *"
-                prefix="S/" 
+                :prefix="simboloDe('PEN')"
                 variant="outlined" 
                 density="compact" 
                 prepend-inner-icon="mdi-domain"
@@ -78,6 +78,7 @@ import Swal from 'sweetalert2'
 import ServicioCatalogoDataService from '@/services/equipments/servicioCatalogoDataService'
 import InnerCounter from '@/components/shared/InnerCounter.vue'
 import { useServiceTypes } from '@/composables/useServiceTypes'
+import { simboloDe } from '@/utils/money'
 
 const emit = defineEmits(['reload'])
 const dialog = ref(false)

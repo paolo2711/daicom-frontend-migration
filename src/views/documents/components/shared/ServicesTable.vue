@@ -15,13 +15,22 @@
           Añadir ítem
         </v-btn>
       </div>
-      <v-row dense class="d-none d-md-flex px-3 py-2 ma-0 border rounded-t-lg text-caption font-weight-bold text-medium-emphasis">
-        <v-col md="5" class="pl-15">Descripción y comentario</v-col>
-        <v-col md="1">Cant.</v-col>
-        <v-col md="2">Unidad</v-col>
-        <v-col md="2">P. unit.</v-col>
-        <v-col md="2" class="text-right pr-10">Total</v-col>
-      </v-row>
+      <!-- Con el asa, el numero y los botones de la fila sin verse: cada titulo queda sobre su columna. -->
+      <div class="d-none d-md-flex align-center px-3 py-2 border rounded-t-lg">
+        <div class="d-flex align-center mr-2 sin-verse">
+          <v-icon size="small">mdi-drag-vertical</v-icon>
+          <div class="d-flex flex-column">
+            <v-btn icon="mdi-chevron-up" variant="text" size="x-small" density="comfortable" tabindex="-1" />
+          </div>
+        </div>
+        <span class="numero-de-item mr-3" />
+        <div class="columnas-de-item flex-grow-1 text-caption font-weight-bold text-medium-emphasis">
+          <span>Descripción y comentario</span><span>Cant.</span><span>Unidad</span><span>P. unit.</span>
+          <span class="text-right">Total</span>
+        </div>
+        <v-btn v-for="n in (acreditaciones.length ? 3 : 2)" :key="n" icon="mdi-plus" variant="text" size="small"
+               class="ml-1 sin-verse" tabindex="-1" />
+      </div>
     </div>
 
     <!-- En pantalla ancha cada servicio va en una linea, como tabla; en angosta
@@ -99,6 +108,7 @@ const borrarFila = (indice) => items.value.splice(indice, 1)
 </script>
 
 <style scoped>
+.sin-verse { visibility: hidden; }
 /* El contenedor que se desliza tiene 1rem de relleno arriba (pt-4): sin
    subirla ese rem, las filas se ven pasar por encima de la barra. */
 .encabezado-fijo {

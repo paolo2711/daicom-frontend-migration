@@ -20,9 +20,9 @@
       </div>
     </template>
     <template v-else>
-      <span class="text-medium-emphasis font-weight-bold pt-2 mr-3">{{ numero }}</span>
-      <v-row dense class="ma-0 flex-grow-1">
-        <v-col cols="12" md="5">
+      <span class="numero-de-item text-medium-emphasis font-weight-bold pt-2 mr-3">{{ numero }}</span>
+      <div class="columnas-de-item flex-grow-1">
+        <div>
           <catalog-description-field :fila="fila" :moneda="moneda" :placeholder="tipo.ejemploItem"
                                      :maxlength="LIMITES.descripcion" @elegido="s => (elegido = s)" />
           <v-textarea v-if="conComentario" ref="campoDeComentario" v-model="fila.observations"
@@ -32,17 +32,17 @@
             <template #append-inner><inner-counter :valor="fila.observations" :max="LIMITES.comentario" /></template>
           </v-textarea>
           <div v-if="error" class="text-caption text-error">{{ error }}</div>
-        </v-col>
-        <v-col cols="4" md="1">
+        </div>
+        <div>
           <v-text-field :model-value="fila.quantity" type="number" min="1" :max="LIMITES.cantidad"
                         :label="mdAndUp ? undefined : 'Cant.'" density="compact" variant="outlined" hide-details
                         @input="e => fijar(e, 'quantity', LIMITES.cantidad)" />
-        </v-col>
-        <v-col cols="4" md="2">
+        </div>
+        <div>
           <v-select v-model="fila.unit" :items="UNIDADES" :label="mdAndUp ? undefined : 'Unidad'"
                     density="compact" variant="outlined" hide-details />
-        </v-col>
-        <v-col cols="4" md="2">
+        </div>
+        <div>
           <v-text-field :model-value="fila.unit_price" type="number" min="0" :max="LIMITES.precio" :prefix="simboloDe(moneda)"
                         :label="mdAndUp ? undefined : 'P. unit.'" density="compact" variant="outlined" hide-details
                         @input="e => fijar(e, 'unit_price', LIMITES.precio)">
@@ -62,11 +62,11 @@
               </v-menu>
             </template>
           </v-text-field>
-        </v-col>
-        <v-col cols="12" md="2" class="d-flex justify-end pt-md-3">
+        </div>
+        <div class="d-flex justify-end pt-md-2">
           <span class="font-weight-bold text-no-wrap">{{ monto(totalDeFila(fila), moneda) }}</span>
-        </v-col>
-      </v-row>
+        </div>
+      </div>
       <!-- Primero el de comentario: oculto, deja su hueco junto al total y no entre los demas. -->
       <v-btn icon="mdi-comment-plus-outline" variant="text" size="small" class="ml-1" title="Agregar comentario"
              :style="{ visibility: conComentario ? 'hidden' : 'visible' }" @click="abrirComentario" />

@@ -3,7 +3,8 @@ import NProgress from "nprogress";
 import "nprogress/nprogress.css";
 import { useAuthStore } from "@/stores/authStore";
 import { sinBeta } from "@/utils/beta";
-import { OPCIONES_NUEVA_COTIZACION } from "@/utils/documents/quoteDefaults";
+import { OPCIONES_NUEVO_DOCUMENTO } from "@/utils/documents/quoteDefaults";
+import { COTIZACION, VALORIZACION } from "@/utils/documents/tipos";
 
 const routes = [
   {
@@ -60,9 +61,25 @@ const routes = [
             path: "cotizaciones",
             meta: {
               pestana: { texto: "Cotizaciones", icono: "mdi-calculator-variant-outline" },
-              nuevo: { texto: "Nueva cotización", icono: "mdi-file-document-plus-outline", opciones: OPCIONES_NUEVA_COTIZACION },
+              nuevo: {
+                texto: "Nueva cotización", icono: "mdi-file-document-plus-outline", opciones: OPCIONES_NUEVO_DOCUMENTO,
+              },
             },
-            component: () => import("@/views/documents/components/TabQuotes.vue"),
+            props: { tipo: COTIZACION },
+            component: () => import("@/views/documents/components/TabDocuments.vue"),
+          },
+          {
+            name: "documents-valuations",
+            path: "valorizaciones",
+            meta: {
+              pestana: { texto: "Valorizaciones", icono: "mdi-receipt-text-outline" },
+              nuevo: {
+                texto: "Nueva valorización", icono: "mdi-file-document-plus-outline",
+                opciones: OPCIONES_NUEVO_DOCUMENTO,
+              },
+            },
+            props: { tipo: VALORIZACION },
+            component: () => import("@/views/documents/components/TabDocuments.vue"),
           },
         ],
       },

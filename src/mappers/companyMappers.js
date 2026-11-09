@@ -11,6 +11,7 @@ class CompanyMappers {
             non_accredited_correlative: element.non_accredited_correlative,
             operationality_correlative: element.operationality_correlative,
             quote_correlative: element.quote_correlative,
+            valuation_correlative: element.valuation_correlative,
             order_service_correlative: element.order_service_correlative,
             order_rental_correlative: element.order_rental_correlative,
             inventory_correlative: element.inventory_correlative,

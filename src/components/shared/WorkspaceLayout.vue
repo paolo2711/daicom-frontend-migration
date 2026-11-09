@@ -2,7 +2,7 @@
   <!-- Prioridad: la lista siempre y la mas grande; el detalle al lado si cabe, si no encima
        mientras esta abierto; el apoyo a la izquierda o en una franja arriba. -->
   <div class="espacio-de-trabajo" :style="grilla">
-    <section v-if="$slots.apoyo" class="hoja hoja-de-apoyo" style="grid-area: apoyo;">
+    <section v-if="$slots.apoyo" class="hoja hoja-de-apoyo overflow-y-auto" style="grid-area: apoyo;">
       <slot name="apoyo" :apilado="disposicion === 'tres'" />
     </section>
 
@@ -53,7 +53,8 @@ const grilla = computed(() => {
   return {
     gridTemplateColumns: columnas,
     gridTemplateAreas: zonas.map(z => `"${z}"`).join(' '),
-    gridTemplateRows: zonas.length > 1 ? 'auto minmax(0, 1fr)' : 'minmax(0, 1fr)',
+    // La franja de apoyo no pasa de la mitad del alto: si no entra, se desplaza por dentro.
+    gridTemplateRows: zonas.length > 1 ? 'fit-content(50%) minmax(0, 1fr)' : 'minmax(0, 1fr)',
   }
 })
 </script>

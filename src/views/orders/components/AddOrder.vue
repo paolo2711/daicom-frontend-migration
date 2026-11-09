@@ -112,7 +112,7 @@ import OrderDataService from '@/services/orders/orderDataService'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
 import DocumentsOrder from './DocumentsOrder.vue'
-import { subirPendientes } from '@/utils/orders/documentos'
+import { sinPendientes, subirPendientes, vinculosAlCrear } from '@/utils/orders/documentos'
 import ResumenEquipos from './ResumenEquipos.vue'
 import DialogCertificateOwners from './services/DialogCertificateOwners.vue'
 import VersionsOrderService from './services/VersionsOrderService.vue'
@@ -192,13 +192,13 @@ watch([items_to_save, () => order.value.client, observaciones], ([items, client]
 }, { deep: true })
 
 // Al crear: lo que se vincula y se sube con la orden. Guardada, cada documento se guarda al momento.
-const documentosNuevos = ref({ cotizaciones: [], archivos: [] })
+const documentosNuevos = ref(sinPendientes())
 
 // `cotizacion`, la orden que el back arma desde una (documents/<id>/orden): queda vinculada a ella.
 async function open(tipo, cotizacion = null) {
   editando.value = null
   clienteOrden.value = null
-  documentosNuevos.value = { cotizaciones: cotizacion ? [cotizacion.documento] : [], archivos: [] }
+  documentosNuevos.value = { ...sinPendientes(), cotizaciones: cotizacion ? [cotizacion.documento] : [] }
   items_to_save.value = []
   observaciones.value = ''
   order.value = { client: cotizacion?.client ?? null, order_type: tipo }
@@ -264,8 +264,7 @@ async function save(imprimir = false) {
 
     const filas = items_to_save.value
     const estimados = formRef.value?.estimados?.()
-    payload_orden.cotizaciones = documentosNuevos.value.cotizaciones.map(c => c.id)
-    const { data } = await OrderDataService.create(payload_orden)
+    const { data } = await OrderDataService.create({ ...payload_orden, ...vinculosAlCrear(documentosNuevos.value) })
     const noSubieron = await subirPendientes(data.id, documentosNuevos.value.archivos)
 
     close()

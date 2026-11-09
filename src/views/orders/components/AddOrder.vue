@@ -105,6 +105,7 @@
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import { ref, computed, watch, nextTick, getCurrentInstance } from 'vue'
 import { useLocalDraft } from '@/composables/useLocalDraft'
+import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useSavedNumbers } from '@/composables/useSavedNumbers'
 import { mensajeDeError } from '@/utils/errors'
 import { SERVICIO, esAlquiler, esDeServicio } from '@/utils/orders/estado'
@@ -301,30 +302,9 @@ async function guardarEdicion() {
 const imprimirIngreso = (id) => abrirIngreso(id).catch(error => $swal.fire('La orden se guardó',
   mensajeDeError(error, 'No se pudo abrir el ingreso: imprímalo desde el menú de la orden.'), 'warning'))
 
-// ── Vista previa: el ingreso que armaria el back, sin guardar nada ──
-const vistaPrevia = ref(false)
-const urlDeVista = ref('')
-const armandoVista = ref(false)
-
-const soltarVista = () => {
-  if (urlDeVista.value) URL.revokeObjectURL(urlDeVista.value)
-  urlDeVista.value = ''
-}
-watch(vistaPrevia, (abierta) => { if (!abierta) soltarVista() })
-
-async function verVistaPrevia() {
-  armandoVista.value = true
-  try {
-    const pdf = await OrderDataService.vistaPreviaIngreso({ client: order.value.client, items: items_to_save.value })
-    soltarVista()
-    urlDeVista.value = URL.createObjectURL(pdf)
-    vistaPrevia.value = true
-  } catch (error) {
-    $swal.fire('No se pudo armar la vista previa', mensajeDeError(error, 'No se pudo armar la vista previa.'), 'error')
-  } finally {
-    armandoVista.value = false
-  }
-}
+const { abierta: vistaPrevia, url: urlDeVista, armando: armandoVista, ver: verVistaPrevia } = usePdfPreview(
+  () => OrderDataService.vistaPreviaIngreso({ client: order.value.client, items: items_to_save.value }),
+  error => $swal.fire('No se pudo armar la vista previa', mensajeDeError(error, 'No se pudo armar la vista previa.'), 'error'))
 
 function close() {
   vistaPrevia.value = false

@@ -18,6 +18,7 @@
                               :exclude-ids="vinculados[v.campo].map(d => d.id)" :return-object="false"
                               item-title="name" item-value="id" :disabled="!clienteId"
                               :label="`Vincular ${DOCUMENTOS[v.documento].nombre} del cliente`"
+                              :no-data-text="`El cliente no tiene ${DOCUMENTOS[v.documento].plural.toLowerCase()} de ${tipo} emitidas`"
                               prepend-inner-icon="mdi-link-variant" density="compact" variant="outlined" rounded="lg"
                               hide-details class="mt-1" @selected="d => vincular(v, d)">
         <template #item="{ item, props: opcion }">
@@ -120,10 +121,11 @@ const subiendoDe = ref(VINCULABLES[0])
 
 const fallo = (error, texto) => Toast.fire({ ...appStore.toastErrorRed, title: mensajeDeError(error, texto) })
 
+const tipo = computed(() => (props.alquiler ? 'alquiler' : 'servicio'))
 const buscadores = Object.fromEntries(VINCULABLES.map(v => [v.campo, (page, size, query) =>
   DocumentsDataService.getAll({
-    document_type: v.documento, status: 'EMITIDO', client: props.clienteId, document_number: query || undefined,
-    page, itemsPerPage: size,
+    document_type: v.documento, kind: tipo.value, status: 'EMITIDO', client: props.clienteId,
+    document_number: query || undefined, page, itemsPerPage: size,
   })]))
 const aDocumento = (d) => ({
   id: d.id, name: d.document_number, pdf: d.pdf_file, tipo: TIPOS_DE_COTIZACION[d.kind]?.texto,

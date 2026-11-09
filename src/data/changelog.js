@@ -19,6 +19,30 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.9.0.0',
+    fecha: '2026-11-09',
+    nuevo: [
+      'Valorizaciones en Documentos: se hacen igual que la cotización, con su serie FV001, y también se guardan en el disco E del servidor.',
+      'Una orden de servicio acepta cualquier servicio: cada equipo es una línea con su servicio, y el certificado se crea solo si el servicio lo lleva (calibración, paquete u operatividad).',
+      'El ingreso se imprime desde la orden y guarda cada versión.',
+      'La orden tiene su bloque de Documentos, también al crearla: cotizaciones y valorizaciones del cliente y, en alquiler, guías y órdenes de compra.',
+      'Formas de pago con adelanto (100 % y 50 %) en la cotización y la valorización.',
+    ],
+    cambio: [
+      'Crear y editar una orden, de servicio o de alquiler, se hace en un formulario que ocupa toda la pantalla y se guarda de una vez.',
+      'La cotización se edita en un formulario que ocupa toda la pantalla, y una nueva ya trae el primer ítem.',
+      'Al editar una cotización larga se ve cuánto falta y la pantalla ya no se congela.',
+      'Las listas de documentos, órdenes y facturas cargan más rápido: la de documentos pesa un 89 % menos.',
+      'Al vincular documentos a una orden solo aparecen los de su tipo, y si el cliente no tiene ninguno, se avisa.',
+      'En Documentos, el PDF de una cotización o valorización se abre al lado de la lista si hay espacio; si no, ocupa toda la pantalla.',
+      'Los montos de las facturas, los abonos, la liquidación, la detracción de cada orden y los precios del catálogo de Equipos se muestran con separador de miles (S/ 4,236.20).',
+      'Los certificados de Antapaccay vuelven a la lista normal de Certificados.',
+    ],
+    arreglo: [
+      'En la cotización, el calendario de la fecha se ve completo aunque el panel sea angosto.',
+    ],
+  },
+  {
     version: '3.8.1.1',
     fecha: '2026-10-21',
     cambio: [

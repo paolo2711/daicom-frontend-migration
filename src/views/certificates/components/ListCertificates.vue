@@ -54,18 +54,6 @@
           @click="toggleFiltroExcel"
         >Pendientes de Excel</filter-pill>
 
-        <!-- ── TEMPORAL Antapacay — borrar esta píldora al terminar contrato (~ago 2026) ── -->
-        <v-chip
-          variant="flat"
-          :class="['antapaccay-chip', 'font-weight-bold', 'cursor-pointer', 'ml-2', { 'antapaccay-chip--active': filtro_antapacay }]"
-          @click="toggleFiltroAntapacay"
-        >
-          <v-icon start size="small" class="antapaccay-pico">mdi-pickaxe</v-icon>
-          Antapaccay
-          <v-tooltip activator="parent" location="top">Ver solo los certificados de Antapaccay (ocultos en el listado normal)</v-tooltip>
-        </v-chip>
-        <!-- ── FIN TEMPORAL Antapacay ── -->
-
         <v-spacer></v-spacer>
 
         <v-btn 
@@ -505,7 +493,6 @@ const options                  = ref({ page: 1, itemsPerPage: 30 })
 
 const filtro_firma_pendiente   = ref(false) // Estado del Smart Chip
 const filtro_excel_pendiente   = ref(false) // Estado del Smart Chip Excel
-const filtro_antapacay         = ref(false) // TEMPORAL Antapacay — borrar al terminar contrato (~ago 2026)
 const mostrar_filtros_avanzados = ref(false) // Toggle de la UI
 
 // ─── Filtros de fecha ─────────────────────────────────────────────────────────
@@ -568,7 +555,7 @@ const ver_bandeja_firmas = computed(() => {
 
 // ─── Headers de la tabla ──────────────────────────────────────────────────────
 // Vuetify 3: "title" en lugar de "text", "key" en lugar de "value"
-const baseHeaders = [
+const headers = [
   { title: 'Cód. Registro',       key: 'registry_code',         align: 'start',  sortable: false },
   { title: 'Tipo',                key: 'certificate_type_label', align: 'start',  sortable: false },
   { title: 'Cliente Certificado', key: 'client_data.name',                        sortable: false },
@@ -581,13 +568,6 @@ const baseHeaders = [
   { title: 'Opciones',            key: 'actions',               align: 'center', sortable: false },
 ]
 
-// Con el filtro Antapaccay todas las filas son el mismo cliente → ocultamos esa
-// columna. TEMPORAL Antapaccay — al quitar el filtro, volver headers a baseHeaders.
-const headers = computed(() =>
-  filtro_antapacay.value
-    ? baseHeaders.filter(h => h.key !== 'client_data.name')
-    : baseHeaders
-)
 
 
 
@@ -704,13 +684,6 @@ function toggleFiltroExcel () {
   retrieveAllCertificates() // Ejecuta la búsqueda
 }
 
-// ── TEMPORAL Antapacay — borrar al terminar contrato (~ago 2026) ──
-function toggleFiltroAntapacay () {
-  filtro_antapacay.value = !filtro_antapacay.value
-  options.value.page = 1
-  retrieveAllCertificates()
-}
-
 function aplicarFiltroFechas () {
   options.value.page = 1    // Reinicia la paginación a la página 1
   retrieveAllCertificates() // Dispara 1 sola búsqueda limpia al backend
@@ -822,7 +795,6 @@ function retrieveAllCertificates (opciones) {
     certificate_type: certificate_type.value || '',
     signature_requested: filtro_firma_pendiente.value,
     pending_excel: filtro_excel_pendiente.value,
-    antapacay: filtro_antapacay.value ? 1 : '', // TEMPORAL Antapacay — borrar al terminar contrato
   }).then((response) => {
     if (!isLatestCertLoad(token)) return   // llegó una carga más nueva → no pisar
     certificates.value = response.data.results.map(cert => CertificateMappers.getMap(cert))
@@ -889,59 +861,6 @@ function onNubeClick(event, cert) {
 
 <style>
 
-/* ── TEMPORAL Antapaccay — borrar este bloque al terminar contrato (~ago 2026) ── */
-.antapaccay-chip {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(184, 115, 51, 0.45) !important;
-  background: rgba(184, 115, 51, 0.10) !important;
-  color: #8a5a2b !important;
-  transition: transform .2s ease, box-shadow .25s ease, background .25s ease;
-}
-.antapaccay-chip:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(184, 115, 51, 0.35) !important;
-}
-.antapaccay-chip--active {
-  background: linear-gradient(120deg, #6d3810, #b87333 42%, #e6b483 52%, #b87333 62%, #6d3810) !important;
-  color: #fff !important;
-  border-color: transparent !important;
-  box-shadow: 0 3px 14px rgba(184, 115, 51, 0.55) !important;
-}
-/* Brillo metálico que barre de lado a lado */
-.antapaccay-chip--active::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -70%;
-  width: 45%;
-  height: 100%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-  transform: skewX(-20deg);
-  pointer-events: none;
-  animation: antapaccay-shine 2.6s ease-in-out infinite;
-}
-.antapaccay-chip .v-chip__content {
-  position: relative;
-  z-index: 1;
-}
-@keyframes antapaccay-shine {
-  0%   { left: -70%; }
-  55%  { left: 130%; }
-  100% { left: 130%; }
-}
-/* El pico "pica" mientras está activa */
-.antapaccay-chip--active .antapaccay-pico {
-  transform-origin: 65% 65%;
-  animation: antapaccay-pick 1.5s ease-in-out infinite;
-}
-@keyframes antapaccay-pick {
-  0%, 100% { transform: rotate(0deg); }
-  40%      { transform: rotate(-22deg); }
-  55%      { transform: rotate(8deg); }
-  70%      { transform: rotate(0deg); }
-}
-/* ── FIN TEMPORAL Antapaccay ── */
 
 
 

@@ -303,7 +303,7 @@ export const quoteDefaultJSON = (kind = TIPO_POR_DEFECTO, tipoDeDocumento = COTI
       address: ""
     },
     intro_text: textos.entrada,
-    items: [],
+    items: [itemVacio(tipo.unidad)],
     totals: {
       subtotal: 0,
       igv_percent: 18,

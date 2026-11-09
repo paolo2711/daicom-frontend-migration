@@ -158,7 +158,7 @@ const borrador = useLocalDraft(
   () => `daicom_borrador_${props.tipoDeDocumento}_${documentoId.value || `nueva_${cotizacion.value.meta.kind}`}`,
   {
     resumen: (guardado) => {
-      const items = (guardado.cotizacion?.items || []).filter(fila => !esGrupo(fila)).length
+      const items = (guardado.cotizacion?.items || []).filter(fila => !esGrupo(fila) && fila.description?.trim()).length
       const nombre = definicion.value.nombre
       return items ? `Hay una ${nombre} sin guardar con ${items} ítem(s) de una sesión anterior.` : ''
     },

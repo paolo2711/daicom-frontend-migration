@@ -56,7 +56,7 @@
               </template>
 
               <v-list-item-title class="font-weight-bold">
-                {{ monedaActual === 'USD' ? '$' : 'S/' }} {{ pago.amount }}
+                {{ monto(pago.amount, monedaActual) }}
               </v-list-item-title>
               <v-list-item-subtitle>
                 {{ pago.payment_method }} - {{ fechaCorta(pago.payment_date) }}
@@ -140,17 +140,17 @@
                   class="font-weight-bold"
                 >
                   <v-icon start size="14">mdi-cash-multiple</v-icon>
-                  {{ monedaActual === 'USD' ? 'USD' : 'PEN' }}
+                  {{ monedaActual }}
                 </v-chip>
               </template>
-              <span>Se liquida en {{ monedaActual === 'USD' ? 'Dólares (US$)' : 'Soles (S/)' }}</span>
+              <span>Se liquida en {{ nombreDe(monedaActual) }}</span>
             </v-tooltip>
           </div>
           <v-row density="compact">
             <v-col cols="12" md="6">
               <v-text-field
                 v-model="payment_data.amount"
-                :label="`Monto Pagado (${monedaActual === 'USD' ? '$' : 'S/'})`"
+                :label="`Monto Pagado (${simboloDe(monedaActual)})`"
                 variant="outlined"
                 density="compact"
                 type="number"
@@ -227,6 +227,7 @@ import { useAppStore } from '@/stores/appStore'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 import { fechaCorta, hoyISO } from '@/utils/dates'
+import { monto, nombreDe, simboloDe } from '@/utils/money'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },

@@ -55,7 +55,7 @@
               <span v-if="vencimiento(inv)" class="text-caption" :class="`text-${vencimiento(inv).color}`">{{ vencimiento(inv).texto }}</span>
             </div>
             <div class="d-flex align-center">
-              <span class="text-body-2 font-weight-bold mr-2">{{ simbolo(inv.currency) }} {{ formatMoney(inv.amount) }}</span>
+              <span class="text-body-2 font-weight-bold mr-2">{{ monto(inv.amount, inv.currency) }}</span>
               <v-icon size="small" :color="inv.pdf_url ? 'primary' : 'grey'">
                 {{ inv.pdf_url ? 'mdi-file-eye' : 'mdi-file-hidden' }}
               </v-icon>
@@ -98,7 +98,7 @@
               </div>
             </div>
             <div class="d-flex align-center">
-              <span class="text-body-2 font-weight-bold text-success mr-2">{{ simbolo(pay.currency) }} {{ formatMoney(pay.amount) }}</span>
+              <span class="text-body-2 font-weight-bold text-success mr-2">{{ monto(pay.amount, pay.currency) }}</span>
               <v-icon size="small" :color="pay.payment_proof ? 'primary' : 'grey'">
                 {{ pay.payment_proof ? 'mdi-file-eye' : 'mdi-file-hidden' }}
               </v-icon>
@@ -114,7 +114,7 @@
             <span class="text-caption font-weight-bold">
               Total abonado:
               <span v-for="(t, i) in totalPorMoneda" :key="t.currency" class="text-success">
-                {{ i ? ' · ' : ' ' }}{{ simbolo(t.currency) }} {{ t.monto }}
+                {{ i ? ' · ' : ' ' }}{{ monto(t.monto, t.currency) }}
               </span>
             </span>
           </div>
@@ -150,6 +150,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import OrderDataService from '@/services/orders/orderDataService.js'
 import { fechaCorta } from '@/utils/dates'
+import { monto } from '@/utils/money'
 import { vencimiento } from '@/utils/orders/cobro'
 
 const props = defineProps({
@@ -190,15 +191,10 @@ const totalPorMoneda = computed(() => {
     const moneda = pago.currency || 'PEN'
     porMoneda[moneda] = (porMoneda[moneda] || 0) + parseFloat(pago.amount || 0)
   }
-  return Object.entries(porMoneda).map(([currency, monto]) => ({ currency, monto: monto.toFixed(2) }))
+  return Object.entries(porMoneda).map(([currency, total]) => ({ currency, monto: total }))
 })
 
 const abrirDoc = (url) => { if (url) window.open(url, '_blank') }
-
-const formatMoney = (val) => parseFloat(val || 0).toFixed(2)
-
-// La moneda vive en cada factura y en cada abono; la orden no tiene.
-const simbolo = (currency) => (currency === 'USD' ? '$' : 'S/')
 
 const irAOrden = () => {
   router.push({ path: '/orders', query: { buscar_orden: props.orderNumber } }).catch(()=>{})

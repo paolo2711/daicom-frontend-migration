@@ -1,9 +1,23 @@
 import OrderDataService from '@/services/orders/orderDataService'
+import { COTIZACION as DE_COTIZACION, VALORIZACION as DE_VALORIZACION } from '@/utils/documents/tipos'
 
 // OrderDocument.Tipo en el back.
 export const ORDEN_DE_COMPRA = 1
 export const VALORIZACION = 2
 export const COTIZACION = 4
+
+// Las secciones que vinculan un documento del sistema (OrderDocument.DEL_SISTEMA). `campo`: el del pedido al
+// crear la orden y el de los pendientes.
+export const VINCULABLES = [
+  { tipo: COTIZACION, documento: DE_COTIZACION, campo: 'cotizaciones' },
+  { tipo: VALORIZACION, documento: DE_VALORIZACION, campo: 'valorizaciones' },
+]
+
+export const sinPendientes = () => ({ cotizaciones: [], valorizaciones: [], archivos: [] })
+
+// Los ids que se vinculan al crear la orden, por campo del pedido.
+export const vinculosAlCrear = (pendientes) =>
+  Object.fromEntries(VINCULABLES.map(v => [v.campo, pendientes[v.campo].map(d => d.id)]))
 
 // Los PDF de un alquiler que van uno solo por orden (campos de Order).
 export const GUIAS = [
@@ -24,9 +38,9 @@ export function subirArchivo(ordenId, { destino, numero, archivo }) {
   return OrderDataService.uploadInvoice(ordenId, datos)
 }
 
-export function vincularCotizacion(ordenId, documentoId) {
+export function vincularDocumento(ordenId, tipo, documentoId) {
   const datos = new FormData()
-  datos.append('tipo', COTIZACION)
+  datos.append('tipo', tipo)
   datos.append('documento', documentoId)
   return OrderDataService.addDocument(ordenId, datos)
 }

@@ -208,7 +208,7 @@
                   <v-icon size="x-small" class="mr-1">mdi-file-document</v-icon>{{ item.documentos.oc_count }}
                 </v-chip>
               </template>
-              <span>Abrir última OC ({{ item.documentos.oc_count }} en total · todas en Editar)</span>
+              <span>Abrir última OC ({{ item.documentos.oc_count }} en total · todas en Ver y editar)</span>
             </v-tooltip>
 
             <v-tooltip location="top" v-if="item.documentos && item.documentos.val_count > 0">
@@ -218,7 +218,9 @@
                   <v-icon size="x-small" class="mr-1">mdi-cash-multiple</v-icon>{{ item.documentos.val_count }}
                 </v-chip>
               </template>
-              <span>Abrir última valorización ({{ item.documentos.val_count }} en total · todas en Editar)</span>
+              <span>
+                Abrir última valorización ({{ item.documentos.val_count }} en total · todas en Ver y editar)
+              </span>
             </v-tooltip>
 
             <v-tooltip location="top" v-if="item.dispatch_guide_pdf">

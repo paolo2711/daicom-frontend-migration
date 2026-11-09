@@ -43,7 +43,7 @@
         </div>
 
         <router-view v-slot="{ Component }">
-          <component :is="Component" ref="pestana" />
+          <component :is="Component" :key="route.name" ref="pestana" />
         </router-view>
       </v-col>
     </v-row>

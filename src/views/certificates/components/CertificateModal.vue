@@ -307,5 +307,5 @@ defineExpose({ open })
 
 <style scoped>
 /* Las filas sin "+" dejan su lugar (el boton y su margen): todos los campos terminan en el mismo borde. */
-.sin-boton { padding-inline-end: calc(3.5rem + 4px) !important; }
+.sin-boton { padding-inline-end: 3.75rem !important; }
 </style>

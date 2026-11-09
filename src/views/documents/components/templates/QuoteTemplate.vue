@@ -96,6 +96,7 @@ import DocumentsDataService from '@/services/documents/documentsDataService'
 import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import { useLocalDraft } from '@/composables/useLocalDraft'
+import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useSwal } from '@/composables/useSwal'
 import { fechaCorta } from '@/utils/dates'
@@ -227,30 +228,9 @@ async function guardar () {
   }
 }
 
-// ── Vista previa: el PDF que armaria el back, sin guardar nada ──
-const vistaPrevia = ref(false)
-const urlDeVista = ref('')
-const armandoVista = ref(false)
-
-const soltarVista = () => {
-  if (urlDeVista.value) URL.revokeObjectURL(urlDeVista.value)
-  urlDeVista.value = ''
-}
-watch(vistaPrevia, (abierta) => { if (!abierta) soltarVista() })
-
-async function verVistaPrevia () {
-  armandoVista.value = true
-  try {
-    const pdf = await DocumentsDataService.vistaPrevia(payload())
-    soltarVista()
-    urlDeVista.value = URL.createObjectURL(pdf)
-    vistaPrevia.value = true
-  } catch (error) {
-    mostrarRechazo(error, 'No se pudo armar la vista previa', 'No se pudo armar la vista previa.')
-  } finally {
-    armandoVista.value = false
-  }
-}
+const { abierta: vistaPrevia, url: urlDeVista, armando: armandoVista, ver: verVistaPrevia } = usePdfPreview(
+  () => DocumentsDataService.vistaPrevia(payload()),
+  error => mostrarRechazo(error, 'No se pudo armar la vista previa', 'No se pudo armar la vista previa.'))
 
 defineExpose({ open })
 </script>

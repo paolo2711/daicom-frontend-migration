@@ -77,7 +77,7 @@
     </div>
     <v-row dense>
       <v-col v-bind="ancho(3, { sm: 6, apilado: 6 })">
-        <v-text-field v-model="meta.date" label="Fecha" type="date" density="compact" variant="outlined" hide-details="auto" />
+        <date-picker label="Fecha" :date="meta.date" @setPickedDate="v => (meta.date = v)" />
       </v-col>
       <v-col v-if="DOCUMENTOS[tipoDeDocumento].conValidez" v-bind="ancho(3, { sm: 6, apilado: 6 })">
         <v-text-field v-model.number="meta.validity_days" label="Validez" suffix="días" type="number" min="1"
@@ -102,6 +102,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import InnerCounter from '@/components/shared/InnerCounter.vue'
 import {

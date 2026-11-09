@@ -20,6 +20,9 @@ export const FECHAS_ALQUILER = {
 export const reglaNoFutura = (hoy) => (fecha) => !fecha || fecha <= hoy || 'No puede ser a futuro'
 export const reglaNoAntesDe = (salida) => (fecha) => !fecha || !salida || fecha >= salida || 'Es antes de la salida'
 
+// Se quita lo que no salio: una linea guardada solo si sigue reservada (quitar_alquiler en el back).
+export const seQuitaElAlquiler = (fila) => fila.modo !== 'linea' || fila.estado === 'reservado'
+
 export function salidaDe(linea) {
   if (linea.departure_date) return fechaCorta(linea.departure_date)
   return linea.estado === 'anulado' ? 'No salió' : 'Aún no sale'

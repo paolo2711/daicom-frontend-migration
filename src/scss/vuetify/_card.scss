@@ -53,3 +53,16 @@
   width: 22rem;
   flex: 0 0 auto;
 }
+
+// Las secciones del panel del equipo elegido (servicio y alquiler).
+.seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem;
+  border-radius: 0.75rem;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+}
+.titulo-de-seccion { font-size: 0.8125rem; font-weight: 600; }
+// El buscador de la cabecera de la lista de equipos.
+.buscador-de-equipo { width: 22rem; flex: 0 1 22rem; }

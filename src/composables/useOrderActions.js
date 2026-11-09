@@ -10,7 +10,7 @@ import { anularOrdenes } from '@/utils/orders/anulacion'
 // Lo que hace cada accion de ACCIONES_ORDEN, y el menu de la tabla. Lo usan
 // Servicios y Alquileres; cada una dice como abre sus modales.
 // Marcar pone al panel de facturas en modo vincular, asi que el menu no marca.
-export function useOrderActions(seleccion, { editar, imprimirIngreso, agregarEquipo, facturar }) {
+export function useOrderActions(seleccion, { editar, imprimirIngreso, facturar }) {
   const { hasAction } = usePermissions()
   const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(seleccion, { marca: false })
 
@@ -43,7 +43,6 @@ export function useOrderActions(seleccion, { editar, imprimirIngreso, agregarEqu
     switch (clave) {
       case 'editar': return editar(orden)
       case 'ingreso': return imprimirIngreso(orden)
-      case 'equipo': return agregarEquipo(orden)
       case VINCULAR:
         seleccion.value = [...seleccion.value, ...ordenes.filter(o => !estaMarcada(o))]
         return

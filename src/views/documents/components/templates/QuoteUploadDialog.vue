@@ -68,6 +68,7 @@ import { MONEDAS, simboloDe } from '@/utils/money'
 import { avisarSoloPdf } from '@/utils/pdf'
 
 const swal = useSwal()
+const emit = defineEmits(['subida'])
 
 const dialog = ref(false)
 const subiendo = ref(false)
@@ -82,14 +83,14 @@ const pdf = ref(null)
 
 const completo = computed(() => clienteId.value && fecha.value && Number(total.value) > 0 && pdf.value)
 
-function open () {
+function open ({ cliente = null, tipoInicial = TIPO_POR_DEFECTO } = {}) {
   numero.value = ''
   DocumentsDataService.siguienteNumero(COTIZACION)
     .then(({ data }) => { numero.value = data.numero })
     .catch(() => {})
-  clienteId.value = null
+  clienteId.value = cliente
   fecha.value = hoyISO()
-  tipo.value = TIPO_POR_DEFECTO
+  tipo.value = tipoInicial
   moneda.value = 'PEN'
   total.value = ''
   pdf.value = null
@@ -110,6 +111,7 @@ async function subir () {
   try {
     const { data } = await DocumentsDataService.subirCotizacion(formulario)
     avisarHecho(`${data.document_number} subida`, data)
+    emit('subida', data)
     close()
   } catch (error) {
     swal.fire({ icon: 'error', title: 'No se subió la cotización', text: mensajeDeError(error, 'No se pudo subir la cotización.') })

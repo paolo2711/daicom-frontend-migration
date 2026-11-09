@@ -1,5 +1,5 @@
 <template>
-  <tr :class="{ 'fila-con-error': error, 'fila-elegida': elegida }" class="fila-de-equipo" @click="emit('elegir')">
+  <tr :class="{ 'fila-con-error': error, 'fila-elegida': elegida }" class="fila-tarjeta" @click="emit('elegir')">
     <td class="text-no-wrap">
       <drag-handle v-bind="asa" class="mr-1" @click.stop />
       <span v-if="eq.registry_code" class="font-weight-medium">{{ eq.registry_code }}</span>
@@ -56,24 +56,6 @@ const otroTitular = computed(() => props.eq.titular && props.eq.titular !== prop
 </script>
 
 <style scoped>
-.fila-de-equipo { cursor: pointer; }
-.fila-de-equipo > td {
-  vertical-align: top;
-  padding-top: 0.5rem !important;
-  padding-bottom: 0.5rem !important;
-  background: rgba(var(--v-theme-on-surface), 0.03);
-  border-top: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-bottom: thin solid rgba(var(--v-border-color), var(--v-border-opacity)) !important;
-}
-.fila-de-equipo > td:first-child {
-  border-left: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 0.75rem 0 0 0.75rem;
-}
-.fila-de-equipo > td:last-child {
-  border-right: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 0 0.75rem 0.75rem 0;
-}
-.fila-elegida > td { background: rgba(var(--v-theme-info), 0.14); border-color: rgb(var(--v-theme-info)) !important; }
 .titular { max-width: 12rem; }
 .titular :deep(.v-chip__content) { display: block; overflow: hidden; text-overflow: ellipsis; }
 .comentario { white-space: pre-line; }

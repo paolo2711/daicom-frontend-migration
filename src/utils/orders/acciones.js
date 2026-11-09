@@ -1,5 +1,5 @@
 import { SIN_CARGO, SIN_COMPROBANTE, marcaDe, puedeMarcarse } from '@/utils/orders/sinFactura'
-import { esAlquiler, esDeServicio, viva } from '@/utils/orders/estado'
+import { esDeServicio, viva } from '@/utils/orders/estado'
 
 // Lo que se puede hacer con ordenes. De aca salen la barra de seleccion y el
 // menu (click derecho y boton de la fila). Los campos de cada una, en
@@ -13,21 +13,13 @@ export const VINCULAR = 'vincular'
 export const ACCIONES_ORDEN = [
   {
     clave: 'editar', grupo: 'orden', varios: false,
-    icono: 'mdi-pencil',
-    // En alquileres el modal tambien lleva las OC y valorizaciones.
-    texto: ([orden]) => (esAlquiler(orden) ? 'Editar alquiler' : 'Ver y editar'),
+    icono: 'mdi-pencil', texto: 'Ver y editar',
     visible: algunaViva,
   },
   {
     clave: 'ingreso', grupo: 'orden', varios: false,
     icono: 'mdi-printer', texto: 'Imprimir ingreso',
     visible: (ordenes) => algunaViva(ordenes) && ordenes.every(esDeServicio),
-  },
-  // En servicio los equipos se agregan desde Ver y editar.
-  {
-    clave: 'equipo', grupo: 'orden', varios: false,
-    icono: 'mdi-plus', texto: 'Añadir equipo extra',
-    visible: (ordenes) => algunaViva(ordenes) && ordenes.every(esAlquiler),
   },
   {
     clave: VINCULAR, grupo: 'cobro', varios: false,

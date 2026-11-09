@@ -129,15 +129,3 @@ function conSuLaboratorio(equipo) {
   props.eq.lab_data = equipo.laboratorio
 }
 </script>
-
-<style scoped>
-.seccion {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-  padding: 0.875rem;
-  border-radius: 0.75rem;
-  background: rgba(var(--v-theme-on-surface), 0.04);
-}
-.titulo-de-seccion { font-size: 0.8125rem; font-weight: 600; }
-</style>

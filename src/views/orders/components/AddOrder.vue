@@ -1,22 +1,21 @@
 <template>
-  <v-dialog v-model="dialog" class="dialog-premium" :fullscreen="pantallaCompleta"
-            width="92%" :max-width="pantallaCompleta ? undefined : '80rem'" persistent>
-    <v-card class="d-flex flex-column" :style="pantallaCompleta ? 'height: 100%;' : 'max-height: 90vh;'">
+  <v-dialog v-model="dialog" class="dialog-premium" fullscreen persistent>
+    <v-card class="d-flex flex-column" style="height: 100%;">
       <base-modal-header :title="titulo" icon="mdi-file-document-plus" @close="close">
         <span v-if="!editando && next_order_number">
           Sig. Orden: <span class="font-weight-bold text-primary ml-1">{{ next_order_number }}</span>
         </span>
       </base-modal-header>
 
-      <v-card-text class="pt-4 d-flex flex-column" :class="{ 'pantalla-de-trabajo': pantallaCompleta }"
-                   style="flex-grow: 1; min-height: 0;"
-                   :style="{ overflowY: pantallaCompleta ? 'hidden' : 'auto' }">
-        <v-form ref="addOrderForm" v-model="is_valid" class="d-flex flex-column flex-grow-1"
-                :class="{ 'columna-de-trabajo': pantallaCompleta }" style="min-height: 0;"
-                @submit.prevent>
+      <v-card-text class="pt-4 d-flex flex-column pantalla-de-trabajo"
+                   style="flex-grow: 1; min-height: 0; overflow-y: hidden;">
+        <v-form ref="addOrderForm" v-model="is_valid" class="d-flex flex-column flex-grow-1 columna-de-trabajo"
+                style="min-height: 0;" @submit.prevent>
 
-          <form-order-service ref="formRef" v-if="esDeServicio(order)" :key="'srv-'+dialog" :cliente="clienteOrden"
-                              @update-list="list => items_to_save = list">
+          <component :is="esDeServicio(order) ? FormOrderService : FormOrderRental" ref="formRef"
+                     :key="`${order.order_type}-${dialog}`"
+                     v-bind="esDeServicio(order) ? { cliente: clienteOrden } : {}"
+                     @update-list="list => items_to_save = list">
             <template #orden="{ apilado }">
               <ClientLookupBar v-model="order.client" creatable :seed="clienteOrden"
                                :forma="apilado ? 'apilada' : 'ajustada'"
@@ -24,31 +23,42 @@
               <div v-if="sinPasar.length" class="text-caption text-medium-emphasis mt-2">
                 No pasaron a la orden: {{ sinPasar.join(', ') }}
               </div>
+              <v-text-field v-if="esAlquiler(order)" v-model="order.client_order_reference" label="Ref. OC del cliente"
+                            class="mt-3" density="compact" variant="outlined" rounded="lg" hide-details />
               <div class="d-flex align-center mt-3 mb-2">
                 <span class="text-body-2 font-weight-medium">Observaciones</span>
                 <v-spacer />
-                <versions-order-service v-if="editando && !apilado" :orden-id="editando.id" compacto />
+                <template v-if="!apilado">
+                  <versions-order-service v-if="editando && esDeServicio(order)" :orden-id="editando.id" compacto />
+                  <v-menu :close-on-content-click="false" location="bottom end">
+                    <template #activator="{ props: menu }">
+                      <v-btn v-bind="menu" variant="text" size="small" prepend-icon="mdi-paperclip"
+                             class="font-weight-bold">Documentos</v-btn>
+                    </template>
+                    <v-card class="pa-3" width="24rem">
+                      <documents-order v-model:pendientes="documentosNuevos" :orden="editando"
+                                       :alquiler="esAlquiler(order)" :cliente-id="order.client" />
+                    </v-card>
+                  </v-menu>
+                </template>
               </div>
               <v-textarea v-model="observaciones" :maxlength="largoDeObservacion" rows="3" auto-grow
                           density="compact" variant="outlined" rounded="lg" hide-details />
-              <versions-order-service v-if="editando && apilado" :orden-id="editando.id" />
+              <template v-if="apilado">
+                <versions-order-service v-if="editando && esDeServicio(order)" :orden-id="editando.id" />
+                <div class="text-body-2 font-weight-medium mt-3 mb-2">Documentos</div>
+                <documents-order v-model:pendientes="documentosNuevos" :orden="editando" :alquiler="esAlquiler(order)"
+                                 :cliente-id="order.client" />
+              </template>
             </template>
-          </form-order-service>
-
-          <!-- Documentos del alquiler (cotización, OC, guías, valorizaciones) se
-               gestionan luego en Editar → hogar único de documentos. Crear queda mínimo. -->
-          <template v-else>
-            <ClientLookupBar v-model="order.client" creatable />
-            <v-divider class="my-4" />
-            <form-order-rental ref="formRef" :key="'alq-'+dialog" @update-list="list => items_to_save = list" />
-          </template>
+          </component>
 
         </v-form>
       </v-card-text>
 
       <!-- Agregamos un borde superior para delimitar los botones cuando el contenido hace scroll -->
       <v-card-actions class="px-6 pb-4 pt-2 border-t-thin">
-        <div class="d-flex flex-wrap align-center ga-2" :class="pantallaCompleta ? 'columna-de-trabajo' : 'w-100'">
+        <div class="d-flex flex-wrap align-center ga-2 columna-de-trabajo">
           <resumen-equipos :filas="items_to_save" :por-tipo="esDeServicio(order)" />
           <v-spacer />
           <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
@@ -101,6 +111,8 @@ import { SERVICIO, esAlquiler, esDeServicio } from '@/utils/orders/estado'
 import OrderDataService from '@/services/orders/orderDataService'
 import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
+import DocumentsOrder from './DocumentsOrder.vue'
+import { subirPendientes } from '@/utils/orders/documentos'
 import ResumenEquipos from './ResumenEquipos.vue'
 import DialogCertificateOwners from './services/DialogCertificateOwners.vue'
 import VersionsOrderService from './services/VersionsOrderService.vue'
@@ -129,8 +141,6 @@ const sePuedeGuardar = computed(() => is_valid.value && items_to_save.value.leng
 const addOrderForm          = ref(null)
 
 const formRef               = ref(null)
-// La de servicio es una pantalla de trabajo; la de alquiler sigue en su dialogo.
-const pantallaCompleta      = computed(() => esDeServicio(order.value))
 // Los items de la cotizacion de la que sale que no pasan a la orden.
 const sinPasar              = ref([])
 // La orden de servicio que se edita; null al crear una.
@@ -181,10 +191,14 @@ watch([items_to_save, () => order.value.client, observaciones], ([items, client]
   if (conBorrador()) borrador.guardar({ client, items, observaciones: observaciones.value })
 }, { deep: true })
 
-// `cotizacion`, la orden que el back arma desde una (documents/<id>/orden).
+// Al crear: lo que se vincula y se sube con la orden. Guardada, cada documento se guarda al momento.
+const documentosNuevos = ref({ cotizaciones: [], archivos: [] })
+
+// `cotizacion`, la orden que el back arma desde una (documents/<id>/orden): queda vinculada a ella.
 async function open(tipo, cotizacion = null) {
   editando.value = null
   clienteOrden.value = null
+  documentosNuevos.value = { cotizaciones: cotizacion ? [cotizacion.documento] : [], archivos: [] }
   items_to_save.value = []
   observaciones.value = ''
   order.value = { client: cotizacion?.client ?? null, order_type: tipo }
@@ -207,13 +221,14 @@ async function open(tipo, cotizacion = null) {
   formRef.value?.cargarFilas(recuperado)
 }
 
-// Una orden de servicio guardada, como la manda su fila, con sus lineas.
+// Una orden guardada, de servicio o de alquiler, como la manda su fila, con sus equipos.
 async function editar(orden) {
   const { data: lineas } = await OrderDataService.getEquipos(orden.id)
   editando.value = orden
   clienteOrden.value = clienteAceptado.value = { id: orden.client_data.id, name: orden.client_data.name }
   observaciones.value = orden.observaciones || ''
-  order.value = { client: orden.client_data.id, order_type: SERVICIO }
+  order.value = { client: orden.client_data.id, order_type: orden.order_type,
+                  client_order_reference: orden.client_order_reference || '' }
   dialog.value = true
   await nextTick()
   formRef.value?.cargarLineas(lineas)
@@ -245,16 +260,20 @@ async function save(imprimir = false) {
       payload_orden.client_order_reference = order.value.client_order_reference
     }
     payload_orden.items = items_to_save.value
-    if (esDeServicio(order.value)) payload_orden.observaciones = observaciones.value
+    payload_orden.observaciones = observaciones.value
 
     const filas = items_to_save.value
     const estimados = formRef.value?.estimados?.()
+    payload_orden.cotizaciones = documentosNuevos.value.cotizaciones.map(c => c.id)
     const { data } = await OrderDataService.create(payload_orden)
-    // Los documentos del alquiler (cotización, OC, guías, valorizaciones) se
-    // suben luego desde Editar. Crear solo registra la orden.
+    const noSubieron = await subirPendientes(data.id, documentosNuevos.value.archivos)
 
     close()
     avisarNumeros(`${data.order_number} creada`, filas, data.codigos, estimados)
+    if (noSubieron.length) {
+      $swal.fire('La orden se guardó', `No se subieron: ${noSubieron.join(', ')}. Súbelos desde "Ver y editar".`,
+                 'warning')
+    }
     if (imprimir) await imprimirIngreso(data.id)
   } catch (error) {
     const data = error.response?.data
@@ -269,9 +288,9 @@ async function guardarEdicion() {
   const { items, quitar } = formRef.value.paraGuardar()
   const estimados = formRef.value.estimados()
   const nuevas = items_to_save.value.map((fila, i) => [fila, estimados[i]]).filter(([fila]) => fila.modo !== 'linea')
-  const { data } = await OrderDataService.patch(editando.value.id, {
-    client: order.value.client, observaciones: observaciones.value, items, quitar,
-  })
+  const datos = { client: order.value.client, observaciones: observaciones.value, items, quitar }
+  if (esAlquiler(order.value)) datos.client_order_reference = order.value.client_order_reference
+  const { data } = await OrderDataService.patch(editando.value.id, datos)
   const orden = editando.value
   close()
   avisarNumeros(`${data.order_number} guardada`, nuevas.map(([fila]) => fila), data.codigos,

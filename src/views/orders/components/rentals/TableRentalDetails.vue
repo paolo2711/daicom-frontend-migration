@@ -10,8 +10,9 @@
         {{ fechaCorta(order.created_at) }}
       </span>
       <v-spacer />
-      <v-btn size="x-small" color="amber-darken-3" variant="flat" class="text-white" @click="emit('add-rental')" :disabled="anulada">
-        <v-icon start size="x-small">mdi-plus</v-icon> Añadir Equipo Extra
+      <v-btn size="x-small" color="amber-darken-3" variant="flat" class="text-white" :disabled="anulada"
+             @click="emit('editar')">
+        <v-icon start size="x-small">mdi-pencil</v-icon> Ver y editar
       </v-btn>
     </v-toolbar>
 
@@ -105,7 +106,7 @@ const props = defineProps({
   order: { type: Object, required: true },
 })
 
-const emit = defineEmits(['add-rental', 'reload'])
+const emit = defineEmits(['editar', 'reload'])
 
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal

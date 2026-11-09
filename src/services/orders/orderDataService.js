@@ -54,13 +54,6 @@ class OrderDataService {
         return axios.get(`orders/${id}/ingreso`, { headers: authHeader() });
     }
 
-    // Todos o ninguno: si una fila no se puede, responde cuales y no guarda nada.
-    agregarEquipos(id, items) {
-        let headers = authHeader();
-        headers['Content-Type'] = "application/json";
-        return axios.post(`orders/${id}/equipos`, { items }, { headers });
-    }
-
     servicios() {
         return axios.get('orders/servicios', { headers: authHeader() });
     }

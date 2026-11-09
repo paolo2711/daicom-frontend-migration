@@ -29,7 +29,7 @@
       </div>
 
       <div class="flex-grow-1 overflow-y-auto" style="min-height: 0;">
-        <v-table v-if="equipments.length > 0" density="compact" class="lista-de-equipos" fixed-header>
+        <v-table v-if="equipments.length > 0" density="compact" class="lista-de-tarjetas" fixed-header>
           <thead>
             <tr>
               <th style="width: 9rem;">N° estimado</th>
@@ -266,15 +266,3 @@ function paraGuardar() {
 
 defineExpose({ cargarFilas, cargarLineas, paraGuardar, marcarErrores, estimados })
 </script>
-
-<style scoped>
-.buscador-de-equipo { width: 22rem; flex: 0 1 22rem; }
-.lista-de-equipos :deep(.v-table__wrapper) { padding: 0 0.5rem; }
-.lista-de-equipos :deep(table) { border-spacing: 0 0.375rem; }
-.lista-de-equipos thead th {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)) !important;
-}
-</style>

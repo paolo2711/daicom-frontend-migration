@@ -1,167 +1,173 @@
 <template>
-  <div>
-    <v-card variant="flat" class="border pa-4 rounded-lg" :color="isDark ? '#1E1E1E' : 'grey-lighten-4'">
-      <div class="d-flex align-center mb-3">
-        <div class="text-subtitle-1 font-weight-bold" :class="isDark ? 'text-amber-lighten-2' : 'text-amber-darken-4'">
-          <v-icon size="small" color="amber-darken-3" class="mr-1">mdi-truck-delivery</v-icon>
-          Seleccionar Equipo para Alquiler
-        </div>
+  <workspace-layout :detalle-abierto="Boolean(elegida)" @cerrar="cerrarPanel">
+    <template v-if="$slots.orden" #apoyo="{ apilado }">
+      <div class="titulo-de-hoja">Orden</div>
+      <div class="px-3 pb-3">
+        <slot name="orden" :apilado="apilado" />
+      </div>
+    </template>
+
+    <template #lista>
+      <div class="titulo-de-hoja titulo-principal flex-wrap ga-2 py-2">
+        <span class="mr-auto">
+          Equipos <span class="text-medium-emphasis font-weight-regular">({{ equipments.length }})</span>
+        </span>
+        <paginated-autocomplete ref="buscador" v-model="buscado" :fetch="fetchEquipos"
+                                :exclude-ids="equipments.map(e => e.equipment_id)" recurso="equipos"
+                                label="Agregar del inventario" :return-object="false" prepend-inner-icon="mdi-magnify"
+                                density="compact" variant="outlined" hide-details class="buscador-de-equipo"
+                                @selected="agregar">
+          <template #item="{ item, props: opcion }">
+            <v-list-item v-bind="opcion" :title="null">
+              <v-list-item-title><strong>{{ item.raw.internal_id }}</strong> · {{ item.raw.name }}</v-list-item-title>
+              <v-list-item-subtitle>{{ detalleDe(item.raw) }}</v-list-item-subtitle>
+            </v-list-item>
+          </template>
+          <template #append>
+            <add-new-button texto="Nuevo equipo en el inventario" @click="nuevoEnInventario?.open()" />
+          </template>
+        </paginated-autocomplete>
       </div>
 
-      <v-row dense>
-        <v-col cols="12">
-          <paginated-autocomplete
-            ref="equipComboRef"
-            v-model="temp_rental.equipment"
-            :fetch="fetchEquipos"
-            :exclude-ids="rentals.map(r => r.equipment_id)"
-            label="Equipo (ID, nombre, marca o serie)"
-            placeholder="Ej: DAI-017, Manómetro o N° serie"
-            prepend-inner-icon="mdi-toolbox-outline"
-            variant="outlined"
-            density="compact"
-            hide-details
-          >
-            <template #selection="{ item }">
-              <strong>{{ item.raw.internal_id }}</strong>&nbsp;-&nbsp;{{ item.raw.name }}&nbsp;(Serie: {{ item.raw.series || 'N/A' }})
-            </template>
-            <template #item="{ item, props }">
-              <v-list-item v-bind="props" :title="null">
-                <v-list-item-title><strong>{{ item.raw.name }}</strong> - Serie: {{ item.raw.series || 'N/A' }} </v-list-item-title>
-                <v-list-item-subtitle>{{ item.raw.brand }} | ID: {{ item.raw.internal_id }}</v-list-item-subtitle>
-              </v-list-item>
-            </template>
-            <template #append>
-              <add-new-button texto="Nuevo equipo en el inventario" @click="addEquipmentModalRef?.open()" />
-            </template>
-          </paginated-autocomplete>
-        </v-col>
-
-        <v-col cols="12" md="6">
-          <v-text-field v-model="temp_rental.departure_date" :label="FECHAS_ALQUILER.departure_date" type="date"
-                        :max="hoy" variant="outlined" density="compact" hide-details clearable />
-        </v-col>
-
-        <v-col cols="12" md="6">
-          <v-text-field v-model="temp_rental.expected_return_date" :label="FECHAS_ALQUILER.expected_return_date" type="date"
-                        :min="temp_rental.departure_date || undefined"
-                        variant="outlined" density="compact" hide-details clearable />
-        </v-col>
-
-        <v-col cols="12">
-          <v-text-field v-model="temp_rental.delivery_notes" label="Observaciones de entrega (Opcional)"
-                        variant="outlined" density="compact" hide-details
-                        placeholder="Ej: Se entrega con estuche y manual" />
-        </v-col>
-      </v-row>
-
-      <div class="d-flex align-center ga-4 mt-3">
-        <div class="text-caption text-medium-emphasis">
-          Si el equipo todavía no sale, deja «{{ FECHAS_ALQUILER.departure_date }}» vacío: queda reservado y la
-          salida se registra cuando salga.
+      <div class="flex-grow-1 overflow-y-auto" style="min-height: 0;">
+        <v-table v-if="equipments.length > 0" density="compact" class="lista-de-tarjetas" fixed-header>
+          <thead>
+            <tr>
+              <th style="width: 7rem;">ID</th>
+              <th>Equipo</th>
+              <th style="width: 8rem;">{{ FECHAS_ALQUILER.departure_date }}</th>
+              <th style="width: 9rem;">{{ FECHAS_ALQUILER.expected_return_date }}</th>
+              <th v-if="conEstado" style="width: 7rem;">Estado</th>
+              <th style="width: 3rem;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <row-order-rental v-for="(eq, index) in equipments" :key="eq.id ?? `nuevo-${eq.equipment_id}`"
+                              :eq="eq" :indice="index" :error="errores[index]" :con-estado="conEstado"
+                              :elegida="eq === elegida" @elegir="elegida = eq" @borrar="borrarFila" />
+          </tbody>
+        </v-table>
+        <div v-else class="d-flex flex-column align-center justify-center fill-height ga-2 pa-8 text-medium-emphasis">
+          <v-icon size="x-large">mdi-truck-delivery-outline</v-icon>
+          Agrega un equipo del inventario con el buscador de arriba.
         </div>
-        <v-spacer />
-        <v-btn color="amber-darken-3" class="text-white flex-shrink-0" variant="flat" prepend-icon="mdi-plus"
-               @click="addRentalToBatch" :disabled="!temp_rental.equipment">
-          Añadir
-        </v-btn>
       </div>
-    </v-card>
+      <add-equipment ref="nuevoEnInventario" @saved="buscador?.reload()" />
+    </template>
 
-    <v-table density="compact" class="mt-4 tabla-mejorada" v-if="rentals.length > 0">
-      <thead>
-        <tr :class="isDark ? 'bg-grey-darken-3' : 'bg-grey-lighten-3'">
-          <th style="width: 8rem;">ID Inventario</th>
-          <th>Equipo</th>
-          <th>Serie</th>
-          <th style="width: 20%;">{{ FECHAS_ALQUILER.departure_date }}</th>
-          <th style="width: 20%;">{{ FECHAS_ALQUILER.expected_return_date }}</th>
-          <th class="text-right">Acción</th>
-        </tr>
-      </thead>
-      <tbody>
-        <row-order-rental v-for="(item, index) in rentals" :key="clave(item)"
-                          v-bind="arrastrable(index)" :class="claseDe(index)" :item="item" :indice="index"
-                          :error="errores[index]" :asa="asa(index)" @borrar="borrarFila" />
-      </tbody>
-    </v-table>
-  <add-equipment ref="addEquipmentModalRef" @saved="equipComboRef?.reload()" />
-  </div>
+    <template #detalle>
+      <panel-order-rental :eq="elegida" :indice="indiceElegida" :error="errores[indiceElegida]"
+                          @cerrar="cerrarPanel" @borrar="borrarFila" />
+    </template>
+
+    <template #sin-detalle>
+      <div class="titulo-de-hoja">Equipo</div>
+      <div class="px-4 text-body-2 text-medium-emphasis">Elige un equipo de la lista para ver y llenar sus datos.</div>
+    </template>
+  </workspace-layout>
 </template>
 
 <script setup>
-import { ref, computed, watch, getCurrentInstance, defineAsyncComponent } from 'vue'
-import { useTheme } from 'vuetify'
-import InventoryDataService from '@/services/inventory/inventoryDataService'
+import { ref, computed, watch, nextTick, defineAsyncComponent } from 'vue'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
+import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
+import InventoryDataService from '@/services/inventory/inventoryDataService'
 import RowOrderRental from './RowOrderRental.vue'
+import PanelOrderRental from './PanelOrderRental.vue'
 import { useRowErrors } from '@/composables/useRowErrors'
-import { useRowDrag } from '@/composables/useRowDrag'
-import { hoyISO } from '@/utils/dates'
-import { FECHAS_ALQUILER, reglaNoAntesDe, reglaNoFutura } from '@/utils/orders/alquiler'
+import { FECHAS_ALQUILER } from '@/utils/orders/alquiler'
 
 const AddEquipment = defineAsyncComponent(() => import('@/views/inventory/components/AddEquipment.vue'))
-const addEquipmentModalRef = ref(null)
 
 const emit = defineEmits(['update-list'])
 
-const { appContext } = getCurrentInstance()
-const $swal = appContext.config.globalProperties.$swal
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
+const equipments = ref([])
+const { errores, marcarErrores } = useRowErrors(equipments)
 
-const hoy = hoyISO()
+// La fila abierta en el panel.
+const elegida = ref(null)
+const indiceElegida = computed(() => equipments.value.indexOf(elegida.value))
+// Al ver uno guardado, cada fila dice en que va: reservado, en obra o devuelto.
+const conEstado = computed(() => equipments.value.some(e => e.estado))
 
-const temp_rental = ref({
-  equipment:            null,
-  departure_date:       '',
-  expected_return_date: '',
-  delivery_notes:       '',
-})
-const rentals        = ref([])
-const { errores, marcarErrores } = useRowErrors(rentals)
-const { asa, arrastrable, claseDe, clave } = useRowDrag(rentals)
-const borrarFila = (indice) => rentals.value.splice(indice, 1)
-
-watch(rentals, (val) => { emit('update-list', val) }, { deep: true })
-
+const buscador = ref(null)
+const buscado = ref(null)
+const nuevoEnInventario = ref(null)
 // Solo los disponibles; al guardar, el back lo vuelve a revisar.
 const fetchEquipos = (page, size, query) =>
   InventoryDataService.getAll({ status: 1, search: query || '', page, page_size: size })
-const equipComboRef = ref(null)   // recargar la lista tras crear un equipo nuevo
+const detalleDe = (equipo) => [equipo.brand, equipo.series && `SN ${equipo.series}`].filter(Boolean).join(' · ')
 
-function problemaDeFechas({ departure_date: salida, expected_return_date: pactado }) {
-  const salidaMal = reglaNoFutura(hoy)(salida)
-  if (salidaMal !== true) return `${FECHAS_ALQUILER.departure_date}: ${salidaMal}. Si todavía no sale, déjala vacía.`
-  const pactadoMal = reglaNoAntesDe(salida)(pactado)
-  if (pactadoMal !== true) return `${FECHAS_ALQUILER.expected_return_date}: ${pactadoMal}.`
-  return null
-}
+watch(equipments, (val) => { emit('update-list', val) }, { deep: true })
 
-function addRentalToBatch() {
-  if (!temp_rental.value.equipment) return
-  const problema = problemaDeFechas(temp_rental.value)
-  if (problema) {
-    $swal.fire('Revisa las fechas', problema, 'warning')
-    return
+// La salida y la devolucion pactada se repiten del ultimo agregado: un alquiler suele salir y volver junto.
+function agregar(equipo) {
+  if (!equipo) return
+  const anterior = equipments.value.findLast(e => e.modo === 'nuevo')
+  const fila = {
+    modo: 'nuevo',
+    equipment_id: equipo.id,
+    internal_id: equipo.internal_id,
+    name: equipo.name,
+    series: equipo.series,
+    departure_date: anterior?.departure_date ?? null,
+    expected_return_date: anterior?.expected_return_date ?? null,
+    delivery_notes: '',
   }
-
-  rentals.value.push({
-    equipment_id:          temp_rental.value.equipment.id,
-    internal_id:           temp_rental.value.equipment.internal_id,
-    name:                  temp_rental.value.equipment.name,
-    series:                temp_rental.value.equipment.series,
-    departure_date:        temp_rental.value.departure_date || null,
-    expected_return_date:  temp_rental.value.expected_return_date || null,
-    delivery_notes:        temp_rental.value.delivery_notes,
-  })
-  
-  temp_rental.value.equipment       = null   // limpia la selección del combobox
-  temp_rental.value.delivery_notes  = ''
-  temp_rental.value.expected_return_date = ''
+  equipments.value.push(fila)
+  elegida.value = fila
+  nextTick(() => { buscado.value = null })
 }
 
-defineExpose({ marcarErrores })
-</script>
+function cerrarPanel() {
+  elegida.value = null
+  nextTick(() => buscador.value?.$el.querySelector('input')?.focus())
+}
 
+// Las lineas guardadas que se quitan de la lista salen de la orden al guardar.
+const quitadas = ref([])
+
+function borrarFila(indice) {
+  const fila = equipments.value[indice]
+  if (fila === elegida.value) elegida.value = null
+  if (fila.modo === 'linea') quitadas.value.push(fila.id)
+  equipments.value.splice(indice, 1)
+}
+
+function cargarFilas({ items }) {
+  equipments.value = [...items]
+}
+
+// Las lineas de un alquiler guardado, para verlo y editarlo, sin las anuladas.
+function cargarLineas(lineas) {
+  quitadas.value = []
+  equipments.value = lineas.filter(l => l.estado !== 'anulado').map(linea => ({
+    modo: 'linea',
+    id: linea.id,
+    equipment_id: linea.equipment,
+    internal_id: linea.equipment_internal_id,
+    name: linea.equipment_name,
+    series: linea.equipment_series,
+    departure_date: linea.departure_date,
+    expected_return_date: linea.expected_return_date,
+    actual_return_date: linea.actual_return_date,
+    delivery_notes: linea.delivery_notes,
+    estado: linea.estado,
+  }))
+}
+
+// Lo que manda el alquiler editado: de las lineas guardadas solo lo que se corrige.
+function paraGuardar() {
+  const items = equipments.value.map(({ modo, id, equipment_id, departure_date, expected_return_date,
+    delivery_notes }) => (modo === 'linea'
+    ? { id, expected_return_date, delivery_notes }
+    : { equipment_id, departure_date, expected_return_date, delivery_notes }))
+  return { items, quitar: quitadas.value }
+}
+
+// Un alquiler no toma numeros de certificado.
+const estimados = () => equipments.value.map(() => null)
+
+defineExpose({ cargarFilas, cargarLineas, paraGuardar, marcarErrores, estimados })
+</script>

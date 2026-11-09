@@ -32,10 +32,9 @@
             </template>
             <template #lista>
               <div class="flex-grow-1 overflow-y-auto px-4 pt-4 lista-de-items" style="min-height: 0;">
-                <services-table v-if="tablaArmada" v-model:items="cotizacion.items" :totales="totales"
+                <services-table v-model:items="cotizacion.items" :totales="totales"
                                 :moneda="cotizacion.meta.currency" :igv="cotizacion.totals.igv_percent"
                                 :errores="errores" :tipo="tipo" />
-                <div v-else class="d-flex justify-center pa-8"><span class="circulo-de-carga" /></div>
               </div>
             </template>
             <template #detalle>
@@ -138,10 +137,6 @@ const totales = computed(() => totalesDe(cotizacion.value))
 const cantidadDeItems = computed(() => cotizacion.value.items.filter(fila => !esGrupo(fila)).length)
 const { errores, marcarErrores } = useRowErrors(computed(() => cotizacion.value.items))
 
-// Con muchas filas montar la tabla toma más de un segundo: se arma después de pintar la pantalla, no antes.
-const tablaArmada = ref(false)
-const trasPintar = () => new Promise(listo => requestAnimationFrame(() => setTimeout(listo)))
-
 const resumen = computed(() => {
   const { meta, billing_client: cliente } = cotizacion.value
   const moneda = MONEDAS.find(m => m.value === meta.currency)?.title
@@ -183,9 +178,7 @@ async function open (documento = null, kind = TIPO_POR_DEFECTO) {
     : quoteDefaultJSON(kind, props.tipoDeDocumento)
   terminosAbiertos.value = false
   datosAbiertos.value = !documento
-  tablaArmada.value = false
   dialog.value = true
-  trasPintar().then(() => { tablaArmada.value = true })
 
   const recuperado = await borrador.ofrecer()
   if (recuperado) {

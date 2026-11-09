@@ -1,6 +1,6 @@
 <template>
   <div>
-    <table-documents :tipo="tipo" con-total :variantes="OPCIONES_DE_TIPO" @editar="d => formulario?.open(d)"
+    <table-documents :tipo="tipo" con-total :variantes="OPCIONES_DE_TIPO" @editar="editar"
                      @crear-orden="crearOrden" />
     <quote-template ref="formulario" :tipo-de-documento="tipo" />
     <quote-upload-dialog ref="subida" :tipo-de-documento="tipo" />
@@ -27,6 +27,17 @@ const formulario = ref(null)
 const subida = ref(null)
 const orden = ref(null)
 const swal = useSwal()
+
+// La fila no trae el JSON: se pide el documento entero al editarlo.
+async function editar(documento) {
+  try {
+    const { data } = await DocumentsDataService.get(documento.id)
+    formulario.value?.open(data)
+  } catch (err) {
+    swal.fire({ icon: 'error', title: `No se abrió ${documento.document_number}`,
+                text: mensajeDeError(err, 'No se pudo leer el documento.') })
+  }
+}
 
 async function crearOrden(documento) {
   try {

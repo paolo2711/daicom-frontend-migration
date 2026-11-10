@@ -6,6 +6,7 @@ import { esDeServicio, viva } from '@/utils/orders/estado'
 // utils/actions.js. Una anulada no tiene ninguna.
 
 const algunaViva = (ordenes) => ordenes.some(viva)
+const yaImpreso = (ordenes) => ordenes.length === 1 && ordenes[0].tiene_ingreso
 const quitaOPone = (marca, texto) => (ordenes) => (marcaDe(ordenes) === marca ? `Quitar ${texto.toLowerCase()}` : texto)
 
 export const VINCULAR = 'vincular'
@@ -18,7 +19,8 @@ export const ACCIONES_ORDEN = [
   },
   {
     clave: 'ingreso', grupo: 'orden', varios: false,
-    icono: 'mdi-printer', texto: 'Imprimir ingreso',
+    icono: (ordenes) => (yaImpreso(ordenes) ? 'mdi-file-eye-outline' : 'mdi-printer'),
+    texto: (ordenes) => (yaImpreso(ordenes) ? 'Ver ingreso' : 'Imprimir ingreso'),
     visible: (ordenes) => algunaViva(ordenes) && ordenes.every(esDeServicio),
   },
   {

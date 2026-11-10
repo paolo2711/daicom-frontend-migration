@@ -1,7 +1,9 @@
 import Swal from 'sweetalert2'
+import { useRouter } from 'vue-router'
 import { usePermissions } from '@/composables/usePermissions'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { accionesPara } from '@/utils/actions'
+import { COTIZACION, VALORIZACION } from '@/utils/documents/tipos'
 import { ACCIONES_ORDEN, VINCULAR } from '@/utils/orders/acciones'
 import { esAlquiler, viva } from '@/utils/orders/estado'
 import { SIN_CARGO, SIN_COMPROBANTE, alternarMarca } from '@/utils/orders/sinFactura'
@@ -12,6 +14,7 @@ import { anularOrdenes } from '@/utils/orders/anulacion'
 // Marcar pone al panel de facturas en modo vincular, asi que el menu no marca.
 export function useOrderActions(seleccion, { editar, imprimirIngreso, facturar }) {
   const { hasAction } = usePermissions()
+  const router = useRouter()
   const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(seleccion, { marca: false })
 
   const estaMarcada = (orden) => seleccion.value.some(o => o.id === orden.id)
@@ -38,11 +41,20 @@ export function useOrderActions(seleccion, { editar, imprimirIngreso, facturar }
     if (isConfirmed && await anularOrdenes(vivas)) soltar(vivas)
   }
 
+  // La pestaña de Documentos de ese tipo abre su editor lleno con los equipos de estas ordenes.
+  const armarDocumento = (tipo, ordenes) => router.push({
+    name: tipo === COTIZACION ? 'documents-quotes' : 'documents-valuations',
+    query: { ordenes: ordenes.filter(viva).map(o => o.id).join(',') },
+  })
+
   async function ejecutarAccion (clave, ordenes) {
     const [orden] = ordenes
     switch (clave) {
       case 'editar': return editar(orden)
       case 'ingreso': return imprimirIngreso(orden)
+      case COTIZACION:
+      case VALORIZACION:
+        return armarDocumento(clave, ordenes)
       case VINCULAR:
         seleccion.value = [...seleccion.value, ...ordenes.filter(o => !estaMarcada(o))]
         return

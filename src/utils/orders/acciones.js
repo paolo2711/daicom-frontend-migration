@@ -1,4 +1,5 @@
 import { SIN_CARGO, SIN_COMPROBANTE, marcaDe, puedeMarcarse } from '@/utils/orders/sinFactura'
+import { COTIZACION, VALORIZACION } from '@/utils/documents/tipos'
 import { esDeServicio, viva } from '@/utils/orders/estado'
 
 // Lo que se puede hacer con ordenes. De aca salen la barra de seleccion y el
@@ -7,6 +8,9 @@ import { esDeServicio, viva } from '@/utils/orders/estado'
 
 const algunaViva = (ordenes) => ordenes.some(viva)
 const yaImpreso = (ordenes) => ordenes.length === 1 && ordenes[0].tiene_ingreso
+// Un documento tiene un solo cliente: con varios, el back tambien lo rechaza.
+const deUnCliente = (ordenes) => new Set(ordenes.filter(viva).map(o => o.client_data?.id)).size === 1
+const motivoDeClientes = (ordenes) => (deUnCliente(ordenes) ? '' : 'Son de clientes distintos')
 const quitaOPone = (marca, texto) => (ordenes) => (marcaDe(ordenes) === marca ? `Quitar ${texto.toLowerCase()}` : texto)
 
 export const VINCULAR = 'vincular'
@@ -22,6 +26,17 @@ export const ACCIONES_ORDEN = [
     icono: (ordenes) => (yaImpreso(ordenes) ? 'mdi-file-eye-outline' : 'mdi-printer'),
     texto: (ordenes) => (yaImpreso(ordenes) ? 'Ver ingreso' : 'Imprimir ingreso'),
     visible: (ordenes) => algunaViva(ordenes) && ordenes.every(esDeServicio),
+  },
+  // Con varias, un solo documento con los equipos de todas.
+  {
+    clave: COTIZACION, grupo: 'orden', varios: true,
+    icono: 'mdi-file-document-edit-outline', texto: 'Cotizar', detalle: motivoDeClientes,
+    visible: algunaViva, disponible: deUnCliente,
+  },
+  {
+    clave: VALORIZACION, grupo: 'orden', varios: true,
+    icono: 'mdi-receipt-text-outline', texto: 'Valorizar', detalle: motivoDeClientes,
+    visible: algunaViva, disponible: deUnCliente,
   },
   {
     clave: VINCULAR, grupo: 'cobro', varios: false,

@@ -24,6 +24,11 @@ export const ACCIONES_CERTIFICADO = [
     disponible: (certs) => certs.some(c => c.link_nube),
   },
   {
+    clave: 'descargar', grupo: 'ver', varios: false,
+    icono: 'mdi-download', texto: 'Descargar certificado',
+    visible: (certs) => certs.some(c => c.nombre_firmado),
+  },
+  {
     clave: 'excel', grupo: 'trabajo', varios: true, permiso: 1006,
     icono: 'mdi-file-excel',
     texto: (certs) => {

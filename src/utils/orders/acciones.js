@@ -7,6 +7,7 @@ import { esDeServicio, viva } from '@/utils/orders/estado'
 // utils/actions.js. Una anulada no tiene ninguna.
 
 const algunaViva = (ordenes) => ordenes.some(viva)
+const yaImpreso = (ordenes) => ordenes.length === 1 && ordenes[0].tiene_ingreso
 // Un documento tiene un solo cliente: con varios, el back tambien lo rechaza.
 const deUnCliente = (ordenes) => new Set(ordenes.filter(viva).map(o => o.client_data?.id)).size === 1
 const motivoDeClientes = (ordenes) => (deUnCliente(ordenes) ? '' : 'Son de clientes distintos')
@@ -22,7 +23,8 @@ export const ACCIONES_ORDEN = [
   },
   {
     clave: 'ingreso', grupo: 'orden', varios: false,
-    icono: 'mdi-printer', texto: 'Imprimir ingreso',
+    icono: (ordenes) => (yaImpreso(ordenes) ? 'mdi-file-eye-outline' : 'mdi-printer'),
+    texto: (ordenes) => (yaImpreso(ordenes) ? 'Ver ingreso' : 'Imprimir ingreso'),
     visible: (ordenes) => algunaViva(ordenes) && ordenes.every(esDeServicio),
   },
   // Con varias, un solo documento con los equipos de todas.

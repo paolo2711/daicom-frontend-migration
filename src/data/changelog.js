@@ -19,6 +19,21 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.9.0.1',
+    fecha: '2026-11-10',
+    nuevo: [
+      'Cotizar y Valorizar en Órdenes: con una o varias órdenes del mismo cliente marcadas, se abre la cotización o la valorización ya llena con sus equipos.',
+      'Descargar certificado en el menú del certificado: baja el PDF firmado con su nombre, no con el código del portal.',
+    ],
+    cambio: [
+      'El número de las órdenes ya no lleva el año.',
+      'El ingreso se arma al imprimirlo, con Guardar e imprimir o Imprimir ingreso; si ya existe, el menú dice Ver ingreso.',
+    ],
+    arreglo: [
+      'En la cotización, el servicio elegido del catálogo queda marcado aunque se escriba más en el título.',
+    ],
+  },
+  {
     version: '3.9.0.0',
     fecha: '2026-11-09',
     nuevo: [

@@ -212,9 +212,9 @@ const PRUEBAS = [
   { category: 'cert_subido',      level: 'info',     ref: '008159',        text: 'Cert. elaborado' },
   { category: 'qr_subido',        level: 'info',     ref: '008159',        text: 'Cert. firmado' },
   { category: 'firma_solicitada', level: 'info',     ref: '',              text: 'Firma solicitada' },
-  { category: 'orden_creada',     level: 'info',     ref: 'OS-2026-00042', text: 'Orden creada' },
+  { category: 'orden_creada',     level: 'info',     ref: 'OS-00042', text: 'Orden creada' },
   { category: 'cert_anulado',     level: 'warning',  ref: '008159',        text: 'Cert. anulado' },
-  { category: 'orden_anulada',    level: 'warning',  ref: 'OS-2026-00042', text: 'Orden anulada' },
+  { category: 'orden_anulada',    level: 'warning',  ref: 'OS-00042', text: 'Orden anulada' },
   { category: 'app_recargada',    level: 'info',     ref: '',              text: 'App recargada' },
 ]
 
@@ -231,7 +231,7 @@ const probarRafaga = () => {
 const probarVariosTipos = () => {
   showEventToast({ category: 'cert_subido', level: 'info', ref: '008159' })
   showEventToast({ category: 'firma_solicitada', level: 'info', ref: '' })
-  showEventToast({ category: 'orden_anulada', level: 'warning', ref: 'OS-2026-00042' })
+  showEventToast({ category: 'orden_anulada', level: 'warning', ref: 'OS-00042' })
 }
 
 // Prueba del flujo REAL de la recarga forzada: encola el aviso y recarga esta

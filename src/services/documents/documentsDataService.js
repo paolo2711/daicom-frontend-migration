@@ -29,6 +29,12 @@ class DocumentsDataService {
   orden(id) {
     return axios.get(`documents/${id}/orden/`, { headers: authHeader() });
   }
+  // El documento que sale de una o varias ordenes, sin guardar: { client, kind, billing_client, items, vinculadas }.
+  desdeOrdenes(ordenIds, documentType) {
+    return axios.get("documents/desde-ordenes/", {
+      params: { ordenes: ordenIds.join(','), tipo: documentType }, headers: authHeader(),
+    });
+  }
   // El PDF sin guardar, como archivo.
   vistaPrevia(data) {
     return archivoDe(axios.post("documents/vista-previa/", data, { headers: authHeader(), responseType: "blob" }));

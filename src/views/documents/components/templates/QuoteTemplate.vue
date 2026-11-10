@@ -102,7 +102,7 @@ import { useSwal } from '@/composables/useSwal'
 import { fechaCorta } from '@/utils/dates'
 import { avisarHecho } from '@/utils/documents/avisos'
 import {
-  DOCUMENTOS, TIPOS_DE_COTIZACION, TIPO_POR_DEFECTO, cotizacionDe, esGrupo, quoteDefaultJSON, totalesDe,
+  DOCUMENTOS, TIPOS_DE_COTIZACION, TIPO_POR_DEFECTO, cotizacionDe, esGrupo, itemVacio, quoteDefaultJSON, totalesDe,
 } from '@/utils/documents/quoteDefaults'
 import { COTIZACION } from '@/utils/documents/tipos'
 import { mensajeDeError } from '@/utils/errors'
@@ -163,8 +163,9 @@ const borrador = useLocalDraft(
 watch([cotizacion, clienteId], () => borrador.guardar({ cotizacion: cotizacion.value, clienteId: clienteId.value }),
   { deep: true })
 
-// Una existente o una nueva del tipo elegido: el tipo no se cambia despues.
-async function open (documento = null, kind = TIPO_POR_DEFECTO) {
+// Una existente o una nueva del tipo elegido: el tipo no se cambia despues. `desdeOrdenes`, lo que
+// sale de las ordenes elegidas (cliente e items), para una nueva ya llena.
+async function open (documento = null, kind = TIPO_POR_DEFECTO, desdeOrdenes = null) {
   documentoId.value = documento?.id || null
   numero.value = documento?.document_number || ''
   numeroNuevo.value = ''
@@ -173,14 +174,20 @@ async function open (documento = null, kind = TIPO_POR_DEFECTO) {
       .then(({ data }) => { numeroNuevo.value = data.numero })
       .catch(() => {})
   }
-  clienteId.value = documento?.client || null
-  cotizacion.value = documento
-    ? cotizacionDe(documento.document_data, props.tipoDeDocumento)
-    : quoteDefaultJSON(kind, props.tipoDeDocumento)
+  clienteId.value = documento?.client || desdeOrdenes?.client || null
+  const nueva = quoteDefaultJSON(kind, props.tipoDeDocumento)
+  if (desdeOrdenes) {
+    Object.assign(nueva, {
+      billing_client: { ...nueva.billing_client, ...desdeOrdenes.billing_client },
+      items: desdeOrdenes.items.map(item => ({ ...itemVacio(TIPOS_DE_COTIZACION[kind].unidad), ...item })),
+    })
+  }
+  cotizacion.value = cotizacionDe(documento ? documento.document_data : nueva, props.tipoDeDocumento)
   terminosAbiertos.value = false
   datosAbiertos.value = !documento
   dialog.value = true
 
+  if (desdeOrdenes) return
   const recuperado = await borrador.ofrecer()
   if (recuperado) {
     cotizacion.value = cotizacionDe(recuperado.cotizacion, props.tipoDeDocumento)

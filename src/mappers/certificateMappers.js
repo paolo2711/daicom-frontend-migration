@@ -32,6 +32,7 @@ export default {
       attached_pdf: element.attached_pdf,
       uploaded: element.uploaded,
       link_nube: element.link_nube,
+      nombre_firmado: element.nombre_firmado,
       signature_requested: element.signature_requested,
       
       // Metadatos de envío

@@ -1,7 +1,7 @@
 import { hoyISO } from '@/utils/dates'
 import { COTIZACION, VALORIZACION } from './tipos'
 
-export const CURRENT_QUOTE_SCHEMA = "1.5"
+export const CURRENT_QUOTE_SCHEMA = "1.6"
 
 // Los mismos topes que apps/documents/cotizacion.py: sin ellos una fila del PDF
 // podria ser mas alta que una hoja.
@@ -256,9 +256,9 @@ export const itemVacio = (unidad = "und") => ({
   observations: "",
   // El codigo de la acreditacion bajo la que se declara (apps/company/acreditaciones.py); vacio, ninguna.
   accreditation: "",
-  // El id del equipo maestro y el tipo de servicio, si se eligio del catalogo:
-  // los usa la orden. El nombre y el precio quedan como se eligieron. null si
-  // se escribio a mano.
+  // Si se eligio del catalogo: su nombre, que la descripcion lleva al comienzo, y el equipo y el
+  // tipo de servicio que usa la orden. null si se escribio a mano.
+  servicio: null,
   equipo: null,
   tipo_servicio: null
 })
@@ -331,6 +331,13 @@ export const totalesDe = (cotizacion) => {
 const conLaForma = (base, guardado = {}) =>
   Object.fromEntries(Object.keys(base).map(campo => [campo, guardado[campo] ?? base[campo]]))
 
+// En la 1.5 un item vinculado tenia como descripcion solo el nombre del servicio.
+const itemDe = (guardado) => {
+  const item = conLaForma(itemVacio(), guardado)
+  if (item.equipo && !item.servicio) item.servicio = item.description
+  return item
+}
+
 // Una cotizacion o valorizacion guardada, con la forma de quoteDefaultJSON: los campos que no
 // estan en ella se descartan y los que faltan salen de los valores por defecto
 // de su tipo. El contacto es siempre el vigente.
@@ -343,7 +350,7 @@ export const cotizacionDe = (guardada, tipoDeDocumento = COTIZACION) => {
     meta: { ...conLaForma(base.meta, copia.meta), kind },
     billing_client: conLaForma(base.billing_client, copia.billing_client),
     certificate_data: conLaForma(base.certificate_data, copia.certificate_data),
-    items: (copia.items || []).map(item => esGrupo(item) ? conLaForma(grupoVacio(), item) : conLaForma(itemVacio(), item)),
+    items: (copia.items || []).map(item => esGrupo(item) ? conLaForma(grupoVacio(), item) : itemDe(item)),
     contact: base.contact,
   }
 }

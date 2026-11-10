@@ -3,6 +3,9 @@ import { useActionCall } from '@/composables/useActionCall'
 import { useUploadState } from '@/composables/useUploadState'
 import { estaEntregado } from '@/utils/certificates/entrega'
 import { copiarConAviso } from '@/utils/clipboard'
+import { mensajeDeError } from '@/utils/errors'
+import { guardarArchivo } from '@/utils/files'
+import { useSwal } from '@/composables/useSwal'
 
 // Lo que hace cada accion de ACCIONES_CERTIFICADO, sobre uno o varios. Lo usa
 // toda pantalla con certificados; cada una dice como abre su modal de lote y
@@ -10,6 +13,7 @@ import { copiarConAviso } from '@/utils/clipboard'
 export function useCertificateActions({ abrirLote, abrirFicha }) {
   const { tareaDe } = useUploadState()
   const { llamarSinPreguntar, confirmarYLlamar } = useActionCall()
+  const swal = useSwal()
 
   // Recien firmado, el link llega en la tarea antes que la fila se actualice.
   const linkDe = (cert) => cert.link_nube || tareaDe(cert.id, 'qr')?.url || ''
@@ -28,6 +32,17 @@ export function useCertificateActions({ abrirLote, abrirFicha }) {
 
   const ids = (certs) => certs.map(c => c.id)
 
+  // El PDF firmado con el nombre de su respaldo en el disco de red, no con el uuid.
+  async function descargar (cert) {
+    try {
+      const respuesta = await fetch(cert.attached_pdf)
+      if (!respuesta.ok) throw new Error()
+      guardarArchivo(await respuesta.blob(), cert.nombre_firmado)
+    } catch (err) {
+      swal.fire({ icon: 'error', title: 'Error', text: mensajeDeError(err, 'No se pudo descargar el certificado.') })
+    }
+  }
+
 
   function ejecutarAccion (clave, certs) {
     const [cert] = certs
@@ -35,6 +50,7 @@ export function useCertificateActions({ abrirLote, abrirFicha }) {
     switch (clave) {
       case 'ver': return abrirFicha(cert)
       case 'link': return copiarLinks(certs)
+      case 'descargar': return descargar(cert)
       case 'excel': return abrirLote('excel', certs)
       // Con varios, el modal dice cuales ya estaban pedidos.
       case 'firma':

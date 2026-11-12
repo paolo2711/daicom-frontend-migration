@@ -41,6 +41,15 @@ export function conOpcion(fila, clave, opciones) {
   fila.certificate_type = opcion.certificate_type
 }
 
+export const opcionPorClave = (clave) =>
+  opciones.value.find(o => claveDe(o.tipo_servicio, o.certificate_type) === clave)
+
+// Las que llevan certificado, para "Corregir tipo"; pide la lista si aun no llego.
+export function opcionesConCertificado() {
+  useOrderServices()
+  return opciones.value.filter(o => o.certificate_type)
+}
+
 // Para un v-select: separadas las que llevan certificado de las que no.
 export function itemsDeSeleccion(opciones) {
   const items = o => ({ value: claveDe(o.tipo_servicio, o.certificate_type), title: o.title })

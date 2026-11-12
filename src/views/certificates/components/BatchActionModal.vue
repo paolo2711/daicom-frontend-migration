@@ -191,7 +191,8 @@ import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { alPresionarEnter } from '@/utils/keyboard'
 import { hoyISO } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
-import { nombreDelTipo } from '@/utils/certificates/tipos'
+import { SE_RENUMERA } from '@/utils/certificates/tipos'
+import { opcionPorClave } from '@/composables/useOrderServices'
 import { ACCIONES, colorDe, esAviso, estaAdjuntado } from './batchActions'
 
 const LoadSheet = defineAsyncComponent(() => import('@/views/certificates/components/LoadSheet.vue'))
@@ -413,13 +414,13 @@ const guardarPdfsBase = async (certs) => {
 
 const confirmarCorreccion = async (aptos) => {
   const conPerdida = aptos.filter(item => esAviso(validacion(item))).length
-  const avisos = ['Cada uno toma el siguiente número de esa serie, y el que tenía queda como número anterior.']
+  const avisos = [`Cada uno ${SE_RENUMERA}.`]
   if (conPerdida) {
     avisos.push(`<b>${conPerdida}</b> ya tienen trabajo hecho que se pierde: revisa el ícono de su fila.`)
   }
   const { isConfirmed } = await $swal.fire({
     icon: 'warning',
-    title: `¿Pasar ${aptos.length} a ${nombreDelTipo(opcion.value)}?`,
+    title: `¿Pasar ${aptos.length} a ${opcionPorClave(opcion.value).title}?`,
     html: avisos.join('<br><br>'),
     showCancelButton: true,
     confirmButtonText: 'Sí, corregir',
@@ -513,7 +514,7 @@ const confirmAction = async () => {
 
     else if (action.value === 'tipo') {
       if (!await confirmarCorreccion(aptos)) return
-      const { data } = await CertificateDataService.corregirTipo(aptos.map(i => i.id), opcion.value)
+      const { data } = await CertificateDataService.corregirTipo(aptos.map(i => i.id), opcionPorClave(opcion.value))
       const codigos = data.codigos
       Toast.fire({
         ...appStore.toastGuardadoExito,

@@ -242,6 +242,7 @@ function cargarLineas(lineas) {
     name: linea.equipo,
     tipo_servicio: linea.tipo_servicio,
     certificate_type: cert?.certificate_type ?? null,
+    tipo_guardado: cert?.certificate_type ?? null,
     lab: linea.lab,
     lab_data: linea.lab_data,
     marca: linea.marca,

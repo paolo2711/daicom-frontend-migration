@@ -16,6 +16,11 @@ export const ACCIONES_GUIA = [
     disponible: ([guia]) => Boolean(guia.pdf),
   },
   {
+    clave: 'descargar', grupo: 'ver', varios: false,
+    icono: 'mdi-download', texto: 'Descargar PDF',
+    disponible: ([guia]) => Boolean(guia.pdf),
+  },
+  {
     clave: 'xml', grupo: 'ver', varios: false,
     icono: 'mdi-file-code-outline', texto: 'Descargar XML',
     disponible: ([guia]) => Boolean(guia.xml),

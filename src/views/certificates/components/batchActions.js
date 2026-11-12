@@ -1,7 +1,8 @@
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
 import { ANULADO, estaPublicado } from '@/utils/certificates/estado'
-import { TIPOS_CERTIFICADO, nombreDelTipo } from '@/utils/certificates/tipos'
+import { SE_RENUMERA, nombreDelTipo } from '@/utils/certificates/tipos'
+import { opcionDe, opcionPorClave, opcionesConCertificado } from '@/composables/useOrderServices'
 import { fechaCorta } from '@/utils/dates'
 
 // Cada accion del modal de lote se describe entera en su entrada de ACCIONES.
@@ -29,10 +30,11 @@ const ADJUNTADO = {
 
 export const estaAdjuntado = (item) => item.validation_status in ADJUNTADO
 
-// Las mismas reglas que por_que_no_se_corrige en el back.
-const impideCorregir = (cert, tipo) => {
+// Las mismas reglas que por_que_no_se_corrige en el back. `clave`: la opcion de servicio elegida.
+const impideCorregir = (cert, clave) => {
+  const tipo = opcionPorClave(clave)?.certificate_type
   if (cert.status === ANULADO) return { nivel: BLOQUEA, titulo: 'Está anulado' }
-  if (!tipo) return { nivel: NEUTRO, titulo: 'Elige el tipo correcto' }
+  if (!tipo) return { nivel: NEUTRO, titulo: 'Elige el servicio correcto' }
   if (cert.certificate_type === tipo) return { nivel: NEUTRO, titulo: `Ya es ${nombreDelTipo(tipo)}` }
   if (estaPublicado(cert)) return { nivel: BLOQUEA, titulo: 'Está en la nube: elimínalo de la nube primero' }
   return null
@@ -155,16 +157,20 @@ export const ACCIONES = {
     titulo: 'Corregir Tipo de Certificado',
     icono: 'mdi-swap-horizontal',
     color: 'indigo',
-    subtitulo: 'Cada uno toma el siguiente número del tipo elegido; el que tenía queda como número anterior:',
+    subtitulo: `Cada uno ${SE_RENUMERA}:`,
     iconoAccion: 'mdi-swap-horizontal',
-    opcion: { label: 'Tipo correcto', items: TIPOS_CERTIFICADO },
+    // Las mismas opciones que en la orden: en una orden, su linea queda con ese servicio.
+    opcion: {
+      label: 'Servicio correcto',
+      get items () { return opcionesConCertificado().map(o => ({ value: opcionDe(o), title: o.title })) },
+    },
 
-    preparar: (cert, tipo) => ({ disabled: Boolean(impideCorregir(cert, tipo)) }),
+    preparar: (cert, clave) => ({ disabled: Boolean(impideCorregir(cert, clave)) }),
 
     estadoPrevio: (item) => ({ texto: nombreDelTipo(item.certificate_type), nivel: NEUTRO }),
 
-    validacion: (item, tipo) => {
-      const impedimento = impideCorregir(item, tipo)
+    validacion: (item, clave) => {
+      const impedimento = impideCorregir(item, clave)
       if (impedimento) return { ...impedimento, icono: 'mdi-minus-circle' }
       if (estaEntregado(item)) {
         return { icono: 'mdi-alert', nivel: AVISO, titulo: 'Ya se entregó: el cliente lo tiene con el número anterior' }
@@ -172,7 +178,7 @@ export const ACCIONES = {
       if (tieneExcelBase(item)) {
         return { icono: 'mdi-file-remove', nivel: AVISO, titulo: 'Se descarta el Excel: hay que rehacerlo con el número nuevo' }
       }
-      return { icono: 'mdi-check-circle', nivel: HECHO, titulo: `Pasa a ${nombreDelTipo(tipo)}` }
+      return { icono: 'mdi-check-circle', nivel: HECHO, titulo: `Pasa a ${opcionPorClave(clave).title}` }
     },
   },
 }

@@ -27,6 +27,9 @@
         <div class="titulo-de-seccion">Servicio</div>
         <v-select v-model="opcion" :items="itemsDeSeleccion(opciones)" label="Servicio"
                   :error="!eq.tipo_servicio" v-bind="CAMPO" />
+        <div v-if="otraSerie" class="text-caption text-warning">
+          Al guardar, el {{ eq.registry_code }} {{ SE_RENUMERA }}.
+        </div>
         <paginated-autocomplete v-model="eq.lab" :fetch="fetchLabs" :mapper="LabMappers.getMap"
                                 recurso="labs" :seed="eq.lab_data" @selected="l => (eq.lab_data = l)"
                                 label="Laboratorio" :return-object="false" item-title="name" item-value="id"
@@ -67,6 +70,7 @@ import EquipmentMappers from '@/mappers/equipmentMappers'
 import LabMappers from '@/mappers/labMappers'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
 import { conOpcion, itemsDeSeleccion, opcionDe, seQuita, useOrderServices } from '@/composables/useOrderServices'
+import { SE_RENUMERA } from '@/utils/certificates/tipos'
 
 // Todo lo de un equipo de FormOrderService, en una columna. Enter lo cierra y
 // Shift+Enter baja de linea.
@@ -100,6 +104,9 @@ const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, 
 const semillaDeEquipo = computed(() => (props.eq.name ? { id: props.eq.name, name: props.eq.name } : null))
 
 const { opciones, largos } = useOrderServices()
+// Un certificado guardado que pasa a otro tipo: corre "Corregir tipo" al guardar.
+const otraSerie = computed(() => Boolean(props.eq.cert_id && props.eq.certificate_type
+  && props.eq.certificate_type !== props.eq.tipo_guardado))
 const opcion = computed({
   get: () => opcionDe(props.eq),
   set: (clave) => conOpcion(props.eq, clave, opciones.value),

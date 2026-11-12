@@ -5,6 +5,9 @@ export const TIPOS_CERTIFICADO = [
   { value: 3, title: 'OPERATIVIDAD', sigla: 'OPE', uno: 'de operatividad', varios: 'de operatividad' },
 ]
 
+// Lo que pasa al corregir el tipo, dicho igual en Certificados y en la orden.
+export const SE_RENUMERA = 'toma el siguiente número de esa serie, y el que tenía queda como número anterior'
+
 const tipoDe = (valor) => TIPOS_CERTIFICADO.find(t => t.value === Number(valor))
 
 export const nombreDelTipo = (valor) => tipoDe(valor)?.title || ''

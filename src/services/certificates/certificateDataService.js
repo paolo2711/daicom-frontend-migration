@@ -75,10 +75,11 @@ export default {
     return axios.post('certificates/entrega', { cert_ids: certIds, sent_date: sentDate }, { headers });
   },
 
-  corregirTipo(certIds, certificateType) {
+  // Con la opcion de servicio elegida: si el certificado esta en una orden, su linea queda con ese servicio.
+  corregirTipo(certIds, { tipo_servicio, certificate_type }) {
     const headers = authHeader();
     headers['Content-Type'] = "application/json";
-    return axios.post('certificates/corregir-tipo', { cert_ids: certIds, certificate_type: certificateType }, { headers });
+    return axios.post('certificates/corregir-tipo', { cert_ids: certIds, certificate_type, tipo_servicio }, { headers });
   },
 
   // Guarda un PDF ya hecho como certificado base, sin convertir.

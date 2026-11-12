@@ -67,6 +67,22 @@
               </v-col>
 
               <v-col cols="12" md="4">
+                <v-text-field v-model="company.dispatch_series" label="Serie de guías de la app" maxlength="4"
+                              placeholder="T003" density="compact" variant="outlined" hide-details="auto"
+                              :disabled="!isEditing" />
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.dispatch_correlative" label="Correlativo de guías"
+                              density="compact" variant="outlined" type="number" min="1" hide-details="auto"
+                              :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <ubigeo-field v-model="company.ubigeo" label="Ubigeo del domicilio fiscal" :disabled="!isEditing" />
+              </v-col>
+
+              <v-col cols="12" md="4">
                 <v-text-field v-model="company.order_service_correlative" label="Correlativo Orden de Servicio" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
               </v-col>
 
@@ -189,6 +205,7 @@ import Characters from "@/validators/commonValidators/characters"
 import CompanyDataService from "@/services/company/companyDataService"
 import CompanyMappers from "@/mappers/companyMappers"
 import { mensajeDeError } from '@/utils/errors'
+import UbigeoField from '@/components/shared/UbigeoField.vue'
 
 const appStore = useAppStore()
 
@@ -210,6 +227,9 @@ const company = reactive({
   operationality_correlative: '',
   quote_correlative: '',
   valuation_correlative: '',
+  dispatch_series: '',
+  dispatch_correlative: '',
+  ubigeo: '',
   order_service_correlative: '',
   order_rental_correlative: '',
   inventory_correlative: '',

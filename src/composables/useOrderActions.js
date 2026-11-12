@@ -4,7 +4,7 @@ import { usePermissions } from '@/composables/usePermissions'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { accionesPara } from '@/utils/actions'
 import { COTIZACION, VALORIZACION } from '@/utils/documents/tipos'
-import { ACCIONES_ORDEN, VINCULAR } from '@/utils/orders/acciones'
+import { ACCIONES_ORDEN, GUIA, VINCULAR } from '@/utils/orders/acciones'
 import { esAlquiler, viva } from '@/utils/orders/estado'
 import { SIN_CARGO, SIN_COMPROBANTE, alternarMarca } from '@/utils/orders/sinFactura'
 import { anularOrdenes } from '@/utils/orders/anulacion'
@@ -41,10 +41,12 @@ export function useOrderActions(seleccion, { editar, imprimirIngreso, facturar }
     if (isConfirmed && await anularOrdenes(vivas)) soltar(vivas)
   }
 
-  // La pestaña de Documentos de ese tipo abre su editor lleno con los equipos de estas ordenes.
-  const armarDocumento = (tipo, ordenes) => router.push({
-    name: tipo === COTIZACION ? 'documents-quotes' : 'documents-valuations',
-    query: { ordenes: ordenes.filter(viva).map(o => o.id).join(',') },
+  // La pestaña de ese documento abre su formulario lleno con los equipos de estas ordenes.
+  const PESTANA = {
+    [COTIZACION]: 'documents-quotes', [VALORIZACION]: 'documents-valuations', [GUIA]: 'billing-dispatch-guides',
+  }
+  const armarDocumento = (clave, ordenes) => router.push({
+    name: PESTANA[clave], query: { ordenes: ordenes.filter(viva).map(o => o.id).join(',') },
   })
 
   async function ejecutarAccion (clave, ordenes) {
@@ -54,6 +56,7 @@ export function useOrderActions(seleccion, { editar, imprimirIngreso, facturar }
       case 'ingreso': return imprimirIngreso(orden)
       case COTIZACION:
       case VALORIZACION:
+      case GUIA:
         return armarDocumento(clave, ordenes)
       case VINCULAR:
         seleccion.value = [...seleccion.value, ...ordenes.filter(o => !estaMarcada(o))]

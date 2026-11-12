@@ -43,6 +43,13 @@ export default [
         name: 'Documentos de Gestión',
     },
     {
+        icon: 'mdi-receipt-text-check-outline',
+        title: 'Facturación',
+        to: '/facturacion',
+        id: 12,
+        name: 'Facturación',
+    },
+    {
         icon: 'mdi-clipboard-list-outline', 
         title: 'Inventario',
         to: '/inventario', 

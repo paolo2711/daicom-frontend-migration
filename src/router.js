@@ -84,6 +84,23 @@ const routes = [
         ],
       },
       {
+        name: "billing",
+        path: "facturacion",
+        redirect: { name: "billing-dispatch-guides" },
+        component: () => import("@/views/billing/Billing.vue"),
+        children: [
+          {
+            name: "billing-dispatch-guides",
+            path: "guias",
+            meta: {
+              pestana: { texto: "Guías", icono: "mdi-truck-delivery-outline" },
+              nuevo: { texto: "Nueva guía", icono: "mdi-file-document-plus-outline" },
+            },
+            component: () => import("@/views/billing/components/TabDispatchGuides.vue"),
+          },
+        ],
+      },
+      {
         name: "labs",
         path: "labs",
         component: () => import("@/views/labs/Labs.vue"),

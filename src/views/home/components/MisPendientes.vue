@@ -23,11 +23,15 @@
         </div>
 
         <div class="flex-grow-1 pend-list">
-          <!-- button y no div: asi se puede llegar con Tab y activar con Enter -->
-          <button v-for="it in b.items" :key="it.id" type="button" class="pend-row" @click="ir(it.ruta)">
-            <span class="pend-code">{{ it.titulo }}</span>
-            <span class="pend-detail">{{ it.detalle }}</span>
-          </button>
+          <div v-for="it in b.items" :key="it.id" class="pend-fila">
+            <!-- button y no div: asi se puede llegar con Tab y activar con Enter -->
+            <button type="button" class="pend-row" @click="ir(it.ruta)">
+              <span class="pend-code">{{ it.titulo }}</span>
+              <span class="pend-detail">{{ it.detalle }}</span>
+            </button>
+            <v-btn v-if="it.accion" size="x-small" variant="outlined" :loading="haciendo === it.id"
+                   @click="hacer(it)">{{ it.accion.texto }}</v-btn>
+          </div>
         </div>
 
         <div v-if="b.total > b.items.length" class="pend-more">
@@ -42,12 +46,26 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import HomeDataService from '@/services/home/homeDataService'
+import { registrarBajaEnSol, reintentarEnvio, reintentarLasPendientes } from '@/utils/billing/pendientes'
 
 const router = useRouter()
 const bloques = ref([])
 const loading = ref(true)
 
 const ir = (ruta) => { if (ruta) router.push(ruta).catch(() => {}) }
+
+// El boton de una fila hace lo que dice la `accion` que manda el back; hecho, se vuelve a pedir la lista.
+const ACCIONES = {
+  baja_en_sol: (it) => registrarBajaEnSol(it.id, it.titulo),
+  reintentar: (it) => reintentarEnvio(it.id, it.titulo),
+}
+const haciendo = ref(null)
+async function hacer (it) {
+  haciendo.value = it.id
+  const hecho = await ACCIONES[it.accion.clave](it)
+  haciendo.value = null
+  if (hecho) cargar()
+}
 
 const cargar = () => {
   loading.value = true
@@ -62,7 +80,11 @@ const cargar = () => {
 
 const emit = defineEmits(['bloques'])
 
-onMounted(cargar)
+onMounted(() => {
+  cargar()
+  // Las guias que no llegaron a SUNAT se mandan otra vez en segundo plano; si habia alguna, se vuelve a pedir.
+  reintentarLasPendientes().then((r) => { if (r?.data.reintentadas) cargar() })
+})
 defineExpose({ cargar })
 </script>
 
@@ -87,17 +109,20 @@ defineExpose({ cargar })
   margin-top: 0.4rem;
 }
 .pend-list { margin-top: 0.8rem; border-top: 1px solid rgba(128, 128, 128, 0.14); }
+.pend-fila {
+  display: flex; align-items: center; gap: 0.5rem;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.14);
+}
+.pend-fila:last-child { border-bottom: none; }
 .pend-row {
   display: flex; align-items: baseline; gap: 0.5rem;
-  width: 100%;
+  flex: 1; min-width: 0;
   padding: 0.4rem 0;
   cursor: pointer; text-align: left;
   background: transparent; border: none;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.14);
   color: inherit; font: inherit;
   transition: opacity 0.12s ease;
 }
-.pend-row:last-child { border-bottom: none; }
 .pend-row:hover { opacity: 0.65; }
 .pend-row:focus-visible { outline: 2px solid rgb(var(--v-theme-primary)); outline-offset: 2px; }
 .pend-code { font-size: 0.77rem; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }

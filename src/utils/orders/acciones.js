@@ -15,6 +15,8 @@ const quitaOPone = (marca, texto) => (ordenes) => (marcaDe(ordenes) === marca ? 
 
 export const VINCULAR = 'vincular'
 
+export const GUIA = 'guia'
+
 export const ACCIONES_ORDEN = [
   {
     clave: 'editar', grupo: 'orden', varios: false,
@@ -36,6 +38,11 @@ export const ACCIONES_ORDEN = [
   {
     clave: VALORIZACION, grupo: 'orden', varios: true,
     icono: 'mdi-receipt-text-outline', texto: 'Valorizar', detalle: motivoDeClientes,
+    visible: algunaViva, disponible: deUnCliente,
+  },
+  {
+    clave: GUIA, grupo: 'orden', varios: true,
+    icono: 'mdi-truck-delivery-outline', texto: 'Guía de remisión', detalle: motivoDeClientes,
     visible: algunaViva, disponible: deUnCliente,
   },
   {

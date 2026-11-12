@@ -19,6 +19,28 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.10.0.0',
+    fecha: '2026-11-12',
+    nuevo: [
+      'Facturación: las guías de remisión se emiten desde la app, desde una o varias órdenes del mismo cliente o en blanco, con vista previa antes de emitir.',
+      'Si SUNAT no responde, la guía queda "Por enviar" con su número y se vuelve a mandar sola al abrir Guías o Inicio.',
+      'Anular una guía sella su PDF como anulado; si falta darla de baja en SOL, queda en Tus pendientes hasta marcarla.',
+      '"Ver información" de una guía muestra su estado, lo que respondió SUNAT, sus órdenes y el QR.',
+      'Cada orden muestra sus guías de remisión en Documentos, y ahí se vincula otra guía del cliente o se sube una hecha fuera.',
+      '"Descargar PDF" en Documentos y en Guías baja el archivo con el mismo nombre de su copia en el disco E.',
+    ],
+    cambio: [
+      'En una orden guardada se cambian el equipo, el servicio y el laboratorio desde el panel del equipo; "Cambiar servicio" ya no está en su menú.',
+      '"Corregir tipo" ofrece los mismos servicios que la orden y deja al equipo de la orden con el servicio elegido.',
+      'Elegir en la orden un servicio de otro tipo de certificado corrige el tipo al guardar, con el número nuevo de esa serie.',
+      'En alquiler, las guías de salida van como guías de remisión; la guía de retorno se sigue subiendo en PDF.',
+    ],
+    arreglo: [
+      'La orden muestra el equipo y el laboratorio de su certificado; antes seguía con los anteriores si se cambiaban en Certificados.',
+      'Un certificado en la nube ya no deja cambiar su equipo ni su laboratorio.',
+    ],
+  },
+  {
     version: '3.9.0.1',
     fecha: '2026-11-10',
     nuevo: [

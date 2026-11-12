@@ -12,28 +12,25 @@
     <div class="d-flex flex-column ga-3 pa-3 overflow-y-auto flex-grow-1">
       <section class="seccion">
         <div class="titulo-de-seccion">Equipo</div>
-        <paginated-autocomplete v-if="nuevo" v-model="eq.name" :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
+        <paginated-autocomplete v-model="eq.name" :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
                                 recurso="equipos" :seed="semillaDeEquipo" @selected="conSuLaboratorio"
                                 label="Equipo" :return-object="false" item-title="name" item-value="id"
-                                v-bind="CAMPO" />
-        <v-text-field v-else :model-value="eq.name" label="Equipo" readonly v-bind="CAMPO" />
+                                :readonly="eq.publicado" v-bind="CAMPO" />
         <v-textarea v-for="campo in CAMPOS" :key="campo.clave" v-model="eq[campo.clave]"
                     :label="campo.etiqueta" :maxlength="largos[campo.clave]" :readonly="eq.publicado" v-bind="TEXTO" />
         <div v-if="eq.publicado" class="text-caption text-medium-emphasis">
-          Su certificado está en la nube: marca, modelo, serie y titular ya no cambian.
+          Su certificado está en la nube: equipo, laboratorio, marca, modelo, serie y titular ya no cambian.
         </div>
       </section>
 
       <section class="seccion">
         <div class="titulo-de-seccion">Servicio</div>
-        <v-select v-if="nuevo" v-model="opcion" :items="itemsDeSeleccion(opciones)" label="Servicio"
+        <v-select v-model="opcion" :items="itemsDeSeleccion(opciones)" label="Servicio"
                   :error="!eq.tipo_servicio" v-bind="CAMPO" />
-        <v-text-field v-else :model-value="tituloDe(eq, opciones)" label="Servicio" readonly v-bind="CAMPO" />
-        <paginated-autocomplete v-if="nuevo" v-model="eq.lab" :fetch="fetchLabs" :mapper="LabMappers.getMap"
+        <paginated-autocomplete v-model="eq.lab" :fetch="fetchLabs" :mapper="LabMappers.getMap"
                                 recurso="labs" :seed="eq.lab_data" @selected="l => (eq.lab_data = l)"
                                 label="Laboratorio" :return-object="false" item-title="name" item-value="id"
-                                v-bind="CAMPO" />
-        <v-text-field v-else :model-value="eq.lab_data?.name || '—'" label="Laboratorio" readonly v-bind="CAMPO" />
+                                :readonly="eq.publicado" v-bind="CAMPO" />
         <template v-if="eq.certificate_type">
           <div class="text-caption text-medium-emphasis mt-1">Certificado a nombre de</div>
           <client-select :model-value="eq.titular ?? cliente?.id" :seed="eq.titular_data ?? cliente"
@@ -69,7 +66,7 @@ import LabDataService from '@/services/labs/labDataService'
 import EquipmentMappers from '@/mappers/equipmentMappers'
 import LabMappers from '@/mappers/labMappers'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
-import { conOpcion, itemsDeSeleccion, opcionDe, seQuita, tituloDe, useOrderServices } from '@/composables/useOrderServices'
+import { conOpcion, itemsDeSeleccion, opcionDe, seQuita, useOrderServices } from '@/composables/useOrderServices'
 
 // Todo lo de un equipo de FormOrderService, en una columna. Enter lo cierra y
 // Shift+Enter baja de linea.
@@ -97,7 +94,6 @@ function alEnter(e) {
   emit('cerrar')
 }
 
-const nuevo = computed(() => props.eq.modo === 'nuevo')
 const fetchEquipments = (page, size, query) => EquipmentDataService.getFiltered(page, size, query)
 const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)
 // El equipo se guarda como su nombre, que en el catalogo es tambien el id.

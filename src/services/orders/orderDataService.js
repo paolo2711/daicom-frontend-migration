@@ -62,10 +62,6 @@ class OrderDataService {
         return axios.post(`orders/lineas/${id}/completada`, { completado }, { headers: authHeader() });
     }
 
-    cambiarServicioDeLinea(id, { tipo_servicio, certificate_type, lab }) {
-        return axios.post(`orders/lineas/${id}/servicio`, { tipo_servicio, certificate_type, lab }, { headers: authHeader() });
-    }
-
     eliminarLinea(id) {
         return axios.delete(`orders/lineas/${id}`, { headers: authHeader() });
     }

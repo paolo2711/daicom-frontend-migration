@@ -124,7 +124,6 @@
                  @accion="clave => ejecutarAccion(clave, menu.filas)" />
     <action-menu v-model:menu="menuDeLinea" :acciones="accionesDeLinea(menuDeLinea.filas)"
                  @accion="clave => accionDeLinea(clave, menuDeLinea.filas[0])" />
-    <dialog-servicio-de-linea v-model="cambiandoServicio" @cambiado="emit('lineas-cambiaron')" />
 
     <selection-bar :count="seleccion.length" label="equipo(s)"
                    :acciones="accionesDe(seleccion)"
@@ -134,7 +133,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePermissions } from '@/composables/usePermissions'
 import { useContextMenu } from '@/composables/useContextMenu'
@@ -153,7 +152,6 @@ import { fechaCorta } from '@/utils/dates'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
 import NumerosAnteriores from '@/components/shared/NumerosAnteriores.vue'
-import DialogServicioDeLinea from './DialogServicioDeLinea.vue'
 
 const props = defineProps({
   order: { type: Object, required: true },
@@ -201,22 +199,14 @@ watch(certificados, (certs) => {
   }
 })
 
-// Las de certificados, mas las que solo tienen sentido dentro de una orden. Cambiar el
-// servicio va con el trabajo, antes de las peligrosas.
-const peligrosa = (a) => a.grupo === 'peligro'
+// Las de certificados, mas las que solo tienen sentido dentro de una orden.
 const ACCIONES_EQUIPO = [
   {
     clave: 'ir', grupo: 'ver', varios: false,
     icono: 'mdi-open-in-new', texto: 'Ir al certificado',
     visible: algunoVivo,
   },
-  ...ACCIONES_CERTIFICADO.filter(a => !peligrosa(a)),
-  {
-    clave: 'servicio', grupo: 'trabajo', varios: false,
-    icono: 'mdi-swap-horizontal', texto: 'Cambiar servicio',
-    visible: algunoVivo,
-  },
-  ...ACCIONES_CERTIFICADO.filter(peligrosa),
+  ...ACCIONES_CERTIFICADO,
   {
     clave: 'desvincular', grupo: 'peligro', varios: true,
     icono: 'mdi-link-variant-off', texto: 'Desvincular de la orden',
@@ -248,25 +238,13 @@ const { ejecutarAccion: accionDeCertificado, copiarLinks, linkDe } = useCertific
 })
 const { llamarSinPreguntar, confirmarYLlamar } = useActionCall()
 
-// La linea a la que se le cambia el servicio, con su dialogo abierto.
-const cambiandoServicio = ref(null)
-const lineaDe = (cert) => props.order.items.find(l => l.certificate?.id === cert.id)
-
 function ejecutarAccion (clave, certs) {
   const [cert] = certs
   if (clave === 'ir') return irACertificado(cert)
-  if (clave === 'servicio') {
-    cambiandoServicio.value = lineaDe(cert)
-    return
-  }
   accionDeCertificado(clave, certs)
 }
 
 async function accionDeLinea (clave, linea) {
-  if (clave === 'servicio') {
-    cambiandoServicio.value = linea
-    return
-  }
   const hecho = clave === 'completar'
     ? await llamarSinPreguntar(() => OrderDataService.completarLinea(linea.id, !linea.completado),
       linea.completado ? 'Se quitó el completado' : 'Marcado como completado', 'No se pudo cambiar la línea.')

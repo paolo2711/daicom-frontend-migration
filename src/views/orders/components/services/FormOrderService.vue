@@ -258,8 +258,9 @@ function cargarLineas(lineas) {
 function paraGuardar() {
   const items = equipments.value.map((fila) => {
     if (fila.modo !== 'linea') return fila
-    const { id, cert_id, marca, modelo, serie, comentario, titular } = fila
-    return { id, marca, modelo, serie, comentario, ...(cert_id && { titular: titular ?? props.cliente?.id }) }
+    const { id, name, lab, tipo_servicio, certificate_type, marca, modelo, serie, comentario, titular } = fila
+    return { id, name, lab, tipo_servicio, certificate_type, marca, modelo, serie, comentario,
+             ...(certificate_type && { titular: titular ?? props.cliente?.id }) }
   })
   return { items, quitar: quitadas.value }
 }

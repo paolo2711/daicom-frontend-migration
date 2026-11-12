@@ -58,7 +58,7 @@
                 :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap" recurso="equipos"
                 :return-object="false" item-title="name" item-value="id"
                 :seed="equipSeed" @selected="conSuLaboratorio"
-                label="Equipo"
+                label="Equipo" :readonly="publicado"
                 density="compact" variant="outlined" hide-details="auto"
                 prepend-inner-icon="mdi-toolbox-outline"
                 clearable
@@ -75,7 +75,7 @@
                                       :return-object="false" item-title="name" item-value="id"
                                       density="compact" hide-details="auto"
                                       prepend-inner-icon="mdi-flask-outline"
-                                      clearable variant="outlined" label="Laboratorio">
+                                      clearable variant="outlined" label="Laboratorio" :readonly="publicado">
                 <template #append>
                   <add-new-button texto="Nuevo laboratorio" @click="labDialogOpen = true" />
                 </template>
@@ -90,7 +90,7 @@
                                 hide-details="auto" />
                 </v-col>
                 <v-col v-if="publicado" cols="12" class="text-caption text-medium-emphasis pt-0">
-                  Está en la nube: marca, modelo y serie ya no cambian.
+                  Está en la nube: equipo, laboratorio, marca, modelo y serie ya no cambian.
                 </v-col>
               </v-row>
             </v-col>

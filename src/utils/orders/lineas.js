@@ -27,10 +27,6 @@ export const ACCIONES_LINEA = [
     texto: ([l]) => (l.completado ? 'Quitar completado' : 'Marcar completado'),
   },
   {
-    clave: 'servicio', grupo: 'trabajo', varios: false,
-    icono: 'mdi-swap-horizontal', texto: 'Cambiar servicio',
-  },
-  {
     clave: 'eliminar', grupo: 'peligro', varios: false,
     icono: 'mdi-delete', texto: 'Eliminar de la orden',
   },

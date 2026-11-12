@@ -59,6 +59,7 @@ import FilterBar from '@/components/shared/FilterBar.vue'
 import PdfSplitView from '@/components/shared/PdfSplitView.vue'
 import StateLegend from '@/components/shared/StateLegend.vue'
 import { useContextMenu } from '@/composables/useContextMenu'
+import { useDownload } from '@/composables/useDownload'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useSwal } from '@/composables/useSwal'
 import BillingDataService from '@/services/billing/billingDataService'
@@ -157,10 +158,12 @@ async function resolver (accion, guia) {
 
 
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu()
+const { descargar } = useDownload()
 const accionesDe = (filas) => accionesPara(ACCIONES_GUIA, filas, () => true)
 function ejecutarAccion (clave, [guia]) {
   switch (clave) {
     case 'pdf': return abrirEnOtraPestana(guia.pdf)
+    case 'descargar': return descargar(guia.pdf, guia.nombre_pdf, 'el PDF')
     case 'xml': return abrirEnOtraPestana(guia.xml)
     case 'cdr': return abrirEnOtraPestana(guia.cdr)
     case 'consultar': return consultar(guia)

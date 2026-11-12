@@ -12,6 +12,11 @@ export const ACCIONES_DOCUMENTO = [
     disponible: ([documento]) => Boolean(documento.pdf_file),
   },
   {
+    clave: 'descargar', grupo: 'documento', varios: false,
+    icono: 'mdi-download', texto: 'Descargar PDF',
+    disponible: ([documento]) => Boolean(documento.pdf_file),
+  },
+  {
     clave: 'editar', grupo: 'documento', varios: false,
     icono: 'mdi-pencil', texto: 'Editar',
     detalle: ([documento]) => (editable(documento) ? '' : 'Solo lectura'),

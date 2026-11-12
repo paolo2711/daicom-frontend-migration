@@ -1,5 +1,6 @@
 import DocumentsDataService from '@/services/documents/documentsDataService'
 import { useContextMenu } from '@/composables/useContextMenu'
+import { useDownload } from '@/composables/useDownload'
 import { useSwal } from '@/composables/useSwal'
 import { accionesPara } from '@/utils/actions'
 import { ACCIONES_DOCUMENTO } from '@/utils/documents/acciones'
@@ -12,6 +13,7 @@ import { mensajeDeError } from '@/utils/errors'
 export function useDocumentActions({ editar, crearOrden }) {
   const swal = useSwal()
   const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu()
+  const { descargar } = useDownload()
 
   const accionesDe = (documentos) => accionesPara(ACCIONES_DOCUMENTO, documentos, () => true)
 
@@ -33,6 +35,7 @@ export function useDocumentActions({ editar, crearOrden }) {
   function ejecutarAccion (clave, [documento]) {
     switch (clave) {
       case 'ver': return abrirEnOtraPestana(documento.pdf_file)
+      case 'descargar': return descargar(documento.pdf_file, documento.nombre_pdf, 'el PDF')
       case 'editar': return editar(documento)
       case 'crear-orden': return crearOrden(documento)
       case 'anular': return anular(documento)

@@ -4,21 +4,25 @@
       <base-modal-header :title="`Guía ${guia.numero}`" icon="mdi-truck-delivery-outline" @close="cerrar" />
 
       <v-card-text class="d-flex flex-column ga-4 pt-4">
-        <div>
-          <div :class="`text-${estado.color}`" class="d-flex align-center ga-2 font-weight-bold">
-            <v-icon :icon="estado.icono" />
-            {{ estado.texto }}
+        <div class="d-flex ga-4">
+          <div class="flex-grow-1">
+            <div :class="`text-${estado.color}`" class="d-flex align-center ga-2 font-weight-bold">
+              <v-icon :icon="estado.icono" />
+              {{ estado.texto }}
+            </div>
+            <div v-if="bajaPendienteEnSol(guia)" class="text-body-2 text-error mt-1">
+              Baja pendiente en SOL: Empresas → Guía de Remisión Electrónica → Dar de Baja GRE Remitente.
+            </div>
+            <div v-else-if="guia.estado === ANULADA" class="text-body-2 text-medium-emphasis mt-1">
+              Baja dada en SOL el {{ fechaHora(guia.baja_en_sol) }}.
+            </div>
+            <div v-if="guia.respuesta.descripcion" class="text-body-2 mt-1">{{ guia.respuesta.descripcion }}</div>
+            <div v-for="nota in guia.respuesta.notas || []" :key="nota" class="text-body-2 text-medium-emphasis">
+              {{ nota }}
+            </div>
           </div>
-          <div v-if="bajaPendienteEnSol(guia)" class="text-body-2 text-error mt-1">
-            Baja pendiente en SOL: Empresas → Guía de Remisión Electrónica → Dar de Baja GRE Remitente.
-          </div>
-          <div v-else-if="guia.estado === ANULADA" class="text-body-2 text-medium-emphasis mt-1">
-            Baja dada en SOL el {{ fechaHora(guia.baja_en_sol) }}.
-          </div>
-          <div v-if="guia.respuesta.descripcion" class="text-body-2 mt-1">{{ guia.respuesta.descripcion }}</div>
-          <div v-for="nota in guia.respuesta.notas || []" :key="nota" class="text-body-2 text-medium-emphasis">
-            {{ nota }}
-          </div>
+          <v-img v-if="guia.qr" :src="guia.qr" alt="QR de SUNAT" width="6rem" max-width="6rem" class="flex-shrink-0"
+                 :title="`Consulta de ${guia.numero} en SUNAT`" />
         </div>
 
         <v-table density="compact" class="bg-transparent">

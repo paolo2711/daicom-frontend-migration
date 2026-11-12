@@ -31,7 +31,6 @@
           </template>
           <template #item.fecha_emision="{ item }">{{ fechaCorta(item.fecha_emision) }}</template>
           <template #item.cliente="{ item }">{{ item.cliente_data.name }}</template>
-          <template #item.ordenes="{ item }">{{ item.ordenes.map(o => o.numero).join(', ') || '—' }}</template>
           <template #item.acciones="{ item }">
             <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" color="grey-darken-1"
                    @click.stop="alBotonDeFila($event, item)" />
@@ -84,7 +83,6 @@ const columnas = computed(() => [
   { title: 'Guía', key: 'numero', sortable: false },
   { title: 'Fecha', key: 'fecha_emision', sortable: false },
   { title: 'Destinatario', key: 'cliente', sortable: false },
-  { title: 'Órdenes', key: 'ordenes', sortable: false },
   { title: 'Opciones', key: 'acciones', align: 'center', sortable: false },
 ].filter(c => vista.value === null || EN_LA_LISTA_ANGOSTA.includes(c.key)))
 

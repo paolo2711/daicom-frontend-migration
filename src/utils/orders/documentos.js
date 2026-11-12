@@ -1,27 +1,60 @@
+import BillingDataService from '@/services/billing/billingDataService'
+import DocumentsDataService from '@/services/documents/documentsDataService'
 import OrderDataService from '@/services/orders/orderDataService'
+import { ESTADOS } from '@/utils/billing/guias'
+import { fechaCorta } from '@/utils/dates'
+import { DOCUMENTOS, TIPOS_DE_COTIZACION } from '@/utils/documents/quoteDefaults'
 import { COTIZACION as DE_COTIZACION, VALORIZACION as DE_VALORIZACION } from '@/utils/documents/tipos'
+import { monto } from '@/utils/money'
 
 // OrderDocument.Tipo en el back.
 export const ORDEN_DE_COMPRA = 1
 export const VALORIZACION = 2
 export const COTIZACION = 4
+export const GUIA_REMISION = 5
 
-// Las secciones que vinculan un documento del sistema (OrderDocument.DEL_SISTEMA). `campo`: el del pedido al
-// crear la orden y el de los pendientes.
+// Un documento de Documentos (cotizacion o valorizacion) que se vincula; el hecho fuera se sube en Documentos.
+function deDocumentos (tipo, documento, campo) {
+  return {
+    tipo, documento, campo, llave: 'documento', nombre: DOCUMENTOS[documento].nombre, plural: DOCUMENTOS[documento].plural,
+    sinResultados: (kind) => `El cliente no tiene ${DOCUMENTOS[documento].plural.toLowerCase()} de ${kind} emitidas`,
+    buscar: ({ cliente, kind, query, page, size }) => DocumentsDataService.getAll({
+      document_type: documento, kind, status: 'EMITIDO', client: cliente,
+      document_number: query || undefined, page, itemsPerPage: size,
+    }),
+    aOpcion: (d) => ({
+      id: d.id, name: d.document_number, pdf: d.pdf_file, tipo: TIPOS_DE_COTIZACION[d.kind]?.texto,
+      detalle: `${fechaCorta(d.issue_date)} · ${monto(d.total_amount, d.currency)}`,
+    }),
+  }
+}
+
+// Las secciones que vinculan algo del sistema. `campo`: el del pedido al crear la orden y el de los pendientes;
+// `llave`: el campo de OrderDocument. La guia hecha fuera se sube en PDF a la misma seccion.
 export const VINCULABLES = [
-  { tipo: COTIZACION, documento: DE_COTIZACION, campo: 'cotizaciones' },
-  { tipo: VALORIZACION, documento: DE_VALORIZACION, campo: 'valorizaciones' },
+  deDocumentos(COTIZACION, DE_COTIZACION, 'cotizaciones'),
+  deDocumentos(VALORIZACION, DE_VALORIZACION, 'valorizaciones'),
+  {
+    tipo: GUIA_REMISION, campo: 'guias', llave: 'guia', nombre: 'guía', plural: 'Guías de remisión', enPdf: true,
+    sinResultados: () => 'El cliente no tiene guías de remisión vigentes',
+    buscar: ({ cliente, query, page, size }) => BillingDataService.listDispatchGuides({
+      cliente, q: query || undefined, vigentes: true, page, itemsPerPage: size,
+    }),
+    aOpcion: (g) => ({ id: g.id, name: g.numero, pdf: g.pdf, tipo: ESTADOS[g.estado].texto,
+                       detalle: fechaCorta(g.fecha_emision) }),
+  },
 ]
 
-export const sinPendientes = () => ({ cotizaciones: [], valorizaciones: [], archivos: [] })
+export const sinPendientes = () => ({ cotizaciones: [], valorizaciones: [], guias: [], archivos: [] })
 
 // Los ids que se vinculan al crear la orden, por campo del pedido.
 export const vinculosAlCrear = (pendientes) =>
   Object.fromEntries(VINCULABLES.map(v => [v.campo, pendientes[v.campo].map(d => d.id)]))
 
-// Los PDF de un alquiler que van uno solo por orden (campos de Order).
+// Los PDF de un alquiler que van uno solo por orden (campos de Order). La de salida es de antes: las de ahora
+// son guías de remisión.
 export const GUIAS = [
-  { campo: 'dispatch_guide_pdf', texto: 'Guía de salida' },
+  { campo: 'dispatch_guide_pdf', texto: 'Guía de salida (anterior)', anterior: true },
   { campo: 'return_guide_pdf', texto: 'Guía de retorno' },
 ]
 
@@ -38,10 +71,10 @@ export function subirArchivo(ordenId, { destino, numero, archivo }) {
   return OrderDataService.uploadInvoice(ordenId, datos)
 }
 
-export function vincularDocumento(ordenId, tipo, documentoId) {
+export function vincularDocumento(ordenId, { tipo, llave }, id) {
   const datos = new FormData()
   datos.append('tipo', tipo)
-  datos.append('documento', documentoId)
+  datos.append(llave, id)
   return OrderDataService.addDocument(ordenId, datos)
 }
 

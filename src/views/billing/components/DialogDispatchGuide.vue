@@ -3,6 +3,12 @@
     <v-card v-if="datos" class="d-flex flex-column" style="height: 100%;">
       <base-modal-header title="Nueva guía de remisión" icon="mdi-truck-delivery-outline" @close="dialog = false">
         <span>Remitente · Transporte privado en vehículo M1 o L</span>
+        <!-- Las ordenes de las que sale; la "x" la saca antes de emitir. -->
+        <v-chip v-for="orden in ordenes" :key="orden.id" size="small" variant="tonal" prepend-icon="mdi-clipboard-text"
+                closable close-label="No vincular esta orden" class="ml-2"
+                @click:close="ordenes = ordenes.filter(o => o !== orden)">
+          {{ orden.numero }}
+        </v-chip>
       </base-modal-header>
 
       <v-card-text class="pt-4 d-flex flex-column pantalla-de-trabajo"
@@ -203,7 +209,7 @@ const items = computed(() => datos.value?.items ?? [])
 const { errores, marcarErrores } = useRowErrors(items)
 const indiceElegido = computed(() => items.value.indexOf(elegido.value))
 const sePuedeEmitir = computed(() => Boolean(clienteId.value && items.value.length))
-const paraElBack = () => ({ cliente: clienteId.value, ordenes: ordenes.value, datos: datos.value })
+const paraElBack = () => ({ cliente: clienteId.value, ordenes: ordenes.value.map(o => o.id), datos: datos.value })
 
 function noSePudo (titulo, porDefecto, error) {
   marcarErrores(error.response?.data?.filas)

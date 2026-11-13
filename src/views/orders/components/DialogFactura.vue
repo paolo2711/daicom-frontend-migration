@@ -153,7 +153,7 @@ import { ref, computed, watch } from 'vue'
 import { Toast } from '@/plugins/alerts'
 import { avisarSoloPdf } from '@/utils/pdf'
 import Swal from 'sweetalert2'
-import OrderDataService from '@/services/orders/orderDataService'
+import BillingDataService from '@/services/billing/billingDataService'
 import { mensajeDeError } from '@/utils/errors'
 import { MONEDAS, monto, simboloDe } from '@/utils/money'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
@@ -238,7 +238,7 @@ const onPdfSelected = async (archivo) => {
   const data = new FormData()
   data.append('pdf', archivo)
   try {
-    const res = await OrderDataService.extractInvoiceData(data)
+    const res = await BillingDataService.extractInvoiceData(data)
     facturaData.value.invoice_number = res.data.invoice_number || facturaData.value.invoice_number
     facturaData.value.invoice_date = res.data.invoice_date || facturaData.value.invoice_date
     facturaData.value.amount = res.data.amount || facturaData.value.amount
@@ -331,16 +331,16 @@ const save = async () => {
   try {
     const data = buildFormData()
     if (editando.value) {
-      await OrderDataService.updateInvoice(props.invoiceToEdit.id, data)
+      await BillingDataService.updateInvoice(props.invoiceToEdit.id, data)
     } else if (esMulti.value) {
       // Una sola factura para varias órdenes: se crea suelta y se vinculan
       // todas de una (el backend valida moneda/tipo al vincular).
-      const res = await OrderDataService.createInvoiceSuelta(data)
-      await OrderDataService.linkInvoice(res.data.id, props.orders.map(o => o.id))
+      const res = await BillingDataService.createInvoiceSuelta(data)
+      await BillingDataService.linkInvoice(res.data.id, props.orders.map(o => o.id))
     } else if (props.order) {
-      await OrderDataService.createInvoice(props.order.id, data)
+      await BillingDataService.createInvoice(props.order.id, data)
     } else {
-      await OrderDataService.createInvoiceSuelta(data)
+      await BillingDataService.createInvoiceSuelta(data)
     }
     Toast.fire({ timer: 2200, icon: 'success', title: editando.value ? 'Factura actualizada' : 'Factura guardada' })
     resetForm()
@@ -363,7 +363,7 @@ const eliminar = async () => {
   if (!r.isConfirmed) return
   isDeleting.value = true
   try {
-    await OrderDataService.deleteInvoice(props.invoiceToEdit.id, props.order?.id)
+    await BillingDataService.deleteInvoice(props.invoiceToEdit.id, props.order?.id)
     Toast.fire({ timer: 2200, icon: 'success', title: 'Factura eliminada' })
     emit('updateOrder')
     closeDialog()

@@ -320,7 +320,7 @@ import { Toast } from '@/plugins/alerts'
 import { avisarSoloPdf } from '@/utils/pdf'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import Swal from 'sweetalert2'
-import OrderDataService from '@/services/orders/orderDataService'
+import BillingDataService from '@/services/billing/billingDataService'
 import InvoiceMappers from '@/mappers/invoiceMappers'
 import { mensajeDeError } from '@/utils/errors'
 import { useLatestRequest } from '@/composables/useLatestRequest'
@@ -421,7 +421,7 @@ const cargar = async () => {
   loading.value = true
   const token = beginLoad()   // guard de secuencia: gana la carga más reciente
   try {
-    const res = await OrderDataService.listInvoices({
+    const res = await BillingDataService.listInvoices({
       order_type: props.order_type,
       order_id: props.foco_order_id || undefined,
       currency: currency_filter.value || undefined,
@@ -465,7 +465,7 @@ const onWsUpdateInvoiceRow = (event) => {
     cargar()
     return
   }
-  OrderDataService.listInvoices({ order_type: props.order_type, invoice_id: invId })
+  BillingDataService.listInvoices({ order_type: props.order_type, invoice_id: invId })
     .then(res => {
       const fresca = (res.data.results || [])[0]
       if (fresca) {
@@ -524,7 +524,7 @@ const confirmarVinculo = async (inv) => {
   })
   if (!r.isConfirmed) return
   try {
-    await OrderDataService.linkInvoice(inv.id, ordenes.map(o => o.id))
+    await BillingDataService.linkInvoice(inv.id, ordenes.map(o => o.id))
     Toast.fire({ timer: 2200, icon: 'success', title: 'Órdenes vinculadas' })
     emit('limpiar-seleccion')
     cargar() // refresco inmediato (además del WS)
@@ -534,7 +534,7 @@ const confirmarVinculo = async (inv) => {
 }
 
 // ── Desvincular una orden de la factura (conserva factura + abonos) ──
-// Backend: DELETE /orders/invoices/<id>?order_id=<oid> quita solo esa
+// Backend: DELETE /billing/invoices/<id>/?order_id=<oid> quita solo esa
 // asignación; si era la última, borra la factura completa.
 const desvincularOrden = async (inv, orden) => {
   const r = await Swal.fire({
@@ -545,7 +545,7 @@ const desvincularOrden = async (inv, orden) => {
   })
   if (!r.isConfirmed) return
   try {
-    await OrderDataService.deleteInvoice(inv.id, orden.order_id)
+    await BillingDataService.deleteInvoice(inv.id, orden.order_id)
     Toast.fire({ timer: 2200, icon: 'success', title: 'Orden desvinculada' })
     cargar()
   } catch (e) {
@@ -567,7 +567,7 @@ const eliminarFactura = async (inv) => {
   })
   if (!r.isConfirmed) return
   try {
-    await OrderDataService.deleteInvoice(inv.id) // sin order_id => borra la factura completa
+    await BillingDataService.deleteInvoice(inv.id) // sin order_id => borra la factura completa
     Toast.fire({ timer: 2200, icon: 'success', title: 'Factura eliminada' })
     cargar()
   } catch (e) {

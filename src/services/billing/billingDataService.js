@@ -38,6 +38,45 @@ class BillingDataService {
   listUbigeos(q) {
     return axios.get("billing/ubigeos/", { params: { q }, headers: authHeader() });
   }
+
+  // Facturas subidas y sus abonos. `filtros`: order_type, currency, estado, detraccion, tipo, q, page.
+  listInvoices(filtros = {}) {
+    return axios.get("billing/invoices/", { params: filtros, headers: authHeader() });
+  }
+  // Una factura para una orden; la suelta (sin orden) nace con el tipo de la pestaña.
+  createInvoice(orderId, data) {
+    return axios.post(`billing/orders/${orderId}/invoices/`, data, { headers: authHeader() });
+  }
+  createInvoiceSuelta(data) {
+    return axios.post("billing/invoices/create/", data, { headers: authHeader() });
+  }
+  updateInvoice(invoiceId, data) {
+    return axios.patch(`billing/invoices/${invoiceId}/`, data, { headers: authHeader() });
+  }
+  // Con `orderId` solo la desvincula de esa orden; se borra si era la última.
+  deleteInvoice(invoiceId, orderId) {
+    return axios.delete(`billing/invoices/${invoiceId}/`, { params: { order_id: orderId }, headers: authHeader() });
+  }
+  linkInvoice(invoiceId, orderIds) {
+    const order_ids = Array.isArray(orderIds) ? orderIds : [orderIds];
+    return axios.post(`billing/invoices/${invoiceId}/link/`, { order_ids }, { headers: authHeader() });
+  }
+  extractInvoiceData(data) {
+    return axios.post("billing/invoices/extract/", data, { headers: authHeader() });
+  }
+  createInvoicePayment(invoiceId, data) {
+    return axios.post(`billing/invoices/${invoiceId}/payments/`, data, { headers: authHeader() });
+  }
+  // El abono de una orden sin comprobante: va a su contenedor interno.
+  liquidate(orderId, data) {
+    return axios.post(`billing/orders/${orderId}/payments/`, data, { headers: authHeader() });
+  }
+  updatePayment(id, data) {
+    return axios.patch(`billing/payments/${id}/`, data, { headers: authHeader() });
+  }
+  deletePayment(id) {
+    return axios.delete(`billing/payments/${id}/`, { headers: authHeader() });
+  }
 }
 
 export default new BillingDataService();

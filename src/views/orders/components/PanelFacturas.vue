@@ -1,692 +1,222 @@
 <template>
-  <pdf-drop-zone label="Suelta el PDF para subir la factura" @file="onPdfDropped" @invalid="avisarSoloPdf">
-  <v-card
-    class="panel-facturas d-flex flex-column position-relative"
-    elevation="0" rounded="lg" border
-  >
-    <!-- Cabecera compacta propia (misma altura de arranque que la tabla de órdenes) -->
-    <div class="panel-header d-flex align-center px-3 flex-shrink-0">
-      <v-icon size="18" color="primary" class="mr-2">
-        {{ modo_seleccion ? 'mdi-link-variant' : 'mdi-file-document-multiple-outline' }}
-      </v-icon>
-      <span class="text-subtitle-2 font-weight-bold">
-        {{ modo_seleccion ? 'Elige una factura' : 'Facturas' }}
-      </span>
-      <span class="text-caption text-medium-emphasis ml-2">
-        <template v-if="modo_seleccion">
-          · vincular {{ ordenes_seleccionadas.length }} {{ ordenes_seleccionadas.length === 1 ? 'orden' : 'órdenes' }}
-        </template>
-      </span>
-
-      <v-spacer />
-
-      <!-- "+ Factura" crea una factura suelta (independiente). Se oculta con un
-           filtro activo: la suelta no coincidiría con el filtro y "desaparece",
-           confundiendo al usuario (cree que se enlaza sola). -->
-      <v-btn v-if="!modo_seleccion && !search_query && !foco_order_number" color="primary" variant="flat" size="small" class="mr-1" @click="abrirCrearSuelta">
-        <v-icon start size="16">mdi-plus</v-icon> Factura
-      </v-btn>
-
-      <!-- Filtro: ícono limpio con puntito solo cuando hay filtro activo -->
-      <v-menu :close-on-content-click="false">
-        <template v-slot:activator="{ props: mprops }">
-          <v-btn icon size="small" variant="text" v-bind="mprops"
-                 :color="hay_filtros ? 'primary' : undefined">
-            <v-icon size="20">{{ hay_filtros ? 'mdi-filter' : 'mdi-filter-outline' }}</v-icon>
-          </v-btn>
-        </template>
-        <v-card min-width="220" class="pa-3">
-          <v-select v-model="currency_filter" :items="currency_options" label="Moneda"
-                    density="compact" variant="outlined" hide-details class="mb-3" />
-          <v-select v-model="estado_filter" :items="estado_options" label="Estado"
-                    density="compact" variant="outlined" hide-details class="mb-3" />
-          <v-select v-model="detraccion_filter" :items="detraccion_options" label="Detracción"
-                    density="compact" variant="outlined" hide-details class="mb-3" />
-          <v-select v-model="tipo_filter" :items="tipo_options" label="Tipo"
-                    density="compact" variant="outlined" hide-details />
-        </v-card>
-      </v-menu>
-
-      <v-tooltip location="bottom" :text="expandido ? 'Contraer' : 'Expandir'">
-        <template v-slot:activator="{ props: tprops }">
-          <v-btn icon size="small" variant="text" v-bind="tprops"
-                 @click="$emit('update:expandido', !expandido)">
-            <v-icon size="20">{{ expandido ? 'mdi-arrow-collapse' : 'mdi-arrow-expand' }}</v-icon>
-          </v-btn>
-        </template>
-      </v-tooltip>
-    </div>
-
-    <!-- Aviso modo selección -->
-    <div v-if="modo_seleccion" class="px-2 pb-2 flex-shrink-0">
-      <v-alert type="info" variant="tonal" density="compact" class="text-caption py-1">
-        Toca la factura a la que quieres vincular. Para crear una nueva o marcar "sin comprobante", usa la barra de selección.
-      </v-alert>
-    </div>
-
-    <!-- Indicador de filtro activo -->
-    <div v-if="search_query || foco_order_number" class="px-3 pb-2 flex-shrink-0">
-      <v-chip v-if="foco_order_number" color="primary" variant="tonal" size="small" closable
-              @click:close="$emit('limpiar-foco-orden')">
-        <v-icon start size="14">mdi-filter</v-icon>
-        Facturas de la orden {{ foco_order_number }}
-      </v-chip>
-      <v-chip v-else color="primary" variant="tonal" size="small" closable
-              @click:close="$emit('limpiar-busqueda')">
-        <v-icon start size="14">mdi-filter</v-icon>
-        Filtrando: {{ search_query }}
-      </v-chip>
-    </div>
-
-    <v-divider />
-
-    <table-loading-overlay
-      :loading="loading"
-      :isEmpty="facturas.length === 0"
-      text="Cargando facturas..."
-      :offset="300"
-      class="lista-scroll flex-grow-1"
-    >
-      <div v-if="facturas.length === 0" class="text-center text-caption text-medium-emphasis py-8">
-        No hay facturas con estos filtros.
+  <v-card class="panel-facturas d-flex flex-column" elevation="0" rounded="lg" border>
+    <div class="pa-3 border-b-thin flex-shrink-0">
+      <div class="d-flex align-center ga-2">
+        <v-icon color="primary">{{ vinculando ? 'mdi-link-variant' : 'mdi-receipt-text-outline' }}</v-icon>
+        <span class="text-subtitle-2 font-weight-bold">{{ titulo }}</span>
+        <v-spacer />
+        <v-btn v-if="vinculando || orden" icon="mdi-close" variant="text" size="small" density="comfortable"
+               :title="vinculando ? 'Soltar las órdenes' : 'Cerrar'"
+               @click="emit(vinculando ? 'limpiar-seleccion' : 'limpiar-foco')" />
       </div>
+      <div v-if="subtitulo" class="text-caption text-medium-emphasis">{{ subtitulo }}</div>
 
-      <!-- ══ MODO EXPANDIDO: tabla real con columnas ══ -->
-      <template v-else-if="expandido">
-        <!-- Header sticky DENTRO del scroll: se desplaza en horizontal junto a
-             las filas y queda fijo al hacer scroll vertical. -->
-        <div class="tabla-header d-flex align-center px-3">
-          <div class="col-estado" />
-          <div class="col-numero text-caption font-weight-bold text-medium-emphasis">N° Factura</div>
-          <div class="col-fecha text-caption font-weight-bold text-medium-emphasis">Fecha</div>
-          <div class="col-monto text-caption font-weight-bold text-medium-emphasis text-right">Monto</div>
-          <div class="col-detr text-caption font-weight-bold text-medium-emphasis text-right">Detracción</div>
-          <div class="col-abonado text-caption font-weight-bold text-medium-emphasis text-right">Abonado</div>
-          <div class="col-estado-txt text-caption font-weight-bold text-medium-emphasis text-center">Estado</div>
-          <div class="col-ordenes text-caption font-weight-bold text-medium-emphasis text-center">Órdenes</div>
-          <div class="col-acciones text-caption font-weight-bold text-medium-emphasis text-right">Acciones</div>
+      <paginated-autocomplete v-if="vinculando || orden" :key="buscador" :model-value="null" class="mt-3"
+                              :fetch="buscarFacturas" :mapper="InvoiceMappers.getMap" :exclude-ids="yaVinculadas"
+                              item-title="invoice_number" label="Buscar factura para vincular"
+                              prepend-inner-icon="mdi-link-variant" density="compact" variant="outlined"
+                              hide-details @selected="vincularA">
+        <template #item="{ props: fila, item }">
+          <v-list-item v-bind="fila" :title="item.raw.invoice_number || 'Sin número'"
+                       :subtitle="[monto(item.raw.amount, item.raw.currency), item.raw.cliente || 'Suelta',
+                                   fechaCorta(item.raw.invoice_date)].filter(Boolean).join(' · ')" />
+        </template>
+      </paginated-autocomplete>
+    </div>
+
+    <div v-if="!orden || vinculando" class="pa-6 text-center text-caption text-medium-emphasis">
+      {{ vinculando ? 'Elige arriba la factura a la que se vinculan.'
+                    : 'Elige una orden con el clic en su semáforo para ver sus facturas.' }}
+    </div>
+
+    <template v-else>
+      <table-loading-overlay :loading="cargando" :isEmpty="facturas.length === 0" class="lista flex-grow-1">
+        <div v-if="!facturas.length" class="pa-6 text-center text-caption text-medium-emphasis">
+          Esta orden no tiene facturas.
         </div>
 
-        <div
-          v-for="inv in facturas_mostradas"
-          :key="inv.id"
-          class="factura-row-exp d-flex align-center px-3"
-          :class="{
-            'factura-row--selectable': modo_seleccion && puede_vincular(inv),
-            'factura-row--disabled': modo_seleccion && !puede_vincular(inv),
-          }"
-          :title="modo_seleccion && !puede_vincular(inv) ? motivoNoVincular(inv) : undefined"
-          @click="modo_seleccion && puede_vincular(inv) ? confirmarVinculo(inv) : null"
-        >
-          <div class="col-estado">
-            <div class="estado-dot" :style="{ backgroundColor: estado_color(inv.estado) }" />
-          </div>
-          <div class="col-numero d-flex align-center ga-1 overflow-hidden">
-            <span class="text-body-2 font-weight-medium text-truncate">{{ inv.invoice_number || 'Sin número' }}</span>
-          </div>
-          <div class="col-fecha text-caption">
-            <div class="text-medium-emphasis">{{ fechaCorta(inv.invoice_date) || '—' }}</div>
-            <div v-if="vencimiento(inv)" :class="`text-${vencimiento(inv).color}`">{{ vencimiento(inv).texto }}</div>
-          </div>
-          <div class="col-monto text-right">
-            <div class="text-body-2 font-weight-medium">{{ montoMostrar(inv) }}</div>
-            <div v-if="saldoInfo(inv)" class="text-caption" :class="saldoInfo(inv).cls">{{ saldoInfo(inv).text }}</div>
-          </div>
-          <div class="col-detr text-right">
-            <span v-if="inv.detraccion_applies" class="text-deep-orange text-body-2 font-weight-medium">{{ monto(inv.detraccion_amount, inv.currency) }}</span>
-            <span v-else class="text-disabled">—</span>
-          </div>
-          <div class="col-abonado text-right">
-            <template v-if="inv.total_pagado > 0">
-              <div class="text-success text-body-2 font-weight-medium">{{ monto(inv.total_pagado, inv.currency) }}</div>
-              <div class="text-medium-emphasis text-caption">{{ (inv.payments || []).length }} abono(s)</div>
-            </template>
-            <span v-else class="text-disabled">—</span>
-          </div>
-          <div class="col-estado-txt text-center">
-            <v-chip size="small" :color="estado_color(inv.estado)" variant="tonal" class="estado-chip">{{ estado_texto(inv.estado) }}</v-chip>
-          </div>
-          <div class="col-ordenes text-center">
-            <v-tooltip location="top" v-if="inv.ordenes_vinculadas.length">
-              <template v-slot:activator="{ props: tprops }">
-                <v-chip v-bind="tprops" size="x-small" variant="tonal" color="primary" style="cursor:pointer" @click.stop="verOrdenesDeFactura(inv)">{{ inv.ordenes_vinculadas.length }}</v-chip>
-              </template>
-              <div class="text-caption">
-                <div v-for="o in inv.ordenes_vinculadas" :key="o.order_id">{{ o.order_number }}</div>
-                <div class="text-medium-emphasis mt-1" style="font-size:10px;">Clic para ver sus órdenes</div>
-              </div>
-            </v-tooltip>
-            <span v-else class="text-disabled">—</span>
-          </div>
-          <div class="col-acciones d-flex justify-end" v-if="!modo_seleccion">
-            <v-btn v-if="inv.pdf_url" icon size="x-small" variant="text" color="primary" :href="inv.pdf_url" target="_blank" @click.stop>
-              <v-icon size="18">mdi-open-in-new</v-icon>
-              <v-tooltip activator="parent" location="top">{{ OTRA_PESTANA }}</v-tooltip>
-            </v-btn>
-            <v-btn icon size="x-small" variant="text" color="success" @click.stop="abrirAbonos(inv)">
-              <v-icon size="18">mdi-cash-plus</v-icon>
-            </v-btn>
-            <v-btn v-if="inv.es_fiscal" icon size="x-small" variant="text" color="grey-darken-1" @click.stop="editarFactura(inv)">
-              <v-icon size="18">mdi-pencil</v-icon>
-            </v-btn>
-            <v-menu location="bottom end">
-              <template v-slot:activator="{ props: mprops }">
-                <v-btn v-bind="mprops" icon size="x-small" variant="text" color="grey-darken-1" @click.stop>
-                  <v-icon size="18">mdi-dots-vertical</v-icon>
-                </v-btn>
-              </template>
-              <v-list density="compact" min-width="210">
-                <template v-if="inv.es_fiscal && inv.ordenes_vinculadas.length">
-                  <v-list-subheader class="text-caption">Desvincular orden</v-list-subheader>
-                  <v-list-item v-for="o in inv.ordenes_vinculadas" :key="o.order_id" @click="desvincularOrden(inv, o)">
-                    <template v-slot:prepend><v-icon size="18" color="grey-darken-1">mdi-link-off</v-icon></template>
-                    <v-list-item-title class="text-body-2">{{ o.order_number }}</v-list-item-title>
-                  </v-list-item>
-                  <v-divider class="my-1" />
-                </template>
-                <v-list-item @click="eliminarFactura(inv)">
-                  <template v-slot:prepend><v-icon size="18" color="error">mdi-delete-outline</v-icon></template>
-                  <v-list-item-title class="text-body-2 text-error">Eliminar factura</v-list-item-title>
-                </v-list-item>
-              </v-list>
-            </v-menu>
-          </div>
-        </div>
-      </template>
-
-      <!-- ══ MODO COMPACTO: filas delgadas ══ -->
-      <template v-else>
-        <div
-          v-for="inv in facturas_mostradas"
-          :key="inv.id"
-          class="factura-row d-flex align-center px-3"
-          :class="{
-            'factura-row--selectable': modo_seleccion && puede_vincular(inv),
-            'factura-row--disabled': modo_seleccion && !puede_vincular(inv),
-          }"
-          :title="modo_seleccion && !puede_vincular(inv) ? motivoNoVincular(inv) : undefined"
-          @click="modo_seleccion && puede_vincular(inv) ? confirmarVinculo(inv) : null"
-        >
-          <div class="estado-dot flex-shrink-0" :style="{ backgroundColor: estado_color(inv.estado) }" />
-
-          <div class="factura-main flex-grow-1 overflow-hidden">
-            <div class="d-flex align-center ga-1">
-              <span class="text-body-2 font-weight-medium text-truncate">{{ inv.invoice_number || 'Sin número' }}</span>
+        <div v-for="factura in facturas" :key="factura.id" class="border-b-thin">
+          <div class="fila px-3 py-2" @click="abierta = abierta === factura.id ? null : factura.id">
+            <div class="d-flex justify-space-between ga-2">
+              <span class="font-weight-medium">{{ factura.invoice_number || 'Sin número' }}</span>
+              <span class="font-weight-medium">{{ montoDe(factura) ? monto(factura.amount, factura.currency) : '—' }}</span>
             </div>
-            <div class="text-caption text-truncate">
-              <span class="text-medium-emphasis">{{ fechaCorta(inv.invoice_date) || '—' }}</span>
-              <span v-if="vencimiento(inv)" :class="`text-${vencimiento(inv).color}`"> · {{ vencimiento(inv).texto }}</span>
+            <div class="d-flex justify-space-between ga-2 text-caption text-medium-emphasis">
+              <span>{{ detalleDe(factura) }}</span>
+              <span :style="{ color: estadoDe(factura).color }">{{ estadoDe(factura).texto }}</span>
             </div>
           </div>
 
-          <div class="factura-monto flex-shrink-0 text-right">
-            <div class="text-body-2 font-weight-medium">{{ montoMostrar(inv) }}</div>
-            <div v-if="saldoInfo(inv)" class="text-caption" :class="saldoInfo(inv).cls">{{ saldoInfo(inv).text }}</div>
-          </div>
-
-          <div class="factura-ordenes flex-shrink-0 text-center">
-            <v-tooltip location="top" v-if="inv.ordenes_vinculadas.length">
-              <template v-slot:activator="{ props: tprops }">
-                <v-chip v-bind="tprops" size="x-small" variant="tonal" color="primary" style="cursor:pointer" @click.stop="verOrdenesDeFactura(inv)">
-                  <v-icon start size="12">mdi-link-variant</v-icon>{{ inv.ordenes_vinculadas.length }}
-                </v-chip>
-              </template>
-              <div class="text-caption">
-                <div v-for="o in inv.ordenes_vinculadas" :key="o.order_id">{{ o.order_number }}</div>
-                <div class="text-medium-emphasis mt-1" style="font-size:10px;">Clic para ver sus órdenes</div>
+          <v-expand-transition>
+            <div v-if="abierta === factura.id" class="px-3 pb-3 bg-hoja_de_apoyo">
+              <div class="dato"><span>{{ factura.es_credito ? 'Crédito' : 'Contado' }}</span>
+                <span v-if="factura.es_credito">vence {{ fechaCorta(factura.due_date) }}</span></div>
+              <div v-if="factura.detraccion_applies" class="dato"><span>Detracción</span>
+                <span>{{ monto(factura.detraccion_amount, factura.currency) }}</span></div>
+              <div v-for="abono in factura.payments" :key="abono.id" class="dato">
+                <span>Abono {{ fechaCorta(abono.payment_date) }} · {{ FORMA_DE_PAGO[abono.payment_method] }}</span>
+                <span>{{ monto(abono.amount, abono.currency) }}</span>
               </div>
-            </v-tooltip>
-            <span v-else class="text-caption text-disabled">—</span>
-          </div>
+              <div v-if="factura.es_fiscal" class="dato font-weight-bold"><span>Falta</span>
+                <span :class="factura.saldo_pendiente > 0 ? 'text-error' : 'text-success'">
+                  {{ monto(Math.max(factura.saldo_pendiente, 0), factura.currency) }}
+                </span></div>
 
-          <div class="factura-acciones flex-shrink-0 d-flex justify-end" v-if="!modo_seleccion">
-            <v-btn v-if="inv.pdf_url" icon size="small" variant="text" color="primary" :href="inv.pdf_url" target="_blank" @click.stop>
-              <v-icon size="18">mdi-open-in-new</v-icon>
-              <v-tooltip activator="parent" location="top">{{ OTRA_PESTANA }}</v-tooltip>
-            </v-btn>
-            <v-btn icon size="small" variant="text" color="success" @click.stop="abrirAbonos(inv)">
-              <v-icon size="18">mdi-cash-plus</v-icon>
-              <v-tooltip activator="parent" location="top">Abonos</v-tooltip>
-            </v-btn>
-            <v-btn v-if="inv.es_fiscal" icon size="small" variant="text" color="grey-darken-1" @click.stop="editarFactura(inv)">
-              <v-icon size="18">mdi-pencil</v-icon>
-              <v-tooltip activator="parent" location="top">Editar factura</v-tooltip>
-            </v-btn>
-            <v-menu location="bottom end">
-              <template v-slot:activator="{ props: mprops }">
-                <v-btn v-bind="mprops" icon size="small" variant="text" color="grey-darken-1" @click.stop>
-                  <v-icon size="18">mdi-dots-vertical</v-icon>
-                </v-btn>
-              </template>
-              <v-list density="compact" min-width="210">
-                <template v-if="inv.es_fiscal && inv.ordenes_vinculadas.length">
-                  <v-list-subheader class="text-caption">Desvincular orden</v-list-subheader>
-                  <v-list-item v-for="o in inv.ordenes_vinculadas" :key="o.order_id" @click="desvincularOrden(inv, o)">
-                    <template v-slot:prepend><v-icon size="18" color="grey-darken-1">mdi-link-off</v-icon></template>
-                    <v-list-item-title class="text-body-2">{{ o.order_number }}</v-list-item-title>
-                  </v-list-item>
-                  <v-divider class="my-1" />
-                </template>
-                <v-list-item @click="eliminarFactura(inv)">
-                  <template v-slot:prepend><v-icon size="18" color="error">mdi-delete-outline</v-icon></template>
-                  <v-list-item-title class="text-body-2 text-error">Eliminar factura</v-list-item-title>
-                </v-list-item>
-              </v-list>
-            </v-menu>
-          </div>
+              <div class="d-flex flex-wrap ga-2 mt-2">
+                <v-btn color="primary" variant="flat" size="small" prepend-icon="mdi-cash-plus"
+                       @click="abrirAbonos(factura)">Registrar abono</v-btn>
+                <v-btn v-if="factura.pdf_url" variant="outlined" size="small" prepend-icon="mdi-file-pdf-box"
+                       @click="abrirEnOtraPestana(factura.pdf_url)">PDF</v-btn>
+                <v-btn v-if="factura.es_fiscal" variant="outlined" size="small" prepend-icon="mdi-link-off"
+                       @click="quitar(factura)">Desvincular</v-btn>
+              </div>
+            </div>
+          </v-expand-transition>
         </div>
-      </template>
-    </table-loading-overlay>
+      </table-loading-overlay>
 
-    <fluent-pagination
-      v-if="!loading && total_items > 0"
-      :page="page"
-      :items-per-page="page_size"
-      :total-items="total_items"
-      @update:page="onPage"
-      @update:itemsPerPage="onPageSize"
-      class="flex-shrink-0"
-    />
+      <div v-if="totales.length" class="pa-3 border-t-thin flex-shrink-0">
+        <div v-for="t in totales" :key="t.currency" class="totales">
+          <div class="bg-hoja_de_apoyo rounded-lg pa-2"><div class="text-caption text-medium-emphasis">Facturado</div>
+            <div class="font-weight-medium text-no-wrap">{{ monto(t.facturado, t.currency) }}</div></div>
+          <div class="bg-hoja_de_apoyo rounded-lg pa-2"><div class="text-caption text-medium-emphasis">Cobrado</div>
+            <div class="font-weight-medium text-no-wrap">{{ monto(t.cobrado, t.currency) }}</div></div>
+          <div class="bg-hoja_de_apoyo rounded-lg pa-2"><div class="text-caption text-medium-emphasis">Falta</div>
+            <div class="font-weight-medium text-no-wrap" :class="Number(t.falta) > 0 ? 'text-error' : 'text-success'">
+              {{ monto(t.falta, t.currency) }}</div></div>
+        </div>
+      </div>
+    </template>
 
-    <dialog-factura
-      v-model="modal_crear"
-      :order="null"
-      :order_type="order_type"
-      :pdf="pdf_soltado"
-      @close="cerrarCrear"
-      @updateOrder="onFacturaCreada"
-    />
-
-    <dialog-factura
-      v-model="modal_editar"
-      :order="null"
-      :invoice-to-edit="factura_editar"
-      @close="cerrarEditar"
-      @updateOrder="onFacturaEditada"
-    />
-
-    <dialog-liquidacion
-      v-model="modal_abonos"
-      :invoice="factura_abonos"
-      @close="modal_abonos = false"
-      @updateOrder="onAbonoActualizado"
-    />
+    <dialog-invoice-payments v-model="enAbonos" :invoice="conAbonos" @close="enAbonos = false" />
   </v-card>
-  </pdf-drop-zone>
 </template>
 
 <script setup>
-import { Toast } from '@/plugins/alerts'
-import { avisarSoloPdf } from '@/utils/pdf'
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import Swal from 'sweetalert2'
-import OrderDataService from '@/services/orders/orderDataService'
-import InvoiceMappers from '@/mappers/invoiceMappers'
-import { mensajeDeError } from '@/utils/errors'
-import { useLatestRequest } from '@/composables/useLatestRequest'
-import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
-import DialogFactura from './DialogFactura.vue'
-import DialogLiquidacion from './DialogLiquidacion.vue'
-import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
-import { OTRA_PESTANA } from '@/utils/pdf'
-import { porVencer, vencimiento } from '@/utils/orders/cobro'
-import { MONEDAS, importe, monto } from '@/utils/money'
-import { ABONADO, ANULADA, CREDITO, DEUDA, EN_PROCESO, ESTADOS, EXCEDIDO, PAGADO } from '@/utils/orders/estado'
+import { useLatestRequest } from '@/composables/useLatestRequest'
+import InvoiceMappers from '@/mappers/invoiceMappers'
+import BillingDataService from '@/services/billing/billingDataService'
+import OrderDataService from '@/services/orders/orderDataService'
+import { FORMA_DE_PAGO, desvincular, estadoDe, montoDe, vincular } from '@/utils/billing/facturas'
 import { fechaCorta } from '@/utils/dates'
+import { monto } from '@/utils/money'
+import { abrirEnOtraPestana } from '@/utils/pdf'
+import DialogInvoicePayments from '@/views/billing/components/DialogInvoicePayments.vue'
 
+// Las facturas de la orden elegida; con ordenes marcadas, su buscador las vincula a todas.
 const props = defineProps({
-  order_type:            { type: Number, required: true },
+  order_type: { type: Number, required: true },
+  orden: { type: Object, default: null },
   ordenes_seleccionadas: { type: Array, default: () => [] },
-  expandido:             { type: Boolean, default: false },
-  search:                { type: String, default: '' },  // viene de Filtros Generales
-  foco_order_id:         { type: Number, default: null }, // enfocar facturas de una orden
-  foco_order_number:     { type: String, default: '' },
 })
-const emit = defineEmits(['update:expandido', 'recargar-ordenes', 'limpiar-seleccion', 'limpiar-busqueda', 'limpiar-foco-orden', 'filtrar-ordenes-por-factura'])
+const emit = defineEmits(['limpiar-seleccion', 'limpiar-foco'])
 
-const loading = ref(false)
+const VISIBLES = 5
+const vinculando = computed(() => props.ordenes_seleccionadas.length > 0)
+const aVincular = computed(() => (vinculando.value ? props.ordenes_seleccionadas : [props.orden]))
+const clientes = computed(() => [...new Set(aVincular.value.map(o => o.client_data?.name).filter(Boolean))])
+
+const titulo = computed(() => {
+  if (vinculando.value) {
+    const n = props.ordenes_seleccionadas.length
+    return `Vincular ${n} ${n === 1 ? 'orden' : 'órdenes'}`
+  }
+  return props.orden ? `Facturas de ${props.orden.order_number}` : 'Facturas'
+})
+const subtitulo = computed(() => {
+  if (vinculando.value) {
+    const numeros = props.ordenes_seleccionadas.map(o => o.order_number)
+    const resto = numeros.length - VISIBLES
+    return numeros.slice(0, VISIBLES).join(', ') + (resto > 0 ? ` y ${resto} más` : '')
+  }
+  return props.orden ? clientes.value.join(', ') : ''
+})
+
+const detalleDe = (factura) => [factura.cliente, fechaCorta(factura.invoice_date),
+  factura.es_fiscal ? '' : 'Sin comprobante'].filter(Boolean).join(' · ')
+
 const facturas = ref([])
-const total_items = ref(0)
-const page = ref(1)
-const page_size = ref(30)
-const currency_filter = ref(null)
-const estado_filter = ref(null)
-const detraccion_filter = ref(null)
-const tipo_filter = ref(null)
+const totales = ref([])
+const cargando = ref(false)
+const abierta = ref(null)
+const buscador = ref(0)
+const yaVinculadas = computed(() => (vinculando.value ? [] : facturas.value.map(f => f.id)))
 
-// El buscador ya no vive en el panel: llega de Filtros Generales por prop.
-const search_query = computed(() => props.search || '')
+const { begin, isLatest } = useLatestRequest()
 
-// Drag & drop + crear suelta
-const modal_crear = ref(false)
-const pdf_soltado = ref(null)
-
-const modal_editar = ref(false)
-const factura_editar = ref(null)
-const modal_abonos = ref(false)
-const factura_abonos = ref(null)
-
-const modo_seleccion = computed(() => props.ordenes_seleccionadas.length > 0)
-
-// Al vincular, las no-facturas no aplican: están atadas a su propia orden y no
-// pueden vincularse a otras. Se ocultan en modo selección.
-const facturas_mostradas = computed(() =>
-  modo_seleccion.value ? facturas.value.filter(f => f.es_fiscal) : facturas.value
-)
-
-const currency_options = [{ title: 'Todas las monedas', value: null }, ...MONEDAS]
-const estadoFactura = (s) => ESTADOS[s] || ESTADOS[DEUDA]
-const estado_color = (s) => estadoFactura(s).color
-const estado_texto = (s) => estadoFactura(s).texto
-
-const estado_options = [
-  { title: 'Todos los estados', value: null },
-  ...[EN_PROCESO, DEUDA, CREDITO, ABONADO, PAGADO, EXCEDIDO, ANULADA]
-    .map(value => ({ title: ESTADOS[value].texto, value })),
-]
-const detraccion_options = [
-  { title: 'Todas', value: null },
-  { title: 'Con detracción', value: 'si' },
-  { title: 'Sin detracción', value: 'no' },
-]
-// Fiscal = comprobante ante SUNAT. Interna = el registro de abonos de una orden
-// sin comprobante, que se ve en el panel pero no existe para SUNAT.
-const tipo_options = [
-  { title: 'Todos los tipos', value: null },
-  { title: 'Facturas', value: 'fiscal' },
-  { title: 'Sin comprobante', value: 'interna' },
-]
-const hay_filtros = computed(() => !!(currency_filter.value || estado_filter.value
-  || detraccion_filter.value || tipo_filter.value))
-
-// Facturas internas nacen en 0 (aún sin abono): mostramos "--" en vez de 0.00
-const montoMostrar = (inv) => {
-  const v = Number(inv.amount || 0)
-  return v > 0 ? monto(v, inv.currency) : '—'
-}
-// Resto de la factura: "Pdte X" si falta cobrar (rojo, o verde azulado si es
-// crédito que no vence), "Exc. X" (azul, color de Excedido) si pagaron de más,
-// null si está justo/pagado.
-const saldoInfo = (inv) => {
-  const s = Number(inv.saldo_pendiente || 0)
-  if (s > 0) return { text: `Pdte ${importe(s)}`, cls: porVencer(inv) ? 'text-teal' : 'text-error' }
-  if (s < 0) return { text: `Exc. ${importe(-s)}`, cls: 'text-blue-darken-1' }
-  return null
-}
-
-let searchTimeout = null
-const { begin: beginLoad, isLatest: isLatestLoad } = useLatestRequest()
-const cargar = async () => {
-  loading.value = true
-  const token = beginLoad()   // guard de secuencia: gana la carga más reciente
+async function recargar () {
+  if (!props.orden) return
+  cargando.value = true
+  const turno = begin()
   try {
-    const res = await OrderDataService.listInvoices({
-      order_type: props.order_type,
-      order_id: props.foco_order_id || undefined,
-      currency: currency_filter.value || undefined,
-      estado: estado_filter.value || undefined,
-      detraccion: detraccion_filter.value || undefined,
-      tipo: tipo_filter.value || undefined,
-      q: search_query.value || undefined,
-      page: page.value,
-      page_size: page_size.value,
-    })
-    if (!isLatestLoad(token)) return
-    facturas.value = (res.data.results || []).map(f => InvoiceMappers.getMap(f))
-    total_items.value = res.data.count ?? facturas.value.length
+    const [lista, resumen] = await Promise.all([
+      BillingDataService.listInvoices({ order_id: props.orden.id, page_size: 100 }),
+      OrderDataService.getResumen(props.orden.id),
+    ])
+    if (!isLatest(turno)) return
+    facturas.value = lista.data.results.map(InvoiceMappers.getMap)
+    totales.value = resumen.data.totales || []
+    if (conAbonos.value) conAbonos.value = facturas.value.find(f => f.id === conAbonos.value.id) || conAbonos.value
   } catch {
-    if (!isLatestLoad(token)) return
+    if (!isLatest(turno)) return
     facturas.value = []
-    total_items.value = 0
+    totales.value = []
   } finally {
-    if (isLatestLoad(token)) loading.value = false
+    if (isLatest(turno)) cargando.value = false
   }
 }
+
+// Las del cliente y las sueltas; con clientes distintos marcados, todas las del tipo.
+const buscarFacturas = (page, size, q) => BillingDataService.listInvoices({
+  page, page_size: size, q: q || undefined, tipo: 'fiscal', order_type: props.order_type,
+  cliente: clientes.value.length === 1 ? aVincular.value[0].client_data.id : undefined,
+})
+
+async function vincularA (factura) {
+  buscador.value++
+  if (!factura || !await vincular(factura, aVincular.value)) return
+  if (vinculando.value) emit('limpiar-seleccion')
+  else recargar()
+}
+
+async function quitar (factura) {
+  if (await desvincular(factura, props.orden)) recargar()
+}
+
+const enAbonos = ref(false)
+const conAbonos = ref(null)
+function abrirAbonos (factura) {
+  conAbonos.value = factura
+  enAbonos.value = true
+}
+
+watch(() => props.orden?.id, () => {
+  abierta.value = null
+  facturas.value = []
+  totales.value = []
+  recargar()
+})
 
 onMounted(() => {
-  cargar()
-  window.addEventListener('wss-reload-invoices', onWsReloadInvoices)
-  window.addEventListener('wss-update-invoice-row', onWsUpdateInvoiceRow)
+  recargar()
+  window.addEventListener('wss-reload-invoices', recargar)
+  window.addEventListener('wss-update-invoice-row', recargar)
 })
 onUnmounted(() => {
-  window.removeEventListener('wss-reload-invoices', onWsReloadInvoices)
-  window.removeEventListener('wss-update-invoice-row', onWsUpdateInvoiceRow)
+  window.removeEventListener('wss-reload-invoices', recargar)
+  window.removeEventListener('wss-update-invoice-row', recargar)
 })
-
-// RELOAD_INVOICES: se creo o borro una factura -> recargamos la lista.
-const onWsReloadInvoices = () => { cargar() }
-
-// UPDATE_ROW invoice_id: cambio una factura puntual (abono, estado, edicion).
-const onWsUpdateInvoiceRow = (event) => {
-  const invId = event.detail
-  const idx = facturas.value.findIndex(f => f.id === invId)
-  if (idx === -1) {
-    cargar()
-    return
-  }
-  OrderDataService.listInvoices({ order_type: props.order_type, invoice_id: invId })
-    .then(res => {
-      const fresca = (res.data.results || [])[0]
-      if (fresca) {
-        facturas.value[idx] = InvoiceMappers.getMap(fresca)
-        if (factura_abonos.value && factura_abonos.value.id === invId) {
-          factura_abonos.value = facturas.value[idx]
-        }
-      } else {
-        cargar()
-      }
-    })
-    .catch(() => { cargar() })
-}
-
-watch(() => props.order_type, () => { page.value = 1; cargar() })
-watch(() => props.foco_order_id, () => { page.value = 1; cargar() })
-// Expandir/contraer es solo cambio de layout: NO recargamos ni perdemos la
-// página (los datos son los mismos en ambas vistas).
-watch([currency_filter, estado_filter, detraccion_filter, tipo_filter], () => { page.value = 1; cargar() })
-watch(search_query, () => {
-  clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => { page.value = 1; cargar() }, 350)
-})
-
-const onPage = (p) => { page.value = p; cargar() }
-const onPageSize = (n) => { page_size.value = n; page.value = 1; cargar() }
-
-const puede_vincular = (inv) => {
-  if (!inv.es_fiscal) return false  // las no-facturas no se vinculan a otras órdenes
-  if (inv.order_type != null && inv.order_type !== props.order_type) return false
-  // La moneda ya NO se valida: cada factura tiene la suya y una orden puede
-  // tener facturas en distintas monedas.
-  const ids = props.ordenes_seleccionadas.map(o => o.id)
-  if (inv.ordenes_vinculadas.some(o => ids.includes(o.order_id))) return false
-  return true
-}
-
-// Motivo por el que NO se puede vincular (tooltip nativo en la fila deshabilitada).
-const motivoNoVincular = (inv) => {
-  if (inv.order_type != null && inv.order_type !== props.order_type) return 'Factura de otro tipo de orden'
-  const ids = props.ordenes_seleccionadas.map(o => o.id)
-  if (inv.ordenes_vinculadas.some(o => ids.includes(o.order_id))) return 'Ya vinculada a una orden marcada'
-  return ''
-}
-
-const confirmarVinculo = async (inv) => {
-  const ordenes = props.ordenes_seleccionadas
-  const nombres = ordenes.map(o => o.order_number).join(', ')
-  const r = await Swal.fire({
-    title: '¿Vincular a esta factura?',
-    html: `Se vincularán <b>${nombres}</b><br>a la factura <b>${inv.invoice_number || 'sin número'}</b>.`,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, vincular',
-    cancelButtonText: 'Cancelar',
-  })
-  if (!r.isConfirmed) return
-  try {
-    await OrderDataService.linkInvoice(inv.id, ordenes.map(o => o.id))
-    Toast.fire({ timer: 2200, icon: 'success', title: 'Órdenes vinculadas' })
-    emit('limpiar-seleccion')
-    cargar() // refresco inmediato (además del WS)
-  } catch (e) {
-    Swal.fire('Error', mensajeDeError(e, 'No se pudo vincular.'), 'error')
-  }
-}
-
-// ── Desvincular una orden de la factura (conserva factura + abonos) ──
-// Backend: DELETE /orders/invoices/<id>?order_id=<oid> quita solo esa
-// asignación; si era la última, borra la factura completa.
-const desvincularOrden = async (inv, orden) => {
-  const r = await Swal.fire({
-    title: '¿Desvincular esta orden?',
-    html: `Se quitará <b>${orden.order_number}</b> de la factura <b>${inv.invoice_number || 'sin número'}</b>.<br>La factura y sus abonos se conservan.`,
-    icon: 'question', showCancelButton: true,
-    confirmButtonText: 'Sí, desvincular', cancelButtonText: 'Cancelar',
-  })
-  if (!r.isConfirmed) return
-  try {
-    await OrderDataService.deleteInvoice(inv.id, orden.order_id)
-    Toast.fire({ timer: 2200, icon: 'success', title: 'Orden desvinculada' })
-    cargar()
-  } catch (e) {
-    Swal.fire('Error', mensajeDeError(e, 'No se pudo desvincular.'), 'error')
-  }
-}
-
-// ── Eliminar la factura completa (sin order_id => borra el comprobante) ──
-const eliminarFactura = async (inv) => {
-  const vinc = inv.ordenes_vinculadas.length
-  const advertencia = vinc
-    ? `Está vinculada a ${vinc} ${vinc === 1 ? 'orden' : 'órdenes'}. Se eliminará la factura y todos sus abonos.`
-    : 'Se eliminará la factura y todos sus abonos de forma permanente.'
-  const r = await Swal.fire({
-    title: '¿Eliminar esta factura?',
-    html: `<b>${inv.invoice_number || 'Sin número'}</b><br>${advertencia}`,
-    icon: 'warning', showCancelButton: true,
-    confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar',
-  })
-  if (!r.isConfirmed) return
-  try {
-    await OrderDataService.deleteInvoice(inv.id) // sin order_id => borra la factura completa
-    Toast.fire({ timer: 2200, icon: 'success', title: 'Factura eliminada' })
-    cargar()
-  } catch (e) {
-    Swal.fire('Error', mensajeDeError(e, 'No se pudo eliminar.'), 'error')
-  }
-}
-
-// Reverso del foco: desde una factura, filtra la TABLA de órdenes por su
-// número (reusa el filtro "Nro Factura"; se limpia borrando ese campo).
-const verOrdenesDeFactura = (inv) => {
-  if (!inv.invoice_number) return
-  // Toggle: si la tabla ya está filtrada por esta factura, el segundo clic limpia.
-  if (props.search === inv.invoice_number) {
-    emit('limpiar-busqueda')
-  } else {
-    emit('filtrar-ordenes-por-factura', inv.invoice_number)
-  }
-}
-
-const abrirAbonos = (inv) => { factura_abonos.value = inv; modal_abonos.value = true }
-// El refresco lo hace el WebSocket (wss-update-invoice-row). El diálogo
-// puede quedar abierto; onWsUpdateInvoiceRow refresca su factura_abonos.
-const onAbonoActualizado = () => { /* WS actualiza fila e historial */ }
-
-const editarFactura = (inv) => {
-  factura_editar.value = inv
-  nextTick(() => { modal_editar.value = true })
-}
-const cerrarEditar = () => { modal_editar.value = false; factura_editar.value = null }
-// WS (wss-update-invoice-row) refresca la fila editada.
-const onFacturaEditada = () => { cerrarEditar() }
-
-// ── Crear factura suelta (botón +) ──
-const abrirCrearSuelta = () => { pdf_soltado.value = null; modal_crear.value = true }
-const cerrarCrear = () => { modal_crear.value = false; pdf_soltado.value = null }
-// WS (wss-reload-invoices) recarga la lista al crearse.
-const onFacturaCreada = () => { cerrarCrear() }
-
-// ── Drag & drop de PDF (UI en el común PdfDropZone) ──
-// Recibe el File ya validado desde PdfDropZone y abre el modal de crear
-// factura con el; el modal lo lee.
-const onPdfDropped = (file) => {
-  pdf_soltado.value = file
-  modal_crear.value = true
-}
-// "Sin factura" se movió a la barra flotante de selección (TabOrdersService),
-// para que el header del panel no mute de tamaño entre modos.
 </script>
 
 <style scoped>
-.panel-facturas {
-  height: calc(100vh - 140px);
-  max-height: calc(100vh - 140px);
-  overflow: hidden;
-}
-/* Cabecera compacta: misma altura de arranque que la tabla de órdenes */
-.panel-header {
-  height: 48px;
-  border-bottom: 1px solid rgba(128,128,128,0.12);
-}
-.lista-scroll {
-  overflow-y: auto;
-  overflow-x: auto; /* la tabla expandida scrollea en horizontal si no cabe */
-  min-height: 0;
-}
-.lista-scroll::-webkit-scrollbar { width: 8px; }
-.lista-scroll::-webkit-scrollbar-track { background: transparent; }
-.lista-scroll::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.35); border-radius: 4px; }
-.lista-scroll::-webkit-scrollbar-thumb:hover { background: rgba(128,128,128,0.55); }
-
-/* ── Fila compacta ── */
-.factura-row {
-  height: 56px;
-  border-bottom: 1px solid rgba(128,128,128,0.12);
-  gap: 12px;
-  transition: background-color 0.15s ease;
-}
-.factura-row--selectable { cursor: pointer; }
-.factura-row--selectable:hover { background-color: rgba(var(--v-theme-primary), 0.08); }
-/* Sin pointer-events:none para que el tooltip nativo (:title) con el motivo
-   se muestre al pasar el cursor. El @click ya no dispara (puede_vincular=false). */
-.factura-row--disabled { opacity: 0.45; cursor: not-allowed; }
-
-.estado-dot { width: 8px; height: 8px; border-radius: 50%; }
-.factura-main    { min-width: 0; }
-.factura-monto   { width: 110px; }
-.factura-ordenes { width: 52px; }
-.factura-acciones{ width: 140px; }
-
-/* ── Tabla expandida (columnas reales con headers) ── */
-.tabla-header {
-  height: 36px;
-  position: sticky;      /* fijo al scrollear vertical */
-  top: 0;
-  z-index: 2;
-  background: rgb(var(--v-theme-surface)); /* opaco para tapar filas debajo */
-  border-bottom: 1px solid rgba(128,128,128,0.18);
-  gap: 8px;
-  min-width: 1040px;     /* mantiene los anchos de columna; scroll-x si no cabe */
-}
-.factura-row-exp {
-  height: 52px;
-  border-bottom: 1px solid rgba(128,128,128,0.10);
-  gap: 8px;
-  min-width: 1040px;     /* igual que el header, para que scrolleen juntos */
-  transition: background-color 0.15s ease;
-}
-.factura-row-exp:hover { background-color: rgba(128,128,128,0.05); }
-/* Anchos de columna compartidos entre header y filas */
-.col-estado   { width: 18px; flex-shrink: 0; }
-.col-numero   { width: 160px; flex-shrink: 0; }
-.col-fecha    { width: 96px; flex-shrink: 0; }
-.col-monto    { width: 120px; flex-shrink: 0; }
-.col-detr     { width: 110px; flex-shrink: 0; }
-.col-abonado  { width: 120px; flex-shrink: 0; }
-.col-estado-txt { width: 110px; flex-shrink: 0; }
-/* Todas las píldoras de estado con el MISMO ancho (el de la palabra más larga,
-   "En proceso") y el texto centrado — así no quedan de tamaños disparejos. */
-.estado-chip { min-width: 96px; justify-content: center; }
-.col-ordenes  { flex-grow: 1; min-width: 60px; }
-.col-acciones { width: 148px; flex-shrink: 0; }
+.panel-facturas { max-height: 85vh; }
+.lista { overflow-y: auto; min-height: 0; }
+.fila { cursor: pointer; }
+.fila:hover { background-color: rgba(var(--v-theme-on-surface), 0.04); }
+.dato { display: flex; justify-content: space-between; gap: 0.5rem; padding-top: 0.25rem; font-size: 0.8125rem; }
+.totales { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: 0.5rem; }
+.totales + .totales { margin-top: 0.5rem; }
 </style>

@@ -40,8 +40,9 @@ export default {
 
       // ─── ÓRDENES VINCULADAS ───
       ordenes_vinculadas: element.ordenes_vinculadas || [],
+      cliente: element.cliente || null,
 
-      // ─── HISTORIAL DE ABONOS (para DialogLiquidacion cuando se abre desde el panel) ───
+      // ─── HISTORIAL DE ABONOS (para DialogInvoicePayments cuando se abre desde el panel) ───
       payments: element.payments || [],
 
       created_at: element.created_at || null,

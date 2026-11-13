@@ -222,12 +222,13 @@ import { Toast } from '@/plugins/alerts'
 import { ref, reactive, watch, computed } from 'vue'
 import { useTheme } from 'vuetify'
 import Swal from 'sweetalert2'
-import OrderDataService from '@/services/orders/orderDataService'
+import BillingDataService from '@/services/billing/billingDataService'
 import { useAppStore } from '@/stores/appStore'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 import { fechaCorta, hoyISO } from '@/utils/dates'
 import { monto, nombreDe, simboloDe } from '@/utils/money'
+import { mensajeDeError } from '@/utils/errors'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -312,11 +313,11 @@ const save = async () => {
     // desde una orden sin factura, cae al endpoint de orden.
     let peticion
     if (editando.value) {
-      peticion = OrderDataService.updatePayment(pago_id_editar.value, data)
+      peticion = BillingDataService.updatePayment(pago_id_editar.value, data)
     } else if (props.invoice) {
-      peticion = OrderDataService.createInvoicePayment(props.invoice.id, data)
+      peticion = BillingDataService.createInvoicePayment(props.invoice.id, data)
     } else {
-      peticion = OrderDataService.liquidate(props.order.id, data)
+      peticion = BillingDataService.liquidate(props.order.id, data)
     }
 
     peticion
@@ -324,6 +325,9 @@ const save = async () => {
         emit('updateOrder')
         closeDialog()
         Swal.fire(appStore.successSavedOptions)
+      })
+      .catch((err) => {
+        Swal.fire('Operación rechazada', mensajeDeError(err, 'No se pudo guardar el abono.'), 'error')
       })
       .finally(() => {
         is_on_sending_process.value = false
@@ -361,7 +365,7 @@ const eliminarPago = (id) => {
     confirmButtonText: 'Sí, eliminar'
   }).then((result) => {
     if (result.isConfirmed) {
-      OrderDataService.deletePayment(id).then(() => {
+      BillingDataService.deletePayment(id).then(() => {
         Toast.fire({ timer: 2200, icon: 'success', title: 'Abono eliminado' })
       }).catch(() => {
         Swal.fire('Error', 'No se pudo eliminar el abono.', 'error')

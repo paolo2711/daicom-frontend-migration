@@ -55,3 +55,30 @@ export const ACCIONES_GUIA = [
     visible: ([guia]) => SE_ANULAN.includes(guia.estado),
   },
 ]
+
+// Lo que se puede hacer con una factura en la pestaña Facturas. El contenedor sin comprobante no se edita ni se vincula.
+export const ACCIONES_FACTURA = [
+  {
+    clave: 'pdf', grupo: 'ver', varios: false,
+    icono: 'mdi-open-in-new', texto: OTRA_PESTANA,
+    disponible: ([factura]) => Boolean(factura.pdf_url),
+  },
+  {
+    clave: 'abonos', grupo: 'trabajo', varios: false,
+    icono: 'mdi-cash-plus', texto: 'Abonos',
+  },
+  {
+    clave: 'editar', grupo: 'trabajo', varios: false,
+    icono: 'mdi-pencil', texto: 'Editar factura',
+    visible: ([factura]) => factura.es_fiscal,
+  },
+  {
+    clave: 'desvincular', grupo: 'trabajo', varios: false,
+    icono: 'mdi-link-off', texto: 'Desvincular una orden',
+    visible: ([factura]) => factura.es_fiscal && factura.ordenes_vinculadas.length > 0,
+  },
+  {
+    clave: 'eliminar', grupo: 'peligro', varios: false,
+    icono: 'mdi-delete-outline', texto: 'Eliminar factura',
+  },
+]

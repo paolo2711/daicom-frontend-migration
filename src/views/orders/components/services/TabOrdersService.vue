@@ -123,7 +123,7 @@
 
     <v-row class="mt-2 mx-0">
       <!-- COLUMNA IZQUIERDA: TABLA OPERATIVA (65% aprox) -->
-      <v-col cols="12" :md="panel_expandido ? 0 : 8" v-show="!panel_expandido" class="pa-0 pr-md-2 transition-swing">
+      <v-col cols="12" md="8" class="pa-0 pr-md-2">
         <table-loading-overlay :loading="loading_list" :isEmpty="orders.length === 0">
           <v-data-table-server
             v-model="ordenes_seleccionadas"
@@ -243,27 +243,15 @@
       </v-col>
 
       <!-- COLUMNA DERECHA: PANEL DE FACTURAS (35% aprox) -->
-      <v-col cols="12" :md="panel_expandido ? 12 : 4" class="pa-0 pl-md-2 transition-swing">
+      <v-col cols="12" md="4" class="pa-0 pl-md-2">
         <div class="panel-sticky-wrapper">
-        <panel-facturas 
-          :order_type="SERVICIO"
-          :ordenes_seleccionadas="ordenes_seleccionadas"
-          :search="filter_invoice"
-          :foco_order_id="foco_order_id"
-          :foco_order_number="foco_order_number"
-          v-model:expandido="panel_expandido"
-          @recargar-ordenes="retrieveOrders"
-          @limpiar-seleccion="ordenes_seleccionadas = []"
-          @limpiar-busqueda="filter_invoice = ''; applyFilters()"
-          @limpiar-foco-orden="foco_order_id = null; foco_order_number = ''"
-          @filtrar-ordenes-por-factura="filter_invoice = $event; applyFilters()"
-        />
+        <panel-facturas :order_type="SERVICIO" :orden="foco" :ordenes_seleccionadas="ordenes_seleccionadas"
+                        @limpiar-seleccion="ordenes_seleccionadas = []" @limpiar-foco="foco = null" />
         </div>
       </v-col>
     </v-row>
 
-    <!-- Con órdenes marcadas, el panel de facturas ya está en modo vincular:
-         tocar una factura ahí las vincula. -->
+    <!-- Con órdenes marcadas, la factura que se elige en el buscador del panel las vincula. -->
     <selection-bar
       :count="ordenes_seleccionadas.length"
       label="seleccionada(s)"
@@ -278,7 +266,7 @@
     <!-- MODALES -->
     <batch-action-modal ref="batchActionModalRef" />
 
-    <dialog-factura v-model="factura_modal" :order="selected_order" :orders="ordenes_factura_multi" :order_type="SERVICIO" @updateOrder="onFacturaGuardada" @close="cerrarFacturaModal" />
+    <dialog-invoice v-model="factura_modal" :order="selected_order" :orders="ordenes_factura_multi" :order_type="SERVICIO" @updateOrder="onFacturaGuardada" @close="cerrarFacturaModal" />
     <add-order ref="editarOrdenRef" @guardada="alCambiarLineas" />
     <certificate-modal ref="certificateModalRef" />
   </div>
@@ -309,12 +297,12 @@ import { throttle } from '@/utils/throttle'
 import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemaforoFinanciero } from '@/utils/orders/cobro'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
-import DialogFactura from '../DialogFactura.vue'
+import DialogInvoice from '@/views/billing/components/DialogInvoice.vue'
 import AddOrder from '../AddOrder.vue'
 import TableServiceDetails from './TableServiceDetails.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import CertificateModal from '@/views/certificates/components/CertificateModal.vue'
-import PanelFacturas from '../PanelFacturas.vue' // NUEVO COMPONENTE DE LA FASE 3
+import PanelFacturas from '../PanelFacturas.vue'
 import { defineAsyncComponent } from 'vue'
 
 const BatchActionModal = defineAsyncComponent(() => import('@/views/certificates/components/BatchActionModal.vue'))
@@ -330,7 +318,6 @@ const ordenes_seleccionadas = ref([])
 const equipos_seleccionados = ref([])
 watch(ordenes_seleccionadas, (v) => { if (v.length) equipos_seleccionados.value = [] })
 watch(equipos_seleccionados, (v) => { if (v.length) ordenes_seleccionadas.value = [] })
-const panel_expandido = ref(false)
 
 // Nuevos estados UI de Filtros Avanzados y Chips
 const mostrar_filtros_avanzados = ref(false)
@@ -405,18 +392,8 @@ const options = ref({ page: 1, itemsPerPage: 30 })
 const filter_order = ref('')
 const filter_correlative = ref('')
 const filter_invoice = ref('')
-const foco_order_id = ref(null)
-const foco_order_number = ref('')
+const foco = ref(null)
 
-// Ver (foco) y seleccionar (vincular) son modos excluyentes. Al MARCAR órdenes
-// (selección no vacía) soltamos el foco. Si la selección quedó vacía NO tocamos
-// el foco: así no pisamos un foco recién puesto por el semáforo.
-watch(ordenes_seleccionadas, (val) => {
-  if (val.length > 0 && foco_order_id.value !== null) {
-    foco_order_id.value = null
-    foco_order_number.value = ''
-  }
-})
 const filter_client_id = ref(null)
 const filter_date_gt = ref('')
 const filter_date_lt = ref('')
@@ -429,9 +406,6 @@ const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestReques
 
 // Funciones de filtro
 const applyFilters = () => {
-  // Si el panel de facturas está maximizado, tapa la tabla: al filtrar lo
-  // achicamos para que se vean los resultados.
-  panel_expandido.value = false
   options.value.page = 1
   retrieveOrders()
   cargarResumenes() // Sincroniza las píldoras cada vez que filtras
@@ -522,24 +496,17 @@ const manejarClicFila = (event, { item }) => {
   }
 }
 
-// Clic en el semáforo: si la orden tiene factura(s), enfoca el panel en
-// TODAS ellas (por order_id, no por número — así una orden con 2+ facturas
-// las muestra todas). Si está libre, la selecciona para vincular.
+// Clic en el semáforo: el panel muestra las facturas de esa orden; otro clic lo suelta.
 const seleccionarFacturaEnPanel = (o) => {
-  // Siempre "ver": enfoca las facturas de esta orden (toggle). Para vincular
-  // se usa el checkbox, no este botón. Al enfocar soltamos cualquier selección
-  // (ver y vincular son excluyentes) para que el panel no quede en modo vincular.
-  if (foco_order_id.value === o.id) {
-    foco_order_id.value = null
-    foco_order_number.value = ''
+  if (foco.value?.id === o.id) {
+    foco.value = null
   } else {
-    if (ordenes_seleccionadas.value.length > 0) ordenes_seleccionadas.value = []
-    foco_order_id.value = o.id
-    foco_order_number.value = o.order_number
+    ordenes_seleccionadas.value = []
+    foco.value = o
   }
 }
 
-// Una sola factura para todas: DialogFactura la crea y les vincula las ordenes.
+// Una sola factura para todas: DialogInvoice la crea y les vincula las ordenes.
 // La moneda se elige ahi, la orden no tiene.
 const facturar = (ordenes) => {
   selected_order.value = null

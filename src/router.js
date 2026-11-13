@@ -98,6 +98,15 @@ const routes = [
             },
             component: () => import("@/views/billing/components/TabDispatchGuides.vue"),
           },
+          {
+            name: "billing-invoices",
+            path: "facturas",
+            meta: {
+              pestana: { texto: "Facturas", icono: "mdi-file-document-multiple-outline" },
+              nuevo: { texto: "Subir factura", icono: "mdi-file-upload-outline" },
+            },
+            component: () => import("@/views/billing/components/TabInvoices.vue"),
+          },
         ],
       },
       {

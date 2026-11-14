@@ -18,6 +18,8 @@ class CompanyMappers {
             invoice_series: element.invoice_series,
             bank_accounts: element.bank_accounts || [],
             invoice_correlative: element.invoice_correlative,
+            credit_note_series: element.credit_note_series,
+            credit_note_correlative: element.credit_note_correlative,
             detraction_account: element.detraction_account,
             order_service_correlative: element.order_service_correlative,
             order_rental_correlative: element.order_rental_correlative,

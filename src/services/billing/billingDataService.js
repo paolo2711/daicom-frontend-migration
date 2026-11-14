@@ -53,6 +53,20 @@ class BillingDataService {
   invoiceAmounts(datos, orderType) {
     return axios.post("billing/invoices/montos/", { datos, order_type: orderType }, { headers: authHeader() });
   }
+  // La nota de credito de una factura.
+  newCreditNote(facturaId) {
+    return axios.get(`billing/invoices/${facturaId}/nota/nueva/`, { headers: authHeader() });
+  }
+  creditNoteAmounts(facturaId, datos) {
+    return axios.post(`billing/invoices/${facturaId}/nota/montos/`, { datos }, { headers: authHeader() });
+  }
+  previewCreditNote(facturaId, datos) {
+    const opciones = { headers: authHeader(), responseType: "blob" };
+    return archivoDe(axios.post(`billing/invoices/${facturaId}/nota/vista-previa/`, { datos }, opciones));
+  }
+  emitCreditNote(facturaId, datos) {
+    return axios.post(`billing/invoices/${facturaId}/nota/`, { datos }, { headers: authHeader() });
+  }
   previewInvoice(datos) {
     const opciones = { headers: authHeader(), responseType: "blob" };
     return archivoDe(axios.post("billing/invoices/vista-previa/", datos, opciones));

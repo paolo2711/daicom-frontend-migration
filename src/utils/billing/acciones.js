@@ -116,6 +116,11 @@ export const ACCIONES_FACTURA = [
     visible: ([factura]) => factura.es_fiscal && factura.ordenes_vinculadas.length > 0,
   },
   {
+    clave: 'nota', grupo: 'peligro', varios: false,
+    icono: 'mdi-file-undo-outline', texto: 'Nota de crédito',
+    visible: ([factura]) => factura.lleva_nota,
+  },
+  {
     clave: 'anular', grupo: 'peligro', varios: false,
     icono: 'mdi-cancel', texto: 'Anular',
     visible: ([factura]) => factura.anulable,

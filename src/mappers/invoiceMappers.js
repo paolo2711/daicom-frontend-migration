@@ -53,6 +53,10 @@ export default {
       respuesta: element.respuesta || {},
       anulable: element.anulable || false,
       baja_en_proceso: element.baja_en_proceso || false,
+      // Sus notas de credito y lo que bajaron.
+      notas: element.notas || [],
+      rebajado: element.rebajado != null ? Number(element.rebajado) : 0,
+      lleva_nota: element.lleva_nota || false,
 
       // ─── HISTORIAL DE ABONOS (para DialogInvoicePayments cuando se abre desde el panel) ───
       payments: element.payments || [],

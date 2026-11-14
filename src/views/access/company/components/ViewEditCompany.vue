@@ -94,6 +94,18 @@
                               :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
               </v-col>
 
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.credit_note_series" label="Serie de notas de crédito" maxlength="4"
+                              placeholder="F005" density="compact" variant="outlined" hide-details="auto"
+                              :disabled="!isEditing" />
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.credit_note_correlative" label="Correlativo de notas de crédito"
+                              density="compact" variant="outlined" type="number" min="1" hide-details="auto"
+                              :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+
 
               <v-col cols="12" md="4">
                 <v-text-field v-model="company.order_service_correlative" label="Correlativo Orden de Servicio" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
@@ -294,6 +306,8 @@ const company = reactive({
   ubigeo: '',
   invoice_series: '',
   invoice_correlative: '',
+  credit_note_series: '',
+  credit_note_correlative: '',
   detraction_account: '',
   order_service_correlative: '',
   order_rental_correlative: '',

@@ -153,7 +153,7 @@ async function recargar () {
   const turno = begin()
   try {
     const [lista, resumen] = await Promise.all([
-      BillingDataService.listInvoices({ order_id: props.orden.id, page_size: 100 }),
+      BillingDataService.listInvoices({ order_id: props.orden.id, page_size: 100, con_abonos: true }),
       OrderDataService.getResumen(props.orden.id),
     ])
     if (!isLatest(turno)) return

@@ -269,7 +269,17 @@ const dialogModel = computed({
 // Unifica el contexto: el abono puede abrirse desde una FACTURA (caso
 // normal, panel) o desde una ORDEN (compatibilidad). La factura manda.
 const monedaActual = computed(() => props.invoice?.currency || 'PEN')
-const historialPagos = computed(() => props.invoice?.payments || props.order?.payments || [])
+// Los de la factura se piden al abrir: la fila de la tabla solo trae cuantos son.
+const abonosDeLaFactura = ref([])
+const historialPagos = computed(() => (props.invoice ? abonosDeLaFactura.value : props.order?.payments || []))
+async function cargarAbonos () {
+  if (!props.invoice) return
+  try {
+    abonosDeLaFactura.value = (await BillingDataService.listInvoicePayments(props.invoice.id)).data
+  } catch (error) {
+    Swal.fire('No se cargaron los abonos', mensajeDeError(error, 'No se pudieron leer los abonos.'), 'error')
+  }
+}
 
 // Lo que el cliente debe: el total, la detraccion que va al Banco de la Nacion, lo abonado y el saldo.
 const saldo = computed(() => Math.max(Number(props.invoice?.saldo_pendiente) || 0, 0))
@@ -316,6 +326,8 @@ watch(() => props.modelValue, (val) => {
   if (val) {
     resetLocalForm()
     if (saldo.value > 0) payment_data.amount = saldo.value
+    abonosDeLaFactura.value = props.invoice?.payments || []
+    cargarAbonos()
   }
 })
 
@@ -403,6 +415,7 @@ const eliminarPago = (id) => {
     if (result.isConfirmed) {
       BillingDataService.deletePayment(id).then(() => {
         Toast.fire({ timer: 2200, icon: 'success', title: 'Abono eliminado' })
+        cargarAbonos()
       }).catch(() => {
         Swal.fire('Error', 'No se pudo eliminar el abono.', 'error')
       })

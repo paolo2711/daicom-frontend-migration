@@ -56,6 +56,7 @@ export default {
 
       // ─── HISTORIAL DE ABONOS (para DialogInvoicePayments cuando se abre desde el panel) ───
       payments: element.payments || [],
+      cantidad_de_abonos: element.cantidad_de_abonos ?? (element.payments || []).length,
 
       created_at: element.created_at || null,
     };

@@ -92,6 +92,9 @@ class BillingDataService {
   extractInvoiceData(data) {
     return axios.post("billing/invoices/extract/", data, { headers: authHeader() });
   }
+  listInvoicePayments(invoiceId) {
+    return axios.get(`billing/invoices/${invoiceId}/payments/`, { headers: authHeader() });
+  }
   createInvoicePayment(invoiceId, data) {
     return axios.post(`billing/invoices/${invoiceId}/payments/`, data, { headers: authHeader() });
   }

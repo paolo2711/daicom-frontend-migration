@@ -55,7 +55,7 @@ export const anulada = (factura) => factura.status === ANULADA
 // La columna Cobro: cuanto falta, lo abonado de lo que el cliente paga y la barra. La sin comprobante, lo cobrado.
 export function cobroDe (factura) {
   const { por_cobrar: neto, total_pagado: pagado, saldo_pendiente: saldo, currency } = factura
-  const abonos = `${factura.payments.length} ${factura.payments.length === 1 ? 'abono' : 'abonos'}`
+  const abonos = `${factura.cantidad_de_abonos} ${factura.cantidad_de_abonos === 1 ? 'abono' : 'abonos'}`
   if (anulada(factura)) return { texto: 'Anulada', detalle: pagado > 0 ? abonos : '', porcentaje: null }
   if (!factura.es_fiscal) {
     return { texto: pagado > 0 ? `Cobrado ${monto(pagado, currency)}` : 'Sin abonos', detalle: '', porcentaje: null }

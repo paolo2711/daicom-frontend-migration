@@ -92,6 +92,7 @@
     </template>
 
     <dialog-invoice-payments v-model="enAbonos" :invoice="conAbonos" @close="enAbonos = false" />
+    <dialog-invoice v-model="subiendo" :orders="aCobrar" @close="recargar" />
   </v-card>
 </template>
 
@@ -112,7 +113,9 @@ import { CAMPO } from '@/utils/fields'
 import { monto } from '@/utils/money'
 import { SIN_COMPROBANTE, marcaDe } from '@/utils/orders/sinFactura'
 import { abrirEnOtraPestana } from '@/utils/pdf'
+import DialogInvoice from '@/views/billing/components/DialogInvoice.vue'
 import DialogInvoicePayments from '@/views/billing/components/DialogInvoicePayments.vue'
+import { SUBIR } from '@/utils/orders/acciones'
 
 // El cobro de la orden elegida, o de las marcadas: sus comprobantes, vincular, emitir o cobrar sin comprobante.
 const props = defineProps({
@@ -203,7 +206,13 @@ function abrirAbonos (factura) {
 }
 
 // Al dejar una orden sin comprobante se abre el abono de su registro interno; se puede cerrar sin cobrar.
+// Subir la de KeyFacil abre su dialogo aca; lo demas lo hace la pantalla de ordenes.
+const subiendo = ref(false)
 async function hacer (clave) {
+  if (clave === SUBIR) {
+    subiendo.value = true
+    return
+  }
   const cobrarYa = clave === SIN_COMPROBANTE && !vinculando.value && marcaDe(aCobrar.value) !== SIN_COMPROBANTE
   const hecho = await props.ejecutarAccion(clave, aCobrar.value)
   if (!hecho || !cobrarYa) return

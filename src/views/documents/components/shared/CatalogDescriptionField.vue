@@ -4,7 +4,7 @@
                 :maxlength="maxlength - (fila.servicio ? fila.servicio.length + 1 : 0)" rows="1" no-resize
                 density="compact" variant="outlined" hide-details :loading="loading && abierto"
                 :class="['crece-con-texto', { 'con-servicio': fila.servicio, 'texto-abajo': textoAbajo }]"
-                @update:model-value="escribir" @focus="enfocado = true" @blur="enfocado = false"
+                @update:model-value="escribir" @focus="alEnfocar" @blur="enfocado = false"
                 @keydown.esc="cerrado = true">
       <template v-if="fila.servicio" #prepend-inner>
         <v-chip ref="pildora" size="small" variant="tonal" prepend-icon="mdi-book-open-variant" closable
@@ -12,13 +12,18 @@
           {{ fila.servicio }}
         </v-chip>
       </template>
-      <template #append-inner><inner-counter :valor="fila.description" :max="maxlength" /></template>
+      <template #append-inner>
+        <inner-counter :valor="fila[campo]" :max="maxlength" />
+        <v-icon v-if="desplegable && !fila.servicio" class="cursor-pointer" :title="abierto ? 'Cerrar la lista' : 'Ver la lista'"
+                @mousedown.prevent @click="alternarLista">{{ abierto ? 'mdi-menu-up' : 'mdi-menu-down' }}</v-icon>
+      </template>
     </v-textarea>
     <v-menu :model-value="abierto" activator="parent" :open-on-click="false" location="bottom start"
             :width="anchoDelMenu" max-height="320">
       <v-list>
-        <v-list-item v-for="s in items" :key="s.id" :title="s.nombre" @mousedown.prevent @click="elegir(s)"
-                     :subtitle="`Estándar ${monto(s.precio_estandar)} · Corporativo ${monto(s.precio_corporativo)}`" />
+        <v-list-item v-for="s in items" :key="s.id" :title="s.nombre ?? s.nombre_tecnico" @mousedown.prevent
+                     :subtitle="deEquipos ? undefined : `Estándar ${monto(s.precio_estandar)} · Corporativo ${monto(s.precio_corporativo)}`"
+                     @click="elegir(s)" />
         <more-results-hint v-if="total > items.length" />
       </v-list>
     </v-menu>
@@ -29,12 +34,13 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import InnerCounter from '@/components/shared/InnerCounter.vue'
 import MoreResultsHint from '@/components/shared/MoreResultsHint.vue'
+import EquipmentDataService from '@/services/equipments/equipmentDataService'
 import ServicioCatalogoDataService from '@/services/equipments/servicioCatalogoDataService'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { monto } from '@/utils/money'
 
-// Busca en el catalogo mientras se escribe; el servicio elegido queda como pildora y solo su "x" lo suelta.
-// 'elegido' lleva el servicio, para ofrecer sus precios mientras se edita.
+// Sugiere del catalogo mientras se escribe y deja cualquier texto. Un servicio queda como pildora con su precio;
+// un equipo solo escribe su nombre. 'elegido' lleva lo elegido.
 const emit = defineEmits(['elegido'])
 
 const props = defineProps({
@@ -42,18 +48,27 @@ const props = defineProps({
   moneda: { type: String, default: 'PEN' },
   placeholder: { type: String, default: '' },
   maxlength: { type: Number, required: true },
+  catalogo: { type: String, default: 'servicios', validator: (v) => ['servicios', 'equipos'].includes(v) },
+  // El campo de `fila` donde va el texto.
+  campo: { type: String, default: 'description' },
+  // Con su flecha: al entrar sin texto muestra la lista entera.
+  desplegable: { type: Boolean, default: false },
+  // Al elegir un servicio pone su precio estandar; sin el, el precio vuelve a cero y se elige uno de los dos.
+  conPrecio: { type: Boolean, default: true },
 })
+const deEquipos = props.catalogo === 'equipos'
 
 const LETRAS_PARA_BUSCAR = 2
 
-const { items, loading, searchQuery, total } = usePaginatedSearch(ServicioCatalogoDataService.getFiltered, x => x)
+const buscar = deEquipos ? EquipmentDataService.getFiltered : ServicioCatalogoDataService.getFiltered
+const { items, loading, searchQuery, total } = usePaginatedSearch(buscar, x => x)
 
 const campo = ref(null)
 
 // Con pildora, el campo muestra solo lo que va despues del servicio.
 const texto = computed(() => (props.fila.servicio
-  ? (props.fila.description || '').slice(props.fila.servicio.length).trimStart()
-  : props.fila.description))
+  ? (props.fila[props.campo] || '').slice(props.fila.servicio.length).trimStart()
+  : props.fila[props.campo]))
 
 // La pildora va encima de la primera linea y el texto sigue despues de ella, como texto corrido;
 // si la primera palabra no entra a su lado, el texto empieza abajo. Se mide solo al cambiar de tamaño.
@@ -89,9 +104,24 @@ const medidas = computed(() => ({
 const enfocado = ref(false)
 const cerrado = ref(false)
 
-const termino = computed(() => (props.fila.description || '').trim())
-const abierto = computed(() => enfocado.value && !cerrado.value && !props.fila.servicio
-  && termino.value.length >= LETRAS_PARA_BUSCAR && searchQuery.value === termino.value && items.value.length > 0)
+const termino = computed(() => (props.fila[props.campo] || '').trim())
+const buscable = computed(() => termino.value.length >= LETRAS_PARA_BUSCAR || (props.desplegable && !termino.value))
+const abierto = computed(() => enfocado.value && !cerrado.value && !props.fila.servicio && buscable.value
+  && searchQuery.value === (termino.value || '') && items.value.length > 0)
+
+function alEnfocar () {
+  enfocado.value = true
+  if (props.desplegable && !termino.value) searchQuery.value = ''
+}
+function alternarLista () {
+  if (abierto.value) {
+    cerrado.value = true
+    return
+  }
+  cerrado.value = false
+  campo.value?.querySelector('textarea')?.focus()
+  searchQuery.value = termino.value.length >= LETRAS_PARA_BUSCAR ? termino.value : ''
+}
 
 // Se mide al abrir: leer el ancho en cada dibujo obliga a recalcular toda la pagina.
 const anchoDelMenu = ref(undefined)
@@ -99,27 +129,35 @@ watch(abierto, (si) => { if (si) anchoDelMenu.value = campo.value?.offsetWidth }
 
 function escribir (escrito) {
   if (props.fila.servicio) {
-    props.fila.description = escrito ? `${props.fila.servicio} ${escrito}` : props.fila.servicio
+    props.fila[props.campo] = escrito ? `${props.fila.servicio} ${escrito}` : props.fila.servicio
     return
   }
-  props.fila.description = escrito
+  props.fila[props.campo] = escrito
   cerrado.value = false
   const buscado = (escrito || '').trim()
-  if (buscado.length >= LETRAS_PARA_BUSCAR) searchQuery.value = buscado
+  if (buscado.length >= LETRAS_PARA_BUSCAR || (props.desplegable && !buscado)) searchQuery.value = buscado
 }
 
 function soltar () {
-  Object.assign(props.fila, { description: texto.value, servicio: null, equipo: null, tipo_servicio: null })
+  Object.assign(props.fila, { [props.campo]: texto.value, servicio: null, equipo: null, tipo_servicio: null })
 }
 
-function elegir (servicio) {
-  props.fila.description = servicio.nombre
+function elegir (elegido) {
+  if (deEquipos) {
+    props.fila[props.campo] = elegido.nombre_tecnico
+    cerrado.value = true
+    emit('elegido', elegido)
+    return
+  }
+  const servicio = elegido
+  props.fila[props.campo] = servicio.nombre
   props.fila.servicio = servicio.nombre
   props.fila.equipo = servicio.equipo
   props.fila.tipo_servicio = servicio.tipo_servicio
   emit('elegido', servicio)
   // Los precios del catalogo son en soles: en dolares no se ponen.
-  if (props.moneda === 'PEN') props.fila.unit_price = Number(servicio.precio_estandar)
+  if (!props.conPrecio) props.fila.unit_price = 0
+  else if (props.moneda === 'PEN') props.fila.unit_price = Number(servicio.precio_estandar)
 }
 </script>
 

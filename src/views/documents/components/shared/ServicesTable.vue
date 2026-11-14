@@ -8,7 +8,7 @@
           <v-icon size="small" class="mr-1">mdi-format-list-numbered</v-icon> {{ tipo.etiquetaItems }}
         </div>
         <v-spacer />
-        <v-btn v-if="grupos" variant="outlined" prepend-icon="mdi-format-list-group" class="mr-2"
+        <v-btn variant="outlined" prepend-icon="mdi-format-list-group" class="mr-2"
                @click="items.push(grupoVacio())">
           Añadir grupo
         </v-btn>
@@ -51,7 +51,6 @@
       <service-row v-for="(fila, i) in visibles" :key="clave(fila)" v-bind="arrastrable(i)" :class="claseDe(i)"
                    :fila="fila" :indice="i" :numero="numeros[i]" :primera="i === 0" :ultima="i === items.length - 1"
                    :error="errores[i]" :moneda="moneda" :tipo="tipo" :acreditaciones="acreditaciones" :asa="asa(i)"
-                   :igv-por-item="igvPorItem"
                    @mover="moverFila" @borrar="borrarFila" />
     </div>
 
@@ -96,9 +95,6 @@ defineProps({
   errores: { type: Object, default: () => ({}) },
   // El de TIPOS_DE_COTIZACION: titulo, unidad por defecto y ejemplo.
   tipo: { type: Object, required: true },
-  // La factura no lleva grupos: SUNAT recibe solo items.
-  grupos: { type: Boolean, default: true },
-  igvPorItem: { type: Boolean, default: false },
 })
 
 // Las acreditaciones que se pueden declarar hoy; sin ninguna, no hay boton.

@@ -7,9 +7,9 @@
         density="compact"
         prepend-inner-icon="mdi-calendar"
         readonly
-        v-bind="props"
         variant="outlined"
         hide-details="auto"
+        v-bind="{ ...campo, ...props }"
       />
     </template>
     <v-date-picker :model-value="dateObj" :min="min" :max="max" @update:model-value="onDateChange" />
@@ -25,7 +25,9 @@ const props = defineProps({
   label: String,
   // 'YYYY-MM-DD': los dias anteriores a `min` y posteriores a `max` no se pueden elegir.
   min: String,
-  max: String
+  max: String,
+  // Props de mas para el campo, como el redondeado de las pantallas de trabajo.
+  campo: { type: Object, default: () => ({}) },
 })
 
 const emit = defineEmits(['setPickedDate'])

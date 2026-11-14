@@ -39,8 +39,8 @@ export const OPCIONES_NUEVA_FACTURA = [
   { valor: SUBIR, texto: 'Subir de KeyFacil', detalle: 'Su PDF, para cobrarla', icono: 'mdi-file-upload-outline' },
 ]
 
-// Lo que la tabla de items de la cotizacion necesita saber de la factura.
-export const TIPO_DE_FACTURA = { etiquetaItems: 'Ítems', unidad: 'und', ejemploItem: 'Ej: Calibración de manómetro' }
+// La unidad de los items de la factura; a SUNAT va como servicio (ZZ).
+export const UNIDAD_DE_FACTURA = 'und'
 
 export const FORMA_DE_PAGO = { EFECTIVO: 'efectivo', BILLETERA: 'billetera virtual', TRANSFERENCIA: 'transferencia' }
 

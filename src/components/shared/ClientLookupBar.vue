@@ -5,7 +5,8 @@
         :class="{ 'cliente-que-baja': forma === 'apilada' }"
         :model-value="modelValue"
         :seed="clienteSembrado"
-        label="Cliente (nombre o documento)"
+        :label="forma === 'apilada' ? 'Cliente' : 'Cliente (nombre o documento)'"
+        v-bind="campo"
         no-data-text="Sin coincidencias. Puede buscar por RUC/DNI en SUNAT/RENIEC →"
         @update:model-value="onPickLocal"
         @selected="onPickCliente"
@@ -16,10 +17,11 @@
       <v-text-field
         v-model="documentoBuscar"
         :class="{ 'campo-corto': forma === 'ajustada' }"
-        label="RUC/DNI en SUNAT/RENIEC"
+        :label="forma === 'apilada' ? 'Buscar RUC/DNI en SUNAT' : 'RUC/DNI en SUNAT/RENIEC'"
         density="compact"
         variant="outlined"
         hide-details="auto"
+        v-bind="campo"
         @keyup.enter="onBuscarReniec"
       >
         <template v-slot:append-inner>
@@ -56,6 +58,8 @@ const props = defineProps({
   // El cliente vinculado, si quien abre el formulario ya lo tiene. Sin esto hay
   // que ir a buscarlo por su id.
   seed: { type: Object, default: null },
+  // Props de mas para los dos campos, como el redondeado de las pantallas de trabajo.
+  campo: { type: Object, default: () => ({}) },
   // 'mitades': cliente y RUC/DNI en 7/5 de la fila. 'ajustada': el RUC/DNI mide lo que su dato
   // (11 cifras) y el cliente toma el resto. 'apilada': uno debajo del otro, para una columna angosta.
   forma: { type: String, default: 'mitades' },

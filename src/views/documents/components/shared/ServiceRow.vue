@@ -62,8 +62,6 @@
               </v-menu>
             </template>
           </v-text-field>
-          <v-checkbox-btn v-if="igvPorItem" v-model="fila.incluye_igv" density="compact" class="text-caption"
-                          label="Incluye IGV" />
         </div>
         <div class="d-flex justify-end pt-md-2">
           <span class="font-weight-bold text-no-wrap">{{ monto(totalDeFila(fila), moneda) }}</span>
@@ -95,7 +93,7 @@ import { useDisplay } from 'vuetify'
 import InnerCounter from '@/components/shared/InnerCounter.vue'
 import DragHandle from '@/components/shared/DragHandle.vue'
 import CatalogDescriptionField from './CatalogDescriptionField.vue'
-import { LIMITES, UNIDADES, acotado, esGrupo, totalDeFila } from '@/utils/documents/quoteDefaults'
+import { LIMITES, UNIDADES, acotado, esGrupo, preciosDelCatalogo as precios, totalDeFila } from '@/utils/documents/quoteDefaults'
 import { monto, simboloDe } from '@/utils/money'
 
 // Una fila de ServicesTable. Es su propio componente para que editarla no redibuje las demas.
@@ -111,8 +109,6 @@ const props = defineProps({
   acreditaciones: { type: Array, default: () => [] },
   // El asa(i) de useRowDrag.
   asa: { type: Object, required: true },
-  // Cada precio dice si ya trae el IGV; por ahora solo en la factura.
-  igvPorItem: { type: Boolean, default: false },
 })
 const emit = defineEmits(['mover', 'borrar'])
 
@@ -120,20 +116,8 @@ const emit = defineEmits(['mover', 'borrar'])
 const { mdAndUp } = useDisplay()
 const grupo = computed(() => esGrupo(props.fila))
 
-// Los dos precios (en soles) del servicio recien elegido, mientras no cambie el texto, o los que trajo la fila.
 const elegido = ref(null)
-const preciosDelCatalogo = computed(() => {
-  if (props.moneda !== 'PEN') return []
-  const servicio = elegido.value?.equipo === props.fila.equipo ? elegido.value : null
-  const precios = servicio
-    ? { estandar: servicio.precio_estandar, corporativo: servicio.precio_corporativo }
-    : props.fila.precios
-  if (!precios) return []
-  return [
-    { titulo: 'Estándar', valor: Number(precios.estandar) },
-    { titulo: 'Corporativo', valor: Number(precios.corporativo) },
-  ]
-})
+const preciosDelCatalogo = computed(() => precios(props.fila, elegido.value, props.moneda))
 
 // Se ve con texto o abierto con su boton; abierto y dejado vacio, se cierra al salir.
 const comentarioAbierto = ref(false)

@@ -354,3 +354,15 @@ export const cotizacionDe = (guardada, tipoDeDocumento = COTIZACION) => {
     contact: base.contact,
   }
 }
+
+// Los dos precios (en soles) del servicio recien elegido, mientras no cambie el texto, o los que trajo la fila.
+export function preciosDelCatalogo (fila, elegido, moneda) {
+  if (moneda !== 'PEN') return []
+  const servicio = elegido?.equipo === fila.equipo ? elegido : null
+  const precios = servicio ? { estandar: servicio.precio_estandar, corporativo: servicio.precio_corporativo } : fila.precios
+  if (!precios) return []
+  return [
+    { titulo: 'Estándar', valor: Number(precios.estandar) },
+    { titulo: 'Corporativo', valor: Number(precios.corporativo) },
+  ]
+}

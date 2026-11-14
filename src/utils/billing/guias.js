@@ -20,3 +20,5 @@ export const OTROS = '13'
 export const bajaPendienteEnSol = (guia) => guia.estado === ANULADA && !guia.baja_en_sol
 
 export const itemVacio = () => ({ descripcion: '', detalle: '', cantidad: 1, peso: '', unidad: 'NIU' })
+// El largo que SUNAT recibe en la descripcion de un item (LARGO_ITEM del back).
+export const LARGO_DE_LA_DESCRIPCION = 250

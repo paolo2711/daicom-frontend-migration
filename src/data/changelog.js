@@ -19,6 +19,36 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.11.0.0',
+    fecha: '2026-11-14',
+    nuevo: [
+      'Facturación → Facturas: las facturas se emiten ante SUNAT desde la app, desde una o varias órdenes del mismo cliente o en blanco, con vista previa antes de emitir.',
+      'La factura y la guía se emiten sin esperar: el formulario se cierra, el comprobante queda al costado mientras SUNAT responde y el avance sigue en el panel de subidas.',
+      'Una factura se anula dentro de los 6 días de emitida; después, con una nota de crédito, que también sirve para rebajar una parte o corregir la descripción.',
+      'La detracción se elige de la lista de códigos de SUNAT y va en soles aunque la factura sea en dólares.',
+      'Facturas y Guías se filtran por rango de fechas y por cliente.',
+      'Órdenes: «Cobro…» en el menú de la orden abre su panel, donde se emite la factura, se sube la de KeyFacil, se vincula una que ya existe, se cobra sin comprobante o se marca sin cargo.',
+      'El panel de la derecha en Órdenes, Documentos y Facturación se ensancha arrastrando la barra; la primera vez se muestra cómo.',
+      'En la cotización, cada ítem puede llevar el IGV incluido.',
+      'Empresa: series de facturas y notas de crédito, cuenta de detracciones y las cuentas bancarias que salen en la factura.',
+    ],
+    cambio: [
+      'Las facturas están en Facturación → Facturas, con su total y lo que falta cobrar.',
+      'Lo que falta cobrar se muestra como una resta: total, notas de crédito, detracción y abonos.',
+      'Factura, guía, cotización, valorización y orden usan el mismo formulario de tres paneles; la descripción sugiere servicios o equipos.',
+      'El menú de la orden queda con lo de la orden; todo lo del cobro está en su panel.',
+      'En pantalla chica, el panel de cobro se abre a pantalla completa.',
+      'Las órdenes muestran su fecha en una columna cuando hay espacio.',
+      'Al registrar un abono, el monto empieza vacío y «Pagar lo que falta» lo llena.',
+      'Los registros internos sin comprobante pasan a llamarse INT1- e INT2-.',
+      'Los datos de Empresa están ordenados por secciones.',
+      'Al vincular una factura a una orden, primero salen las que se subieron sin cliente.',
+    ],
+    arreglo: [
+      'Al subir una factura de KeyFacil, el aviso de la detracción mostraba 10 % en cualquier factura en dólares.',
+    ],
+  },
+  {
     version: '3.10.0.0',
     fecha: '2026-11-12',
     nuevo: [

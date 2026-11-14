@@ -59,7 +59,10 @@
 
     <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
                  @accion="clave => ejecutarAccion(clave, menu.filas)" />
-    <dialog-dispatch-guide ref="formulario" @emitida="recargar" @cambiada="reemplazar" @ver-pdf="g => (vista = g.id)" />
+    <dialog-dispatch-guide ref="formulario" @emitida="alEmitir" />
+    <sunat-envio :comprobante="enviada && comprobanteDe(enviada)" tipo="dispatchguide"
+                 :filas="enviada ? filasDe(enviada) : []"
+                 :corregible="corregible" @cerrar="cerrarEnviada" @corregir="corregirEnviada" @ver-pdf="vista = enviada.id; cerrarEnviada()" />
     <dialog-cancel-dispatch-guide v-model="porAnular" @anulada="reemplazar" />
     <dialog-info-dispatch-guide v-model="enInfo" @cambiada="reemplazar" @ver-pdf="g => (vista = g.id)" />
   </div>
@@ -80,6 +83,7 @@ import StateLegend from '@/components/shared/StateLegend.vue'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { useDateRangeFilter } from '@/composables/useDateRangeFilter'
 import { useDownload } from '@/composables/useDownload'
+import { useEmissionPanel } from '@/composables/useEmissionPanel'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useSwal } from '@/composables/useSwal'
 import BillingDataService from '@/services/billing/billingDataService'
@@ -94,6 +98,7 @@ import { abrirEnOtraPestana } from '@/utils/pdf'
 import DialogCancelDispatchGuide from './DialogCancelDispatchGuide.vue'
 import DialogDispatchGuide from './DialogDispatchGuide.vue'
 import DialogInfoDispatchGuide from './DialogInfoDispatchGuide.vue'
+import SunatEnvio from './SunatEnvio.vue'
 
 const swal = useSwal()
 const route = useRoute()
@@ -136,6 +141,12 @@ async function recargar () {
     if (isLatest(turno)) cargando.value = false
   }
 }
+
+const { enviada, corregible, alEmitir, cerrar: cerrarEnviada, corregir: corregirEnviada } =
+  useEmissionPanel(guias, formulario, recargar)
+const comprobanteDe = (g) => ({ id: g.id, numero: g.numero, cliente: g.cliente_data?.name, pdf: g.pdf,
+                                nombrePdf: g.nombre_pdf, xml: g.xml })
+const filasDe = (g) => [['Traslado', fechaCorta(g.fecha_traslado)]]
 
 function reemplazar (guia) {
   const posicion = guias.value.findIndex(g => g.id === guia.id)

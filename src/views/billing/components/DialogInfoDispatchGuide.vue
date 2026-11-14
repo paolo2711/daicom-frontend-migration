@@ -1,8 +1,6 @@
 <template>
-  <v-dialog v-model="abierto" class="dialog-premium" width="90%" max-width="36rem" :persistent="enviando">
-    <sunat-envio v-if="envio" :envio="envio" titulo="Emitir guía" texto-de-volver="Volver a la guía"
-                 @volver="emit('volver')" />
-    <v-card v-else-if="guia">
+  <v-dialog v-model="abierto" class="dialog-premium" width="90%" max-width="36rem">
+    <v-card v-if="guia">
       <base-modal-header :title="`Guía ${guia.numero}`" icon="mdi-truck-delivery-outline" @close="cerrar" />
 
       <v-card-text class="pt-4">
@@ -48,23 +46,19 @@ import { fechaCorta, fechaHora } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 import { ANULADA, ENVIADA, POR_ENVIAR, bajaPendienteEnSol } from '@/utils/billing/guias'
 import { registrarBajaEnSol, reintentarEnvio } from '@/utils/billing/pendientes'
-import SunatEnvio from './SunatEnvio.vue'
 import SunatInfo from './SunatInfo.vue'
 
 // La guia de la fila, o null con el dialogo cerrado. Al abrirse pide el detalle, que tambien le pregunta a SUNAT.
 const fila = defineModel({ type: Object, default: null })
-// Mientras se emite (ver SunatEnvio). Solo se cierra volviendo al formulario.
-const props = defineProps({ envio: { type: Object, default: null } })
-const emit = defineEmits(['cambiada', 'ver-pdf', 'volver'])
+const emit = defineEmits(['cambiada', 'ver-pdf'])
 
 const swal = useSwal()
 const guia = ref(null)
 const trabajando = ref(false)
 const { programar, parar } = usePolling()
-const enviando = computed(() => Boolean(props.envio && !props.envio.motivo))
 const abierto = computed({
-  get: () => Boolean(fila.value || props.envio),
-  set: (si) => { if (si) return; if (!props.envio) cerrar(); else if (!enviando.value) emit('volver') },
+  get: () => Boolean(fila.value),
+  set: (si) => { if (!si) cerrar() },
 })
 
 const filas = computed(() => {

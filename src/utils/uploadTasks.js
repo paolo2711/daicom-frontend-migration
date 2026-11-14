@@ -23,7 +23,7 @@ export const enCurso   = (tarea) => EN_CURSO.includes(tarea.status)
 // ('saving') y subir el PDF rescatado. Del servidor no hay avisos que pedirle.
 export const enElServidor = (tarea) =>
   enCurso(tarea) && tarea.status !== 'saving' && tarea.source !== 'manual'
-export const cancelable = (tarea) => enCurso(tarea) && !SIN_VUELTA.includes(tarea.status)
+export const cancelable = (tarea) => enCurso(tarea) && !SIN_VUELTA.includes(tarea.status) && !esComprobante(tarea)
 export const fallida   = (tarea) => FALLIDA.includes(tarea.status)
 export const terminada = (tarea) => TERMINADA.includes(tarea.status)
 export const detenida  = (tarea) => DETENIDA.includes(tarea.status)
@@ -32,6 +32,10 @@ export const esConversion = (tarea) => TIPOS_CONVERSION.includes(tarea.type)
 
 // Sacar de la nube no deja ningun PDF que abrir al terminar.
 export const esBaja = (tarea) => tarea.type === 'nube'
+
+// Facturas y guias enviadas a SUNAT: se miran en su pestaña, y la rechazada se corrige alla, no se reintenta.
+const TIPOS_COMPROBANTE = ['invoice', 'dispatchguide']
+export const esComprobante = (tarea) => TIPOS_COMPROBANTE.includes(tarea.type)
 
 // Una conversion en 'success' tiene el PDF hecho y todavia sin guardar: lo que
 // sigue no es cerrarla, es que alguien lo revise.
@@ -42,4 +46,4 @@ export const esperandoRevision = (tarea) =>
 export const yaRevisada = (tarea) => ['saved', 'discarded'].includes(tarea.status)
 
 // Un archivo subido del navegador no se puede repetir: solo viajo una vez.
-export const reintentable = (tarea) => fallida(tarea) && tarea.source !== 'manual'
+export const reintentable = (tarea) => fallida(tarea) && tarea.source !== 'manual' && !esComprobante(tarea)

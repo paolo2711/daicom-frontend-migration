@@ -130,7 +130,7 @@
                         </v-tooltip>
 
                         <template v-else-if="terminada(task)">
-                          <template v-if="isHovering && !esBaja(task)">
+                          <template v-if="isHovering && !esBaja(task) && !esComprobante(task)">
                             <v-tooltip location="bottom">
                               <template v-slot:activator="{ props: tooltipProps }">
                                 <v-btn v-if="esConversion(task)" v-bind="tooltipProps" icon variant="text" size="small" color="purple" :href="task.url_base" target="_blank" :disabled="!task.url_base">
@@ -223,7 +223,7 @@ import { useAppStore } from '@/stores/appStore'
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import { mensajeDeError } from '@/utils/errors'
 import { guardarArchivo } from '@/utils/files'
-import { cancelable, detenida, enCurso, esBaja, esConversion, esperandoRevision, fallida, reintentable, terminada, yaRevisada } from '@/utils/uploadTasks'
+import { cancelable, detenida, enCurso, esBaja, esComprobante, esConversion, esperandoRevision, fallida, reintentable, terminada, yaRevisada } from '@/utils/uploadTasks'
 
 const appStore = useAppStore()
 const theme    = useTheme()
@@ -308,6 +308,7 @@ function iconoDe(task) {
   if (esperandoRevision(task)) return { icono: 'mdi-file-excel-box', color: 'amber-darken-2' }
   if (esConversion(task)) return { icono: 'mdi-file-excel-box', color: 'green-darken-2' }
   if (esBaja(task)) return { icono: 'mdi-cloud-remove-outline', color: 'blue-grey' }
+  if (esComprobante(task)) return { icono: 'mdi-file-document-outline', color: 'info' }
   return { icono: 'mdi-file-pdf-box', color: 'red-darken-2' }
 }
 

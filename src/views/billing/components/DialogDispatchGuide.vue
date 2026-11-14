@@ -146,13 +146,11 @@
       </pdf-preview-dialog>
     </v-card>
 
-    <dialog-info-dispatch-guide v-model="emitida" :envio="envio" @volver="envio = null" @cambiada="alCambiar"
-                                @ver-pdf="g => emit('ver-pdf', g)" />
   </v-dialog>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import DetailEmpty from '@/components/shared/DetailEmpty.vue'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
@@ -164,18 +162,16 @@ import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useSwal } from '@/composables/useSwal'
 import BillingDataService from '@/services/billing/billingDataService'
-import { OTROS, RECHAZADA, itemVacio } from '@/utils/billing/guias'
+import { OTROS, itemVacio } from '@/utils/billing/guias'
 import { hoyISO } from '@/utils/dates'
-import { avisarHecho } from '@/utils/documents/avisos'
 import { mensajeDeError } from '@/utils/errors'
 import { CAMPO } from '@/utils/fields'
-import DialogInfoDispatchGuide from './DialogInfoDispatchGuide.vue'
 import PanelDispatchGuide from './PanelDispatchGuide.vue'
 import RowDispatchGuide from './RowDispatchGuide.vue'
 import SectionLinkedOrders from './SectionLinkedOrders.vue'
 
 // Todo lo que trae lleno (de las ordenes, de Empresa o de la ultima guia) se puede cambiar antes de emitir.
-const emit = defineEmits(['emitida', 'cambiada', 'ver-pdf'])
+const emit = defineEmits(['emitida'])
 
 const swal = useSwal()
 
@@ -192,9 +188,8 @@ const PESTANAS = [{ valor: 'info', texto: 'Información', icono: 'mdi-card-accou
                   { valor: 'traslado', texto: 'Traslado', icono: 'mdi-truck-outline' }]
 const pestana = ref('info')
 const emitiendo = ref(false)
-const envio = ref(null)
-const emitida = ref(null)
-const rechazada = ref(false)
+// La ultima emitida desde lo escrito: si SUNAT la rechaza, `corregir` vuelve a abrir el formulario igual.
+const emitidaDe = ref(null)
 const clienteId = ref(null)
 const clienteInicial = ref(null)
 const ordenes = ref([])
@@ -239,6 +234,7 @@ function borrar(indice) {
 
 // `nueva` es lo que devuelve el back (cliente, ordenes, datos y motivos); `plantilla`, otra guia emitida.
 function open(nueva, plantilla = null) {
+  emitidaDe.value = null
   clienteId.value = plantilla?.cliente ?? nueva.cliente
   clienteInicial.value = plantilla?.cliente_data ?? nueva.cliente_data
   ordenes.value = plantilla ? [] : nueva.ordenes
@@ -253,31 +249,26 @@ function open(nueva, plantilla = null) {
   dialog.value = true
 }
 
-// Ver informacion acompaña el envio y sigue preguntando hasta que SUNAT resuelva. Si no salio, se vuelve al formulario.
+// El back responde enseguida y la manda a SUNAT en segundo plano: el formulario se cierra con lo escrito guardado.
 async function emitir() {
   emitiendo.value = true
-  vistaPrevia.value = false
-  envio.value = {}
-  rechazada.value = false
   try {
     const { data } = await BillingDataService.createDispatchGuide(paraElBack())
-    if (data.warning) avisarHecho(`Guía ${data.numero} emitida`, { warning: data.warning })
+    vistaPrevia.value = false
+    dialog.value = false
+    emitidaDe.value = data.id
     emit('emitida', data)
-    envio.value = null
-    emitida.value = data
   } catch (error) {
-    marcarErrores(error.response?.data?.filas)
-    envio.value = { motivo: mensajeDeError(error, 'No se pudo emitir.') }
+    noSePudo('No se emitió', 'No se pudo emitir.', error)
   } finally {
     emitiendo.value = false
   }
 }
-function alCambiar (guia) {
-  rechazada.value = guia.estado === RECHAZADA
-  emit('cambiada', guia)
+const corregible = (id) => emitidaDe.value === id
+function corregir () {
+  emitidaDe.value = null
+  dialog.value = true
 }
-// Al cerrar su informacion se cierra el formulario, salvo que SUNAT la rechace: queda para corregir y emitir otra.
-watch(emitida, (ahora, antes) => { if (antes && !ahora && !rechazada.value) dialog.value = false })
 
-defineExpose({ open })
+defineExpose({ open, corregir, corregible })
 </script>

@@ -1,8 +1,6 @@
 <template>
-  <v-dialog v-model="abierto" class="dialog-premium" width="90%" max-width="36rem" :persistent="enviando">
-    <sunat-envio v-if="envio" :envio="envio" titulo="Emitir factura" texto-de-volver="Volver a la factura"
-                 @volver="emit('volver')" />
-    <v-card v-else-if="factura">
+  <v-dialog v-model="abierto" class="dialog-premium" width="90%" max-width="36rem">
+    <v-card v-if="factura">
       <base-modal-header :title="`Factura ${factura.invoice_number}`" icon="mdi-file-document-outline" @close="cerrar" />
 
       <v-card-text class="pt-4">
@@ -35,23 +33,19 @@ import { ANULADA, POR_ENVIAR } from '@/utils/billing/sunat'
 import { fechaCorta, fechaHora } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 import { monto } from '@/utils/money'
-import SunatEnvio from './SunatEnvio.vue'
 import SunatInfo from './SunatInfo.vue'
 
 // La factura de la fila, o null con el dialogo cerrado. Al abrirse pide el detalle con el QR.
 const fila = defineModel({ type: Object, default: null })
-// Mientras se emite (ver SunatEnvio). Solo se cierra volviendo al formulario.
-const props = defineProps({ envio: { type: Object, default: null } })
-const emit = defineEmits(['cambiada', 'ver-pdf', 'volver'])
+const emit = defineEmits(['cambiada', 'ver-pdf'])
 
 const swal = useSwal()
 const { programar, parar } = usePolling()
 const factura = ref(null)
 const trabajando = ref(false)
-const enviando = computed(() => Boolean(props.envio && !props.envio.motivo))
 const abierto = computed({
-  get: () => Boolean(fila.value || props.envio),
-  set: (si) => { if (si) return; if (!props.envio) cerrar(); else if (!enviando.value) emit('volver') },
+  get: () => Boolean(fila.value),
+  set: (si) => { if (!si) cerrar() },
 })
 
 const filas = computed(() => [

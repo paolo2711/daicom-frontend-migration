@@ -4,7 +4,7 @@
       <v-icon size="small" class="mr-1">mdi-domain</v-icon> Cliente a facturar
     </div>
 
-    <client-lookup-bar v-model="clientId" :forma="apilado ? 'apilada' : 'mitades'" class="mb-4"
+    <client-lookup-bar v-model="clientId" :forma="apilado ? 'apilada' : 'mitades'" :campo="CAMPO" class="mb-4"
                        @client-selected="aplicarCliente" />
 
     <v-alert v-if="bloqueado && clientId" type="warning" variant="tonal" density="compact" class="mb-4" icon="mdi-alert">
@@ -17,15 +17,15 @@
       <!-- Razon social y documento salen del cliente elegido, como en una factura; el back los toma de ahi. -->
       <v-col v-bind="ancho(9)">
         <v-text-field v-model="billing.business_name" label="Razón social (del cliente elegido)" disabled
-                      density="compact" variant="outlined" hide-details />
+                      v-bind="CAMPO" />
       </v-col>
       <v-col v-bind="ancho(3)">
         <v-text-field v-model="billing.doc_number" :label="billing.doc_type || 'Documento'" disabled
-                      density="compact" variant="outlined" hide-details />
+                      v-bind="CAMPO" />
       </v-col>
       <v-col cols="12">
         <v-text-field v-model="billing.address" label="Dirección" :disabled="bloqueado"
-                      density="compact" variant="outlined" hide-details />
+                      v-bind="CAMPO" />
       </v-col>
     </v-row>
 
@@ -36,21 +36,21 @@
       <v-col v-bind="ancho(3, { sm: 6 })">
         <v-text-field v-model="billing.area" label="Área o dependencia" placeholder="Ej: Facultad de Ingeniería"
                       prepend-inner-icon="mdi-office-building-outline" :maxlength="LIMITES.area"
-                      density="compact" variant="outlined" hide-details>
+                      v-bind="CAMPO">
           <template #append-inner><inner-counter :valor="billing.area" :max="LIMITES.area" /></template>
         </v-text-field>
       </v-col>
       <v-col v-bind="ancho(3, { sm: 6 })">
         <v-text-field v-model="billing.contact_name" label="Atención" prepend-inner-icon="mdi-account-outline"
-                      density="compact" variant="outlined" hide-details />
+                      v-bind="CAMPO" />
       </v-col>
       <v-col v-bind="ancho(3, { sm: 6 })">
         <v-text-field v-model="billing.phone" label="Teléfono" prepend-inner-icon="mdi-phone-outline"
-                      density="compact" variant="outlined" hide-details />
+                      v-bind="CAMPO" />
       </v-col>
       <v-col v-bind="ancho(3, { sm: 6 })">
         <v-text-field v-model="billing.email" label="Correo" prepend-inner-icon="mdi-email-outline"
-                      density="compact" variant="outlined" hide-details />
+                      v-bind="CAMPO" />
       </v-col>
     </v-row>
 
@@ -61,11 +61,11 @@
       <v-row v-if="meta.kind === 'servicio' && !certificate.same_as_billing_client" dense>
         <v-col v-bind="ancho(6)">
           <v-text-field v-model="certificate.business_name" label="Razón social del certificado"
-                        density="compact" variant="outlined" hide-details="auto" />
+                        v-bind="CAMPO" />
         </v-col>
         <v-col v-bind="ancho(6)">
           <v-text-field v-model="certificate.address" label="Dirección del certificado"
-                        density="compact" variant="outlined" hide-details="auto" />
+                        v-bind="CAMPO" />
         </v-col>
       </v-row>
     </v-expand-transition>
@@ -77,24 +77,24 @@
     </div>
     <v-row dense>
       <v-col v-bind="ancho(3, { sm: 6, apilado: 6 })">
-        <date-picker label="Fecha" :date="meta.date" @setPickedDate="v => (meta.date = v)" />
+        <date-picker label="Fecha" :date="meta.date" :campo="CAMPO" @setPickedDate="v => (meta.date = v)" />
       </v-col>
       <v-col v-if="DOCUMENTOS[tipoDeDocumento].conValidez" v-bind="ancho(3, { sm: 6, apilado: 6 })">
         <v-text-field v-model.number="meta.validity_days" label="Validez" suffix="días" type="number" min="1"
-                      density="compact" variant="outlined" hide-details="auto" />
+                      v-bind="CAMPO" />
       </v-col>
       <v-col v-bind="ancho(3, { sm: 6, apilado: 6 })">
-        <v-select v-model="meta.currency" :items="MONEDAS" label="Moneda" density="compact" variant="outlined" hide-details="auto" />
+        <v-select v-model="meta.currency" :items="MONEDAS" label="Moneda" v-bind="CAMPO" />
       </v-col>
       <v-col v-bind="ancho(3, { sm: 6, apilado: 6 })">
         <v-select v-model="meta.payment_terms" :items="FORMAS_DE_PAGO" label="Forma de pago"
-                  density="compact" variant="outlined" hide-details="auto" />
+                  v-bind="CAMPO" />
       </v-col>
       <v-col v-bind="ancho(6)">
         <v-text-field v-model="meta.delivery_time"
                       :label="`${etiquetaDelPlazo(tipoDeDocumento, meta.kind)} (opcional)`"
                       :placeholder="ejemploDelPlazo(tipoDeDocumento, meta.kind)" persistent-placeholder
-                      density="compact" variant="outlined" hide-details="auto" />
+                      v-bind="CAMPO" />
       </v-col>
     </v-row>
   </div>
@@ -105,6 +105,7 @@ import { computed } from 'vue'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import InnerCounter from '@/components/shared/InnerCounter.vue'
+import { CAMPO } from '@/utils/fields'
 import {
   DOCUMENTOS, FORMAS_DE_PAGO, LIMITES, ejemploDelPlazo, etiquetaDelPlazo,
 } from '@/utils/documents/quoteDefaults'

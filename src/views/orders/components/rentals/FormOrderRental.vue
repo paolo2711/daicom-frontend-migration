@@ -61,8 +61,7 @@
     </template>
 
     <template #sin-detalle>
-      <div class="titulo-de-hoja">Equipo</div>
-      <div class="px-4 text-body-2 text-medium-emphasis">Elige un equipo de la lista para ver y llenar sus datos.</div>
+      <detail-empty titulo="Equipo" icono="mdi-toolbox-outline" texto="Elige un equipo de la lista para ver y llenar sus datos." />
     </template>
   </workspace-layout>
 </template>
@@ -71,6 +70,7 @@
 import { ref, computed, watch, nextTick, defineAsyncComponent } from 'vue'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
+import DetailEmpty from '@/components/shared/DetailEmpty.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import RowOrderRental from './RowOrderRental.vue'

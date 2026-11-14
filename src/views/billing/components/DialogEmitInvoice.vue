@@ -103,7 +103,7 @@
             </template>
 
             <template #detalle>
-              <panel-invoice-item v-if="abierto?.item" :item="abierto.item" :indice="indiceAbierto"
+              <panel-service-item v-if="abierto?.item" :item="abierto.item" :indice="indiceAbierto"
                                   :moneda="datos.moneda" :error="errores[indiceAbierto]" @cerrar="abierto = null"
                                   @borrar="borrar" />
               <panel-invoice-payment v-else-if="abierto?.clave === 'pago'" :datos="datos" :cuenta="cuenta"
@@ -178,11 +178,11 @@ import { MONEDAS, monto } from '@/utils/money'
 import { ALQUILER, SERVICIO } from '@/utils/orders/estado'
 import CardInvoiceSummary from './CardInvoiceSummary.vue'
 import DialogInfoInvoice from './DialogInfoInvoice.vue'
-import PanelInvoiceItem from './PanelInvoiceItem.vue'
 import PanelInvoiceOption from './PanelInvoiceOption.vue'
 import PanelInvoicePayment from './PanelInvoicePayment.vue'
 import RowInvoiceItem from './RowInvoiceItem.vue'
 import SectionLinkedOrders from './SectionLinkedOrders.vue'
+import PanelServiceItem from '@/views/documents/components/shared/PanelServiceItem.vue'
 
 // Todo lo que trae lleno (de las ordenes o de Empresa) se puede cambiar antes de emitir; la cuenta la hace el back.
 const emit = defineEmits(['emitida', 'cambiada', 'ver-pdf'])

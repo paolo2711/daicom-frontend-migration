@@ -3,20 +3,23 @@
     <section class="seccion">
       <div class="titulo-de-seccion">Ítem</div>
       <catalog-description-field :fila="item" :moneda="moneda" desplegable :con-precio="false" placeholder="Descripción"
-                                 :maxlength="LIMITES.descripcion"
-                                 @elegido="s => (elegido = s)" />
-      <v-textarea v-model="item.observations" label="Detalle" rows="1" no-resize class="crece-con-texto"
-                  v-bind="CAMPO" />
+                                 :maxlength="LIMITES.descripcion" @elegido="s => (elegido = s)" />
+      <v-textarea v-model="item.observations" :label="etiquetaDelDetalle" :maxlength="LIMITES.comentario" rows="1"
+                  no-resize class="crece-con-texto" v-bind="CAMPO" />
     </section>
 
     <section class="seccion">
       <div class="titulo-de-seccion">Cantidad y precio</div>
       <v-row dense>
-        <v-col cols="5">
-          <v-text-field v-model="item.quantity" type="number" min="0" label="Cantidad" v-bind="CAMPO" />
+        <v-col :cols="unidades ? 6 : 5">
+          <v-text-field v-model="item.quantity" type="number" min="0" :max="LIMITES.cantidad" label="Cantidad"
+                        v-bind="CAMPO" />
         </v-col>
-        <v-col cols="7">
-          <v-text-field v-model="item.unit_price" type="number" min="0" label="Precio unitario"
+        <v-col v-if="unidades" cols="6">
+          <v-select v-model="item.unit" :items="unidades" label="Unidad" v-bind="CAMPO" />
+        </v-col>
+        <v-col :cols="unidades ? 12 : 7">
+          <v-text-field v-model="item.unit_price" type="number" min="0" :max="LIMITES.precio" label="Precio unitario"
                         :prefix="simboloDe(moneda)" v-bind="CAMPO" />
         </v-col>
       </v-row>
@@ -25,6 +28,11 @@
         <segmented-field :model-value="precioElegido" :opciones="opcionesDePrecio" @update:model-value="elegirPrecio" />
       </div>
       <segmented-field v-model="item.incluye_igv" :opciones="IGV" />
+    </section>
+
+    <section v-if="acreditaciones.length" class="seccion">
+      <div class="titulo-de-seccion">Acreditación</div>
+      <v-select v-model="item.accreditation" :items="opcionesDeAcreditacion" label="Se declara bajo" v-bind="CAMPO" />
     </section>
 
     <div v-if="error" class="text-caption text-error">{{ error }}</div>
@@ -37,24 +45,34 @@
 </template>
 
 <script setup>
-// Lo de un item de DialogEmitInvoice. La descripcion sugiere servicios del catalogo y acepta cualquier texto.
+// El item elegido de una factura, cotizacion o valorizacion. La descripcion sugiere servicios y acepta cualquier texto.
 import { computed, ref } from 'vue'
 import DetailPanel from '@/components/shared/DetailPanel.vue'
 import SegmentedField from '@/components/shared/SegmentedField.vue'
 import { LIMITES, preciosDelCatalogo } from '@/utils/documents/quoteDefaults'
 import { CAMPO } from '@/utils/fields'
 import { importe, simboloDe } from '@/utils/money'
-import CatalogDescriptionField from '@/views/documents/components/shared/CatalogDescriptionField.vue'
+import CatalogDescriptionField from './CatalogDescriptionField.vue'
 
 const props = defineProps({
   item: { type: Object, required: true },
   indice: { type: Number, required: true },
   moneda: { type: String, default: 'PEN' },
   error: { type: String, default: '' },
+  // Sin unidades, el item va siempre con la suya (la factura); con ellas se elige.
+  unidades: { type: Array, default: null },
+  // Las que se pueden declarar hoy; sin ninguna no se muestra la seccion.
+  acreditaciones: { type: Array, default: () => [] },
+  etiquetaDelDetalle: { type: String, default: 'Detalle' },
 })
 const emit = defineEmits(['cerrar', 'borrar'])
 
 const IGV = [{ valor: false, texto: 'Más IGV' }, { valor: true, texto: 'Incluye IGV' }]
+const opcionesDeAcreditacion = computed(() => [
+  { title: 'Sin acreditación', value: '' },
+  ...props.acreditaciones.map(a => ({ title: `${a.codigo} · ${a.organismo} N.° ${a.numero}`, value: a.codigo })),
+])
+
 const elegido = ref(null)
 const precios = computed(() => preciosDelCatalogo(props.item, elegido.value, props.moneda))
 const opcionesDePrecio = computed(() => precios.value.map(p => ({ valor: p.titulo, texto: `${p.titulo} ${importe(p.valor)}` })))

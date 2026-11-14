@@ -115,10 +115,8 @@
             </template>
 
             <template #sin-detalle>
-              <div class="titulo-de-hoja">Ítem</div>
-              <div class="px-4 text-body-2 text-medium-emphasis">
-                Elige un ítem de la lista para ver y llenar sus datos.
-              </div>
+              <detail-empty titulo="Ítem" icono="mdi-package-variant-closed"
+                            texto="Elige un ítem de la lista para ver y llenar sus datos." />
             </template>
           </workspace-layout>
         </div>
@@ -166,6 +164,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
+import DetailEmpty from '@/components/shared/DetailEmpty.vue'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
 import UbigeoField from '@/components/shared/UbigeoField.vue'

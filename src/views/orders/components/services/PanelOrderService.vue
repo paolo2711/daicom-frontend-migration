@@ -1,15 +1,5 @@
 <template>
-  <div class="d-flex flex-column fill-height">
-    <div class="titulo-de-hoja bg-primary flex-shrink-0">
-      <span>Equipo {{ indice + 1 }}</span>
-      <span v-if="eq.registry_code" class="text-caption ml-2">· Certificado {{ eq.registry_code }}</span>
-      <span v-else-if="eq.certificate_type" class="text-caption ml-2">· N° estimado {{ estimado }}</span>
-      <v-spacer />
-      <v-btn icon="mdi-check" color="white" variant="flat" size="x-small" class="text-primary" title="Listo (Enter)"
-             @click="emit('cerrar')" />
-    </div>
-
-    <div class="d-flex flex-column ga-3 pa-3 overflow-y-auto flex-grow-1">
+  <detail-panel :titulo="titulo" @cerrar="emit('cerrar')">
       <section class="seccion">
         <div class="titulo-de-seccion">Equipo</div>
         <paginated-autocomplete v-model="eq.name" :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
@@ -48,17 +38,16 @@
       </section>
 
       <div v-if="error" class="text-caption text-error">{{ error }}</div>
-    </div>
 
-    <div class="d-flex ga-2 px-4 py-3 border-t-thin flex-shrink-0">
+    <template #pie>
       <v-btn variant="outlined" prepend-icon="mdi-content-copy" title="Mismo equipo, marca, modelo y servicio, sin serie"
              @click="emit('otro-igual')">Otro igual</v-btn>
       <v-spacer />
       <v-btn v-if="seQuita(eq)" variant="text" color="red" prepend-icon="mdi-delete" @click="emit('borrar', indice)">
         Quitar
       </v-btn>
-    </div>
-  </div>
+    </template>
+  </detail-panel>
 </template>
 
 <script setup>
@@ -69,8 +58,10 @@ import LabDataService from '@/services/labs/labDataService'
 import EquipmentMappers from '@/mappers/equipmentMappers'
 import LabMappers from '@/mappers/labMappers'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
+import DetailPanel from '@/components/shared/DetailPanel.vue'
 import { conOpcion, itemsDeSeleccion, opcionDe, seQuita, useOrderServices } from '@/composables/useOrderServices'
 import { SE_RENUMERA } from '@/utils/certificates/tipos'
+import { CAMPO } from '@/utils/fields'
 
 // Todo lo de un equipo de FormOrderService, en una columna. Enter lo cierra y
 // Shift+Enter baja de linea.
@@ -84,7 +75,11 @@ const props = defineProps({
 })
 const emit = defineEmits(['cerrar', 'otro-igual', 'borrar'])
 
-const CAMPO = { density: 'compact', variant: 'outlined', rounded: 'lg', hideDetails: true }
+const titulo = computed(() => {
+  if (props.eq.registry_code) return `Equipo ${props.indice + 1} · Certificado ${props.eq.registry_code}`
+  return props.eq.certificate_type ? `Equipo ${props.indice + 1} · N° estimado ${props.estimado}` : `Equipo ${props.indice + 1}`
+})
+
 const CAMPOS = [
   { clave: 'marca', etiqueta: 'Marca' },
   { clave: 'modelo', etiqueta: 'Modelo' },

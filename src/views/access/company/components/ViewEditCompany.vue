@@ -23,100 +23,90 @@
       <v-form ref="editForm" @submit.prevent v-model="is_valid">
         <v-row>
           <v-col cols="12" md="8">
+            <div class="text-subtitle-2 font-weight-bold text-grey-darken-1 mb-2">Datos de la empresa</div>
             <v-row dense>
               <v-col cols="12" md="8">
                 <v-text-field v-model="company.name" label="Nombre (*)" density="compact" variant="outlined" counter="120" hide-details="auto" :rules="name_rules" :disabled="!isEditing" @keypress="isLetterOrSpace" />
               </v-col>
-
               <v-col cols="12" md="4">
                 <v-text-field v-model="company.document" label="RUC" density="compact" variant="outlined" counter="11" hide-details="auto" :rules="document_rules" :disabled="!isEditing" @keypress="isDigit" />
               </v-col>
-
               <v-col cols="12" md="8">
                 <v-text-field v-model="company.address" label="Dirección" density="compact" variant="outlined" counter="200" hide-details="auto" :rules="address_rules" :disabled="!isEditing" @keypress="isLetterOrDigit" />
               </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field v-model="company.accredited_correlative" label="Correlativo para Acreditados" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
-              </v-col>
-
-              <v-col cols="12" md="8">
-                <v-text-field v-model="company.phone" label="Teléfono" density="compact" variant="outlined" counter="20" hide-details="auto" :rules="phone_rules" :disabled="!isEditing" @keypress="isDigit" />
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field v-model="company.non_accredited_correlative" label="Correlativo para NO Acreditados" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
-              </v-col>
-
-              <v-col cols="12" md="8">
-                <v-text-field v-model="company.email" label="Email" density="compact" variant="outlined" hide-details="auto" :rules="email_rules" :disabled="!isEditing" />
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field v-model="company.operationality_correlative" label="Correlativo para Operatividad" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field v-model="company.quote_correlative" label="Correlativo de Cotización" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field v-model="company.valuation_correlative" label="Correlativo de Valorización"
-                              density="compact" variant="outlined" type="number" min="1" hide-details="auto"
-                              :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field v-model="company.dispatch_series" label="Serie de guías de la app" maxlength="4"
-                              placeholder="T003" density="compact" variant="outlined" hide-details="auto"
-                              :disabled="!isEditing" />
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field v-model="company.dispatch_correlative" label="Correlativo de guías"
-                              density="compact" variant="outlined" type="number" min="1" hide-details="auto"
-                              :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
-              </v-col>
-
               <v-col cols="12" md="4">
                 <ubigeo-field v-model="company.ubigeo" label="Ubigeo del domicilio fiscal" :disabled="!isEditing" />
               </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field v-model="company.invoice_series" label="Serie de facturas de la app" maxlength="4"
+              <v-col cols="12" md="6">
+                <v-text-field v-model="company.phone" label="Teléfono" density="compact" variant="outlined" counter="20" hide-details="auto" :rules="phone_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field v-model="company.email" label="Email" density="compact" variant="outlined" hide-details="auto" :rules="email_rules" :disabled="!isEditing" />
+              </v-col>
+            </v-row>
+            <div class="text-subtitle-2 font-weight-bold text-grey-darken-1 mb-2 mt-4">Comprobantes electrónicos (SUNAT)</div>
+            <v-row dense>
+              <v-col cols="12" md="3">
+                <v-text-field v-model="company.invoice_series" label="Serie de facturas" maxlength="4"
                               placeholder="F004" density="compact" variant="outlined" hide-details="auto"
                               :disabled="!isEditing" />
               </v-col>
-
-              <v-col cols="12" md="4">
+              <v-col cols="12" md="3">
                 <v-text-field v-model="company.invoice_correlative" label="Correlativo de facturas"
                               density="compact" variant="outlined" type="number" min="1" hide-details="auto"
                               :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
               </v-col>
-
-              <v-col cols="12" md="4">
+              <v-col cols="12" md="3">
                 <v-text-field v-model="company.credit_note_series" label="Serie de notas de crédito" maxlength="4"
                               placeholder="F005" density="compact" variant="outlined" hide-details="auto"
                               :disabled="!isEditing" />
               </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field v-model="company.credit_note_correlative" label="Correlativo de notas de crédito"
+              <v-col cols="12" md="3">
+                <v-text-field v-model="company.credit_note_correlative" label="Correlativo de notas"
                               density="compact" variant="outlined" type="number" min="1" hide-details="auto"
                               :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
               </v-col>
-
-
-              <v-col cols="12" md="4">
-                <v-text-field v-model="company.order_service_correlative" label="Correlativo Orden de Servicio" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              <v-col cols="12" md="3">
+                <v-text-field v-model="company.dispatch_series" label="Serie de guías" maxlength="4"
+                              placeholder="T003" density="compact" variant="outlined" hide-details="auto"
+                              :disabled="!isEditing" />
               </v-col>
-
-              <v-col cols="12" md="4">
-                <v-text-field v-model="company.order_rental_correlative" label="Correlativo Orden de Alquiler" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              <v-col cols="12" md="3">
+                <v-text-field v-model="company.dispatch_correlative" label="Correlativo de guías"
+                              density="compact" variant="outlined" type="number" min="1" hide-details="auto"
+                              :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
               </v-col>
-
+            </v-row>
+            <div class="text-subtitle-2 font-weight-bold text-grey-darken-1 mb-2 mt-4">Certificados · correlativos</div>
+            <v-row dense>
               <v-col cols="12" md="4">
-                <v-text-field v-model="company.inventory_correlative" label="Correlativo Inventario (DAI-XXX)" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+                <v-text-field v-model="company.accredited_correlative" label="Acreditados" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.non_accredited_correlative" label="No acreditados" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.operationality_correlative" label="Operatividad" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+            </v-row>
+            <div class="text-subtitle-2 font-weight-bold text-grey-darken-1 mb-2 mt-4">Documentos y órdenes · correlativos</div>
+            <v-row dense>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.quote_correlative" label="Cotización" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.valuation_correlative" label="Valorización"
+                              density="compact" variant="outlined" type="number" min="1" hide-details="auto"
+                              :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.order_service_correlative" label="Orden de servicio" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.order_rental_correlative" label="Orden de alquiler" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.inventory_correlative" label="Inventario (DAI-XXX)" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
               </v-col>
             </v-row>
 

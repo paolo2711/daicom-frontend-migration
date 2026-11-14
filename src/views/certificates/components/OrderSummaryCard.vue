@@ -52,7 +52,7 @@
             <div class="d-flex flex-column">
               <span class="text-body-2 font-weight-bold">{{ inv.invoice_number || 'Sin número' }}</span>
               <span class="text-caption text-medium-emphasis">{{ fechaCorta(inv.invoice_date) || 'Sin fecha' }}</span>
-              <span v-if="vencimiento(inv)" class="text-caption" :class="`text-${vencimiento(inv).color}`">{{ vencimiento(inv).texto }}</span>
+              <span v-if="vencimiento(inv)" class="text-caption text-medium-emphasis">{{ vencimiento(inv) }}</span>
             </div>
             <div class="d-flex align-center">
               <span class="text-body-2 font-weight-bold mr-2">{{ monto(inv.amount, inv.currency) }}</span>

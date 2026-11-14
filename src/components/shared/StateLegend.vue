@@ -4,7 +4,8 @@
       <span class="text-caption font-weight-bold mr-4 text-uppercase text-medium-emphasis">{{ titulo }}</span>
       <div class="d-flex flex-wrap justify-center">
         <v-chip v-for="estado in lista" :key="estado.texto" size="small" :color="estado.color"
-                class="mr-3 mb-1 text-white">{{ estado.texto }}</v-chip>
+                :prepend-icon="estado.icono"
+                :class="{ 'text-medium-emphasis': estado.tenue }" class="mr-3 mb-1">{{ estado.texto }}</v-chip>
       </div>
     </v-row>
   </v-card>
@@ -17,7 +18,7 @@ import { computed } from 'vue'
 // pildora del codigo.
 const props = defineProps({
   titulo: { type: String, required: true },
-  // { clave: { texto, color } }, como los ESTADOS de cada modulo.
+  // { clave: { texto, color?, icono?, tenue? } }; sin color sale en gris.
   estados: { type: Object, required: true },
 })
 

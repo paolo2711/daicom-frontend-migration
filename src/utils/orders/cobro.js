@@ -1,39 +1,24 @@
 import { fechaCorta, hoyISO } from '@/utils/dates'
-import { ABONADO, ANULADA, CREDITO, DEUDA, EXCEDIDO, PAGADO, esAlquiler } from '@/utils/orders/estado'
+import { ABONADO, ANULADA, CREDITO, DEUDA, EXCEDIDO, PAGADO, esAlquiler, tonoDe } from '@/utils/orders/estado'
 
 // A credito y dentro del plazo, tenga abonos o no: lo que falta todavia no se
 // cobra.
-export const porVencer = (factura) => !!(factura.es_credito && factura.due_date && factura.due_date >= hoyISO())
+const porVencer = (factura) => !!(factura.es_credito && factura.due_date && factura.due_date >= hoyISO())
 
-// "Vence 25/11/2026" mientras corre el plazo, "Venció ..." en rojo si ya paso
-// sin pagarse. Pagada no dice nada: null.
+// "Vence 25/11/2026" mientras corre el plazo, "Venció ..." si ya paso sin pagarse. Pagada no dice nada.
 export function vencimiento(factura) {
-  if (!factura.es_credito || !factura.due_date || [PAGADO, EXCEDIDO].includes(factura.estado)) return null
-  const vigente = porVencer(factura)
-  return {
-    texto: `${vigente ? 'Vence' : 'Venció'} ${fechaCorta(factura.due_date)}`,
-    color: vigente ? 'teal' : 'error',
-  }
+  if (!factura.es_credito || !factura.due_date || [PAGADO, EXCEDIDO].includes(factura.estado)) return ''
+  return `${porVencer(factura) ? 'Vence' : 'Venció'} ${fechaCorta(factura.due_date)}`
 }
 
 // El semaforo de la fila de una orden, segun su estado_financiero.
 export const getColorSemaforoFinanciero = (o) => {
   // Sin cargo va primero: esas ordenes tambien tienen wants_invoice en false y
   // caerian en la rama de abajo, que habla de abonos que nunca van a existir.
-  if (o.requiere_pago === false) return 'grey-darken-2'
-  if (o.wants_invoice === false) {
-    // Sin comprobante: verde si ya tiene abono (pagado), gris si aún no.
-    return o.estado_financiero === PAGADO ? 'success' : 'grey-darken-2'
-  }
-  switch (o.estado_financiero) {
-    case ANULADA: return 'grey-darken-1'
-    case EXCEDIDO: return 'blue-darken-1'
-    case PAGADO: return 'success'
-    case ABONADO: return 'warning'
-    case DEUDA: return 'error'
-    case CREDITO: return 'teal'
-    default: return 'grey'           // En proceso / sin factura
-  }
+  if (o.requiere_pago === false) return undefined
+  // Sin comprobante: verde si ya tiene abono, sin color si aun no.
+  if (o.wants_invoice === false) return o.estado_financiero === PAGADO ? 'success' : undefined
+  return tonoDe(o.estado_financiero).color
 }
 
 export const getIconoSemaforoFinanciero = (o) => {

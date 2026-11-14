@@ -16,6 +16,7 @@ export default {
       currency: element.currency || 'PEN',
       exchange_rate: element.exchange_rate != null ? Number(element.exchange_rate) : null,
       pdf_url: element.pdf_url || null,
+      nombre_pdf: element.nombre_pdf || 'Factura.pdf',
 
       // ─── TIPO Y NATURALEZA ───
       order_type: element.order_type ?? null, // null = limbo (sin vincular)
@@ -37,10 +38,21 @@ export default {
       // ─── CEREBRO FINANCIERO DE LA FACTURA ───
       total_pagado: element.total_pagado != null ? Number(element.total_pagado) : 0,
       saldo_pendiente: element.saldo_pendiente != null ? Number(element.saldo_pendiente) : 0,
+      // El total sin la detraccion: lo que el cliente le paga a DAICOM.
+      por_cobrar: element.por_cobrar != null ? Number(element.por_cobrar) : 0,
+      dias_de_atraso: element.dias_de_atraso ?? null,
 
       // ─── ÓRDENES VINCULADAS ───
       ordenes_vinculadas: element.ordenes_vinculadas || [],
       cliente: element.cliente || null,
+
+      // Lo de SUNAT, en blanco si no la emitio la app.
+      estado_sunat: element.estado_sunat || '',
+      xml: element.xml || null,
+      cdr: element.cdr || null,
+      respuesta: element.respuesta || {},
+      anulable: element.anulable || false,
+      baja_en_proceso: element.baja_en_proceso || false,
 
       // ─── HISTORIAL DE ABONOS (para DialogInvoicePayments cuando se abre desde el panel) ───
       payments: element.payments || [],

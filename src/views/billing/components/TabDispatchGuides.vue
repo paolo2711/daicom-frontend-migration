@@ -3,9 +3,25 @@
     <filter-bar>
       <v-text-field v-model="filtros.q" hide-details density="compact" prepend-inner-icon="mdi-magnify"
                     variant="outlined" label="Buscar N.° o cliente" clearable />
-      <v-select v-model="filtros.estado" :items="FILTRO_DE_ESTADO" item-title="name" item-value="id"
-                prepend-inner-icon="mdi-list-status" label="Estado" clearable
-                density="compact" variant="outlined" hide-details />
+      <template #pildoras>
+        <filter-pill :active="filtros.sunat" color="warning" icon="mdi-alert-outline"
+                     tooltip="Por enviar, esperando a SUNAT, por revisar o con la baja en SOL pendiente"
+                     @click="filtros.sunat = !filtros.sunat">Pendiente en SUNAT</filter-pill>
+      </template>
+      <template #avanzados>
+        <v-col cols="12" md="4">
+          <date-range-filter v-model:desde="rango.desde" v-model:hasta="rango.hasta" label="Fecha de emisión"
+                             clearable @apply="aplicarRango" @clear="limpiarRango" />
+        </v-col>
+        <v-col cols="12" md="4">
+          <client-select v-model="filtros.cliente" />
+        </v-col>
+        <v-col cols="12" md="4">
+          <v-select v-model="filtros.estado" :items="FILTRO_DE_ESTADO" item-title="name" item-value="id"
+                    prepend-inner-icon="mdi-list-status" label="Estado" clearable
+                    density="compact" variant="outlined" hide-details />
+        </v-col>
+      </template>
     </filter-bar>
 
     <pdf-split-view v-model="vista" :items="guias" :pdf-de="g => g.pdf" :titulo-de="tituloDe" clave="guias">
@@ -43,22 +59,26 @@
 
     <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
                  @accion="clave => ejecutarAccion(clave, menu.filas)" />
-    <dialog-dispatch-guide ref="formulario" @emitida="recargar" />
+    <dialog-dispatch-guide ref="formulario" @emitida="recargar" @cambiada="reemplazar" @ver-pdf="g => (vista = g.id)" />
     <dialog-cancel-dispatch-guide v-model="porAnular" @anulada="reemplazar" />
     <dialog-info-dispatch-guide v-model="enInfo" @cambiada="reemplazar" @ver-pdf="g => (vista = g.id)" />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
+import ClientSelect from '@/components/shared/ClientSelect.vue'
+import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import FilterBar from '@/components/shared/FilterBar.vue'
+import FilterPill from '@/components/shared/FilterPill.vue'
 import PdfSplitView from '@/components/shared/PdfSplitView.vue'
 import StateLegend from '@/components/shared/StateLegend.vue'
 import { useContextMenu } from '@/composables/useContextMenu'
+import { useDateRangeFilter } from '@/composables/useDateRangeFilter'
 import { useDownload } from '@/composables/useDownload'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useSwal } from '@/composables/useSwal'
@@ -91,7 +111,8 @@ const guias = ref([])
 const total = ref(0)
 const cargando = ref(false)
 const opciones = ref({ page: 1, itemsPerPage: 30 })
-const filtros = ref({ q: '', estado: null })
+const filtros = ref({ q: '', sunat: false, cliente: null, desde: '', hasta: '', estado: null })
+const { rango, aplicarRango, limpiarRango } = useDateRangeFilter(filtros)
 const vista = ref(null)
 const formulario = ref(null)
 const tituloDe = (guia) => `${guia.numero} · ${guia.cliente_data.name}`
@@ -122,14 +143,6 @@ function reemplazar (guia) {
 }
 
 // Abrir una guia en espera le pregunta de nuevo a SUNAT (el back lo hace al leerla).
-async function consultar (guia) {
-  try {
-    reemplazar((await BillingDataService.getDispatchGuide(guia.id)).data)
-  } catch (error) {
-    swal.fire({ icon: 'error', title: 'No se consultó', text: mensajeDeError(error, 'No se pudo consultar.') })
-  }
-}
-
 async function abrirFormulario (ordenIds = [], plantilla = null) {
   try {
     const { data: nueva } = await BillingDataService.newDispatchGuide(ordenIds)
@@ -166,7 +179,10 @@ function ejecutarAccion (clave, [guia]) {
     case 'descargar': return descargar(guia.pdf, guia.nombre_pdf, 'el PDF')
     case 'xml': return abrirEnOtraPestana(guia.xml)
     case 'cdr': return abrirEnOtraPestana(guia.cdr)
-    case 'consultar': return consultar(guia)
+    // Ver informacion le pregunta a SUNAT y sigue preguntando hasta que responda.
+    case 'consultar':
+      enInfo.value = guia
+      return
     case 'plantilla': return abrirFormulario([], guia)
     case 'anular':
       porAnular.value = guia
@@ -187,14 +203,15 @@ watch(filtros, debounce(() => {
 
 // Desde Órdenes llega con ?ordenes=1,2: el formulario se abre lleno con sus equipos.
 onMounted(() => {
-  recargar()
-  // Las que no llegaron a SUNAT se mandan otra vez en segundo plano; si habia alguna, se refresca la lista.
-  reintentarLasPendientes().then((r) => { if (r?.data.reintentadas) recargar() })
+  // Despues de la lista: las que no llegaron van en segundo plano y la lista se refresca sola al guardarse.
+  recargar().then(reintentarLasPendientes)
+  window.addEventListener('wss-reload-dispatch-guides', recargar)
   const ids = String(route.query.ordenes || '').split(',').filter(Boolean)
   if (!ids.length) return
   router.replace({ query: {} })
   abrirFormulario(ids)
 })
+onUnmounted(() => window.removeEventListener('wss-reload-dispatch-guides', recargar))
 
 defineExpose({ nuevo: () => abrirFormulario() })
 </script>

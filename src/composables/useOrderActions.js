@@ -12,7 +12,7 @@ import { anularOrdenes } from '@/utils/orders/anulacion'
 // Lo que hace cada accion de ACCIONES_ORDEN, y el menu de la tabla. Lo usan
 // Servicios y Alquileres; cada una dice como abre sus modales.
 // Marcar pone al panel de facturas en modo vincular, asi que el menu no marca.
-export function useOrderActions(seleccion, { editar, imprimirIngreso, facturar }) {
+export function useOrderActions(seleccion, { editar, imprimirIngreso }) {
   const { hasAction } = usePermissions()
   const router = useRouter()
   const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(seleccion, { marca: false })
@@ -44,6 +44,7 @@ export function useOrderActions(seleccion, { editar, imprimirIngreso, facturar }
   // La pestaña de ese documento abre su formulario lleno con los equipos de estas ordenes.
   const PESTANA = {
     [COTIZACION]: 'documents-quotes', [VALORIZACION]: 'documents-valuations', [GUIA]: 'billing-dispatch-guides',
+    facturar: 'billing-invoices',
   }
   const armarDocumento = (clave, ordenes) => router.push({
     name: PESTANA[clave], query: { ordenes: ordenes.filter(viva).map(o => o.id).join(',') },
@@ -57,11 +58,11 @@ export function useOrderActions(seleccion, { editar, imprimirIngreso, facturar }
       case COTIZACION:
       case VALORIZACION:
       case GUIA:
+      case 'facturar':
         return armarDocumento(clave, ordenes)
       case VINCULAR:
         seleccion.value = [...seleccion.value, ...ordenes.filter(o => !estaMarcada(o))]
         return
-      case 'facturar': return facturar(ordenes)
       case SIN_COMPROBANTE:
       case SIN_CARGO:
         if (await alternarMarca(clave, ordenes)) soltar(ordenes)

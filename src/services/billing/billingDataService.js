@@ -40,6 +40,34 @@ class BillingDataService {
   }
 
   // Facturas subidas y sus abonos. `filtros`: order_type, currency, estado, detraccion, tipo, q, page.
+  // El formulario de emision lleno desde las ordenes, y su cuenta.
+  newInvoice(ordenIds = []) {
+    return axios.get("billing/invoices/nueva/", {
+      params: ordenIds.length ? { ordenes: ordenIds.join(',') } : {}, headers: authHeader(),
+    });
+  }
+  invoiceAmounts(datos, orderType) {
+    return axios.post("billing/invoices/montos/", { datos, order_type: orderType }, { headers: authHeader() });
+  }
+  previewInvoice(datos) {
+    const opciones = { headers: authHeader(), responseType: "blob" };
+    return archivoDe(axios.post("billing/invoices/vista-previa/", datos, opciones));
+  }
+  getInvoiceInfo(id) {
+    return axios.get(`billing/invoices/${id}/info/`, { headers: authHeader() });
+  }
+  cancelInvoice(id, motivo) {
+    return axios.post(`billing/invoices/${id}/anular/`, { motivo }, { headers: authHeader() });
+  }
+  retryInvoice(id) {
+    return axios.post(`billing/invoices/${id}/reintentar/`, {}, { headers: authHeader() });
+  }
+  retryPendingInvoices() {
+    return axios.post("billing/invoices/reintentar/", {}, { headers: authHeader() });
+  }
+  emitInvoice(datos) {
+    return axios.post("billing/invoices/emitir/", datos, { headers: authHeader() });
+  }
   listInvoices(filtros = {}) {
     return axios.get("billing/invoices/", { params: filtros, headers: authHeader() });
   }

@@ -12,7 +12,7 @@
         hide-details="auto"
       />
     </template>
-    <v-date-picker :model-value="dateObj" :min="min" @update:model-value="onDateChange" />
+    <v-date-picker :model-value="dateObj" :min="min" :max="max" @update:model-value="onDateChange" />
   </v-menu>
 </template>
 
@@ -23,8 +23,9 @@ import { fechaCorta, fechaISO } from '@/utils/dates'
 const props = defineProps({
   date: String,
   label: String,
-  // 'YYYY-MM-DD': los dias anteriores no se pueden elegir.
-  min: String
+  // 'YYYY-MM-DD': los dias anteriores a `min` y posteriores a `max` no se pueden elegir.
+  min: String,
+  max: String
 })
 
 const emit = defineEmits(['setPickedDate'])

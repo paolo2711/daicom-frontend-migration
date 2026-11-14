@@ -62,6 +62,8 @@
               </v-menu>
             </template>
           </v-text-field>
+          <v-checkbox-btn v-if="igvPorItem" v-model="fila.incluye_igv" density="compact" class="text-caption"
+                          label="Incluye IGV" />
         </div>
         <div class="d-flex justify-end pt-md-2">
           <span class="font-weight-bold text-no-wrap">{{ monto(totalDeFila(fila), moneda) }}</span>
@@ -109,6 +111,8 @@ const props = defineProps({
   acreditaciones: { type: Array, default: () => [] },
   // El asa(i) de useRowDrag.
   asa: { type: Object, required: true },
+  // Cada precio dice si ya trae el IGV; por ahora solo en la factura.
+  igvPorItem: { type: Boolean, default: false },
 })
 const emit = defineEmits(['mover', 'borrar'])
 
@@ -116,15 +120,18 @@ const emit = defineEmits(['mover', 'borrar'])
 const { mdAndUp } = useDisplay()
 const grupo = computed(() => esGrupo(props.fila))
 
-// El servicio recien elegido, solo mientras se edita: ofrece sus dos precios
-// (en soles) hasta que se cambie el texto.
+// Los dos precios (en soles) del servicio recien elegido, mientras no cambie el texto, o los que trajo la fila.
 const elegido = ref(null)
 const preciosDelCatalogo = computed(() => {
-  const servicio = elegido.value
-  if (props.moneda !== 'PEN' || !servicio || servicio.equipo !== props.fila.equipo) return []
+  if (props.moneda !== 'PEN') return []
+  const servicio = elegido.value?.equipo === props.fila.equipo ? elegido.value : null
+  const precios = servicio
+    ? { estandar: servicio.precio_estandar, corporativo: servicio.precio_corporativo }
+    : props.fila.precios
+  if (!precios) return []
   return [
-    { titulo: 'Estándar', valor: Number(servicio.precio_estandar) },
-    { titulo: 'Corporativo', valor: Number(servicio.precio_corporativo) },
+    { titulo: 'Estándar', valor: Number(precios.estandar) },
+    { titulo: 'Corporativo', valor: Number(precios.corporativo) },
   ]
 })
 

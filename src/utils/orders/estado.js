@@ -10,17 +10,25 @@ export const EXCEDIDO = 6
 // calcula al leer (OrderInvoice.estado y Order.estado_financiero).
 export const CREDITO = 8
 
-// Texto y color de cada uno. Anulada va en azul-gris, distinto del gris de En
-// proceso.
 export const ESTADOS = {
-  [EN_PROCESO]: { texto: 'En proceso', color: '#9e9e9e' },
-  [DEUDA]: { texto: 'Deuda', color: '#e53935' },
-  [CREDITO]: { texto: 'Crédito', color: '#00897b' },
-  [ABONADO]: { texto: 'Abonado', color: '#fb8c00' },
-  [PAGADO]: { texto: 'Pagado', color: '#43a047' },
-  [EXCEDIDO]: { texto: 'Excedido', color: '#1e88e5' },
-  [ANULADA]: { texto: 'Anulada', color: '#546e7a' },
+  [EN_PROCESO]: { texto: 'En proceso' },
+  [DEUDA]: { texto: 'Deuda' },
+  [CREDITO]: { texto: 'Crédito' },
+  [ABONADO]: { texto: 'Abonado' },
+  [PAGADO]: { texto: 'Pagado' },
+  [EXCEDIDO]: { texto: 'Excedido' },
+  [ANULADA]: { texto: 'Anulada' },
 }
+
+// El color del cobro: lo que falta cobrar en rojo, lo cobrado en verde, lo demas sin color.
+export const TONOS = {
+  debe: { texto: 'Debe', color: 'error' },
+  abierta: { texto: 'Crédito al día o en proceso' },
+  pagada: { texto: 'Pagada', color: 'success' },
+  anulada: { texto: 'Anulada', tenue: true },
+}
+const TONO_DEL_ESTADO = { [DEUDA]: 'debe', [ABONADO]: 'debe', [PAGADO]: 'pagada', [EXCEDIDO]: 'pagada', [ANULADA]: 'anulada' }
+export const tonoDe = (estado) => TONOS[TONO_DEL_ESTADO[estado] || 'abierta']
 
 // El filtro de la columna de la orden. Credito no esta: no se guarda, se
 // calcula al leer.

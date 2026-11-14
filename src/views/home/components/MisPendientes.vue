@@ -43,10 +43,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import HomeDataService from '@/services/home/homeDataService'
-import { registrarBajaEnSol, reintentarEnvio, reintentarLasPendientes } from '@/utils/billing/pendientes'
+import { registrarBajaEnSol, reintentarEnvio, reintentarFactura, reintentarLasFacturasPendientes, reintentarLasPendientes }
+  from '@/utils/billing/pendientes'
+import { debounce } from '@/utils/debounce'
 
 const router = useRouter()
 const bloques = ref([])
@@ -58,6 +60,7 @@ const ir = (ruta) => { if (ruta) router.push(ruta).catch(() => {}) }
 const ACCIONES = {
   baja_en_sol: (it) => registrarBajaEnSol(it.id, it.titulo),
   reintentar: (it) => reintentarEnvio(it.id, it.titulo),
+  reintentar_factura: (it) => reintentarFactura(it.id, it.titulo),
 }
 const haciendo = ref(null)
 async function hacer (it) {
@@ -80,11 +83,17 @@ const cargar = () => {
 
 const emit = defineEmits(['bloques'])
 
+// Las guias y facturas que no llegaron a SUNAT van en segundo plano; cuando cambian, se vuelve a pedir.
+const AVISOS_QUE_LOS_CAMBIAN = ['wss-reload-dispatch-guides', 'wss-reload-invoices', 'wss-update-invoice-row']
+const recargar = debounce(cargar)
+
 onMounted(() => {
   cargar()
-  // Las guias que no llegaron a SUNAT se mandan otra vez en segundo plano; si habia alguna, se vuelve a pedir.
-  reintentarLasPendientes().then((r) => { if (r?.data.reintentadas) cargar() })
+  reintentarLasPendientes()
+  reintentarLasFacturasPendientes()
+  AVISOS_QUE_LOS_CAMBIAN.forEach(aviso => window.addEventListener(aviso, recargar))
 })
+onUnmounted(() => AVISOS_QUE_LOS_CAMBIAN.forEach(aviso => window.removeEventListener(aviso, recargar)))
 defineExpose({ cargar })
 </script>
 

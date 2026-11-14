@@ -83,6 +83,19 @@
               </v-col>
 
               <v-col cols="12" md="4">
+                <v-text-field v-model="company.invoice_series" label="Serie de facturas de la app" maxlength="4"
+                              placeholder="F004" density="compact" variant="outlined" hide-details="auto"
+                              :disabled="!isEditing" />
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-text-field v-model="company.invoice_correlative" label="Correlativo de facturas"
+                              density="compact" variant="outlined" type="number" min="1" hide-details="auto"
+                              :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+
+
+              <v-col cols="12" md="4">
                 <v-text-field v-model="company.order_service_correlative" label="Correlativo Orden de Servicio" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
               </v-col>
 
@@ -92,6 +105,51 @@
 
               <v-col cols="12" md="4">
                 <v-text-field v-model="company.inventory_correlative" label="Correlativo Inventario (DAI-XXX)" density="compact" variant="outlined" type="number" min="1" hide-details="auto" :rules="correlative_rules" :disabled="!isEditing" @keypress="isDigit" />
+              </v-col>
+            </v-row>
+
+            <v-row class="mt-4">
+              <v-col cols="12">
+                <v-divider></v-divider>
+                <div class="d-flex align-center my-3">
+                  <div class="text-subtitle-2 font-weight-bold text-grey-darken-1 mr-auto">Cuentas bancarias de la factura</div>
+                  <v-btn v-if="isEditing" variant="outlined" size="small" prepend-icon="mdi-plus"
+                         @click="company.bank_accounts.push(cuentaVacia())">Cuenta</v-btn>
+                </div>
+                <v-row dense class="mb-2">
+                  <v-col cols="12" md="6">
+                    <v-text-field v-model="company.detraction_account" label="Cuenta de detracciones"
+                                  maxlength="30" hint="Banco de la Nación · también va a SUNAT" persistent-hint
+                                  v-bind="CAMPO_DE_CUENTA" hide-details="auto" />
+                  </v-col>
+                </v-row>
+                <div v-if="!company.bank_accounts.length" class="text-caption text-medium-emphasis">
+                  Sin cuentas: la factura no las imprime.
+                </div>
+                <div v-for="(cuenta, i) in company.bank_accounts" :key="i" class="border rounded-lg pa-2 mb-2">
+                  <v-row dense class="align-center">
+                    <v-col cols="12" md="4">
+                      <v-text-field v-model="cuenta.banco" label="Banco" v-bind="CAMPO_DE_CUENTA" />
+                    </v-col>
+                    <v-col cols="6" md="4">
+                      <v-select v-model="cuenta.moneda" :items="['Soles', 'Dólares']" label="Moneda" v-bind="CAMPO_DE_CUENTA" />
+                    </v-col>
+                    <v-col cols="6" md="4">
+                      <v-select v-model="cuenta.tipo" :items="['Cta. corriente', 'Cta. ahorros']" label="Tipo"
+                                v-bind="CAMPO_DE_CUENTA" />
+                    </v-col>
+                    <v-col cols="12" md="5">
+                      <v-text-field v-model="cuenta.numero" label="Número" v-bind="CAMPO_DE_CUENTA" />
+                    </v-col>
+                    <v-col cols="11" md="6">
+                      <v-text-field v-model="cuenta.cci" label="CCI" v-bind="CAMPO_DE_CUENTA" />
+                    </v-col>
+                    <v-col cols="1" class="text-right">
+                      <v-btn v-if="isEditing" icon="mdi-close" variant="text" size="small" title="Quitar la cuenta"
+                             @click="company.bank_accounts.splice(i, 1)" />
+                    </v-col>
+                  </v-row>
+                </div>
               </v-col>
             </v-row>
 
@@ -215,6 +273,9 @@ const is_loading = ref(false)
 const is_valid = ref(false)
 const is_on_sending_process = ref(false)
 
+const CAMPO_DE_CUENTA = computed(() => ({ density: 'compact', variant: 'outlined', hideDetails: true, disabled: !isEditing.value }))
+const cuentaVacia = () => ({ banco: '', moneda: 'Soles', tipo: 'Cta. corriente', numero: '', cci: '' })
+
 const company = reactive({
   name: '',
   address: '',
@@ -222,6 +283,7 @@ const company = reactive({
   email: '',
   image: '',
   bank_accounts_image: '',
+  bank_accounts: [],
   accredited_correlative: '',
   non_accredited_correlative: '',
   operationality_correlative: '',
@@ -230,6 +292,9 @@ const company = reactive({
   dispatch_series: '',
   dispatch_correlative: '',
   ubigeo: '',
+  invoice_series: '',
+  invoice_correlative: '',
+  detraction_account: '',
   order_service_correlative: '',
   order_rental_correlative: '',
   inventory_correlative: '',
@@ -329,6 +394,7 @@ const saveCompany = async () => {
   delete prepare_data['non_accredited_correlative_pdf_first_page']
   delete prepare_data['non_accredited_correlative_pdf_other_pages']
 
+  prepare_data.bank_accounts = JSON.stringify(company.bank_accounts)
   for (let key in prepare_data) {
     data.append(key, prepare_data[key] === undefined || prepare_data[key] === null ? '' : prepare_data[key])
   }

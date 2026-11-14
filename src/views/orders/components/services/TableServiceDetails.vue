@@ -6,7 +6,7 @@
         <span class="text-subtitle-2 font-weight-bold text-primary">
           Equipos en este Servicio: {{ order.order_number }}
         </span>
-        <span v-if="order.created_at" class="text-caption text-medium-emphasis ml-3 mt-1 font-weight-medium d-flex align-center">
+        <span v-if="muestraFecha && order.created_at" class="text-caption text-medium-emphasis ml-3 mt-1 font-weight-medium d-flex align-center">
           <v-icon size="x-small" class="mr-1">mdi-calendar-blank</v-icon>
           {{ fechaCorta(order.created_at) }}
         </span>
@@ -155,6 +155,8 @@ import NumerosAnteriores from '@/components/shared/NumerosAnteriores.vue'
 
 const props = defineProps({
   order: { type: Object, required: true },
+  // Sin la columna de fecha en la lista, va aca.
+  muestraFecha: { type: Boolean, default: true },
 })
 const emit = defineEmits(['editar', 'edit-certificate', 'accion-certificados', 'lineas-cambiaron'])
 

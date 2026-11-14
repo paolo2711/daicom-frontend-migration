@@ -98,10 +98,6 @@ class BillingDataService {
   createInvoicePayment(invoiceId, data) {
     return axios.post(`billing/invoices/${invoiceId}/payments/`, data, { headers: authHeader() });
   }
-  // El abono de una orden sin comprobante: va a su contenedor interno.
-  liquidate(orderId, data) {
-    return axios.post(`billing/orders/${orderId}/payments/`, data, { headers: authHeader() });
-  }
   updatePayment(id, data) {
     return axios.patch(`billing/payments/${id}/`, data, { headers: authHeader() });
   }

@@ -286,7 +286,6 @@
                  @accion="clave => ejecutarAccion(clave, menu.filas)" />
 
     <!-- MODALES -->
-    <dialog-invoice v-model="factura_modal" :order="selected_order" :orders="ordenes_factura_multi" :order_type="ALQUILER" @updateOrder="onFacturaGuardada" @close="cerrarFacturaModal" />
     <add-order ref="editarOrdenRef" @guardada="o => fetchAndInjectSingleOrder({ detail: o.id })" />
     
   </div>
@@ -310,7 +309,6 @@ import { useOrderItems } from '@/composables/useOrderItems'
 import { throttle } from '@/utils/throttle'
 import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemaforoFinanciero } from '@/utils/orders/cobro'
 import { useAppStore } from '@/stores/appStore'
-import DialogInvoice from '@/views/billing/components/DialogInvoice.vue'
 import AddOrder from '../AddOrder.vue'
 import TableRentalDetails from './TableRentalDetails.vue'
 import PanelFacturas from '../PanelFacturas.vue'
@@ -322,12 +320,8 @@ const appStore = useAppStore()
 // ── Búsqueda paginada de clientes (autocomplete del filtro) ──
 const filter_client_id = ref(null)
 
-// ── Estado UI (modales + split-screen del panel de facturas) ──
-const factura_modal = ref(false)
-const selected_order = ref(null)
 const ordenes_seleccionadas = ref([])
 const foco = ref(null)
-const ordenes_factura_multi = ref(null) // órdenes para crear UNA factura por selección
 
 const headers = [
   { title: 'Nro Alquiler',      key: 'order_number' },
@@ -445,16 +439,6 @@ const fetchAndInjectSingleOrder = (event) => {
   }).catch(() => {})
 }
 
-const updateSingleOrderInList = (updatedOrder) => {
-  const index = orders.value.findIndex(o => o.id === updatedOrder.id)
-  if (index !== -1) {
-    // Las lineas las trae useOrderItems; el resto de la orden no las pisa.
-    const lineas = orders.value[index].rentals
-    Object.assign(orders.value[index], OrderMappers.getMap(updatedOrder), { rentals: lineas })
-  }
-  // El Anti-DDoS (setTimeout) del WebSocket ya llama a cargarResumenes.
-}
-
 // ── Filas / expansión ──
 const manejarClicFila = (event, { item }) => {
   if (event.target.closest('button') || event.target.closest('.v-btn') || event.target.closest('.v-chip') || event.target.closest('.v-data-table__expand-icon')) return
@@ -475,32 +459,10 @@ const seleccionarFacturaEnPanel = (o) => {
 const editarOrdenRef = ref(null)
 const abrirEditarOrden = (o) => editarOrdenRef.value?.editar(o)
 
-// Una sola factura para todas: DialogInvoice la crea y les vincula las ordenes.
-// La moneda se elige ahi, la orden no tiene.
-const facturar = (ordenes) => {
-  selected_order.value = null
-  ordenes_factura_multi.value = [...ordenes]
-  factura_modal.value = true
-}
-
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, ejecutarAccion } =
   useOrderActions(ordenes_seleccionadas, {
     editar: abrirEditarOrden,
-    facturar,
   })
-
-// Guardado desde el diálogo: en multi limpia la selección; en single refresca su fila.
-const onFacturaGuardada = (payload) => {
-  if (ordenes_factura_multi.value) {
-    ordenes_seleccionadas.value = []
-  } else if (payload && payload.id) {
-    updateSingleOrderInList(payload)
-  }
-}
-const cerrarFacturaModal = () => {
-  factura_modal.value = false
-  ordenes_factura_multi.value = null
-}
 
 // ── Watchers ──
 watch(options, () => { retrieveOrders() }, { deep: true })

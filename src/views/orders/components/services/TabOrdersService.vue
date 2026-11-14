@@ -266,7 +266,6 @@
     <!-- MODALES -->
     <batch-action-modal ref="batchActionModalRef" />
 
-    <dialog-invoice v-model="factura_modal" :order="selected_order" :orders="ordenes_factura_multi" :order_type="SERVICIO" @updateOrder="onFacturaGuardada" @close="cerrarFacturaModal" />
     <add-order ref="editarOrdenRef" @guardada="alCambiarLineas" />
     <certificate-modal ref="certificateModalRef" />
   </div>
@@ -297,7 +296,6 @@ import { throttle } from '@/utils/throttle'
 import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemaforoFinanciero } from '@/utils/orders/cobro'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
-import DialogInvoice from '@/views/billing/components/DialogInvoice.vue'
 import AddOrder from '../AddOrder.vue'
 import TableServiceDetails from './TableServiceDetails.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
@@ -328,9 +326,6 @@ const filtro_sin_factura = ref(false)
 // Texto computado para el calendario elegante
 
 // Estados de modales
-const factura_modal = ref(false)
-const ordenes_factura_multi = ref(null) // órdenes para crear UNA factura por selección
-const selected_order = ref(null)
 const certificateModalRef = ref(null)
 const batchActionModalRef = ref(null)
 
@@ -506,30 +501,6 @@ const seleccionarFacturaEnPanel = (o) => {
   }
 }
 
-// Una sola factura para todas: DialogInvoice la crea y les vincula las ordenes.
-// La moneda se elige ahi, la orden no tiene.
-const facturar = (ordenes) => {
-  selected_order.value = null
-  ordenes_factura_multi.value = [...ordenes]
-  factura_modal.value = true
-}
-
-// ------------------------------------------------
-
-// Guardado de factura desde el diálogo. En multi limpiamos la selección; en
-// single refrescamos su fila. En ambos casos el WS refresca fila(s) y panel.
-const onFacturaGuardada = (payload) => {
-  if (ordenes_factura_multi.value) {
-    ordenes_seleccionadas.value = []
-  } else if (payload && payload.id) {
-    updateSingleOrderInList(payload)
-  }
-}
-const cerrarFacturaModal = () => {
-  factura_modal.value = false
-  ordenes_factura_multi.value = null
-}
-
 const getProgreso = (o) => {
   return o.progreso || { total: 0, listos: 0 }
 }
@@ -545,7 +516,6 @@ const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, ejecutarA
   useOrderActions(ordenes_seleccionadas, {
     editar: abrirEditarOrden,
     imprimirIngreso,
-    facturar,
   })
 
 const idOrdenExpandida = () => (
@@ -583,15 +553,6 @@ const aplicarEquiposCambiados = (event) => actualizarItems(idOrdenExpandida(), [
 
 // Se creo o se borro un certificado: cambio quien esta en la orden.
 const recargarEquiposPorWebSocket = () => cargarItems(idOrdenExpandida())
-
-const updateSingleOrderInList = (updatedOrder) => {
-  const index = orders.value.findIndex(o => o.id === updatedOrder.id)
-  if (index !== -1) {
-    // Los equipos los trae useOrderItems; el resto de la orden no los pisa.
-    const equipos = orders.value[index].items
-    Object.assign(orders.value[index], OrderMappers.getMap(updatedOrder), { items: equipos })
-  }
-}
 
 // Una linea sin certificado no avisa sola: se recargan sus equipos y la barra de la fila.
 function alCambiarLineas (orden) {

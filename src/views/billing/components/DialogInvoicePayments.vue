@@ -17,6 +17,19 @@
       </base-modal-header>
 
       <v-card-text class="pa-0">
+        <div v-if="resumen" class="pa-4 pb-0">
+          <v-row dense>
+            <v-col v-for="dato in resumen" :key="dato.titulo" cols="6" sm="3">
+              <div class="border rounded-lg pa-2 h-100" :class="dato.clase">
+                <div class="text-caption text-medium-emphasis">{{ dato.titulo }}</div>
+                <div class="font-weight-bold text-no-wrap">{{ dato.valor }}</div>
+              </div>
+            </v-col>
+          </v-row>
+          <div v-if="invoice.detraccion_applies" class="text-caption text-medium-emphasis mt-2">
+            La detracción la deposita el cliente en el Banco de la Nación: no entra en el saldo.
+          </div>
+        </div>
         <div
           class="pa-4"
           :class="theme.global.current.value.dark ? 'bg-grey-darken-4' : 'bg-grey-lighten-4'"
@@ -125,7 +138,10 @@
 
         <v-divider class="mx-6 mb-0" />
 
-        <v-form ref="liquidarFormRef" @submit.prevent class="pa-4">
+        <v-alert v-if="anulada(invoice || {})" type="info" variant="tonal" density="compact" class="ma-4">
+          Esta factura está anulada: no recibe abonos.
+        </v-alert>
+        <v-form v-else ref="liquidarFormRef" @submit.prevent class="pa-4">
           <div class="d-flex align-center justify-space-between mb-3">
             <div class="text-subtitle-2 font-weight-bold">
               {{ editando ? 'Editar Abono:' : 'Registrar Nuevo Abono:' }}
@@ -159,6 +175,8 @@
                 prepend-inner-icon="mdi-currency-usd"
                 :rules="[v => !!v || 'Monto requerido']"
               />
+              <v-btn v-if="saldo > 0 && !editando" variant="text" size="small" class="text-none px-1 mt-1"
+                     @click="payment_data.amount = saldo">Pagar saldo · {{ monto(saldo, monedaActual) }}</v-btn>
             </v-col>
             <v-col cols="12" md="6">
               <date-picker
@@ -208,7 +226,8 @@
       <v-card-actions class="px-6 pb-4 pt-2">
         <v-spacer />
         <v-btn variant="flat" class="font-weight-bold rounded-lg mr-3 px-6" @click="closeDialog">Cerrar</v-btn>
-                <v-btn color="primary" variant="flat" elevation="2" class="text-white font-weight-bold rounded-lg px-6"
+                <v-btn v-if="!anulada(invoice || {})" color="primary" variant="flat" elevation="2"
+          class="text-white font-weight-bold rounded-lg px-6"
           :loading="is_on_sending_process" :disabled="!payment_data.payment_method || !payment_data.amount" @click="save">
           {{ editando ? 'Guardar Cambios' : 'Registrar Abono' }}
         </v-btn>
@@ -227,6 +246,7 @@ import { useAppStore } from '@/stores/appStore'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 import { fechaCorta, hoyISO } from '@/utils/dates'
+import { anulada } from '@/utils/billing/facturas'
 import { monto, nombreDe, simboloDe } from '@/utils/money'
 import { mensajeDeError } from '@/utils/errors'
 
@@ -249,7 +269,32 @@ const dialogModel = computed({
 // Unifica el contexto: el abono puede abrirse desde una FACTURA (caso
 // normal, panel) o desde una ORDEN (compatibilidad). La factura manda.
 const monedaActual = computed(() => props.invoice?.currency || 'PEN')
-const historialPagos = computed(() => props.invoice?.payments || props.order?.payments || [])
+// Los de la factura se piden al abrir: la fila de la tabla solo trae cuantos son.
+const abonosDeLaFactura = ref([])
+const historialPagos = computed(() => (props.invoice ? abonosDeLaFactura.value : props.order?.payments || []))
+async function cargarAbonos () {
+  if (!props.invoice) return
+  try {
+    abonosDeLaFactura.value = (await BillingDataService.listInvoicePayments(props.invoice.id)).data
+  } catch (error) {
+    Swal.fire('No se cargaron los abonos', mensajeDeError(error, 'No se pudieron leer los abonos.'), 'error')
+  }
+}
+
+// Lo que el cliente debe: el total, la detraccion que va al Banco de la Nacion, lo abonado y el saldo.
+const saldo = computed(() => Math.max(Number(props.invoice?.saldo_pendiente) || 0, 0))
+const resumen = computed(() => {
+  const factura = props.invoice
+  if (!factura?.es_fiscal) return null
+  const moneda = factura.currency
+  return [
+    { titulo: 'Total', valor: monto(factura.amount, moneda) },
+    { titulo: 'Detracción', valor: factura.detraccion_applies ? `− ${monto(factura.detraccion_amount, moneda)}` : '—' },
+    { titulo: 'Abonado', valor: `− ${monto(factura.total_pagado, moneda)}` },
+    { titulo: 'Saldo', valor: monto(factura.saldo_pendiente, moneda),
+      clase: factura.saldo_pendiente > 0 ? 'text-error border-error' : 'text-success border-success' },
+  ]
+})
 
 const is_on_sending_process = ref(false)
 const file = ref(null)
@@ -280,6 +325,9 @@ const resetLocalForm = () => {
 watch(() => props.modelValue, (val) => {
   if (val) {
     resetLocalForm()
+    if (saldo.value > 0) payment_data.amount = saldo.value
+    abonosDeLaFactura.value = props.invoice?.payments || []
+    cargarAbonos()
   }
 })
 
@@ -367,6 +415,7 @@ const eliminarPago = (id) => {
     if (result.isConfirmed) {
       BillingDataService.deletePayment(id).then(() => {
         Toast.fire({ timer: 2200, icon: 'success', title: 'Abono eliminado' })
+        cargarAbonos()
       }).catch(() => {
         Swal.fire('Error', 'No se pudo eliminar el abono.', 'error')
       })

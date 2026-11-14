@@ -66,3 +66,22 @@
 .titulo-de-seccion { font-size: 0.8125rem; font-weight: 600; }
 // El buscador de la cabecera de la lista de equipos.
 .buscador-de-equipo { width: 22rem; flex: 0 1 22rem; }
+// Las pestañas del panel de apoyo: todas del mismo ancho, digan lo que digan.
+.pestanas-parejas .v-tab { flex: 1 1 0; min-width: 0; text-transform: none; letter-spacing: normal; border-radius: 0.5rem 0.5rem 0 0; }
+.pestanas-parejas .v-tab--selected { font-weight: 700; }
+// Una fila que abre algo en el panel de la derecha: fondo suave sin contorno; la abierta, teñida.
+.fila-que-abre {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.625rem;
+  background: rgba(var(--v-theme-on-surface), 0.05);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.fila-que-abre:hover { background: rgba(var(--v-theme-on-surface), 0.09); }
+.fila-que-abre.abierta {
+  background: rgba(var(--v-theme-primary), 0.16);
+  font-weight: 600;
+}

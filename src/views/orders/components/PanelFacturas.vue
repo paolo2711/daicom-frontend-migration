@@ -43,7 +43,7 @@
             </div>
             <div class="d-flex justify-space-between ga-2 text-caption text-medium-emphasis">
               <span>{{ detalleDe(factura) }}</span>
-              <span :style="{ color: estadoDe(factura).color }">{{ estadoDe(factura).texto }}</span>
+              <span :class="estadoDe(factura).color && `text-${estadoDe(factura).color}`">{{ estadoDe(factura).texto }}</span>
             </div>
           </div>
 
@@ -153,7 +153,7 @@ async function recargar () {
   const turno = begin()
   try {
     const [lista, resumen] = await Promise.all([
-      BillingDataService.listInvoices({ order_id: props.orden.id, page_size: 100 }),
+      BillingDataService.listInvoices({ order_id: props.orden.id, page_size: 100, con_abonos: true }),
       OrderDataService.getResumen(props.orden.id),
     ])
     if (!isLatest(turno)) return
@@ -172,7 +172,7 @@ async function recargar () {
 // Las del cliente y las sueltas; con clientes distintos marcados, todas las del tipo.
 const buscarFacturas = (page, size, q) => BillingDataService.listInvoices({
   page, page_size: size, q: q || undefined, tipo: 'fiscal', order_type: props.order_type,
-  cliente: clientes.value.length === 1 ? aVincular.value[0].client_data.id : undefined,
+  para_cliente: clientes.value.length === 1 ? aVincular.value[0].client_data.id : undefined,
 })
 
 async function vincularA (factura) {

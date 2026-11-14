@@ -13,6 +13,7 @@ const RELOADS = {
   RELOAD_ORDERS_rental: 'wss-reload-orders-rental',
   RELOAD_DOCUMENTS: 'wss-reload-documents',     // todas las tablas de documentos
   RELOAD_INVOICES: 'wss-reload-invoices',
+  RELOAD_DISPATCH_GUIDES: 'wss-reload-dispatch-guides',
   RELOAD_INVENTORY: 'wss-reload-inventory',
 }
 

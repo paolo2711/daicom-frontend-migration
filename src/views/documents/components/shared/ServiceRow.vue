@@ -93,7 +93,7 @@ import { useDisplay } from 'vuetify'
 import InnerCounter from '@/components/shared/InnerCounter.vue'
 import DragHandle from '@/components/shared/DragHandle.vue'
 import CatalogDescriptionField from './CatalogDescriptionField.vue'
-import { LIMITES, UNIDADES, acotado, esGrupo, totalDeFila } from '@/utils/documents/quoteDefaults'
+import { LIMITES, UNIDADES, acotado, esGrupo, preciosDelCatalogo as precios, totalDeFila } from '@/utils/documents/quoteDefaults'
 import { monto, simboloDe } from '@/utils/money'
 
 // Una fila de ServicesTable. Es su propio componente para que editarla no redibuje las demas.
@@ -116,17 +116,8 @@ const emit = defineEmits(['mover', 'borrar'])
 const { mdAndUp } = useDisplay()
 const grupo = computed(() => esGrupo(props.fila))
 
-// El servicio recien elegido, solo mientras se edita: ofrece sus dos precios
-// (en soles) hasta que se cambie el texto.
 const elegido = ref(null)
-const preciosDelCatalogo = computed(() => {
-  const servicio = elegido.value
-  if (props.moneda !== 'PEN' || !servicio || servicio.equipo !== props.fila.equipo) return []
-  return [
-    { titulo: 'Estándar', valor: Number(servicio.precio_estandar) },
-    { titulo: 'Corporativo', valor: Number(servicio.precio_corporativo) },
-  ]
-})
+const preciosDelCatalogo = computed(() => precios(props.fila, elegido.value, props.moneda))
 
 // Se ve con texto o abierto con su boton; abierto y dejado vacio, se cierra al salir.
 const comentarioAbierto = ref(false)

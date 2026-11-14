@@ -3,6 +3,7 @@ import NProgress from "nprogress";
 import "nprogress/nprogress.css";
 import { useAuthStore } from "@/stores/authStore";
 import { sinBeta } from "@/utils/beta";
+import { OPCIONES_NUEVA_FACTURA } from "@/utils/billing/facturas";
 import { OPCIONES_NUEVO_DOCUMENTO } from "@/utils/documents/quoteDefaults";
 import { COTIZACION, VALORIZACION } from "@/utils/documents/tipos";
 
@@ -103,7 +104,7 @@ const routes = [
             path: "facturas",
             meta: {
               pestana: { texto: "Facturas", icono: "mdi-file-document-multiple-outline" },
-              nuevo: { texto: "Subir factura", icono: "mdi-file-upload-outline" },
+              nuevo: { texto: "Nueva factura", icono: "mdi-file-document-plus-outline", opciones: OPCIONES_NUEVA_FACTURA },
             },
             component: () => import("@/views/billing/components/TabInvoices.vue"),
           },

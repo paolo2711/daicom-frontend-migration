@@ -33,7 +33,7 @@
           <span class="om-det">{{ m.simbolo }} {{ money(m.cobrado) }} de {{ m.simbolo }} {{ money(m.facturado) }}</span>
         </div>
 
-        <!-- Cobros sin comprobante (INT-). Fuera del arco a proposito: nacen
+        <!-- Cobros sin comprobante (INT). Fuera del arco a proposito: nacen
              cobradas al 100% y empujarian el porcentaje sin significar nada. -->
         <div v-for="s in sinComprobante" :key="'int-' + s.moneda" class="otra-moneda">
           <span class="om-cod">Sin comprobante</span>

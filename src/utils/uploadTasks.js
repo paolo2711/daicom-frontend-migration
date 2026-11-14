@@ -33,8 +33,8 @@ export const esConversion = (tarea) => TIPOS_CONVERSION.includes(tarea.type)
 // Sacar de la nube no deja ningun PDF que abrir al terminar.
 export const esBaja = (tarea) => tarea.type === 'nube'
 
-// Facturas y guias enviadas a SUNAT: se miran en su pestaña, y la rechazada se corrige alla, no se reintenta.
-const TIPOS_COMPROBANTE = ['invoice', 'dispatchguide']
+// Facturas, guias y notas de credito enviadas a SUNAT: se miran en su pestaña, y la rechazada se corrige alla, no se reintenta.
+const TIPOS_COMPROBANTE = ['invoice', 'dispatchguide', 'creditnote']
 export const esComprobante = (tarea) => TIPOS_COMPROBANTE.includes(tarea.type)
 
 // Una conversion en 'success' tiene el PDF hecho y todavia sin guardar: lo que

@@ -18,12 +18,8 @@
 
       <div class="cuerpo d-flex flex-column ga-3 pa-3 flex-grow-1">
         <div v-if="!vinculando && totales.length" class="titulo-de-seccion">Total de la orden</div>
-        <div v-for="t in vinculando ? [] : totales" :key="t.currency" class="totales">
-          <div v-for="dato in datosDe(t)" :key="dato.titulo" class="bg-hoja_de_apoyo rounded-lg pa-2">
-            <div class="text-caption text-medium-emphasis">{{ dato.titulo }}</div>
-            <div class="font-weight-medium text-no-wrap" :class="dato.clase">{{ dato.valor }}</div>
-          </div>
-        </div>
+        <amount-breakdown v-for="t in vinculando ? [] : totales" :key="t.currency" v-bind="desgloseDeOrden(t)"
+                          class="total-de-la-orden px-3 py-2 rounded-lg" />
 
         <div v-if="vinculando" class="text-caption text-medium-emphasis">
           Vincúlalas a una factura que ya existe o emite una sola para todas.
@@ -57,18 +53,11 @@
 
             <v-expand-transition>
               <div v-if="abierta === factura.id" class="detalle mx-3 pb-3">
-                <div v-if="factura.es_fiscal" class="dato"><span>{{ factura.es_credito ? 'Crédito' : 'Contado' }}</span>
-                  <span v-if="factura.es_credito">vence {{ fechaCorta(factura.due_date) }}</span></div>
-                <div v-if="factura.detraccion_applies" class="dato"><span>Detracción</span>
-                  <span>{{ monto(factura.detraccion_amount, factura.currency) }}</span></div>
-                <div v-for="abono in factura.payments" :key="abono.id" class="dato">
+                <amount-breakdown v-if="factura.es_fiscal" v-bind="desgloseDeFactura(factura, factura.payments)" />
+                <div v-for="abono in factura.es_fiscal ? [] : factura.payments" :key="abono.id" class="dato">
                   <span>Abono {{ fechaCorta(abono.payment_date) }} · {{ FORMA_DE_PAGO[abono.payment_method] }}</span>
                   <span>{{ monto(abono.amount, abono.currency) }}</span>
                 </div>
-                <div v-if="factura.es_fiscal" class="dato font-weight-bold"><span>Falta</span>
-                  <span :class="factura.saldo_pendiente > 0 ? 'text-error' : 'text-success'">
-                    {{ monto(Math.max(factura.saldo_pendiente, 0), factura.currency) }}
-                  </span></div>
 
                 <div class="botones mt-3">
                   <v-btn color="primary" variant="flat" size="small" class="text-none" prepend-icon="mdi-cash-plus"
@@ -107,6 +96,8 @@
 </template>
 
 <script setup>
+import AmountBreakdown from '@/components/shared/AmountBreakdown.vue'
+import { desgloseDeFactura, desgloseDeOrden } from '@/utils/billing/desglose'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
@@ -155,11 +146,6 @@ const subtitulo = computed(() => {
 
 const detalleDe = (factura) => [factura.cliente, fechaCorta(factura.invoice_date),
   factura.es_fiscal ? '' : 'Sin comprobante'].filter(Boolean).join(' · ')
-const datosDe = (t) => [
-  { titulo: 'Facturado', valor: monto(t.facturado, t.currency) },
-  { titulo: 'Cobrado', valor: monto(t.cobrado, t.currency) },
-  { titulo: 'Falta', valor: monto(t.falta, t.currency), clase: Number(t.falta) > 0 ? 'text-error' : 'text-success' },
-]
 
 const facturas = ref([])
 const totales = ref([])
@@ -254,6 +240,7 @@ onUnmounted(() => {
 .cabeza:hover { background: rgba(var(--v-theme-on-surface), 0.04); }
 .detalle { border-top: thin solid rgba(var(--v-border-color), var(--v-border-opacity)); padding-top: 0.5rem; }
 .dato { display: flex; justify-content: space-between; gap: 0.5rem; padding-top: 0.25rem; font-size: 0.75rem; }
-.botones { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0.5rem; }
-.totales { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: 0.5rem; }
+.botones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.botones > * { flex: 1 1 auto; }
+.total-de-la-orden { background: rgba(var(--v-theme-on-surface), 0.05); }
 </style>

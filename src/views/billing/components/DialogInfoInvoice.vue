@@ -6,6 +6,18 @@
       <v-card-text class="pt-4">
         <sunat-info :comprobante="factura" :estado-sunat="factura.estado_sunat" :numero="factura.invoice_number"
                     :filas="filas" />
+        <div v-if="factura.notas?.length" class="mt-4">
+          <div class="text-caption text-medium-emphasis mb-1">Notas de crédito</div>
+          <div v-for="nota in factura.notas" :key="nota.id" class="d-flex align-center ga-2 text-body-2 py-1">
+            <div class="flex-grow-1">
+              <div class="font-weight-medium">{{ nota.numero }}</div>
+              <div class="text-caption text-medium-emphasis">{{ nota.motivo }} · {{ nota.motivo_nombre }}</div>
+            </div>
+            <span class="text-no-wrap">{{ Number(nota.total) ? `− ${monto(nota.total, nota.moneda)}` : 'Sin monto' }}</span>
+            <v-btn size="small" variant="outlined" class="text-none" prepend-icon="mdi-file-pdf-box"
+                   :disabled="!nota.pdf_url" @click="abrirEnOtraPestana(nota.pdf_url)">PDF</v-btn>
+          </div>
+        </div>
       </v-card-text>
 
       <v-card-actions class="px-6 pb-4 flex-wrap ga-2">
@@ -33,6 +45,7 @@ import { ANULADA, POR_ENVIAR } from '@/utils/billing/sunat'
 import { fechaCorta, fechaHora } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 import { monto } from '@/utils/money'
+import { abrirEnOtraPestana } from '@/utils/pdf'
 import SunatInfo from './SunatInfo.vue'
 
 // La factura de la fila, o null con el dialogo cerrado. Al abrirse pide el detalle con el QR.

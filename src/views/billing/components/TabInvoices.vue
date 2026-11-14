@@ -84,6 +84,9 @@
             <div v-if="item.es_fiscal" class="text-caption text-no-wrap text-medium-emphasis">
               {{ item.detraccion_applies ? `Detracción ${importe(item.detraccion_amount)}` : 'Sin detracción' }}
             </div>
+            <div v-for="nota in item.notas" :key="nota.id" class="text-caption text-no-wrap text-medium-emphasis">
+              Con nota {{ nota.numero }}{{ Number(nota.total) ? ` · − ${monto(nota.total, item.currency)}` : '' }}
+            </div>
           </template>
           <template #item.cobro="{ item }">
             <div class="font-weight-medium text-no-wrap" :class="cobroDe(item).tono && `text-${cobroDe(item).tono}`">
@@ -112,6 +115,11 @@
     <dialog-invoice v-model="editando" :invoice-to-edit="enEdicion" @close="enEdicion = null" />
     <dialog-invoice-payments v-model="enAbonos" :invoice="conAbonos" @close="enAbonos = false" />
     <dialog-emit-invoice ref="emision" @emitida="alEmitir" />
+    <dialog-credit-note ref="nota" @emitida="alEmitirNota" />
+    <sunat-envio :comprobante="notaEnviada && comprobanteDeNota(notaEnviada)" tipo="creditnote"
+                 :filas="notaEnviada ? [['Factura', notaEnviada.factura_numero], ['Total', monto(notaEnviada.total, notaEnviada.moneda)]] : []"
+                 :corregible="notaCorregible" @cerrar="cerrarNota" @corregir="corregirNota"
+                 @ver-pdf="abrirEnOtraPestana(notaEnviada.pdf_url); cerrarNota()" />
     <sunat-envio :comprobante="enviada && comprobanteDe(enviada)" tipo="invoice" :filas="enviada ? filasDe(enviada) : []"
                  :corregible="corregible" @cerrar="cerrarEnviada" @corregir="corregirEnviada"
                  @ver-pdf="vista = enviada.id; cerrarEnviada()" />
@@ -155,6 +163,7 @@ import { MONEDAS, importe, monto } from '@/utils/money'
 import { ALQUILER, SERVICIO, TONOS } from '@/utils/orders/estado'
 import { abrirEnOtraPestana, avisarSoloPdf } from '@/utils/pdf'
 import DialogCancelInvoice from './DialogCancelInvoice.vue'
+import DialogCreditNote from './DialogCreditNote.vue'
 import DialogEmitInvoice from './DialogEmitInvoice.vue'
 import DialogInfoInvoice from './DialogInfoInvoice.vue'
 import DialogInvoice from './DialogInvoice.vue'
@@ -256,6 +265,21 @@ function subir (pdf = null) {
 const emision = ref(null)
 const { enviada, corregible, alEmitir, cerrar: cerrarEnviada, corregir: corregirEnviada } =
   useEmissionPanel(facturas, emision, recargar, InvoiceMappers.getMap)
+
+// La nota de credito: su formulario y, al emitirla, su panel al costado como el de la factura.
+const nota = ref(null)
+const notasDeLaLista = computed(() => facturas.value.flatMap(f => f.notas))
+const { enviada: notaEnviada, corregible: notaCorregible, alEmitir: alEmitirNota, cerrar: cerrarNota,
+        corregir: corregirNota } = useEmissionPanel(notasDeLaLista, nota, recargar)
+const comprobanteDeNota = (n) => ({ id: n.id, numero: n.numero, cliente: n.cliente, pdf: n.pdf_url,
+                                    nombrePdf: n.nombre_pdf, xml: n.xml })
+async function abrirNota (factura) {
+  try {
+    nota.value.open((await BillingDataService.newCreditNote(factura.id)).data)
+  } catch (error) {
+    swal.fire({ icon: 'error', title: 'No se abrió la nota', text: mensajeDeError(error, 'No se pudieron leer los datos.') })
+  }
+}
 // `plantilla`: otra factura emitida, que llena el formulario con sus items y condiciones.
 async function abrirEmision (ordenIds = [], plantilla = null) {
   try {
@@ -332,6 +356,7 @@ function ejecutarAccion (clave, [factura]) {
       enEdicion.value = factura
       return nextTick(() => { editando.value = true })
     case 'desvincular': return desvincularUna(factura)
+    case 'nota': return abrirNota(factura)
     case 'anular':
       enBaja.value = factura
       return

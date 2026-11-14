@@ -13,18 +13,8 @@
       </base-modal-header>
 
       <v-card-text class="pa-0">
-        <div v-if="resumen" class="pa-4 pb-0">
-          <v-row dense>
-            <v-col v-for="dato in resumen" :key="dato.titulo" cols="6" sm="3">
-              <div class="border rounded-lg pa-2 h-100" :class="dato.clase">
-                <div class="text-caption text-medium-emphasis">{{ dato.titulo }}</div>
-                <div class="font-weight-bold text-no-wrap">{{ dato.valor }}</div>
-              </div>
-            </v-col>
-          </v-row>
-          <div v-if="invoice.detraccion_applies" class="text-caption text-medium-emphasis mt-2">
-            La detracción la deposita el cliente en el Banco de la Nación: no entra en el saldo.
-          </div>
+        <div v-if="desglose" class="pa-4 pb-0">
+          <amount-breakdown v-bind="desglose" />
         </div>
         <div
           class="pa-4"
@@ -172,7 +162,7 @@
                 :rules="[v => !!v || 'Monto requerido']"
               />
               <v-btn v-if="saldo > 0 && !editando" variant="text" size="small" class="text-none px-1 mt-1"
-                     @click="payment_data.amount = saldo">Pagar saldo · {{ monto(saldo, monedaActual) }}</v-btn>
+                     @click="payment_data.amount = saldo">Pagar lo que falta · {{ monto(saldo, monedaActual) }}</v-btn>
             </v-col>
             <v-col cols="12" md="6">
               <date-picker
@@ -233,6 +223,8 @@
 </template>
 
 <script setup>
+import AmountBreakdown from '@/components/shared/AmountBreakdown.vue'
+import { desgloseDeFactura } from '@/utils/billing/desglose'
 import { Toast } from '@/plugins/alerts'
 import { ref, reactive, watch, computed } from 'vue'
 import { useTheme } from 'vuetify'
@@ -273,20 +265,9 @@ async function cargarAbonos () {
   }
 }
 
-// Lo que el cliente debe: el total, la detraccion que va al Banco de la Nacion, lo abonado y el saldo.
+// Lo que el cliente debe, restado de arriba abajo: el total, sus notas, la detraccion y lo abonado.
 const saldo = computed(() => Math.max(Number(props.invoice?.saldo_pendiente) || 0, 0))
-const resumen = computed(() => {
-  const factura = props.invoice
-  if (!factura?.es_fiscal) return null
-  const moneda = factura.currency
-  return [
-    { titulo: 'Total', valor: monto(factura.amount, moneda) },
-    { titulo: 'Detracción', valor: factura.detraccion_applies ? `− ${monto(factura.detraccion_amount, moneda)}` : '—' },
-    { titulo: 'Abonado', valor: `− ${monto(factura.total_pagado, moneda)}` },
-    { titulo: 'Saldo', valor: monto(factura.saldo_pendiente, moneda),
-      clase: factura.saldo_pendiente > 0 ? 'text-error border-error' : 'text-success border-success' },
-  ]
-})
+const desglose = computed(() => (props.invoice?.es_fiscal ? desgloseDeFactura(props.invoice) : null))
 
 const is_on_sending_process = ref(false)
 const file = ref(null)
@@ -317,7 +298,6 @@ const resetLocalForm = () => {
 watch(() => props.modelValue, (val) => {
   if (val) {
     resetLocalForm()
-    if (saldo.value > 0) payment_data.amount = saldo.value
     abonosDeLaFactura.value = props.invoice?.payments || []
     cargarAbonos()
   }

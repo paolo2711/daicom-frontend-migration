@@ -111,7 +111,10 @@
     <dialog-invoice v-model="creando" :pdf="pdfSoltado" @close="pdfSoltado = null" />
     <dialog-invoice v-model="editando" :invoice-to-edit="enEdicion" @close="enEdicion = null" />
     <dialog-invoice-payments v-model="enAbonos" :invoice="conAbonos" @close="enAbonos = false" />
-    <dialog-emit-invoice ref="emision" @emitida="recargar" @cambiada="reemplazar" @ver-pdf="f => (vista = f.id)" />
+    <dialog-emit-invoice ref="emision" @emitida="alEmitir" />
+    <sunat-envio :comprobante="enviada && comprobanteDe(enviada)" tipo="invoice" :filas="enviada ? filasDe(enviada) : []"
+                 :corregible="corregible" @cerrar="cerrarEnviada" @corregir="corregirEnviada"
+                 @ver-pdf="vista = enviada.id; cerrarEnviada()" />
     <dialog-info-invoice v-model="enInfo" @cambiada="reemplazar" @ver-pdf="f => (vista = f.id)" />
     <dialog-cancel-invoice v-model="enBaja" @enviada="f => { reemplazar(f); enInfo = f }" />
   </pdf-drop-zone>
@@ -133,6 +136,7 @@ import StateLegend from '@/components/shared/StateLegend.vue'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { useDateRangeFilter } from '@/composables/useDateRangeFilter'
 import { useDownload } from '@/composables/useDownload'
+import { useEmissionPanel } from '@/composables/useEmissionPanel'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useSwal } from '@/composables/useSwal'
 import InvoiceMappers from '@/mappers/invoiceMappers'
@@ -155,6 +159,7 @@ import DialogEmitInvoice from './DialogEmitInvoice.vue'
 import DialogInfoInvoice from './DialogInfoInvoice.vue'
 import DialogInvoice from './DialogInvoice.vue'
 import DialogInvoicePayments from './DialogInvoicePayments.vue'
+import SunatEnvio from './SunatEnvio.vue'
 
 const swal = useSwal()
 const route = useRoute()
@@ -220,6 +225,14 @@ async function refrescarFila (event) {
   }
 }
 
+const comprobanteDe = (f) => ({ id: f.id, numero: f.invoice_number, cliente: f.cliente, pdf: f.pdf_url,
+                                nombrePdf: f.nombre_pdf, xml: f.xml })
+const filasDe = (f) => [
+  ['Total', monto(f.amount, f.currency)],
+  ...(f.detraccion_applies ? [['Detracción', monto(f.detraccion_amount, f.currency)]] : []),
+  ['Condición', f.es_credito ? `Crédito · vence ${fechaCorta(f.due_date)}` : 'Contado'],
+]
+
 // La que se mira en Ver informacion, la que se anula, y reemplazar la fila con lo que vuelve.
 const enInfo = ref(null)
 const enBaja = ref(null)
@@ -241,6 +254,8 @@ function subir (pdf = null) {
 }
 
 const emision = ref(null)
+const { enviada, corregible, alEmitir, cerrar: cerrarEnviada, corregir: corregirEnviada } =
+  useEmissionPanel(facturas, emision, recargar, InvoiceMappers.getMap)
 // `plantilla`: otra factura emitida, que llena el formulario con sus items y condiciones.
 async function abrirEmision (ordenIds = [], plantilla = null) {
   try {

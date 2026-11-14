@@ -133,8 +133,6 @@
       </template>
     </pdf-preview-dialog>
 
-    <dialog-info-invoice v-model="emitida" :envio="envio" @volver="envio = null" @cambiada="f => emit('cambiada', f)"
-                         @ver-pdf="f => emit('ver-pdf', f)" />
   </v-dialog>
 </template>
 
@@ -160,7 +158,6 @@ import { CAMPO } from '@/utils/fields'
 import { MONEDAS, monto } from '@/utils/money'
 import { ALQUILER, SERVICIO } from '@/utils/orders/estado'
 import CardInvoiceSummary from './CardInvoiceSummary.vue'
-import DialogInfoInvoice from './DialogInfoInvoice.vue'
 import PanelInvoiceOption from './PanelInvoiceOption.vue'
 import PanelInvoicePayment from './PanelInvoicePayment.vue'
 import RowInvoiceItem from './RowInvoiceItem.vue'
@@ -168,7 +165,7 @@ import SectionLinkedOrders from './SectionLinkedOrders.vue'
 import PanelServiceItem from '@/views/documents/components/shared/PanelServiceItem.vue'
 
 // Todo lo que trae lleno (de las ordenes o de Empresa) se puede cambiar antes de emitir; la cuenta la hace el back.
-const emit = defineEmits(['emitida', 'cambiada', 'ver-pdf'])
+const emit = defineEmits(['emitida'])
 
 const swal = useSwal()
 
@@ -183,8 +180,8 @@ const datosAbiertos = ref(true)
 const PESTANAS = [{ valor: 'info', texto: 'Información', icono: 'mdi-card-account-details-outline' },
                   { valor: 'opciones', texto: 'Opciones', icono: 'mdi-format-list-bulleted' }]
 const emitiendo = ref(false)
-const envio = ref(null)
-const emitida = ref(null)
+// La ultima emitida desde lo escrito: si SUNAT la rechaza, `corregir` vuelve a abrir el formulario igual.
+const emitidaDe = ref(null)
 const clienteId = ref(null)
 const clienteInicial = ref(null)
 const ordenes = ref([])
@@ -283,6 +280,7 @@ const { abierta: vistaPrevia, url: urlDeVista, armando: armandoVista, ver: verVi
 // `nueva` es lo que devuelve el back: cliente, ordenes, tipo, serie, catalogo de detraccion y datos. Con `plantilla`
 // (otra factura emitida) van su cliente, items y condiciones; la fecha es hoy y guias, OC y cuotas quedan vacias.
 function open (nueva, plantilla = null) {
+  emitidaDe.value = null
   clienteId.value = plantilla?.cliente_id ?? nueva.cliente
   clienteInicial.value = plantilla?.cliente_data ?? nueva.cliente_data
   ordenes.value = plantilla ? [] : nueva.ordenes
@@ -304,27 +302,28 @@ function open (nueva, plantilla = null) {
   dialog.value = true
 }
 
-// Ver informacion acompaña el envio: espera a SUNAT y muestra lo que respondio. Si no salio, se vuelve al formulario.
+// El back responde enseguida y la manda a SUNAT en segundo plano: el formulario se cierra con lo escrito guardado.
 async function emitir () {
   emitiendo.value = true
-  vistaPrevia.value = false
-  envio.value = {}
   try {
     const { data } = await BillingDataService.emitInvoice(paraElBack())
+    vistaPrevia.value = false
+    dialog.value = false
+    emitidaDe.value = data.id
     emit('emitida', data)
-    envio.value = null
-    emitida.value = data
   } catch (error) {
-    marcarErrores(error.response?.data?.filas)
-    envio.value = { motivo: mensajeDeError(error, 'No se pudo emitir.') }
+    noSePudo('No se emitió', 'No se pudo emitir.', error)
   } finally {
     emitiendo.value = false
   }
 }
-// La factura ya existe: al cerrar su informacion se cierra tambien el formulario.
-watch(emitida, (ahora, antes) => { if (antes && !ahora) dialog.value = false })
+const corregible = (id) => emitidaDe.value === id
+function corregir () {
+  emitidaDe.value = null
+  dialog.value = true
+}
 
-defineExpose({ open })
+defineExpose({ open, corregir, corregible })
 </script>
 
 <style scoped>

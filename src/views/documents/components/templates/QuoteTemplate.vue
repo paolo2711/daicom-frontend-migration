@@ -15,33 +15,14 @@
         <div class="d-flex flex-column flex-grow-1 columna-de-trabajo" style="min-height: 0;">
           <workspace-layout :detalle-abierto="Boolean(abierto)" @cerrar="abierto = null">
             <template #apoyo="{ apilado }">
-              <div class="d-flex align-center flex-shrink-0 border-b-thin px-3 pt-2">
-                <v-tabs v-model="pestana" density="compact" slider-color="primary" class="flex-grow-1 pestanas-parejas"
-                        @update:model-value="datosAbiertos = true">
-                  <v-tab value="info" prepend-icon="mdi-card-account-details-outline">Información</v-tab>
-                  <v-tab value="opciones" prepend-icon="mdi-format-list-bulleted">Opciones</v-tab>
-                </v-tabs>
-                <v-btn v-if="!apilado" :icon="datosAbiertos ? 'mdi-chevron-up' : 'mdi-chevron-down'" variant="text"
-                       size="small" :title="datosAbiertos ? 'Plegar' : resumen" @click="datosAbiertos = !datosAbiertos" />
-              </div>
-              <v-expand-transition>
-                <div v-show="apilado || datosAbiertos" class="pa-4">
-                  <billing-client-panel v-if="pestana === 'info'" :tipo-de-documento="tipoDeDocumento"
-                                        v-model:meta="cotizacion.meta" v-model:billing="cotizacion.billing_client"
-                                        v-model:certificate="cotizacion.certificate_data" v-model:clientId="clienteId"
-                                        :apilado="apilado" />
-                  <div v-else class="d-flex flex-column ga-2">
-                    <div v-for="opcion in opciones" :key="opcion.clave" class="fila-que-abre text-body-2"
-                         :class="{ abierta: abierto?.clave === opcion.clave }" role="button" tabindex="0"
-                         @click="abrir(opcion.clave)" @keydown.enter="abrir(opcion.clave)">
-                      <v-icon size="small" color="primary">{{ opcion.icono }}</v-icon>
-                      <span class="text-no-wrap mr-auto">{{ opcion.titulo }}</span>
-                      <span v-if="opcion.valor" class="text-caption text-medium-emphasis text-truncate">{{ opcion.valor }}</span>
-                      <v-icon size="small" class="text-medium-emphasis">mdi-chevron-right</v-icon>
-                    </div>
-                  </div>
-                </div>
-              </v-expand-transition>
+              <workspace-tabs v-model="pestana" v-model:abiertos="datosAbiertos" :pestanas="PESTANAS" :apilado="apilado"
+                              :resumen="resumen">
+                <billing-client-panel v-if="pestana === 'info'" :tipo-de-documento="tipoDeDocumento"
+                                      v-model:meta="cotizacion.meta" v-model:billing="cotizacion.billing_client"
+                                      v-model:certificate="cotizacion.certificate_data" v-model:clientId="clienteId"
+                                      :apilado="apilado" />
+                <option-rows v-else :opciones="opciones" :abierta="abierto?.clave" @abrir="abrir" />
+              </workspace-tabs>
             </template>
 
             <template #lista>
@@ -165,7 +146,9 @@ import DocumentsDataService from '@/services/documents/documentsDataService'
 import DetailEmpty from '@/components/shared/DetailEmpty.vue'
 import DetailPanel from '@/components/shared/DetailPanel.vue'
 import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
+import OptionRows from '@/components/shared/OptionRows.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
+import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useLocalDraft } from '@/composables/useLocalDraft'
 import { usePdfPreview } from '@/composables/usePdfPreview'
@@ -200,6 +183,8 @@ const pestana = ref('info')
 const abierto = ref(null)
 // En franja, los datos se pliegan a una línea para dejar la altura a los ítems; al crear empiezan abiertos.
 const datosAbiertos = ref(true)
+const PESTANAS = [{ valor: 'info', texto: 'Información', icono: 'mdi-card-account-details-outline' },
+                  { valor: 'opciones', texto: 'Opciones', icono: 'mdi-format-list-bulleted' }]
 const guardando = ref(false)
 const documentoId = ref(null)
 const numero = ref('')

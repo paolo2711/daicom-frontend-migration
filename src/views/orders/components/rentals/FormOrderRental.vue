@@ -1,10 +1,10 @@
 <template>
-  <workspace-layout :detalle-abierto="Boolean(elegida)" @cerrar="cerrarPanel">
+  <workspace-layout :detalle-abierto="Boolean(elegida || opcionAbierta)" @cerrar="cerrarPanel">
     <template v-if="$slots.orden" #apoyo="{ apilado }">
-      <div class="titulo-de-hoja">Orden</div>
-      <div class="px-3 pb-3">
-        <slot name="orden" :apilado="apilado" />
-      </div>
+      <workspace-tabs v-model="pestana" v-model:abiertos="datosAbiertos" :pestanas="pestanas" :apilado="apilado">
+        <slot v-if="pestana === 'info'" name="orden" :apilado="apilado" />
+        <option-rows v-else :opciones="opcionesDelPanel" :abierta="opcionAbierta" @abrir="abrirOpcion" />
+      </workspace-tabs>
     </template>
 
     <template #lista>
@@ -56,8 +56,11 @@
     </template>
 
     <template #detalle>
-      <panel-order-rental :eq="elegida" :indice="indiceElegida" :error="errores[indiceElegida]"
+      <panel-order-rental v-if="elegida" :eq="elegida" :indice="indiceElegida" :error="errores[indiceElegida]"
                           @cerrar="cerrarPanel" @borrar="borrarFila" />
+      <detail-panel v-else :titulo="tituloDeOpcion" @cerrar="cerrarPanel">
+        <slot name="opcion" :clave="opcionAbierta" />
+      </detail-panel>
     </template>
 
     <template #sin-detalle>
@@ -72,6 +75,10 @@ import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutoco
 import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
 import DetailEmpty from '@/components/shared/DetailEmpty.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
+import DetailPanel from '@/components/shared/DetailPanel.vue'
+import OptionRows from '@/components/shared/OptionRows.vue'
+import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
+import { useDetailOptions } from '@/composables/useDetailOptions'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import RowOrderRental from './RowOrderRental.vue'
 import PanelOrderRental from './PanelOrderRental.vue'
@@ -80,6 +87,10 @@ import { FECHAS_ALQUILER } from '@/utils/orders/alquiler'
 
 const AddEquipment = defineAsyncComponent(() => import('@/views/inventory/components/AddEquipment.vue'))
 
+const props = defineProps({
+  // Las de la pestaña Opciones, [{ clave, titulo, icono, valor }]; se abren a la derecha con el slot `opcion`.
+  opcionesDelPanel: { type: Array, default: () => [] },
+})
 const emit = defineEmits(['update-list'])
 
 const equipments = ref([])
@@ -88,6 +99,14 @@ const { errores, marcarErrores } = useRowErrors(equipments)
 // La fila abierta en el panel.
 const elegida = ref(null)
 const indiceElegida = computed(() => equipments.value.indexOf(elegida.value))
+
+const pestana = ref('info')
+const datosAbiertos = ref(true)
+const pestanas = computed(() => [
+  { valor: 'info', texto: 'Información', icono: 'mdi-card-account-details-outline' },
+  ...(props.opcionesDelPanel.length ? [{ valor: 'opciones', texto: 'Opciones', icono: 'mdi-format-list-bulleted' }] : []),
+])
+const { opcionAbierta, abrirOpcion, tituloDeOpcion } = useDetailOptions(elegida, () => props.opcionesDelPanel)
 // Al ver uno guardado, cada fila dice en que va: reservado, en obra o devuelto.
 const conEstado = computed(() => equipments.value.some(e => e.estado))
 
@@ -122,6 +141,7 @@ function agregar(equipo) {
 
 function cerrarPanel() {
   elegida.value = null
+  opcionAbierta.value = null
   nextTick(() => buscador.value?.$el.querySelector('input')?.focus())
 }
 

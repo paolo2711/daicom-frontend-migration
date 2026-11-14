@@ -10,68 +10,58 @@
         <div class="d-flex flex-column flex-grow-1 columna-de-trabajo" style="min-height: 0;">
           <workspace-layout :detalle-abierto="Boolean(elegido)" @cerrar="elegido = null">
             <template #apoyo="{ apilado }">
-              <div class="d-flex align-center flex-shrink-0 border-b-thin px-3 pt-2">
-                <v-tabs v-model="pestana" density="compact" slider-color="primary" class="flex-grow-1 pestanas-parejas"
-                        @update:model-value="datosAbiertos = true">
-                  <v-tab value="info" prepend-icon="mdi-card-account-details-outline">Información</v-tab>
-                  <v-tab value="traslado" prepend-icon="mdi-truck-outline">Traslado</v-tab>
-                </v-tabs>
-                <v-btn v-if="!apilado" :icon="datosAbiertos ? 'mdi-chevron-up' : 'mdi-chevron-down'" variant="text"
-                       size="small" :title="datosAbiertos ? 'Plegar' : resumen" @click="datosAbiertos = !datosAbiertos" />
-              </div>
-              <v-expand-transition>
-                <div v-show="apilado || datosAbiertos" class="pa-4">
-                  <div v-if="pestana === 'info'" class="d-flex flex-column ga-3">
-                    <client-lookup-bar v-model="clienteId" :seed="clienteInicial" :forma="apilado ? 'apilada' : 'mitades'"
-                                       :campo="CAMPO" @client-selected="c => (clienteInicial = c)" />
-                    <v-row dense>
-                      <v-col v-bind="ancho(apilado, 4)">
-                        <v-select v-model="datos.motivo.codigo" :items="motivos" item-title="nombre" item-value="codigo"
-                                  label="Motivo de traslado" v-bind="CAMPO" />
-                      </v-col>
-                      <v-col v-if="datos.motivo.codigo === OTROS" v-bind="ancho(apilado, 8)">
-                        <v-text-field v-model="datos.motivo.descripcion" label="¿Cuál es el motivo? (opcional)"
-                                      v-bind="CAMPO" />
-                      </v-col>
-                    </v-row>
-                    <v-row dense>
-                      <v-col v-for="lugar in LUGARES" :key="lugar.clave" v-bind="ancho(apilado, 6)">
-                        <section class="seccion">
-                          <div class="titulo-de-seccion">{{ lugar.titulo }}</div>
-                          <ubigeo-field v-model="datos[lugar.clave].ubigeo" />
-                          <v-textarea v-model="datos[lugar.clave].direccion" label="Dirección" rows="1" no-resize
-                                      class="crece-con-texto" v-bind="CAMPO" />
-                        </section>
-                      </v-col>
-                    </v-row>
-                    <section-linked-orders v-model="ordenes" :cliente-id="clienteId" titulo="Documentos relacionados" />
-                  </div>
-
-                  <div v-else class="d-flex flex-column ga-3">
-                    <v-row dense>
-                      <v-col v-bind="ancho(apilado, 4)">
-                        <date-picker :date="datos.fecha_traslado" label="Fecha del traslado" :min="hoy" :campo="CAMPO"
-                                     @setPickedDate="f => (datos.fecha_traslado = f)" />
-                      </v-col>
-                      <v-col v-bind="ancho(apilado, 4)">
-                        <v-text-field v-model="datos.bultos" type="number" min="0" label="Bultos o pallets (opcional)"
-                                      v-bind="CAMPO" />
-                      </v-col>
-                      <v-col v-bind="ancho(apilado, 4)">
-                        <v-text-field v-model="datos.peso" type="number" min="0" label="Peso total" suffix="kg"
-                                      :placeholder="pesoDeLosItems ? String(pesoDeLosItems) : ''" persistent-placeholder
-                                      :hint="pesoDeLosItems ? 'Vacío, va la suma de los ítems' : ''" persistent-hint
-                                      v-bind="CAMPO" hide-details="auto" />
-                      </v-col>
-                    </v-row>
-                    <div class="d-flex ga-2 text-body-2 text-medium-emphasis">
-                      <v-icon size="small">mdi-information-outline</v-icon>
-                      Transporte privado en vehículo M1 o L: SUNAT no pide placa ni conductor.
-                    </div>
-                    <v-textarea v-model="datos.observaciones" label="Observaciones" rows="2" auto-grow v-bind="CAMPO" />
-                  </div>
+              <workspace-tabs v-model="pestana" v-model:abiertos="datosAbiertos" :pestanas="PESTANAS" :apilado="apilado"
+                              :resumen="resumen">
+                <div v-if="pestana === 'info'" class="d-flex flex-column ga-3">
+                  <client-lookup-bar v-model="clienteId" :seed="clienteInicial" :forma="apilado ? 'apilada' : 'mitades'"
+                                     :campo="CAMPO" @client-selected="c => (clienteInicial = c)" />
+                  <v-row dense>
+                    <v-col v-bind="ancho(apilado, 4)">
+                      <v-select v-model="datos.motivo.codigo" :items="motivos" item-title="nombre" item-value="codigo"
+                                label="Motivo de traslado" v-bind="CAMPO" />
+                    </v-col>
+                    <v-col v-if="datos.motivo.codigo === OTROS" v-bind="ancho(apilado, 8)">
+                      <v-text-field v-model="datos.motivo.descripcion" label="¿Cuál es el motivo? (opcional)"
+                                    v-bind="CAMPO" />
+                    </v-col>
+                  </v-row>
+                  <v-row dense>
+                    <v-col v-for="lugar in LUGARES" :key="lugar.clave" v-bind="ancho(apilado, 6)">
+                      <section class="seccion">
+                        <div class="titulo-de-seccion">{{ lugar.titulo }}</div>
+                        <ubigeo-field v-model="datos[lugar.clave].ubigeo" />
+                        <v-textarea v-model="datos[lugar.clave].direccion" label="Dirección" rows="1" no-resize
+                                    class="crece-con-texto" v-bind="CAMPO" />
+                      </section>
+                    </v-col>
+                  </v-row>
+                  <section-linked-orders v-model="ordenes" :cliente-id="clienteId" titulo="Documentos relacionados" />
                 </div>
-              </v-expand-transition>
+
+                <div v-else class="d-flex flex-column ga-3">
+                  <v-row dense>
+                    <v-col v-bind="ancho(apilado, 4)">
+                      <date-picker :date="datos.fecha_traslado" label="Fecha del traslado" :min="hoy" :campo="CAMPO"
+                                   @setPickedDate="f => (datos.fecha_traslado = f)" />
+                    </v-col>
+                    <v-col v-bind="ancho(apilado, 4)">
+                      <v-text-field v-model="datos.bultos" type="number" min="0" label="Bultos o pallets (opcional)"
+                                    v-bind="CAMPO" />
+                    </v-col>
+                    <v-col v-bind="ancho(apilado, 4)">
+                      <v-text-field v-model="datos.peso" type="number" min="0" label="Peso total" suffix="kg"
+                                    :placeholder="pesoDeLosItems ? String(pesoDeLosItems) : ''" persistent-placeholder
+                                    :hint="pesoDeLosItems ? 'Vacío, va la suma de los ítems' : ''" persistent-hint
+                                    v-bind="CAMPO" hide-details="auto" />
+                    </v-col>
+                  </v-row>
+                  <div class="d-flex ga-2 text-body-2 text-medium-emphasis">
+                    <v-icon size="small">mdi-information-outline</v-icon>
+                    Transporte privado en vehículo M1 o L: SUNAT no pide placa ni conductor.
+                  </div>
+                  <v-textarea v-model="datos.observaciones" label="Observaciones" rows="2" auto-grow v-bind="CAMPO" />
+                </div>
+              </workspace-tabs>
             </template>
 
             <template #lista>
@@ -169,6 +159,7 @@ import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
 import UbigeoField from '@/components/shared/UbigeoField.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
+import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
 import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useSwal } from '@/composables/useSwal'
@@ -197,6 +188,8 @@ const ancho = (apilado, md) => (apilado ? { cols: 12 } : { cols: 12, md })
 const dialog = ref(false)
 // En franja, los datos se pliegan a una linea para dejar la altura a los items.
 const datosAbiertos = ref(true)
+const PESTANAS = [{ valor: 'info', texto: 'Información', icono: 'mdi-card-account-details-outline' },
+                  { valor: 'traslado', texto: 'Traslado', icono: 'mdi-truck-outline' }]
 const pestana = ref('info')
 const emitiendo = ref(false)
 const envio = ref(null)

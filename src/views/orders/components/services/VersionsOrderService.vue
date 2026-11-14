@@ -1,20 +1,5 @@
 <template>
-  <v-menu v-if="compacto" location="bottom end">
-    <template #activator="{ props: menu }">
-      <v-btn v-if="versiones.length" v-bind="menu" variant="text" size="small" prepend-icon="mdi-history"
-             class="font-weight-bold">
-        Versiones del ingreso ({{ versiones.length }})
-      </v-btn>
-    </template>
-    <v-list density="compact">
-      <v-list-item v-for="version in versiones" :key="version.id" prepend-icon="mdi-file-pdf-box"
-                   :title="`Versión ${version.numero}`" :subtitle="detalle(version)"
-                   @click="abrirEnOtraPestana(version.pdf)" />
-    </v-list>
-  </v-menu>
-
-  <div v-else>
-    <div class="text-body-2 font-weight-medium mt-3 mb-2">Ingreso</div>
+  <div>
     <div v-if="fallo" class="text-caption text-error">No se pudieron traer las versiones.</div>
     <div v-else-if="!versiones.length" class="text-caption text-medium-emphasis">
       Todavía sin PDF: se arma al imprimir el ingreso.
@@ -36,10 +21,9 @@ import OrderDataService from '@/services/orders/orderDataService'
 import { fechaHora } from '@/utils/dates'
 import { abrirEnOtraPestana } from '@/utils/pdf'
 
-// Las versiones del PDF del ingreso de una orden guardada. `compacto`: un boton que las despliega, para la franja.
+// Las versiones del PDF del ingreso de una orden guardada.
 const props = defineProps({
   ordenId: { type: Number, required: true },
-  compacto: { type: Boolean, default: false },
 })
 
 // OrderDocument.Tipo.INGRESO en el back.

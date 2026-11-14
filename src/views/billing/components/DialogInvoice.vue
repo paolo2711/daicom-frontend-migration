@@ -15,7 +15,7 @@
       >
         <span v-if="order">Orden: <b class="text-primary">{{ order.order_number }}</b></span>
         <span v-else-if="esMulti">
-          <b class="text-primary">{{ orders.length }}</b> órdenes:
+          {{ orders.length === 1 ? 'Orden' : `${orders.length} órdenes` }}:
           <span class="text-primary">{{ orders.map(o => o.order_number).join(', ') }}</span>
         </span>
         <span v-else>Factura independiente</span>

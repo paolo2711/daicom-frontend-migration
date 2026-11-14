@@ -13,6 +13,7 @@ const motivoDeClientes = (ordenes) => (deUnCliente(ordenes) ? '' : 'Son de clien
 const quitaOPone = (marca, texto) => (ordenes) => (marcaDe(ordenes) === marca ? `Quitar ${texto.toLowerCase()}` : texto)
 
 export const COBRO = 'cobro'
+export const SUBIR = 'subir'
 
 export const GUIA = 'guia'
 
@@ -62,6 +63,13 @@ export const ACCIONES_COBRO = [
   {
     clave: 'facturar', grupo: 'cobro', varios: true,
     icono: 'mdi-file-document-plus', texto: 'Emitir factura',
+    visible: algunaViva,
+    disponible: (ordenes) => ordenes.every(viva),
+  },
+  // La hecha en KeyFacil: se sube el PDF y queda vinculada a estas ordenes.
+  {
+    clave: SUBIR, grupo: 'cobro', varios: true,
+    icono: 'mdi-file-upload-outline', texto: 'Subir de KeyFacil',
     visible: algunaViva,
     disponible: (ordenes) => ordenes.every(viva),
   },

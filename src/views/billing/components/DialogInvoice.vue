@@ -115,16 +115,15 @@
             />
           </div>
 
-          <!-- Aviso de detracción estimada (informativo, antes de guardar) -->
           <v-alert
-            v-if="detraccionEstimada !== null"
-            :type="detraccionEstimada > 0 ? 'warning' : 'success'"
+            v-if="detraccion"
+            :type="detraccion.aplica ? 'warning' : 'success'"
             variant="tonal" density="compact" class="mt-4"
-            :icon="detraccionEstimada > 0 ? 'mdi-bank-outline' : 'mdi-check-circle-outline'"
+            :icon="detraccion.aplica ? 'mdi-bank-outline' : 'mdi-check-circle-outline'"
           >
-            <template v-if="detraccionEstimada > 0">
-              Esta factura tendrá detracción: <strong>{{ monto(detraccionEstimada, monedaActual) }}</strong>
-              ({{ esUSD ? '10%' : (tipoOrden === 2 ? '10%' : '12%') }} sobre el total).
+            <template v-if="detraccion.aplica">
+              Esta factura tendrá detracción: <strong>{{ monto(detraccion.monto, monedaActual) }}</strong>
+              ({{ Number(detraccion.tasa) }} % sobre el total).
             </template>
             <template v-else>
               Sin detracción (no supera el umbral de S/ 700).
@@ -150,6 +149,8 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { useLatestRequest } from '@/composables/useLatestRequest'
+import { debounce } from '@/utils/debounce'
 import { Toast } from '@/plugins/alerts'
 import { avisarSoloPdf } from '@/utils/pdf'
 import Swal from 'sweetalert2'
@@ -195,26 +196,9 @@ const monedaActual = computed(() => {
 })
 const esUSD = computed(() => monedaActual.value === 'USD')
 
-// Tipo de la orden (para la tasa). Si es factura suelta sin orden, no
-// sabemos el tipo aún (lo adoptará al vincular); asumimos servicio (12%)
-// solo para el aviso informativo.
-const tipoOrden = computed(() => props.order?.order_type ?? props.orders?.[0]?.order_type ?? props.invoiceToEdit?.order_type ?? 1)
-
-// Detracción estimada (solo informativa, antes de guardar). Convierte a
-// soles con el tipo de cambio para el umbral de 700, pero el monto de la
-// detracción queda en la moneda de la factura — igual que el backend.
-const detraccionEstimada = computed(() => {
-  const total = parseFloat(facturaData.value.amount)
-  const fecha = facturaData.value.invoice_date
-  if (!fecha || isNaN(total) || total <= 0) return null
-  const exchange = parseFloat(facturaData.value.exchange_rate) || 0
-  if (esUSD.value && exchange <= 0) return null
-
-  const tasa = tipoOrden.value === 2 ? 0.10 : 0.12
-  const UMBRAL = 700
-  const valorSoles = esUSD.value ? total * exchange : total
-  return valorSoles <= UMBRAL ? 0 : parseFloat((total * tasa).toFixed(2))
-})
+// La factura suelta todavia no tiene tipo: el back toma el de servicio hasta que se vincule.
+const tipoOrden = computed(() => props.order?.order_type ?? props.orders?.[0]?.order_type
+  ?? props.invoiceToEdit?.order_type ?? props.order_type)
 
 const facturaData = ref({
   invoice_number: '',
@@ -285,6 +269,29 @@ const cargarDatosIniciales = () => {
   resetForm()
   if (props.pdf) onPdfDropped(props.pdf)
 }
+
+// La detraccion la calcula el back con la misma regla que al guardar; el aviso solo la muestra.
+const detraccion = ref(null)
+const { begin, isLatest } = useLatestRequest()
+const pedirDetraccion = debounce(async () => {
+  const { amount, invoice_date: fecha, exchange_rate: cambio } = facturaData.value
+  const turno = begin()
+  if (!fecha || !(parseFloat(amount) > 0) || (esUSD.value && !(parseFloat(cambio) > 0))) {
+    detraccion.value = null
+    return
+  }
+  try {
+    const { data } = await BillingDataService.uploadDetraccion({
+      amount, invoice_date: fecha, currency: monedaActual.value, exchange_rate: cambio || null,
+      order_type: tipoOrden.value ?? null,
+    })
+    if (isLatest(turno)) detraccion.value = data
+  } catch {
+    if (isLatest(turno)) detraccion.value = null
+  }
+})
+watch(() => [facturaData.value.amount, facturaData.value.invoice_date, facturaData.value.exchange_rate,
+  monedaActual.value, tipoOrden.value], pedirDetraccion)
 
 watch(() => props.modelValue, cargarDatosIniciales, { immediate: true })
 watch(() => props.invoiceToEdit, cargarDatosIniciales)

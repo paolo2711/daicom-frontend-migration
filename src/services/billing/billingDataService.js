@@ -46,6 +46,10 @@ class BillingDataService {
       params: ordenIds.length ? { ordenes: ordenIds.join(',') } : {}, headers: authHeader(),
     });
   }
+  // La detraccion de una factura subida, antes de guardarla.
+  uploadDetraccion(data) {
+    return axios.post("billing/invoices/detraccion/", data, { headers: authHeader() });
+  }
   invoiceAmounts(datos, orderType) {
     return axios.post("billing/invoices/montos/", { datos, order_type: orderType }, { headers: authHeader() });
   }

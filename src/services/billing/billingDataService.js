@@ -46,6 +46,10 @@ class BillingDataService {
       params: ordenIds.length ? { ordenes: ordenIds.join(',') } : {}, headers: authHeader(),
     });
   }
+  // La detraccion de una factura subida, antes de guardarla.
+  uploadDetraccion(data) {
+    return axios.post("billing/invoices/detraccion/", data, { headers: authHeader() });
+  }
   invoiceAmounts(datos, orderType) {
     return axios.post("billing/invoices/montos/", { datos, order_type: orderType }, { headers: authHeader() });
   }
@@ -97,10 +101,6 @@ class BillingDataService {
   }
   createInvoicePayment(invoiceId, data) {
     return axios.post(`billing/invoices/${invoiceId}/payments/`, data, { headers: authHeader() });
-  }
-  // El abono de una orden sin comprobante: va a su contenedor interno.
-  liquidate(orderId, data) {
-    return axios.post(`billing/orders/${orderId}/payments/`, data, { headers: authHeader() });
   }
   updatePayment(id, data) {
     return axios.patch(`billing/payments/${id}/`, data, { headers: authHeader() });

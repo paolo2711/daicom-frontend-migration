@@ -5,7 +5,7 @@
       <span class="text-subtitle-2 font-weight-bold" :class="isDark ? 'text-amber-lighten-2' : 'text-amber-darken-4'">
         Equipos en este Alquiler
       </span>
-      <span v-if="order.created_at" class="text-caption text-medium-emphasis ml-3 mt-1 font-weight-medium d-flex align-center">
+      <span v-if="muestraFecha && order.created_at" class="text-caption text-medium-emphasis ml-3 mt-1 font-weight-medium d-flex align-center">
         <v-icon size="x-small" class="mr-1">mdi-calendar-blank</v-icon>
         {{ fechaCorta(order.created_at) }}
       </span>
@@ -104,6 +104,8 @@ import { mensajeDeError } from '@/utils/errors'
 
 const props = defineProps({
   order: { type: Object, required: true },
+  // Sin la columna de fecha en la lista, va aca.
+  muestraFecha: { type: Boolean, default: true },
 })
 
 const emit = defineEmits(['editar', 'reload'])

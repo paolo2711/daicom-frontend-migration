@@ -121,9 +121,7 @@
       </v-expand-transition>
     </v-card>
 
-    <v-row class="mt-2 mx-0">
-      <!-- COLUMNA IZQUIERDA: TABLA OPERATIVA (65% aprox) -->
-      <v-col cols="12" md="8" class="pa-0 pr-md-2">
+    <resizable-split v-model:ancho-de-la-lista="anchoDeLaLista" v-model:abierto="enCobro" clave="ordenes.servicio" class="mt-2">
         <table-loading-overlay :loading="loading_list" :isEmpty="orders.length === 0">
           <v-data-table-server
             v-model="ordenes_seleccionadas"
@@ -177,6 +175,10 @@
           <span v-else class="text-grey">---</span>
         </template>
 
+        <template v-slot:item.created_at="{ item }">
+          <span class="text-no-wrap">{{ fechaCorta(item.created_at) }}</span>
+        </template>
+
         <template v-slot:item.vinculo_financiero="{ item }">
           <div class="d-flex align-center justify-center">
             <v-tooltip location="bottom">
@@ -188,7 +190,7 @@
                   density="compact"
                   :disabled="!viva(item)"
                   :color="getColorSemaforoFinanciero(item)"
-                  @click.stop="seleccionarFacturaEnPanel(item)"
+                  @click.stop="alSemaforo(item)"
                 >
                   <v-icon size="small">{{ getIconoSemaforoFinanciero(item) }}</v-icon>
                 </v-btn>
@@ -229,6 +231,7 @@
               <table-service-details
                 v-model:seleccion="equipos_seleccionados"
                 :order="item"
+                :muestra-fecha="!fechaEnColumna"
                 @reload="retrieveOrders"
                 @editar="abrirEditarOrden(item)"
                 @edit-certificate="openCertificateModal"
@@ -240,16 +243,14 @@
         </template>
       </v-data-table-server>
     </table-loading-overlay>
-      </v-col>
-
-      <!-- COLUMNA DERECHA: PANEL DE FACTURAS (35% aprox) -->
-      <v-col cols="12" md="4" class="pa-0 pl-md-2">
+      <template #lado>
         <div class="panel-sticky-wrapper">
-        <panel-facturas :order_type="SERVICIO" :orden="foco" :ordenes_seleccionadas="ordenes_seleccionadas"
-                        @limpiar-seleccion="ordenes_seleccionadas = []" @limpiar-foco="foco = null" />
+          <panel-facturas :order_type="SERVICIO" :orden="foco" :ordenes_seleccionadas="ordenes_seleccionadas"
+                          :acciones-de="accionesDeCobro" :ejecutar-accion="ejecutarAccion"
+                          @limpiar-seleccion="ordenes_seleccionadas = []" @limpiar-foco="cerrarCobro" />
         </div>
-      </v-col>
-    </v-row>
+      </template>
+    </resizable-split>
 
     <!-- Con órdenes marcadas, la factura que se elige en el buscador del panel las vincula. -->
     <selection-bar
@@ -287,6 +288,9 @@ import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import { useOrderActions } from '@/composables/useOrderActions'
+import { useOrderCobro } from '@/composables/useOrderCobro'
+import { useOrderDateColumn } from '@/composables/useOrderDateColumn'
+import { fechaCorta } from '@/utils/dates'
 import { FILTRO_DE_ESTADO, SERVICIO, esDeServicio, viva } from '@/utils/orders/estado'
 import { lineaAnulada } from '@/utils/orders/lineas'
 import { useLatestRequest } from '@/composables/useLatestRequest'
@@ -301,6 +305,7 @@ import TableServiceDetails from './TableServiceDetails.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import CertificateModal from '@/views/certificates/components/CertificateModal.vue'
 import PanelFacturas from '../PanelFacturas.vue'
+import ResizableSplit from '@/components/shared/ResizableSplit.vue'
 import { defineAsyncComponent } from 'vue'
 
 const BatchActionModal = defineAsyncComponent(() => import('@/views/certificates/components/BatchActionModal.vue'))
@@ -339,7 +344,7 @@ const openCertificateModal = (cert) => {
 }
 
 // Headers
-const headers = [
+const columnas = [
   { title: 'Nro Orden', key: 'order_number' },
   { title: 'Cliente', key: 'client_data.name' },
   { title: 'Progreso', key: 'progress', align: 'center', sortable: false },
@@ -347,9 +352,11 @@ const headers = [
   { title: 'Opciones', key: 'actions', align: 'center', sortable: false },
   { title: '', key: 'data-table-expand' },
 ]
+const { anchoDeLaLista, fechaEnColumna, headers } = useOrderDateColumn(columnas)
 
 // Datos de tabla
 const orders = ref([])
+const { foco, abierto: enCobro, abrirCobro, cerrarCobro, alSemaforo } = useOrderCobro(orders, ordenes_seleccionadas)
 const expanded = ref([])
 // Los avisos de equipos llegan por certificado: una linea se reconoce por el suyo.
 const { cargarItems, actualizarItems, reemplazarOrdenes } = useOrderItems(orders, 'items', {
@@ -387,7 +394,6 @@ const options = ref({ page: 1, itemsPerPage: 30 })
 const filter_order = ref('')
 const filter_correlative = ref('')
 const filter_invoice = ref('')
-const foco = ref(null)
 
 const filter_client_id = ref(null)
 const filter_date_gt = ref('')
@@ -491,15 +497,6 @@ const manejarClicFila = (event, { item }) => {
   }
 }
 
-// Clic en el semáforo: el panel muestra las facturas de esa orden; otro clic lo suelta.
-const seleccionarFacturaEnPanel = (o) => {
-  if (foco.value?.id === o.id) {
-    foco.value = null
-  } else {
-    ordenes_seleccionadas.value = []
-    foco.value = o
-  }
-}
 
 const getProgreso = (o) => {
   return o.progreso || { total: 0, listos: 0 }
@@ -512,10 +509,11 @@ const imprimirIngreso = (o) => abrirIngreso(o.id)
   .catch(error => Toast.fire({ ...appStore.toastErrorRed,
                                title: mensajeDeError(error, 'No se pudo abrir el ingreso.') }))
 
-const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, ejecutarAccion } =
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, accionesDeCobro, ejecutarAccion } =
   useOrderActions(ordenes_seleccionadas, {
     editar: abrirEditarOrden,
     imprimirIngreso,
+    abrirCobro,
   })
 
 const idOrdenExpandida = () => (

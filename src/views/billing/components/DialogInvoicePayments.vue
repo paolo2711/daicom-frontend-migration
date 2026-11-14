@@ -10,10 +10,6 @@
           Factura:
           <span class="font-weight-bold text-primary ml-1">{{ invoice.invoice_number || 'Sin número' }}</span>
         </span>
-        <span v-else-if="order">
-          Orden:
-          <span class="font-weight-bold text-primary ml-1">{{ order.order_number }}</span>
-        </span>
       </base-modal-header>
 
       <v-card-text class="pa-0">
@@ -37,7 +33,7 @@
           <div class="text-subtitle-2 font-weight-bold mb-2">Historial de Pagos:</div>
 
           <v-alert
-            v-if="historialPagos.length === 0"
+            v-if="abonosDeLaFactura.length === 0"
             type="info"
             variant="text"
             density="compact"
@@ -53,7 +49,7 @@
             lines="two"
           >
             <v-list-item
-              v-for="pago in historialPagos"
+              v-for="pago in abonosDeLaFactura"
               :key="pago.id"
               class="border-bottom"
             >
@@ -252,11 +248,10 @@ import { mensajeDeError } from '@/utils/errors'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
-  order: { type: Object, default: null },
   invoice: { type: Object, default: null }
 })
 
-const emit = defineEmits(['update:modelValue', 'updateOrder', 'close'])
+const emit = defineEmits(['update:modelValue', 'close'])
 
 const theme = useTheme()
 const appStore = useAppStore()
@@ -266,12 +261,9 @@ const dialogModel = computed({
   set: (val) => emit('update:modelValue', val)
 })
 
-// Unifica el contexto: el abono puede abrirse desde una FACTURA (caso
-// normal, panel) o desde una ORDEN (compatibilidad). La factura manda.
 const monedaActual = computed(() => props.invoice?.currency || 'PEN')
 // Los de la factura se piden al abrir: la fila de la tabla solo trae cuantos son.
 const abonosDeLaFactura = ref([])
-const historialPagos = computed(() => (props.invoice ? abonosDeLaFactura.value : props.order?.payments || []))
 async function cargarAbonos () {
   if (!props.invoice) return
   try {
@@ -357,20 +349,12 @@ const save = async () => {
       data.append('payment_proof', file.value)
     }
 
-    // El abono va a la FACTURA (caso normal). Si por compatibilidad se abrió
-    // desde una orden sin factura, cae al endpoint de orden.
-    let peticion
-    if (editando.value) {
-      peticion = BillingDataService.updatePayment(pago_id_editar.value, data)
-    } else if (props.invoice) {
-      peticion = BillingDataService.createInvoicePayment(props.invoice.id, data)
-    } else {
-      peticion = BillingDataService.liquidate(props.order.id, data)
-    }
+    const peticion = editando.value
+      ? BillingDataService.updatePayment(pago_id_editar.value, data)
+      : BillingDataService.createInvoicePayment(props.invoice.id, data)
 
     peticion
       .then(() => {
-        emit('updateOrder')
         closeDialog()
         Swal.fire(appStore.successSavedOptions)
       })

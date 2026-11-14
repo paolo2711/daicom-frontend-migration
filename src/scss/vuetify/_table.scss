@@ -99,19 +99,3 @@ div.cae-despues {
   font-family: monospace;
   color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
 }
-
-// Las columnas de un item de la cotizacion y de su encabezado: cantidad, unidad, precio y total con el ancho
-// de su dato, la descripcion con lo que queda. En angosta los numeros bajan debajo de la descripcion.
-.columnas-de-item {
-  display: grid;
-  gap: 0.5rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  > :first-child, > :last-child { grid-column: 1 / -1; }
-}
-@media (min-width: 960px) {
-  .columnas-de-item {
-    grid-template-columns: minmax(0, 1fr) 5rem 6rem 9.25rem 7rem;
-    > :first-child, > :last-child { grid-column: auto; }
-  }
-}
-.numero-de-item { min-width: 1.5rem; text-align: end; }

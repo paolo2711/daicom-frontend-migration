@@ -17,7 +17,7 @@
       <v-text-field
         v-model="documentoBuscar"
         :class="{ 'campo-corto': forma === 'ajustada' }"
-        :label="forma === 'apilada' ? 'Buscar RUC/DNI en SUNAT' : 'RUC/DNI en SUNAT/RENIEC'"
+        :label="forma === 'apilada' ? 'RUC/DNI en SUNAT' : 'RUC/DNI en SUNAT/RENIEC'"
         density="compact"
         variant="outlined"
         hide-details="auto"

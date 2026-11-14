@@ -2,9 +2,8 @@ import { SIN_CARGO, SIN_COMPROBANTE, marcaDe, puedeMarcarse } from '@/utils/orde
 import { COTIZACION, VALORIZACION } from '@/utils/documents/tipos'
 import { esDeServicio, viva } from '@/utils/orders/estado'
 
-// Lo que se puede hacer con ordenes. De aca salen la barra de seleccion y el
-// menu (click derecho y boton de la fila). Los campos de cada una, en
-// utils/actions.js. Una anulada no tiene ninguna.
+// Lo que se puede hacer con ordenes. El menu y la barra de seleccion llevan las de la orden; las del cobro van en
+// el panel de cobro (ACCIONES_COBRO). Los campos de cada una, en utils/actions.js. Una anulada no tiene ninguna.
 
 const algunaViva = (ordenes) => ordenes.some(viva)
 const yaImpreso = (ordenes) => ordenes.length === 1 && ordenes[0].tiene_ingreso
@@ -13,7 +12,7 @@ const deUnCliente = (ordenes) => new Set(ordenes.filter(viva).map(o => o.client_
 const motivoDeClientes = (ordenes) => (deUnCliente(ordenes) ? '' : 'Son de clientes distintos')
 const quitaOPone = (marca, texto) => (ordenes) => (marcaDe(ordenes) === marca ? `Quitar ${texto.toLowerCase()}` : texto)
 
-export const VINCULAR = 'vincular'
+export const COBRO = 'cobro'
 
 export const GUIA = 'guia'
 
@@ -46,17 +45,26 @@ export const ACCIONES_ORDEN = [
     visible: algunaViva, disponible: deUnCliente,
   },
   {
-    clave: VINCULAR, grupo: 'cobro', varios: false,
-    icono: 'mdi-link-variant', texto: 'Vincular a una factura',
+    clave: COBRO, grupo: 'cobro', varios: true,
+    icono: 'mdi-cash-multiple', texto: 'Cobro…',
     visible: algunaViva,
   },
   {
+    clave: 'anular', grupo: 'peligro', varios: true, permiso: 1004,
+    icono: 'mdi-delete-outline', texto: 'Anular',
+    visible: algunaViva,
+  },
+]
+
+// Las del panel de cobro, para la orden elegida o las marcadas. Con factura fiscal, sin comprobante y sin cargo van
+// en gris: primero se desvincula esa factura.
+export const ACCIONES_COBRO = [
+  {
     clave: 'facturar', grupo: 'cobro', varios: true,
-    icono: 'mdi-file-document-plus', texto: 'Facturar',
+    icono: 'mdi-file-document-plus', texto: 'Emitir factura',
     visible: algunaViva,
     disponible: (ordenes) => ordenes.every(viva),
   },
-  // Con factura fiscal va en gris: primero se desvincula esa factura.
   {
     clave: SIN_COMPROBANTE, grupo: 'cobro', varios: true,
     icono: 'mdi-file-remove-outline', texto: quitaOPone(SIN_COMPROBANTE, 'Sin comprobante'),
@@ -68,10 +76,5 @@ export const ACCIONES_ORDEN = [
     icono: 'mdi-cash-off', texto: quitaOPone(SIN_CARGO, 'Sin cargo'),
     visible: algunaViva,
     disponible: (ordenes) => ordenes.some(o => viva(o) && puedeMarcarse(o)),
-  },
-  {
-    clave: 'anular', grupo: 'peligro', varios: true, permiso: 1004,
-    icono: 'mdi-delete-outline', texto: 'Anular',
-    visible: algunaViva,
   },
 ]

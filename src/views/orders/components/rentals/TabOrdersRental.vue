@@ -121,9 +121,7 @@
       </v-expand-transition>
     </v-card>
 
-    <v-row class="mt-2 mx-0">
-      <!-- IZQUIERDA: tabla operativa (colapsa al expandir el panel) -->
-      <v-col cols="12" md="8" class="pa-0 pr-md-2">
+    <resizable-split v-model:ancho-de-la-lista="anchoDeLaLista" v-model:abierto="enCobro" clave="ordenes.alquiler" class="mt-2">
     <table-loading-overlay :loading="loading_list" :isEmpty="orders.length === 0">
       <v-data-table-server
         v-model="ordenes_seleccionadas"
@@ -169,6 +167,10 @@
           <span :class="viva(item) ? '' : 'anulado-atenuado'">{{ item.client_data.name }}</span>
         </template>
 
+        <template v-slot:item.created_at="{ item }">
+          <span class="text-no-wrap">{{ fechaCorta(item.created_at) }}</span>
+        </template>
+
         <template v-slot:item.vinculo_financiero="{ item }">
           <div class="d-flex align-center justify-center">
             <v-tooltip location="bottom">
@@ -180,7 +182,7 @@
                   density="compact"
                   :disabled="!viva(item)"
                   :color="getColorSemaforoFinanciero(item)"
-                  @click.stop="seleccionarFacturaEnPanel(item)"
+                  @click.stop="alSemaforo(item)"
                 >
                   <v-icon size="small">{{ getIconoSemaforoFinanciero(item) }}</v-icon>
                 </v-btn>
@@ -255,23 +257,21 @@
         <template v-slot:expanded-row="{ columns, item }">
           <tr class="fila-activa">
             <td :colspan="columns.length" class="pa-0">
-              <table-rental-details :order="item" @editar="abrirEditarOrden(item)"
+              <table-rental-details :order="item" :muestra-fecha="!fechaEnColumna" @editar="abrirEditarOrden(item)"
                                     @reload="expanded = []; retrieveOrders()" />
             </td>
           </tr>
         </template>
       </v-data-table-server>
     </table-loading-overlay>
-      </v-col>
-
-      <!-- DERECHA: panel de facturas (order_type=2 = alquiler) -->
-      <v-col cols="12" md="4" class="pa-0 pl-md-2">
+      <template #lado>
         <div class="panel-sticky-wrapper">
           <panel-facturas :order_type="ALQUILER" :orden="foco" :ordenes_seleccionadas="ordenes_seleccionadas"
-                          @limpiar-seleccion="ordenes_seleccionadas = []" @limpiar-foco="foco = null" />
+                          :acciones-de="accionesDeCobro" :ejecutar-accion="ejecutarAccion"
+                          @limpiar-seleccion="ordenes_seleccionadas = []" @limpiar-foco="cerrarCobro" />
         </div>
-      </v-col>
-    </v-row>
+      </template>
+    </resizable-split>
 
     <!-- Con órdenes marcadas, la factura que se elige en el buscador del panel las vincula. -->
     <selection-bar
@@ -303,6 +303,9 @@ import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import { useOrderActions } from '@/composables/useOrderActions'
+import { useOrderCobro } from '@/composables/useOrderCobro'
+import { useOrderDateColumn } from '@/composables/useOrderDateColumn'
+import { fechaCorta } from '@/utils/dates'
 import { ALQUILER, FILTRO_DE_ESTADO, esAlquiler, viva } from '@/utils/orders/estado'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
@@ -312,6 +315,7 @@ import { useAppStore } from '@/stores/appStore'
 import AddOrder from '../AddOrder.vue'
 import TableRentalDetails from './TableRentalDetails.vue'
 import PanelFacturas from '../PanelFacturas.vue'
+import ResizableSplit from '@/components/shared/ResizableSplit.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
 
 const route = useRoute()
@@ -321,9 +325,8 @@ const appStore = useAppStore()
 const filter_client_id = ref(null)
 
 const ordenes_seleccionadas = ref([])
-const foco = ref(null)
 
-const headers = [
+const columnas = [
   { title: 'Nro Alquiler',      key: 'order_number' },
   { title: 'Ref. Cliente',      key: 'client_order_reference' },
   { title: 'Empresa',           key: 'client_data.name' },
@@ -332,9 +335,11 @@ const headers = [
   { title: 'Opciones',          key: 'actions',     align: 'center', sortable: false },
   { title: '',                  key: 'data-table-expand' },
 ]
+const { anchoDeLaLista, fechaEnColumna, headers } = useOrderDateColumn(columnas)
 
 // ── Tabla + filtros ──
 const orders = ref([])
+const { foco, abierto: enCobro, abrirCobro, cerrarCobro, alSemaforo } = useOrderCobro(orders, ordenes_seleccionadas)
 const expanded = ref([])
 const { cargarItems, reemplazarOrdenes } = useOrderItems(orders, 'rentals')
 
@@ -445,23 +450,15 @@ const manejarClicFila = (event, { item }) => {
   expanded.value = isOrderExpanded(item) ? [] : [item.raw || item]
 }
 
-// Clic en el semáforo: el panel muestra las facturas de esa orden; otro clic lo suelta.
-const seleccionarFacturaEnPanel = (o) => {
-  if (foco.value?.id === o.id) {
-    foco.value = null
-  } else {
-    ordenes_seleccionadas.value = []
-    foco.value = o
-  }
-}
 
 // ── Acciones ──
 const editarOrdenRef = ref(null)
 const abrirEditarOrden = (o) => editarOrdenRef.value?.editar(o)
 
-const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, ejecutarAccion } =
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, accionesDeCobro, ejecutarAccion } =
   useOrderActions(ordenes_seleccionadas, {
     editar: abrirEditarOrden,
+    abrirCobro,
   })
 
 // ── Watchers ──

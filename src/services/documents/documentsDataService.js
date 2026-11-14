@@ -36,6 +36,10 @@ class DocumentsDataService {
     });
   }
   // El PDF sin guardar, como archivo.
+  // La cuenta del editor: el total de cada fila y los totales, con el IGV de cada item segun su marca.
+  montos(data) {
+    return axios.post("documents/montos/", data, { headers: authHeader() });
+  }
   vistaPrevia(data) {
     return archivoDe(axios.post("documents/vista-previa/", data, { headers: authHeader(), responseType: "blob" }));
   }

@@ -22,7 +22,7 @@
 </template>
 
 <script setup>
-// Una fila de DialogEmitInvoice, solo para leer: se edita en PanelInvoiceItem. El importe lo calcula el back.
+// Una fila de DialogEmitInvoice, solo para leer: se edita en PanelServiceItem. El importe lo calcula el back.
 import { importe } from '@/utils/money'
 
 defineProps({

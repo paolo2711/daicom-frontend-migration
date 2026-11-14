@@ -254,6 +254,8 @@ export const itemVacio = (unidad = "und") => ({
   unit_price: 0,
   row_total: 0,
   observations: "",
+  // El precio escrito ya trae el IGV: el back lo saca de adentro.
+  incluye_igv: false,
   // El codigo de la acreditacion bajo la que se declara (apps/company/acreditaciones.py); vacio, ninguna.
   accreditation: "",
   // Si se eligio del catalogo: su nombre, que la descripcion lleva al comienzo, y el equipo y el
@@ -318,16 +320,6 @@ export const quoteDefaultJSON = (kind = TIPO_POR_DEFECTO, tipoDeDocumento = COTI
 
 // Lo que se ve mientras se edita. Los que quedan en la cotizacion los calcula el
 // back al guardar.
-export const totalDeFila = (item) => esGrupo(item)
-  ? 0
-  : Math.round((Number(item.quantity) || 0) * (Number(item.unit_price) || 0) * 100) / 100
-
-export const totalesDe = (cotizacion) => {
-  const subtotal = cotizacion.items.reduce((suma, item) => suma + totalDeFila(item), 0)
-  const igv = Math.round(subtotal * cotizacion.totals.igv_percent) / 100
-  return { subtotal, igv, total: subtotal + igv }
-}
-
 const conLaForma = (base, guardado = {}) =>
   Object.fromEntries(Object.keys(base).map(campo => [campo, guardado[campo] ?? base[campo]]))
 

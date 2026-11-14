@@ -14,42 +14,26 @@
 
           <component :is="esDeServicio(order) ? FormOrderService : FormOrderRental" ref="formRef"
                      :key="`${order.order_type}-${dialog}`"
-                     v-bind="esDeServicio(order) ? { cliente: clienteOrden } : {}"
+                     v-bind="esDeServicio(order) ? { cliente: clienteOrden } : {}" :opciones-del-panel="opcionesDelPanel"
                      @update-list="list => items_to_save = list">
             <template #orden="{ apilado }">
-              <ClientLookupBar v-model="order.client" creatable :seed="clienteOrden"
-                               :forma="apilado ? 'apilada' : 'ajustada'"
-                               @client-selected="c => (clienteOrden = { id: c.id, name: c.name })" />
-              <div v-if="sinPasar.length" class="text-caption text-medium-emphasis mt-2">
-                No pasaron a la orden: {{ sinPasar.join(', ') }}
+              <div class="d-flex flex-column ga-3">
+                <ClientLookupBar v-model="order.client" creatable :seed="clienteOrden" :campo="CAMPO"
+                                 :forma="apilado ? 'apilada' : 'ajustada'"
+                                 @client-selected="c => (clienteOrden = { id: c.id, name: c.name })" />
+                <div v-if="sinPasar.length" class="text-caption text-medium-emphasis">
+                  No pasaron a la orden: {{ sinPasar.join(', ') }}
+                </div>
+                <v-text-field v-if="esAlquiler(order)" v-model="order.client_order_reference" label="Ref. OC del cliente"
+                              v-bind="CAMPO" />
+                <v-textarea v-model="observaciones" label="Observaciones" :maxlength="largoDeObservacion" rows="3"
+                            auto-grow v-bind="CAMPO" />
               </div>
-              <v-text-field v-if="esAlquiler(order)" v-model="order.client_order_reference" label="Ref. OC del cliente"
-                            class="mt-3" density="compact" variant="outlined" rounded="lg" hide-details />
-              <div class="d-flex align-center mt-3 mb-2">
-                <span class="text-body-2 font-weight-medium">Observaciones</span>
-                <v-spacer />
-                <template v-if="!apilado">
-                  <versions-order-service v-if="editando && esDeServicio(order)" :orden-id="editando.id" compacto />
-                  <v-menu :close-on-content-click="false" location="bottom end">
-                    <template #activator="{ props: menu }">
-                      <v-btn v-bind="menu" variant="text" size="small" prepend-icon="mdi-paperclip"
-                             class="font-weight-bold">Documentos</v-btn>
-                    </template>
-                    <v-card class="pa-3" width="24rem">
-                      <documents-order v-model:pendientes="documentosNuevos" :orden="editando"
-                                       :alquiler="esAlquiler(order)" :cliente-id="order.client" />
-                    </v-card>
-                  </v-menu>
-                </template>
-              </div>
-              <v-textarea v-model="observaciones" :maxlength="largoDeObservacion" rows="3" auto-grow
-                          density="compact" variant="outlined" rounded="lg" hide-details />
-              <template v-if="apilado">
-                <versions-order-service v-if="editando && esDeServicio(order)" :orden-id="editando.id" />
-                <div class="text-body-2 font-weight-medium mt-3 mb-2">Documentos</div>
-                <documents-order v-model:pendientes="documentosNuevos" :orden="editando" :alquiler="esAlquiler(order)"
-                                 :cliente-id="order.client" />
-              </template>
+            </template>
+            <template #opcion="{ clave }">
+              <documents-order v-if="clave === 'documentos'" v-model:pendientes="documentosNuevos" :orden="editando"
+                               :alquiler="esAlquiler(order)" :cliente-id="order.client" />
+              <versions-order-service v-else-if="clave === 'versiones'" :orden-id="editando.id" />
             </template>
           </component>
 
@@ -108,6 +92,7 @@ import { useLocalDraft } from '@/composables/useLocalDraft'
 import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useSavedNumbers } from '@/composables/useSavedNumbers'
 import { mensajeDeError } from '@/utils/errors'
+import { CAMPO } from '@/utils/fields'
 import { SERVICIO, esAlquiler, esDeServicio } from '@/utils/orders/estado'
 import OrderDataService from '@/services/orders/orderDataService'
 import FormOrderService from './services/FormOrderService.vue'
@@ -194,6 +179,12 @@ watch([items_to_save, () => order.value.client, observaciones], ([items, client]
 
 // Al crear: lo que se vincula y se sube con la orden. Guardada, cada documento se guarda al momento.
 const documentosNuevos = ref(sinPendientes())
+// La pestaña Opciones: los documentos de la orden y, al editar una de servicio, las versiones de su ingreso.
+const opcionesDelPanel = computed(() => [
+  { clave: 'documentos', titulo: 'Documentos', icono: 'mdi-paperclip' },
+  ...(editando.value && esDeServicio(order.value)
+    ? [{ clave: 'versiones', titulo: 'Versiones del ingreso', icono: 'mdi-history' }] : []),
+])
 
 // `cotizacion`, la orden que el back arma desde una (documents/<id>/orden): queda vinculada a ella.
 async function open(tipo, cotizacion = null) {

@@ -1,10 +1,10 @@
 <template>
-  <workspace-layout :detalle-abierto="Boolean(elegida)" @cerrar="cerrarPanel">
+  <workspace-layout :detalle-abierto="Boolean(elegida || opcionAbierta)" @cerrar="cerrarPanel">
     <template v-if="$slots.orden" #apoyo="{ apilado }">
-      <div class="titulo-de-hoja">Orden</div>
-      <div class="px-3 pb-3">
-        <slot name="orden" :apilado="apilado" />
-      </div>
+      <workspace-tabs v-model="pestana" v-model:abiertos="datosAbiertos" :pestanas="pestanas" :apilado="apilado">
+        <slot v-if="pestana === 'info'" name="orden" :apilado="apilado" />
+        <option-rows v-else :opciones="opcionesDelPanel" :abierta="opcionAbierta" @abrir="abrirOpcion" />
+      </workspace-tabs>
     </template>
 
     <template #lista>
@@ -58,14 +58,16 @@
     </template>
 
     <template #detalle>
-      <panel-order-service :eq="elegida" :indice="indiceElegida" :estimado="numerosEstimados[indiceElegida]"
+      <panel-order-service v-if="elegida" :eq="elegida" :indice="indiceElegida" :estimado="numerosEstimados[indiceElegida]"
                            :error="errores[indiceElegida]" :cliente="cliente" @cerrar="cerrarPanel" @otro-igual="otroIgual"
                            @borrar="borrarFila" />
+      <detail-panel v-else :titulo="tituloDeOpcion" @cerrar="cerrarPanel">
+        <slot name="opcion" :clave="opcionAbierta" />
+      </detail-panel>
     </template>
 
     <template #sin-detalle>
-      <div class="titulo-de-hoja">Equipo</div>
-      <div class="px-4 text-body-2 text-medium-emphasis">Elige un equipo de la lista para ver y llenar sus datos.</div>
+      <detail-empty titulo="Equipo" icono="mdi-toolbox-outline" texto="Elige un equipo de la lista para ver y llenar sus datos." />
     </template>
   </workspace-layout>
 </template>
@@ -74,7 +76,12 @@
 import { ref, computed, watch, nextTick, onMounted, getCurrentInstance } from 'vue'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
+import DetailEmpty from '@/components/shared/DetailEmpty.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
+import DetailPanel from '@/components/shared/DetailPanel.vue'
+import OptionRows from '@/components/shared/OptionRows.vue'
+import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
+import { useDetailOptions } from '@/composables/useDetailOptions'
 import RowOrderService from './RowOrderService.vue'
 import PanelOrderService from './PanelOrderService.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService'
@@ -92,6 +99,8 @@ import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
 const props = defineProps({
   // El cliente de la orden, {id, name}: el titular de los certificados que no dicen otro.
   cliente: { type: Object, default: null },
+  // Las de la pestaña Opciones, [{ clave, titulo, icono, valor }]; se abren a la derecha con el slot `opcion`.
+  opcionesDelPanel: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['update-list'])
 
@@ -107,6 +116,14 @@ const { asa, arrastrable, claseDe, clave } = useRowDrag(equipments)
 // La fila abierta en el panel.
 const elegida = ref(null)
 const indiceElegida = computed(() => equipments.value.indexOf(elegida.value))
+
+const pestana = ref('info')
+const datosAbiertos = ref(true)
+const pestanas = computed(() => [
+  { valor: 'info', texto: 'Información', icono: 'mdi-card-account-details-outline' },
+  ...(props.opcionesDelPanel.length ? [{ valor: 'opciones', texto: 'Opciones', icono: 'mdi-format-list-bulleted' }] : []),
+])
+const { opcionAbierta, abrirOpcion, tituloDeOpcion } = useDetailOptions(elegida, () => props.opcionesDelPanel)
 
 const fetchEquipments = (page, size, query) => EquipmentDataService.getFiltered(page, size, query)
 const buscador = ref(null)
@@ -172,6 +189,7 @@ function otroIgual() {
 
 function cerrarPanel() {
   elegida.value = null
+  opcionAbierta.value = null
   nextTick(() => buscador.value?.$el.querySelector('input')?.focus())
 }
 

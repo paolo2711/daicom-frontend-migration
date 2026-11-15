@@ -244,11 +244,9 @@
       </v-data-table-server>
     </table-loading-overlay>
       <template #lado>
-        <div class="panel-sticky-wrapper">
-          <panel-facturas :order_type="SERVICIO" :orden="foco" :ordenes_seleccionadas="ordenes_seleccionadas"
-                          :acciones-de="accionesDeCobro" :ejecutar-accion="ejecutarAccion"
-                          @limpiar-seleccion="ordenes_seleccionadas = []" @limpiar-foco="cerrarCobro" />
-        </div>
+        <panel-facturas :order_type="SERVICIO" :orden="foco" :ordenes_seleccionadas="ordenes_seleccionadas"
+                        :acciones-de="accionesDeCobro" :ejecutar-accion="ejecutarAccion"
+                        @limpiar-seleccion="ordenes_seleccionadas = []" @limpiar-foco="cerrarCobro" />
       </template>
     </resizable-split>
 
@@ -618,14 +616,6 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss">
-/* Panel de facturas: se mantiene fijo mientras la tabla de órdenes scrollea.
-   El scroll de la página vive en .v-main (overflow-y:auto), así que el sticky
-   se calcula respecto a ese contenedor. */
-.panel-sticky-wrapper {
-  position: sticky;
-  top: 8px;
-  z-index: 5;
-}
 /* La píldora flotante de selección vive ahora en el componente común
    @/components/commonComponents/SelectionBar.vue (estilos incluidos). */
 

@@ -265,11 +265,9 @@
       </v-data-table-server>
     </table-loading-overlay>
       <template #lado>
-        <div class="panel-sticky-wrapper">
-          <panel-facturas :order_type="ALQUILER" :orden="foco" :ordenes_seleccionadas="ordenes_seleccionadas"
-                          :acciones-de="accionesDeCobro" :ejecutar-accion="ejecutarAccion"
-                          @limpiar-seleccion="ordenes_seleccionadas = []" @limpiar-foco="cerrarCobro" />
-        </div>
+        <panel-facturas :order_type="ALQUILER" :orden="foco" :ordenes_seleccionadas="ordenes_seleccionadas"
+                        :acciones-de="accionesDeCobro" :ejecutar-accion="ejecutarAccion"
+                        @limpiar-seleccion="ordenes_seleccionadas = []" @limpiar-foco="cerrarCobro" />
       </template>
     </resizable-split>
 
@@ -498,12 +496,6 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss">
-.panel-sticky-wrapper {
-  position: sticky;
-  top: 8px;
-  z-index: 5;
-}
-
 /* El ambar distingue Alquileres de Servicios de un vistazo. Pisa el marco
    comun de _table.scss a proposito. */
 .v-application .tabla-ordenes-alquiler {

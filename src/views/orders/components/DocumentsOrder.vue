@@ -15,6 +15,7 @@
                title="Quitar" @click="desvincular(v, d)" />
       </div>
       <paginated-autocomplete v-model="buscadas[v.campo]" :fetch="buscadores[v.campo]" :mapper="v.aOpcion"
+                              :cache="false"
                               :exclude-ids="vinculados[v.campo].map(d => d.id)" :return-object="false"
                               item-title="name" item-value="id" :disabled="!clienteId"
                               :label="`Vincular ${v.nombre} del cliente`" :no-data-text="v.sinResultados(tipo)"

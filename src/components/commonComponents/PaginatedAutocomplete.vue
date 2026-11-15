@@ -46,6 +46,8 @@ const props = defineProps({
   seed: { default: null },   // item ya seleccionado (para que se muestre al editar, sin buscar)
   // Nombre del recurso para la memoria corta ('clientes', 'labs'...). Vacio la apaga.
   recurso: { type: String, default: '' },
+  // false en una lista que depende de otro dato (cliente, tipo...): se vuelve a pedir cada vez que se abre.
+  cache: { type: Boolean, default: true },
 })
 // 'selected' emite el OBJETO elegido (util si el padre necesita otros campos, ej.
 // el nombre) sin tener que leer toda la lista.
@@ -62,8 +64,9 @@ const elegidoId = ref(idDe(props.modelValue))
 watch(() => props.modelValue, (valor) => { elegidoId.value = idDe(valor) })
 const selectedId = () => elegidoId.value
 
-const { items, loading, searchQuery: search, retrieveData, total } =
-  usePaginatedSearch((page, size, q) => props.fetch(page, size, q), props.mapper, selectedId, props.recurso)
+const { items, loading, searchQuery: search, retrieveData, olvidar, total } =
+  usePaginatedSearch((page, size, q) => props.fetch(page, size, q), props.mapper, selectedId,
+  props.cache ? props.recurso : '')
 
 const visibleItems = computed(() => {
   const base = items.value.filter(it => !props.excludeIds.includes(it[props.itemValue]))
@@ -88,7 +91,13 @@ function onSelect(v) {
 // La lista se pide al desplegar, no al dibujarse. Con `seed` el elegido ya se
 // muestra sin pedir nada.
 function alAbrir(estaAbierto) {
-  if (estaAbierto && !items.value.length) retrieveData('')
+  if (!estaAbierto) return
+  if (!props.cache) {
+    olvidar()
+    retrieveData(search.value || '')
+  } else if (!items.value.length) {
+    retrieveData('')
+  }
 }
 
 const tituloElegido = computed(() => {

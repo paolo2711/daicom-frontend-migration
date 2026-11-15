@@ -8,6 +8,7 @@
       </v-chip>
     </div>
     <paginated-autocomplete v-if="clienteId" :key="buscador" :model-value="null" :fetch="buscar" :mapper="aOpcion"
+                            :cache="false"
                             :exclude-ids="modelValue.map(o => o.id)" label="Agregar orden"
                             prepend-inner-icon="mdi-plus" v-bind="CAMPO" @update:model-value="agregar" />
     <div v-else class="text-caption text-medium-emphasis">Elige primero el cliente para agregar sus órdenes.</div>

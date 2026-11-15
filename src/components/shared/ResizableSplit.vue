@@ -19,8 +19,8 @@
 </template>
 
 <script setup>
-// Una lista con un panel al lado que se ensancha arrastrando el divisor. En pantalla angosta, el panel se abre
-// a pantalla completa mientras `abierto`; lo cierra el mismo panel.
+// Una lista con un panel al lado que se ensancha arrastrando el divisor y acompaña al bajar por la lista. En
+// pantalla angosta, el panel se abre a pantalla completa mientras `abierto`; lo cierra el mismo panel.
 import { onUnmounted, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import SplitDivider from '@/components/shared/SplitDivider.vue'
@@ -55,5 +55,5 @@ onUnmounted(() => medidor.disconnect())
 </script>
 
 <style scoped>
-.lado { min-width: v-bind(minimo); }
+.lado { min-width: v-bind(minimo); position: sticky; top: 0.5rem; z-index: 5; }
 </style>

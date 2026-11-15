@@ -72,8 +72,12 @@
           </div>
         </table-loading-overlay>
 
-        <paginated-autocomplete :key="buscador" :model-value="null" v-bind="CAMPO"
-                                :fetch="buscarFacturas" :mapper="InvoiceMappers.getMap" :exclude-ids="yaVinculadas"
+        <div v-if="!clienteUnico" class="text-caption text-medium-emphasis">
+          Las órdenes marcadas son de clientes distintos: no pueden ir en la misma factura.
+        </div>
+        <paginated-autocomplete v-else :key="buscador" :model-value="null" v-bind="CAMPO"
+                                :fetch="buscarFacturas" :cache="false"
+                                :mapper="InvoiceMappers.getMap" :exclude-ids="yaVinculadas"
                                 item-title="invoice_number" label="Vincular a una factura que ya existe"
                                 prepend-inner-icon="mdi-link-variant" @selected="vincularA">
           <template #item="{ props: fila, item }">
@@ -134,6 +138,10 @@ const aCobrar = computed(() => {
   return props.orden ? [props.orden] : []
 })
 const clientes = computed(() => [...new Set(aCobrar.value.map(o => o.client_data?.name).filter(Boolean))])
+const clienteUnico = computed(() => {
+  const ids = new Set(aCobrar.value.map(o => o.client_data?.id))
+  return ids.size === 1 ? [...ids][0] ?? null : null
+})
 const acciones = computed(() => props.accionesDe(aCobrar.value).filter(a => !a.disabled))
 
 const titulo = computed(() => {
@@ -181,10 +189,10 @@ async function recargar () {
   }
 }
 
-// Las del cliente y las sueltas; con clientes distintos marcados, todas las del tipo.
+// Las del cliente y las sueltas, que se le pueden vincular.
 const buscarFacturas = (page, size, q) => BillingDataService.listInvoices({
   page, page_size: size, q: q || undefined, tipo: 'fiscal', order_type: props.order_type,
-  para_cliente: clientes.value.length === 1 ? aCobrar.value[0].client_data.id : undefined,
+  para_cliente: clienteUnico.value,
 })
 
 async function vincularA (factura) {

@@ -37,6 +37,16 @@ export function usePaginatedSearch(apiServiceCall, mapperFunction, getActiveId =
 
   let ultimaConsulta = null
   let enVuelo = null
+  let vuelta = 0
+
+  // Descarta lo traido y lo que esta en camino; la proxima busqueda va al server.
+  const olvidar = () => {
+    vuelta++
+    ultimaConsulta = null
+    enVuelo = null
+    items.value = []
+    total.value = 0
+  }
 
   const retrieveData = async (query = '', forzar = false) => {
     const texto = query || ''
@@ -59,8 +69,10 @@ export function usePaginatedSearch(apiServiceCall, mapperFunction, getActiveId =
 
     enVuelo = texto
     loading.value = true
+    const mia = vuelta
     try {
       const response = await apiServiceCall(1, 10, query)
+      if (mia !== vuelta) return
       const cuenta = response.data.count ?? response.data.results.length
       const lista = response.data.results.map(mapperFunction)
       if (clave) guardarCache(clave, { lista, total: cuenta })
@@ -69,8 +81,10 @@ export function usePaginatedSearch(apiServiceCall, mapperFunction, getActiveId =
     } catch (error) {
       console.error("Error en la búsqueda paginada:", error)
     } finally {
-      enVuelo = null
-      loading.value = false
+      if (mia === vuelta) {
+        enVuelo = null
+        loading.value = false
+      }
     }
   }
 
@@ -86,6 +100,7 @@ export function usePaginatedSearch(apiServiceCall, mapperFunction, getActiveId =
     loading,
     searchQuery,
     retrieveData,
+    olvidar,
     total
   }
 }

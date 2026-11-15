@@ -19,6 +19,15 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.11.0.1',
+    fecha: '2026-11-14',
+    arreglo: [
+      'Órdenes → Cobro: «Vincular a una factura que ya existe» muestra las facturas del cliente de la orden abierta, no las de la que se vio antes.',
+      'Una factura solo se vincula a órdenes de su cliente; la subida sin cliente se puede vincular a cualquiera.',
+      'Al agregar órdenes a un comprobante o documentos a una orden, la lista es siempre la del cliente elegido.',
+    ],
+  },
+  {
     version: '3.11.0.0',
     fecha: '2026-11-14',
     nuevo: [

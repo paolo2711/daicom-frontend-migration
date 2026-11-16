@@ -17,20 +17,16 @@
       </div>
 
       <div class="cuerpo d-flex flex-column ga-3 pa-3 flex-grow-1">
-        <div v-if="!vinculando && totales.length" class="titulo-de-seccion">Total de la orden</div>
-        <amount-breakdown v-for="t in vinculando ? [] : totales" :key="t.currency" v-bind="desgloseDeOrden(t)"
+        <div v-if="totales.length" class="titulo-de-seccion">{{ varias ? 'Total de las órdenes' : 'Total de la orden' }}</div>
+        <amount-breakdown v-for="t in totales" :key="t.currency" v-bind="desgloseDeOrden(t)"
                           class="total-de-la-orden px-3 py-2 rounded-lg" />
 
-        <div v-if="vinculando" class="text-caption text-medium-emphasis">
-          Vincúlalas a una factura que ya existe o emite una sola para todas.
-        </div>
-
-        <table-loading-overlay v-else :loading="cargando" :isEmpty="facturas.length === 0">
+        <table-loading-overlay :loading="cargando" :isEmpty="facturas.length === 0">
           <div v-if="facturas.length" class="titulo-de-seccion mb-2">
             {{ facturas.length === 1 ? 'Su comprobante' : `Sus ${facturas.length} comprobantes` }}
           </div>
           <div v-if="!facturas.length" class="py-6 text-center text-caption text-medium-emphasis">
-            Esta orden todavía no tiene comprobante.
+            {{ varias ? 'Estas órdenes todavía no tienen comprobante.' : 'Esta orden todavía no tiene comprobante.' }}
           </div>
 
           <div v-for="factura in facturas" :key="factura.id" class="comprobante"
@@ -64,7 +60,7 @@
                          @click="abrirAbonos(factura)">Abonar</v-btn>
                   <v-btn v-if="factura.pdf_url" variant="outlined" size="small" class="text-none"
                          prepend-icon="mdi-file-pdf-box" @click="abrirEnOtraPestana(factura.pdf_url)">PDF</v-btn>
-                  <v-btn v-if="factura.es_fiscal" variant="outlined" size="small" class="text-none"
+                  <v-btn v-if="factura.es_fiscal && !varias" variant="outlined" size="small" class="text-none"
                          prepend-icon="mdi-link-off" @click="quitar(factura)">Desvincular</v-btn>
                 </div>
               </div>
@@ -137,6 +133,7 @@ const aCobrar = computed(() => {
   if (vinculando.value) return props.ordenes_seleccionadas
   return props.orden ? [props.orden] : []
 })
+const varias = computed(() => aCobrar.value.length > 1)
 const clientes = computed(() => [...new Set(aCobrar.value.map(o => o.client_data?.name).filter(Boolean))])
 const clienteUnico = computed(() => {
   const ids = new Set(aCobrar.value.map(o => o.client_data?.id))
@@ -146,39 +143,42 @@ const acciones = computed(() => props.accionesDe(aCobrar.value).filter(a => !a.d
 
 const titulo = computed(() => {
   const n = aCobrar.value.length
-  return vinculando.value ? `Cobro de ${n} ${n === 1 ? 'orden' : 'órdenes'}` : `Cobro de ${props.orden.order_number}`
+  return varias.value ? `Cobro de ${n} órdenes` : `Cobro de ${aCobrar.value[0].order_number}`
 })
 const subtitulo = computed(() => {
-  if (!vinculando.value) return clientes.value.join(', ')
+  if (!varias.value) return clientes.value.join(', ')
   const numeros = aCobrar.value.map(o => o.order_number)
   const resto = numeros.length - VISIBLES
   return numeros.slice(0, VISIBLES).join(', ') + (resto > 0 ? ` y ${resto} más` : '')
 })
 
-const detalleDe = (factura) => [factura.cliente, fechaCorta(factura.invoice_date),
-  factura.es_fiscal ? '' : 'Sin comprobante'].filter(Boolean).join(' · ')
+// Con varias ordenes, cada comprobante dice a cuales va.
+const detalleDe = (factura) => [varias.value ? factura.ordenes_vinculadas.map(o => o.order_number).join(', ') : '',
+  factura.cliente, fechaCorta(factura.invoice_date), factura.es_fiscal ? '' : 'Sin comprobante'].filter(Boolean).join(' · ')
 
 const facturas = ref([])
 const totales = ref([])
 const cargando = ref(false)
 const abierta = ref(null)
 const buscador = ref(0)
-const yaVinculadas = computed(() => (vinculando.value ? [] : facturas.value.map(f => f.id)))
+const yaVinculadas = computed(() => facturas.value.map(f => f.id))
 
 const { begin, isLatest } = useLatestRequest()
 
+// Los comprobantes y el total de las ordenes del panel, una o varias.
 async function recargar () {
-  if (!props.orden) return
+  const ids = aCobrar.value.map(o => o.id)
+  if (!ids.length) return
   cargando.value = true
   const turno = begin()
   try {
     const [lista, resumen] = await Promise.all([
-      BillingDataService.listInvoices({ order_id: props.orden.id, page_size: 100, con_abonos: true }),
-      OrderDataService.getResumen(props.orden.id),
+      BillingDataService.listInvoices({ order_ids: ids.join(','), page_size: 100, con_abonos: true }),
+      OrderDataService.getTotales(ids),
     ])
     if (!isLatest(turno)) return
     facturas.value = lista.data.results.map(InvoiceMappers.getMap)
-    totales.value = resumen.data.totales || []
+    totales.value = resumen.data.totales
     if (conAbonos.value) conAbonos.value = facturas.value.find(f => f.id === conAbonos.value.id) || conAbonos.value
   } catch {
     if (!isLatest(turno)) return
@@ -203,7 +203,7 @@ async function vincularA (factura) {
 }
 
 async function quitar (factura) {
-  if (await desvincular(factura, props.orden)) recargar()
+  if (await desvincular(factura, aCobrar.value[0])) recargar()
 }
 
 const enAbonos = ref(false)
@@ -229,7 +229,7 @@ async function hacer (clave) {
   if (interna) abrirAbonos(interna)
 }
 
-watch(() => props.orden?.id, () => {
+watch(() => aCobrar.value.map(o => o.id).join(','), () => {
   abierta.value = null
   facturas.value = []
   totales.value = []

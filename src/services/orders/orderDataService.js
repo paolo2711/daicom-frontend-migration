@@ -75,6 +75,11 @@ class OrderDataService {
         return axios.get(`orders/${id}/resumen`, { headers: authHeader() });
     }
 
+    // Lo facturado y cobrado de varias ordenes juntas, por moneda.
+    getTotales(ids) {
+        return axios.get('orders/totales', { params: { ordenes: ids.join(',') }, headers: authHeader() });
+    }
+
     // Anula una o varias ordenes con sus equipos, todas o ninguna.
     anular(ids) {
         return axios.post('orders/anular', { order_ids: ids }, { headers: authHeader() });

@@ -62,16 +62,16 @@ export const ACCIONES_ORDEN = [
 export const ACCIONES_COBRO = [
   {
     clave: 'facturar', grupo: 'cobro', varios: true,
-    icono: 'mdi-file-document-plus', texto: 'Emitir factura',
+    icono: 'mdi-file-document-plus', texto: 'Emitir factura', detalle: motivoDeClientes,
     visible: algunaViva,
-    disponible: (ordenes) => ordenes.every(viva),
+    disponible: (ordenes) => ordenes.every(viva) && deUnCliente(ordenes),
   },
   // La hecha en KeyFacil: se sube el PDF y queda vinculada a estas ordenes.
   {
     clave: SUBIR, grupo: 'cobro', varios: true,
-    icono: 'mdi-file-upload-outline', texto: 'Subir de KeyFacil',
+    icono: 'mdi-file-upload-outline', texto: 'Subir de KeyFacil', detalle: motivoDeClientes,
     visible: algunaViva,
-    disponible: (ordenes) => ordenes.every(viva),
+    disponible: (ordenes) => ordenes.every(viva) && deUnCliente(ordenes),
   },
   {
     clave: SIN_COMPROBANTE, grupo: 'cobro', varios: true,

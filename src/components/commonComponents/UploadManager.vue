@@ -1,7 +1,7 @@
 <template>
   <div>
     <v-slide-y-reverse-transition>
-      <v-card v-if="tasks.length > 0"
+      <v-card v-if="tasks.length > 0 && !appStore.panelesLaterales"
               class="upload-manager-card panel-flotante"
               :class="{ raised: selectionActive }">
 

@@ -60,11 +60,10 @@
     <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
                  @accion="clave => ejecutarAccion(clave, menu.filas)" />
     <dialog-dispatch-guide ref="formulario" @emitida="alEmitir" />
-    <sunat-envio :comprobante="enviada && comprobanteDe(enviada)" tipo="dispatchguide"
-                 :filas="enviada ? filasDe(enviada) : []"
-                 :corregible="corregible" @cerrar="cerrarEnviada" @corregir="corregirEnviada" @ver-pdf="vista = enviada.id; cerrarEnviada()" />
     <dialog-cancel-dispatch-guide v-model="porAnular" @anulada="reemplazar" />
-    <dialog-info-dispatch-guide v-model="enInfo" @cambiada="reemplazar" @ver-pdf="g => (vista = g.id)" />
+    <panel-info-dispatch-guide v-model="abierta" :corregible="corregible" :acciones="abierta ? accionesDe([abierta]) : []"
+                               @corregir="corregir" @accion="clave => ejecutarAccion(clave, [abierta])"
+                               @cambiada="reemplazar" />
   </div>
 </template>
 
@@ -97,8 +96,7 @@ import { ESTADOS, FILTRO_DE_ESTADO, bajaPendienteEnSol } from '@/utils/billing/g
 import { abrirEnOtraPestana } from '@/utils/pdf'
 import DialogCancelDispatchGuide from './DialogCancelDispatchGuide.vue'
 import DialogDispatchGuide from './DialogDispatchGuide.vue'
-import DialogInfoDispatchGuide from './DialogInfoDispatchGuide.vue'
-import SunatEnvio from './SunatEnvio.vue'
+import PanelInfoDispatchGuide from './PanelInfoDispatchGuide.vue'
 
 const swal = useSwal()
 const route = useRoute()
@@ -142,11 +140,8 @@ async function recargar () {
   }
 }
 
-const { enviada, corregible, alEmitir, cerrar: cerrarEnviada, corregir: corregirEnviada } =
-  useEmissionPanel(guias, formulario, recargar)
-const comprobanteDe = (g) => ({ id: g.id, numero: g.numero, cliente: g.cliente_data?.name, pdf: g.pdf,
-                                nombrePdf: g.nombre_pdf, xml: g.xml })
-const filasDe = (g) => [['Traslado', fechaCorta(g.fecha_traslado)]]
+// La que se mira en su panel: la de Ver informacion o la recien emitida.
+const { abierta, corregible, alEmitir, corregir } = useEmissionPanel(formulario, recargar)
 
 function reemplazar (guia) {
   const posicion = guias.value.findIndex(g => g.id === guia.id)
@@ -165,14 +160,12 @@ async function abrirFormulario (ordenIds = [], plantilla = null) {
   }
 }
 
-// La que se esta anulando y la que se mira, cada una para su dialogo.
 const porAnular = ref(null)
-const enInfo = ref(null)
 
 // Con PDF se ve al costado; sin PDF (rechazada, en espera) se abre lo que le pasa.
 function abrir (guia) {
   if (guia.pdf) vista.value = guia.id
-  else enInfo.value = guia
+  else abierta.value = guia
 }
 
 async function resolver (accion, guia) {
@@ -192,7 +185,7 @@ function ejecutarAccion (clave, [guia]) {
     case 'cdr': return abrirEnOtraPestana(guia.cdr)
     // Ver informacion le pregunta a SUNAT y sigue preguntando hasta que responda.
     case 'consultar':
-      enInfo.value = guia
+      abierta.value = guia
       return
     case 'plantilla': return abrirFormulario([], guia)
     case 'anular':
@@ -201,7 +194,7 @@ function ejecutarAccion (clave, [guia]) {
     case 'baja-en-sol': return resolver(registrarBajaEnSol, guia)
     case 'reintentar': return resolver(reintentarEnvio, guia)
     case 'info':
-      enInfo.value = guia
+      abierta.value = guia
       break
   }
 }

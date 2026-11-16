@@ -19,6 +19,21 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.11.0.2',
+    fecha: '2026-11-16',
+    cambio: [
+      'Facturación: «Ver información» de una factura o una guía se abre en un panel a la derecha, con su QR y las mismas opciones del menú.',
+      'Al emitir una factura o una guía, ese mismo panel muestra cómo va ante SUNAT; al cerrarlo vuelve el panel de subidas.',
+      'Órdenes → Cobro: con varias órdenes marcadas se ven el total y sus comprobantes, igual que al abrir una sola.',
+      'Las filas de la factura y de la guía se ordenan arrastrándolas, como en la orden y la cotización.',
+    ],
+    arreglo: [
+      'Facturación: al cambiar el tamaño de la ventana aparecían paneles en blanco al costado de la lista.',
+      'Órdenes → Cobro: con órdenes de clientes distintos ya no se ofrece emitir ni subir una factura.',
+      'El crédito al día vuelve a verse en verde azulado, distinto de lo que todavía no tiene factura.',
+    ],
+  },
+  {
     version: '3.11.0.1',
     fecha: '2026-11-14',
     arreglo: [

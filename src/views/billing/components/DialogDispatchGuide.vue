@@ -78,7 +78,7 @@
                 <v-table v-if="datos.items.length" density="compact" class="lista-de-tarjetas" fixed-header>
                   <thead>
                     <tr>
-                      <th style="width: 3rem;">N°</th>
+                      <th style="width: 4.5rem;">N°</th>
                       <th>Descripción</th>
                       <th style="width: 6rem;">Cantidad</th>
                       <th style="width: 7rem;">Peso c/u</th>
@@ -86,7 +86,8 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <row-dispatch-guide v-for="(item, i) in datos.items" :key="i" :item="item" :indice="i"
+                    <row-dispatch-guide v-for="(item, i) in datos.items" :key="clave(item)" v-bind="arrastrable(i)"
+                                        :class="claseDe(i)" :asa="asa(i)" :item="item" :indice="i"
                                         :error="errores[i]" :elegida="item === elegido" @elegir="elegido = item"
                                         @borrar="borrar" />
                   </tbody>
@@ -151,6 +152,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { useRowDrag } from '@/composables/useRowDrag'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import DetailEmpty from '@/components/shared/DetailEmpty.vue'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
@@ -198,6 +200,7 @@ const datos = ref(null)
 const elegido = ref(null)
 
 const items = computed(() => datos.value?.items ?? [])
+const { asa, arrastrable, claseDe, clave } = useRowDrag(items)
 const { errores, marcarErrores } = useRowErrors(items)
 const indiceElegido = computed(() => items.value.indexOf(elegido.value))
 const sePuedeEmitir = computed(() => Boolean(clienteId.value && items.value.length))

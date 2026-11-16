@@ -55,7 +55,7 @@
                 <v-table density="compact" class="lista-de-tarjetas" fixed-header>
                   <thead>
                     <tr>
-                      <th style="width: 3rem;">N°</th>
+                      <th style="width: 4.5rem;">N°</th>
                       <th>Descripción</th>
                       <th class="text-right" style="width: 6rem;">Cantidad</th>
                       <th class="text-right" style="width: 8rem;">P. unitario</th>
@@ -65,7 +65,8 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <row-invoice-item v-for="(item, i) in datos.items" :key="i" :item="item" :indice="i"
+                    <row-invoice-item v-for="(item, i) in datos.items" :key="clave(item)" v-bind="arrastrable(i)"
+                                      :class="claseDe(i)" :asa="asa(i)" :item="item" :indice="i"
                                       :importe-del-item="cuenta.importes?.[i] ?? 0" :error="errores[i]"
                                       :elegida="abierto?.item === item" @elegir="abrir(null, item)" @borrar="borrar" />
                   </tbody>
@@ -138,6 +139,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { useRowDrag } from '@/composables/useRowDrag'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
@@ -198,6 +200,7 @@ const cuenta = ref(SIN_CUENTA)
 const abierto = ref(null)
 
 const items = computed(() => datos.value?.items ?? [])
+const { asa, arrastrable, claseDe, clave } = useRowDrag(items)
 const { errores, marcarErrores } = useRowErrors(items)
 const indiceAbierto = computed(() => items.value.indexOf(abierto.value?.item))
 const sePuedeEmitir = computed(() => Boolean(clienteId.value && items.value.length))

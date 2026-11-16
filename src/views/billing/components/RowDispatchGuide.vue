@@ -1,6 +1,6 @@
 <template>
   <tr :class="{ 'fila-con-error': error, 'fila-elegida': elegida }" class="fila-tarjeta" @click="emit('elegir')">
-    <td class="text-medium-emphasis">{{ indice + 1 }}</td>
+    <td class="text-medium-emphasis text-no-wrap"><drag-handle v-bind="asa" @click.stop /> {{ indice + 1 }}</td>
     <td class="text-break">
       <div v-if="item.descripcion" class="font-weight-bold text-high-emphasis">{{ item.descripcion }}</div>
       <div v-else class="text-error">Falta la descripción</div>
@@ -17,12 +17,16 @@
 </template>
 
 <script setup>
+import DragHandle from '@/components/shared/DragHandle.vue'
+
 // Una fila de DialogDispatchGuide, solo para leer: se edita en PanelDispatchGuide.
 defineProps({
   item: { type: Object, required: true },
   indice: { type: Number, required: true },
   error: { type: String, default: '' },
   elegida: { type: Boolean, default: false },
+  // El asa(i) de useRowDrag.
+  asa: { type: Object, required: true },
 })
 const emit = defineEmits(['elegir', 'borrar'])
 </script>

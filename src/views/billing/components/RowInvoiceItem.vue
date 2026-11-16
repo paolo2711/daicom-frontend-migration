@@ -1,6 +1,6 @@
 <template>
   <tr :class="{ 'fila-con-error': error, 'fila-elegida': elegida }" class="fila-tarjeta" @click="emit('elegir')">
-    <td class="text-medium-emphasis">{{ indice + 1 }}</td>
+    <td class="text-medium-emphasis text-no-wrap"><drag-handle v-bind="asa" @click.stop /> {{ indice + 1 }}</td>
     <td class="text-break">
       <div v-if="item.description" class="font-weight-bold text-high-emphasis">{{ item.description }}</div>
       <div v-else class="text-error">Falta la descripción</div>
@@ -23,6 +23,7 @@
 
 <script setup>
 // Una fila de DialogEmitInvoice, solo para leer: se edita en PanelServiceItem. El importe lo calcula el back.
+import DragHandle from '@/components/shared/DragHandle.vue'
 import { importe } from '@/utils/money'
 
 defineProps({
@@ -31,6 +32,8 @@ defineProps({
   importeDelItem: { type: [Number, String], default: 0 },
   error: { type: String, default: '' },
   elegida: { type: Boolean, default: false },
+  // El asa(i) de useRowDrag.
+  asa: { type: Object, required: true },
 })
 const emit = defineEmits(['elegir', 'borrar'])
 </script>

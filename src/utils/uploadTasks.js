@@ -36,6 +36,7 @@ export const esBaja = (tarea) => tarea.type === 'nube'
 // Facturas, guias y notas de credito enviadas a SUNAT: se miran en su pestaña, y la rechazada se corrige alla, no se reintenta.
 const TIPOS_COMPROBANTE = ['invoice', 'dispatchguide', 'creditnote']
 export const esComprobante = (tarea) => TIPOS_COMPROBANTE.includes(tarea.type)
+export const tareaDe = (tareas, tipo, id) => tareas.find(t => t.type === tipo && String(t.id) === String(id))
 
 // Una conversion en 'success' tiene el PDF hecho y todavia sin guardar: lo que
 // sigue no es cerrarla, es que alguien lo revise.

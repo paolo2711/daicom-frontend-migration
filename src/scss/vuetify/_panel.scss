@@ -48,3 +48,16 @@
 .v-theme--dark .panel-flotante__encabezado {
   border-bottom-color: rgba(255, 255, 255, 0.08);
 }
+
+// El panel lateral (FloatingSidePanel): un v-dialog pegado a la derecha y de alto completo.
+.v-dialog.panel-lateral {
+  justify-content: flex-end;
+  align-items: stretch;
+}
+
+.v-dialog.panel-lateral > .v-overlay__content {
+  margin: 0.75rem;
+  max-height: calc(100% - 1.5rem);
+  max-width: calc(100% - 1.5rem);
+  height: calc(100% - 1.5rem);
+}

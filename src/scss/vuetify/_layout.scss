@@ -81,8 +81,9 @@ a { text-decoration: none; }
 ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: #555; }
 
-/* Fondo acrílico exclusivo para modales con la clase dialog-premium */
-.dialog-premium .v-overlay__scrim {
+/* Fondo acrílico de los modales: dialog-premium y el panel lateral (FloatingSidePanel). */
+.dialog-premium .v-overlay__scrim,
+.panel-lateral .v-overlay__scrim {
   backdrop-filter: blur(12px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
   background-color: rgba(0, 0, 0, 0.45) !important;
@@ -92,8 +93,9 @@ a { text-decoration: none; }
   box-shadow: none !important;
 }
 
-/* Bordes y estilos exclusivos para la tarjeta dentro de dialog-premium */
-.dialog-premium .v-overlay__content > .v-card {
+/* Bordes de la tarjeta de los modales: dialog-premium y el panel lateral (FloatingSidePanel). */
+.dialog-premium .v-overlay__content > .v-card,
+.panel-lateral .v-overlay__content > .v-card {
   border-radius: 21px !important;
   overflow: hidden !important;
 }

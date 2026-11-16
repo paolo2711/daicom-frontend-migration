@@ -116,15 +116,14 @@
     <dialog-invoice-payments v-model="enAbonos" :invoice="conAbonos" @close="enAbonos = false" />
     <dialog-emit-invoice ref="emision" @emitida="alEmitir" />
     <dialog-credit-note ref="nota" @emitida="alEmitirNota" />
-    <sunat-envio :comprobante="notaEnviada && comprobanteDeNota(notaEnviada)" tipo="creditnote"
-                 :filas="notaEnviada ? [['Factura', notaEnviada.factura_numero], ['Total', monto(notaEnviada.total, notaEnviada.moneda)]] : []"
-                 :corregible="notaCorregible" @cerrar="cerrarNota" @corregir="corregirNota"
-                 @ver-pdf="abrirEnOtraPestana(notaEnviada.pdf_url); cerrarNota()" />
-    <sunat-envio :comprobante="enviada && comprobanteDe(enviada)" tipo="invoice" :filas="enviada ? filasDe(enviada) : []"
-                 :corregible="corregible" @cerrar="cerrarEnviada" @corregir="corregirEnviada"
-                 @ver-pdf="vista = enviada.id; cerrarEnviada()" />
-    <dialog-info-invoice v-model="enInfo" @cambiada="reemplazar" @ver-pdf="f => (vista = f.id)" />
-    <dialog-cancel-invoice v-model="enBaja" @enviada="f => { reemplazar(f); enInfo = f }" />
+    <panel-sunat :abierto="Boolean(notaAbierta)" tipo="creditnote" :id="notaAbierta?.id" nombre="Nota de crédito"
+                 :numero="notaFresca?.numero" :estado-sunat="notaFresca?.estado" :respuesta="notaFresca?.respuesta"
+                 :filas="filasDeNota" :acciones="accionesDeNota" :corregible="notaCorregible"
+                 @cerrar="notaAbierta = null" @accion="accionDeNota" />
+    <panel-info-invoice v-model="abierta" :corregible="corregible" :acciones="abierta ? accionesDe([abierta]) : []"
+                        @corregir="corregir" @accion="clave => ejecutarAccion(clave, [abierta])"
+                        @cambiada="reemplazar" />
+    <dialog-cancel-invoice v-model="enBaja" @enviada="f => { reemplazar(f); abierta = f }" />
   </pdf-drop-zone>
 </template>
 
@@ -161,14 +160,14 @@ import { avisarHecho } from '@/utils/documents/avisos'
 import { mensajeDeError } from '@/utils/errors'
 import { MONEDAS, importe, monto } from '@/utils/money'
 import { ALQUILER, SERVICIO, TONOS } from '@/utils/orders/estado'
-import { abrirEnOtraPestana, avisarSoloPdf } from '@/utils/pdf'
+import { OTRA_PESTANA, abrirEnOtraPestana, avisarSoloPdf } from '@/utils/pdf'
 import DialogCancelInvoice from './DialogCancelInvoice.vue'
 import DialogCreditNote from './DialogCreditNote.vue'
 import DialogEmitInvoice from './DialogEmitInvoice.vue'
-import DialogInfoInvoice from './DialogInfoInvoice.vue'
 import DialogInvoice from './DialogInvoice.vue'
 import DialogInvoicePayments from './DialogInvoicePayments.vue'
-import SunatEnvio from './SunatEnvio.vue'
+import PanelInfoInvoice from './PanelInfoInvoice.vue'
+import PanelSunat from './PanelSunat.vue'
 
 const swal = useSwal()
 const route = useRoute()
@@ -234,16 +233,7 @@ async function refrescarFila (event) {
   }
 }
 
-const comprobanteDe = (f) => ({ id: f.id, numero: f.invoice_number, cliente: f.cliente, pdf: f.pdf_url,
-                                nombrePdf: f.nombre_pdf, xml: f.xml })
-const filasDe = (f) => [
-  ['Total', monto(f.amount, f.currency)],
-  ...(f.detraccion_applies ? [['Detracción', monto(f.detraccion_amount, f.currency)]] : []),
-  ['Condición', f.es_credito ? `Crédito · vence ${fechaCorta(f.due_date)}` : 'Contado'],
-]
-
-// La que se mira en Ver informacion, la que se anula, y reemplazar la fila con lo que vuelve.
-const enInfo = ref(null)
+// La que se anula, y reemplazar la fila con lo que vuelve.
 const enBaja = ref(null)
 function reemplazar (fresca) {
   const posicion = facturas.value.findIndex(f => f.id === fresca.id)
@@ -263,16 +253,23 @@ function subir (pdf = null) {
 }
 
 const emision = ref(null)
-const { enviada, corregible, alEmitir, cerrar: cerrarEnviada, corregir: corregirEnviada } =
-  useEmissionPanel(facturas, emision, recargar, InvoiceMappers.getMap)
+// La que se mira en su panel: la de Ver informacion o la recien emitida.
+const { abierta, corregible, alEmitir, corregir } = useEmissionPanel(emision, recargar, InvoiceMappers.getMap)
 
-// La nota de credito: su formulario y, al emitirla, su panel al costado como el de la factura.
+// La nota de credito: su formulario y, al emitirla, su panel como el de la factura.
 const nota = ref(null)
 const notasDeLaLista = computed(() => facturas.value.flatMap(f => f.notas))
-const { enviada: notaEnviada, corregible: notaCorregible, alEmitir: alEmitirNota, cerrar: cerrarNota,
-        corregir: corregirNota } = useEmissionPanel(notasDeLaLista, nota, recargar)
-const comprobanteDeNota = (n) => ({ id: n.id, numero: n.numero, cliente: n.cliente, pdf: n.pdf_url,
-                                    nombrePdf: n.nombre_pdf, xml: n.xml })
+const { abierta: notaAbierta, corregible: notaCorregible, alEmitir: alEmitirNota, corregir: corregirNota } =
+  useEmissionPanel(nota, recargar)
+const notaFresca = computed(() => notaAbierta.value &&
+  (notasDeLaLista.value.find(n => n.id === notaAbierta.value.id) || notaAbierta.value))
+const filasDeNota = computed(() => notaFresca.value ? [
+  ['Cliente', notaFresca.value.cliente], ['Factura', notaFresca.value.factura_numero],
+  ['Total', monto(notaFresca.value.total, notaFresca.value.moneda)],
+] : [])
+const accionesDeNota = computed(() => notaFresca.value?.pdf_url
+  ? [{ clave: 'pdf', grupo: 'ver', texto: OTRA_PESTANA, icono: 'mdi-open-in-new' }] : [])
+const accionDeNota = (clave) => clave === 'corregir' ? corregirNota() : abrirEnOtraPestana(notaFresca.value.pdf_url)
 async function abrirNota (factura) {
   try {
     nota.value.open((await BillingDataService.newCreditNote(factura.id)).data)
@@ -346,7 +343,7 @@ function ejecutarAccion (clave, [factura]) {
     // Ver informacion le pregunta a SUNAT y sigue preguntando hasta que responda.
     case 'info':
     case 'consultar':
-      enInfo.value = factura
+      abierta.value = factura
       return
     case 'plantilla': return abrirEmision([], factura)
     case 'reintentar':

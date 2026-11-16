@@ -1,26 +1,19 @@
 import { computed, ref } from 'vue'
 
-// El comprobante recien emitido, al costado de su lista mientras SUNAT responde (SunatEnvio). Su fila de la lista
-// manda en cuanto llega; `formulario` es el que lo emitio, y vuelve a abrirse con "Corregir".
-export function useEmissionPanel (filas, formulario, recargar, aFila = (fila) => fila) {
-  const id = ref(null)
-  const respuesta = ref(null)
-  const enviada = computed(() => filas.value.find(f => f.id === id.value) || respuesta.value)
-  const corregible = computed(() => Boolean(enviada.value && formulario.value?.corregible(enviada.value.id)))
+// El comprobante abierto en su panel (PanelSunat): el de Ver informacion o el recien emitido. `formulario` es el
+// que lo emitio, y vuelve a abrirse con "Corregir".
+export function useEmissionPanel (formulario, recargar, aFila = (fila) => fila) {
+  const abierta = ref(null)
+  const corregible = computed(() => Boolean(abierta.value && formulario.value?.corregible(abierta.value.id)))
 
   function alEmitir (fila) {
-    respuesta.value = aFila(fila)
-    id.value = fila.id
+    abierta.value = aFila(fila)
     recargar()
   }
-  function cerrar () {
-    id.value = null
-    respuesta.value = null
-  }
   function corregir () {
-    cerrar()
+    abierta.value = null
     formulario.value.corregir()
   }
 
-  return { enviada, corregible, alEmitir, cerrar, corregir }
+  return { abierta, corregible, alEmitir, corregir }
 }

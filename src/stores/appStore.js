@@ -127,6 +127,9 @@ export const useAppStore = defineStore('app', {
     // Upload Manager para no solaparse con ella en ventanas angostas.
     selectionActive: false,
 
+    // Paneles laterales abiertos (FloatingSidePanel): mientras haya uno, el Upload Manager no se muestra.
+    panelesLaterales: 0,
+
     // Aviso de nueva versión (lo enciende el WS).
     updateAvailable: false,
     serverVersion: null, // la que reporta el back, se ve en el footer

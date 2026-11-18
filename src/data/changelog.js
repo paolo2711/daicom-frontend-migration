@@ -19,6 +19,26 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.11.1.0',
+    fecha: '2026-11-18',
+    nuevo: [
+      'Certificados acreditados: se imprimen con su carátula, tomada de la hoja «DATOS CERTIFICADO» del Excel.',
+      'En los acreditados, las tablas y los gráficos no se parten entre páginas, y las observaciones van numeradas antes del fin del certificado.',
+      'Al subir el Excel, la opción «PDF sin plantilla», para imprimir en las hojas con membrete. Se descarga y no se guarda.',
+      'Empresa: el sello del metrólogo, que sale en la hoja 1 junto a la firma y el QR.',
+      '«Otro igual» también en cotizaciones, facturas y guías.',
+    ],
+    cambio: [
+      'El sello, la firma y el QR van juntos al pie de la hoja 1, también en los no acreditados.',
+      'Empresa: una sola plantilla por tipo de certificado, acreditado y no acreditado.',
+      'El modal de acciones en lote dice qué va a pasar con cada certificado, y el botón «?» abre su ayuda.',
+      'Órdenes, cotizaciones, facturas, guías y notas de crédito: las zonas se distinguen mejor, la fila elegida tiene el color de su panel y los botones van sin borde.',
+    ],
+    arreglo: [
+      'Usuarios: con el apellido vacío, el aviso decía «Nombre es requerido».',
+    ],
+  },
+  {
     version: '3.11.0.2',
     fecha: '2026-11-16',
     cambio: [

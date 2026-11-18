@@ -63,7 +63,7 @@
                 counter="120"
                 variant="outlined" 
                 hide-details="auto" 
-                :rules="first_name_rules"
+                :rules="last_name_rules"
                 @keypress="isLetterOrSpace"
               />
             </v-col>

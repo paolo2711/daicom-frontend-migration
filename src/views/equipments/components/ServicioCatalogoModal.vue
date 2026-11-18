@@ -128,7 +128,7 @@ const save = async () => {
       emit('reload')
       close()
       Toast.fire({ timer: 2200, icon: 'success', title: 'Servicio guardado' })
-    }).catch(e => {
+    }).catch(() => {
       Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo guardar. Verifica que no estés duplicando un servicio exacto.' })
     }).finally(() => { is_saving.value = false })
   }

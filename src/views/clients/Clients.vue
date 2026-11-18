@@ -33,13 +33,13 @@
               </div>
             </div>
 
-            <v-btn variant="tonal" prepend-icon="mdi-pencil-plus-outline" @click="listClients?.openAddDialog()">
+            <v-btn variant="tonal" prepend-icon="mdi-pencil-plus-outline" @click="listaDeClientes?.openAddDialog()">
               CARGA MANUAL
             </v-btn>
           </div>
         </div>
 
-        <list-clients ref="listClients" />
+        <list-clients ref="listaDeClientes" />
       </v-col>
     </v-row>
   </v-container>
@@ -50,7 +50,7 @@ import { ref } from 'vue'
 import ListClients from '@/views/clients/components/ListClients.vue'
 import { useClientLookup } from '@/composables/useClientLookup'
 
-const listClients = ref(null)
+const listaDeClientes = ref(null)
 
 const documentoBuscar = ref('')
 const { loadingExternal, loadingResolve, buscarYResolver } = useClientLookup()
@@ -63,6 +63,6 @@ const onBuscarReniec = async () => {
   if (!clienteResuelto) return
 
   documentoBuscar.value = ''
-  listClients.value?.retrieveAllClients()
+  listaDeClientes.value?.retrieveAllClients()
 }
 </script>

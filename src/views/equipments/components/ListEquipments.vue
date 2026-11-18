@@ -214,7 +214,7 @@ const retrieveAll = () => {
     if (!isLatestLoad(token)) return
     equipos.value = res.data.results
     total_equipos.value = res.data.count
-  }).catch(e => {
+  }).catch(() => {
     Swal.fire('Error', 'Fallo al conectar con la base de datos.', 'error')
   }).finally(() => {
     if (isLatestLoad(token)) loading.value = false

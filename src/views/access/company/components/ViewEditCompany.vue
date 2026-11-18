@@ -158,33 +158,12 @@
             <v-row class="mt-4">
               <v-col cols="12">
                 <v-divider></v-divider>
-                <div class="text-subtitle-2 font-weight-bold text-grey-darken-1 my-3">Fondos de Certificados (Formatos PDF)</div>
+                <div class="text-subtitle-2 font-weight-bold text-grey-darken-1 my-3">Plantillas de Certificados (PDF, sin sello)</div>
               </v-col>
 
-              <v-col cols="12" md="6" class="mb-2">
-                <v-file-input v-model="uploadFiles.accFirst" label="Fondo Certificado Acreditado Con Sello" density="compact" variant="outlined" show-size accept="application/pdf" :disabled="!isEditing" hide-details="auto" prepend-icon="" prepend-inner-icon="mdi-file-pdf-box" />
-                <v-btn v-if="company.accredited_correlative_pdf_first_page" :href="company.accredited_correlative_pdf_first_page" target="_blank" variant="text" color="info" size="small" class="mt-1 px-0 text-caption" height="auto">
-                  <v-icon start size="16">mdi-download</v-icon> Descargar archivo actual
-                </v-btn>
-              </v-col>
-
-              <v-col cols="12" md="6" class="mb-2">
-                <v-file-input v-model="uploadFiles.accOther" label="Fondo Certificado Acreditado Sin Sello" density="compact" variant="outlined" show-size accept="application/pdf" :disabled="!isEditing" hide-details="auto" prepend-icon="" prepend-inner-icon="mdi-file-pdf-box" />
-                <v-btn v-if="company.accredited_correlative_pdf_other_pages" :href="company.accredited_correlative_pdf_other_pages" target="_blank" variant="text" color="info" size="small" class="mt-1 px-0 text-caption" height="auto">
-                  <v-icon start size="16">mdi-download</v-icon> Descargar archivo actual
-                </v-btn>
-              </v-col>
-
-              <v-col cols="12" md="6" class="mb-2">
-                <v-file-input v-model="uploadFiles.nonAccFirst" label="Fondo Certificado NO Acreditado Con Sello" density="compact" variant="outlined" show-size accept="application/pdf" :disabled="!isEditing" hide-details="auto" prepend-icon="" prepend-inner-icon="mdi-file-pdf-box" />
-                <v-btn v-if="company.non_accredited_correlative_pdf_first_page" :href="company.non_accredited_correlative_pdf_first_page" target="_blank" variant="text" color="info" size="small" class="mt-1 px-0 text-caption" height="auto">
-                  <v-icon start size="16">mdi-download</v-icon> Descargar archivo actual
-                </v-btn>
-              </v-col>
-
-              <v-col cols="12" md="6" class="mb-2">
-                <v-file-input v-model="uploadFiles.nonAccOther" label="Fondo Certificado NO Acreditado Sin Sello" density="compact" variant="outlined" show-size accept="application/pdf" :disabled="!isEditing" hide-details="auto" prepend-icon="" prepend-inner-icon="mdi-file-pdf-box" />
-                <v-btn v-if="company.non_accredited_correlative_pdf_other_pages" :href="company.non_accredited_correlative_pdf_other_pages" target="_blank" variant="text" color="info" size="small" class="mt-1 px-0 text-caption" height="auto">
+              <v-col v-for="[campo, etiqueta] in PLANTILLAS" :key="campo" cols="12" md="6" class="mb-2">
+                <v-file-input v-model="uploadFiles[campo]" :label="etiqueta" density="compact" variant="outlined" show-size accept="application/pdf" :disabled="!isEditing" hide-details="auto" prepend-icon="" prepend-inner-icon="mdi-file-pdf-box" />
+                <v-btn v-if="company[campo]" :href="company[campo]" target="_blank" variant="text" color="info" size="small" class="mt-1 px-0 text-caption" height="auto">
                   <v-icon start size="16">mdi-download</v-icon> Descargar archivo actual
                 </v-btn>
               </v-col>
@@ -237,6 +216,20 @@
               prepend-icon="" 
               prepend-inner-icon="mdi-bank" 
             />
+
+            <v-divider class="my-3"></v-divider>
+            <div class="text-subtitle-2 font-weight-bold text-grey-darken-1 mb-3">Sello del metrólogo</div>
+
+            <v-card v-if="selloPreview" variant="flat" class="bg-white mb-4 rounded-lg d-flex align-center justify-center overflow-hidden border-thin" style="min-height: 180px;">
+              <v-img :src="selloPreview" contain max-height="160" class="w-100"></v-img>
+            </v-card>
+            <v-card v-else variant="flat" class="bg-surface mb-4 rounded-lg d-flex align-center justify-center zona-vacia" style="min-height: 180px;">
+              <v-icon size="64" color="grey-lighten-1">mdi-stamper</v-icon>
+            </v-card>
+
+            <v-file-input v-model="uploadFiles.sello" label="Sello (PNG con fondo transparente)" density="compact"
+                          variant="outlined" show-size accept="image/png" :disabled="!isEditing" hide-details="auto"
+                          prepend-icon="" prepend-inner-icon="mdi-stamper" />
           </v-col>
         </v-row>
       </v-form>
@@ -302,21 +295,16 @@ const company = reactive({
   order_service_correlative: '',
   order_rental_correlative: '',
   inventory_correlative: '',
-  accredited_correlative_pdf_first_page: '',
-  accredited_correlative_pdf_other_pages: '',
-  non_accredited_correlative_pdf_first_page: '',
-  non_accredited_correlative_pdf_other_pages: '',
+  plantilla_acr: '',
+  plantilla_nacr: '',
+  sello: '',
   document: '',
 })
 
-const uploadFiles = reactive({
-  image: [],
-  bank_accounts_image: [],
-  accFirst: [],
-  accOther: [],
-  nonAccFirst: [],
-  nonAccOther: []
-})
+// Los archivos de Company que se suben, con el nombre de su campo.
+const ARCHIVOS = ['image', 'bank_accounts_image', 'sello', 'plantilla_acr', 'plantilla_nacr']
+const PLANTILLAS = [['plantilla_acr', 'Plantilla ACR'], ['plantilla_nacr', 'Plantilla NACR']]
+const uploadFiles = reactive(Object.fromEntries(ARCHIVOS.map(campo => [campo, []])))
 
 const name_rules = CompanyRules.name_rules()
 const address_rules = CompanyRules.address_rules()
@@ -325,21 +313,15 @@ const email_rules = CompanyRules.email_rules()
 const document_rules = CompanyRules.document_rules()
 const correlative_rules = CompanyRules.correlative_rules()
 
-const logoPreview = computed(() => {
-  const f = Array.isArray(uploadFiles.image) ? uploadFiles.image[0] : uploadFiles.image
-  if (f instanceof File) {
-    return URL.createObjectURL(f)
-  }
-  return company.image || null
-})
-
-const bankAccountsPreview = computed(() => {
-  const f = Array.isArray(uploadFiles.bank_accounts_image) ? uploadFiles.bank_accounts_image[0] : uploadFiles.bank_accounts_image
-  if (f instanceof File) {
-    return URL.createObjectURL(f)
-  }
-  return company.bank_accounts_image || null
-})
+const elegido = (campo) => (Array.isArray(uploadFiles[campo]) ? uploadFiles[campo][0] : uploadFiles[campo])
+// La imagen recien elegida o, si no hay, la guardada.
+const vistaPrevia = (campo) => {
+  const f = elegido(campo)
+  return f instanceof File ? URL.createObjectURL(f) : company[campo] || null
+}
+const logoPreview = computed(() => vistaPrevia('image'))
+const bankAccountsPreview = computed(() => vistaPrevia('bank_accounts_image'))
+const selloPreview = computed(() => vistaPrevia('sello'))
 
 const getCompany = () => {
   is_loading.value = true
@@ -352,12 +334,7 @@ const getCompany = () => {
 }
 
 const clearUploads = () => {
-  uploadFiles.image = []
-  uploadFiles.bank_accounts_image = []
-  uploadFiles.accFirst = []
-  uploadFiles.accOther = []
-  uploadFiles.nonAccFirst = []
-  uploadFiles.nonAccOther = []
+  for (const campo of ARCHIVOS) uploadFiles[campo] = []
 }
 
 const initCompany = () => {
@@ -377,26 +354,12 @@ const saveCompany = async () => {
 
   let data = new FormData()
 
-  const appendFile = (key, file) => {
-    if (!file) return
-    const f = Array.isArray(file) ? file[0] : file
-    if (f instanceof File) data.append(key, f)
-  }
-
-  appendFile('image', uploadFiles.image)
-  appendFile('bank_accounts_image', uploadFiles.bank_accounts_image)
-  appendFile('accredited_correlative_pdf_first_page', uploadFiles.accFirst)
-  appendFile('accredited_correlative_pdf_other_pages', uploadFiles.accOther)
-  appendFile('non_accredited_correlative_pdf_first_page', uploadFiles.nonAccFirst)
-  appendFile('non_accredited_correlative_pdf_other_pages', uploadFiles.nonAccOther)
-
+  // Un archivo va solo si se eligio uno nuevo; la URL del guardado no se manda.
   let prepare_data = Object.assign({}, company)
-  delete prepare_data['image']
-  delete prepare_data['bank_accounts_image']
-  delete prepare_data['accredited_correlative_pdf_first_page']
-  delete prepare_data['accredited_correlative_pdf_other_pages']
-  delete prepare_data['non_accredited_correlative_pdf_first_page']
-  delete prepare_data['non_accredited_correlative_pdf_other_pages']
+  for (const campo of ARCHIVOS) {
+    if (elegido(campo) instanceof File) data.append(campo, elegido(campo))
+    delete prepare_data[campo]
+  }
 
   prepare_data.bank_accounts = JSON.stringify(company.bank_accounts)
   for (let key in prepare_data) {

@@ -32,7 +32,11 @@
           <div class="mb-1">
             <span class="font-weight-bold">Se imprime la hoja</span>
             <code class="ruta">CERTIFICADO</code>
-            <span class="text-medium-emphasis">en los acreditados y la hoja</span>
+            <span class="text-medium-emphasis">en los acreditados (</span>
+            <code class="ruta">RESULTADOS CERTIFICADO</code>
+            <span class="text-medium-emphasis">si traen la hoja</span>
+            <code class="ruta">DATOS CERTIFICADO</code>
+            <span class="text-medium-emphasis">) y la hoja</span>
             <code class="ruta">IMPRESION</code>
             <span class="text-medium-emphasis">o</span>
             <code class="ruta">IMPRIMIR</code>

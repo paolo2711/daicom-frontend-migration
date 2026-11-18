@@ -416,7 +416,7 @@
 
     <batch-action-modal
       ref="batchActionModalRef"
-      @clearSelection="certificados_seleccionados = []"
+      @hecha="soltarCertificados"
     />
 
     <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
@@ -463,6 +463,7 @@ import FilterPill          from '@/components/shared/FilterPill.vue'
 import DateRangeFilter     from '@/components/shared/DateRangeFilter.vue'
 import { decidirRefresco } from '@/utils/changedRows'
 import { useCertificateActions } from '@/composables/useCertificateActions'
+import { seguirLaLista, soltar } from '@/composables/useCurrentRows'
 
 // Componentes async (lazy-loading igual que en Vue 2)
 // carga diferida de LoadSheet movida a BatchActionModal
@@ -484,6 +485,8 @@ const batchActionModalRef  = ref(null)
 // ─── Estado de la tabla ───────────────────────────────────────────────────────
 const certificados_seleccionados = ref([])
 const certificates             = ref([])
+// Un anulado no se marca: si se anula marcado, se desmarca.
+seguirLaLista(() => certificates.value.filter(vivo), certificados_seleccionados)
 // Lo de cada orden de la pagina, por id: llega una vez aunque la compartan varias filas.
 const ordenes                  = ref({})
 const ordenDe                  = (item) => ordenes.value[item.order] || {}
@@ -614,10 +617,12 @@ watch(lab_id,            () => { options.value.page = 1; retrieveAllCertificates
 function abrirLote (accion, certs) {
   batchActionModalRef.value?.open(accion, certs, certs.length === 1)
 }
+const soltarCertificados = (certs) => soltar(certificados_seleccionados, certs)
 
 const { ejecutarAccion, copiarLinks, linkDe } = useCertificateActions({
   abrirLote,
   abrirFicha: (cert) => certificateModal.value?.open(cert),
+  seleccion: certificados_seleccionados,
 })
 
 // ─── Expose ───────────────────────────────────────────────────────────────────
@@ -745,7 +750,7 @@ const getSemaforoText = (item) => {
 
 // Un anulado no se marca: su menu es de el solo.
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } =
-  useContextMenu(certificados_seleccionados, { seMarca: vivo })
+  useContextMenu(certificates, certificados_seleccionados, { seMarca: vivo })
 
 function handleRowClick (event, { item }) {
   // Prevenir selección si el clic fue en un botón, enlace o ícono interactivo
@@ -773,8 +778,8 @@ function handleRowClick (event, { item }) {
 function retrieveAllCertificates (opciones) {
   const silencioso = opciones?.silencioso === true
 
-  // AL RECARGAR DATOS: Reiniciamos las selecciones para evitar filas fantasma (filtros o paginación)
-  certificados_seleccionados.value = []
+  // Otra pagina u otros filtros empiezan sin marcados; con el aviso, los marcados siguen en la lista nueva.
+  if (!silencioso) certificados_seleccionados.value = []
 
   if (!silencioso) loading_list.value = true
   const token = beginCertLoad()   // guard de secuencia: solo aplica la carga más reciente

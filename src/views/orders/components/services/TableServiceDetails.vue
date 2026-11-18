@@ -133,10 +133,11 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePermissions } from '@/composables/usePermissions'
 import { useContextMenu } from '@/composables/useContextMenu'
+import { seguirLaLista } from '@/composables/useCurrentRows'
 import { useCertificateActions } from '@/composables/useCertificateActions'
 import { useActionCall } from '@/composables/useActionCall'
 import { tituloDe, useOrderServices } from '@/composables/useOrderServices'
@@ -191,15 +192,8 @@ function alClicFila (event, linea) {
   alternar(linea.certificate)
 }
 
-// Los equipos llegan de nuevo cuando cambian: la seleccion pasa a los
-// actuales, y se van los que se anularon o salieron de la orden.
-watch(certificados, (certs) => {
-  const vivos = new Map(certs.filter(vivo).map(c => [c.id, c]))
-  const actuales = seleccion.value.map(c => vivos.get(c.id)).filter(Boolean)
-  if (actuales.length !== seleccion.value.length || actuales.some((c, i) => c !== seleccion.value[i])) {
-    seleccion.value = actuales
-  }
-})
+// Los que se anularon o salieron de la orden se desmarcan.
+seguirLaLista(marcables, seleccion)
 
 // Las de certificados, mas las que solo tienen sentido dentro de una orden.
 const ACCIONES_EQUIPO = [
@@ -221,10 +215,10 @@ const accionesDeLaFila = (linea) => (linea.certificate ? accionesDe([linea.certi
 
 // El menu de un marcado es de todos los marcados; el de otro, solo de ese y
 // sin marcarlo. Una linea sin certificado tiene el suyo, de ella sola.
-const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(seleccion, { marca: false })
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(certificados, seleccion, { marca: false })
 const {
   menu: menuDeLinea, alClickDerecho: clickDerechoEnLinea, alBotonDeFila: botonDeLinea, estaEnElMenu: lineaEnElMenu,
-} = useContextMenu()
+} = useContextMenu(() => props.order.items)
 
 function abrirMenu (event, linea, derecho = false) {
   if (linea.certificate) {
@@ -237,6 +231,7 @@ const enElMenu = (linea) => (linea.certificate ? estaEnElMenu(linea.certificate)
 const { ejecutarAccion: accionDeCertificado, copiarLinks, linkDe } = useCertificateActions({
   abrirLote: (clave, certs) => emit('accion-certificados', clave, certs),
   abrirFicha: (cert) => emit('edit-certificate', cert),
+  seleccion,
 })
 const { llamarSinPreguntar, confirmarYLlamar } = useActionCall()
 

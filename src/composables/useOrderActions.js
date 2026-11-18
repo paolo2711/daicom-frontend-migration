@@ -2,6 +2,7 @@ import Swal from 'sweetalert2'
 import { useRouter } from 'vue-router'
 import { usePermissions } from '@/composables/usePermissions'
 import { useContextMenu } from '@/composables/useContextMenu'
+import { soltar } from '@/composables/useCurrentRows'
 import { accionesPara } from '@/utils/actions'
 import { COTIZACION, VALORIZACION } from '@/utils/documents/tipos'
 import { ACCIONES_COBRO, ACCIONES_ORDEN, COBRO, GUIA } from '@/utils/orders/acciones'
@@ -11,19 +12,13 @@ import { anularOrdenes } from '@/utils/orders/anulacion'
 
 // Lo que hace cada accion de ACCIONES_ORDEN y ACCIONES_COBRO, y el menu de la tabla. Lo usan Servicios y
 // Alquileres; cada una dice como abre sus modales y su panel de cobro.
-export function useOrderActions(seleccion, { editar, imprimirIngreso, abrirCobro }) {
+export function useOrderActions(lista, seleccion, { editar, imprimirIngreso, abrirCobro }) {
   const { hasAction } = usePermissions()
   const router = useRouter()
-  const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(seleccion, { marca: false })
+  const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(lista, seleccion, { marca: false })
 
   const accionesDe = (ordenes) => accionesPara(ACCIONES_ORDEN, ordenes, hasAction)
   const accionesDeCobro = (ordenes) => accionesPara(ACCIONES_COBRO, ordenes, hasAction)
-
-  // Las que se tocaron salen de la seleccion; las demas marcadas siguen.
-  const soltar = (ordenes) => {
-    const ids = ordenes.map(o => o.id)
-    seleccion.value = seleccion.value.filter(o => !ids.includes(o.id))
-  }
 
   async function anular (ordenes) {
     const vivas = ordenes.filter(viva)
@@ -34,7 +29,7 @@ export function useOrderActions(seleccion, { editar, imprimirIngreso, abrirCobro
         : 'Se anulan también todos sus equipos.',
       icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, anular', cancelButtonText: 'Cancelar',
     })
-    if (isConfirmed && await anularOrdenes(vivas)) soltar(vivas)
+    if (isConfirmed && await anularOrdenes(vivas)) soltar(seleccion, vivas)
   }
 
   // La pestaña de ese documento abre su formulario lleno con los equipos de estas ordenes.
@@ -61,7 +56,7 @@ export function useOrderActions(seleccion, { editar, imprimirIngreso, abrirCobro
       case SIN_COMPROBANTE:
       case SIN_CARGO: {
         const hecho = await alternarMarca(clave, ordenes)
-        if (hecho) soltar(ordenes)
+        if (hecho) soltar(seleccion, ordenes)
         return hecho
       }
       case 'anular': return anular(ordenes)

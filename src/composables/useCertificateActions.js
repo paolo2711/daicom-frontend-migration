@@ -1,14 +1,14 @@
 import CertificateDataService from '@/services/certificates/certificateDataService'
 import { useActionCall } from '@/composables/useActionCall'
+import { soltar } from '@/composables/useCurrentRows'
 import { useUploadState } from '@/composables/useUploadState'
 import { estaEntregado } from '@/utils/certificates/entrega'
 import { copiarConAviso } from '@/utils/clipboard'
 import { useDownload } from '@/composables/useDownload'
 
-// Lo que hace cada accion de ACCIONES_CERTIFICADO, sobre uno o varios. Lo usa
-// toda pantalla con certificados; cada una dice como abre su modal de lote y
-// la ficha de un certificado.
-export function useCertificateActions({ abrirLote, abrirFicha }) {
+// Lo que hace cada accion de ACCIONES_CERTIFICADO; cada pantalla dice como abre su modal de lote y su ficha.
+// Lo que cambia algo y sale bien desmarca sus certificados de `seleccion`.
+export function useCertificateActions({ abrirLote, abrirFicha, seleccion = null }) {
   const { tareaDe } = useUploadState()
   const { llamarSinPreguntar, confirmarYLlamar } = useActionCall()
 
@@ -31,8 +31,13 @@ export function useCertificateActions({ abrirLote, abrirFicha }) {
 
   const { descargar } = useDownload()
 
+  async function ejecutarAccion (clave, certs) {
+    const hecho = await hacer(clave, certs)
+    if (hecho === true && seleccion) soltar(seleccion, certs)
+    return hecho
+  }
 
-  function ejecutarAccion (clave, certs) {
+  function hacer (clave, certs) {
     const [cert] = certs
     const solo = certs.length === 1
     switch (clave) {

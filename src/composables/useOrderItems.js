@@ -1,3 +1,5 @@
+import { ref, watch } from 'vue'
+import { seguirLaLista } from '@/composables/useCurrentRows'
 import OrderDataService from '@/services/orders/orderDataService'
 import { ANULADO } from '@/utils/certificates/estado'
 
@@ -10,6 +12,14 @@ export function useOrderItems(orders, campo, { clave = item => item.id, anulado 
   const pendientes = new Map()
 
   const filaDe = (orderId) => orders.value.find(o => String(o.id) === String(orderId))
+
+  // La orden abierta, una sola a la vez. Al abrir otra se cargan sus equipos.
+  const expanded = ref([])
+  seguirLaLista(orders, expanded)
+  const idOrdenExpandida = () => (expanded.value.length === 1 ? expanded.value[0].id : null)
+  const isOrderExpanded = (orden) => idOrdenExpandida() === orden.id
+  watch(expanded, (abiertas) => { if (abiertas.length > 1) expanded.value = [abiertas.at(-1)] })
+  watch(idOrdenExpandida, (id) => { if (id) cargarItems(id, { mostrarCarga: true }) })
 
   // Todos los de la orden. `mostrarCarga` deja la tabla en "Cargando..."
   // mientras: cuando la abre el usuario, no cuando la refresca un aviso.
@@ -29,7 +39,8 @@ export function useOrderItems(orders, campo, { clave = item => item.id, anulado 
 
   // Las filas de la lista recargada son objetos nuevos y llegan sin sus
   // equipos: la abierta muestra los que ya tenia mientras se refrescan.
-  function reemplazarOrdenes(nuevas, abierta) {
+  function reemplazarOrdenes(nuevas) {
+    const abierta = idOrdenExpandida()
     const anteriores = filaDe(abierta)?.[campo]
     orders.value = nuevas
     const fila = filaDe(abierta)
@@ -101,5 +112,5 @@ export function useOrderItems(orders, campo, { clave = item => item.id, anulado 
     return true
   }
 
-  return { cargarItems, actualizarItems, reemplazarOrdenes }
+  return { expanded, idOrdenExpandida, isOrderExpanded, cargarItems, actualizarItems, reemplazarOrdenes }
 }

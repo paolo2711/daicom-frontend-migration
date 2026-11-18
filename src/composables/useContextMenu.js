@@ -1,4 +1,5 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { seguirLaLista } from '@/composables/useCurrentRows'
 
 // El menu de click derecho (y del boton ⋮) de una tabla, como en Google Drive:
 // sobre una fila marcada es de toda la seleccion; sobre otra, la seleccion pasa
@@ -15,10 +16,16 @@ import { ref } from 'vue'
 // con un click derecho.
 let cerrarElAbierto = null
 
-export function useContextMenu(seleccion = null, { seMarca = () => true, marca = true } = {}) {
+export function useContextMenu(lista, seleccion = null, { seMarca = () => true, marca = true } = {}) {
   const menu = ref({ show: false, x: 0, y: 0, filas: [] })
 
   const cerrar = () => { menu.value = { ...menu.value, show: false } }
+
+  // `lista` son las filas de la tabla: si se recarga con el menu abierto, el menu toma las nuevas.
+  seguirLaLista(lista, computed({
+    get: () => menu.value.filas,
+    set: (filas) => { menu.value = { ...menu.value, filas, show: menu.value.show && filas.length > 0 } },
+  }))
 
   function abrir (x, y, fila) {
     if (cerrarElAbierto && cerrarElAbierto !== cerrar) cerrarElAbierto()

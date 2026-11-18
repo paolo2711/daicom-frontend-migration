@@ -141,11 +141,13 @@ async function recargar () {
 }
 
 // La que se mira en su panel: la de Ver informacion o la recien emitida.
-const { abierta, corregible, alEmitir, corregir } = useEmissionPanel(formulario, recargar)
+const { abierta, corregible, alEmitir, corregir } = useEmissionPanel(formulario, recargar, guias)
 
+// Lo que vuelve reemplaza su fila y la del panel, que puede no estar en la pagina.
 function reemplazar (guia) {
   const posicion = guias.value.findIndex(g => g.id === guia.id)
   if (posicion !== -1) guias.value.splice(posicion, 1, guia)
+  if (abierta.value?.id === guia.id) abierta.value = guia
 }
 
 // Abrir una guia en espera le pregunta de nuevo a SUNAT (el back lo hace al leerla).
@@ -174,7 +176,7 @@ async function resolver (accion, guia) {
 }
 
 
-const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu()
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(guias)
 const { descargar } = useDownload()
 const accionesDe = (filas) => accionesPara(ACCIONES_GUIA, filas, () => true)
 function ejecutarAccion (clave, [guia]) {

@@ -187,7 +187,7 @@ import { uuid } from '@/utils/uuid'
 const LoadSheet = defineAsyncComponent(() => import('@/views/certificates/components/LoadSheet.vue'))
 const AyudaLote = defineAsyncComponent(() => import('@/views/certificates/components/AyudaLote.vue'))
 
-const emit = defineEmits(['clearSelection', 'corregido'])
+const emit = defineEmits(['hecha', 'corregido'])
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
 const appStore = useAppStore()
@@ -438,7 +438,7 @@ const confirmAction = async () => {
       const ids = aptos.map(i => i.id)
       await CertificateDataService.requestBatchSignatures(ids)
       Toast.fire({ ...appStore.toastGuardadoExito, title: '¡Solicitud Registrada!' })
-      emit('clearSelection')
+      emit('hecha', items.value)
       close()
     } 
     
@@ -458,7 +458,7 @@ const confirmAction = async () => {
       Toast.fire({ timer: 4000,
         icon: 'info', title: `Procesando ${aptos.length} firmas/subidas en segundo plano...`
       })
-      emit('clearSelection')
+      emit('hecha', items.value)
       close()
     }
 
@@ -486,7 +486,7 @@ const confirmAction = async () => {
 
       if (yaHechos.length && !sinPlantilla.value) await guardarPdfsBase(yaHechos)
 
-      emit('clearSelection')
+      emit('hecha', items.value)
       close()
     }
 
@@ -503,7 +503,7 @@ const confirmAction = async () => {
           text: `${data.omitidos} todavía no están firmados.`, confirmButtonText: 'Entendido'
         })
       }
-      emit('clearSelection')
+      emit('hecha', items.value)
       close()
     }
 
@@ -518,7 +518,7 @@ const confirmAction = async () => {
           : `${codigos.length} corregidos: del ${codigos[0]} al ${codigos[codigos.length - 1]}`
       })
       emit('corregido')
-      emit('clearSelection')
+      emit('hecha', items.value)
       close()
     }
 

@@ -263,7 +263,7 @@
                  @accion="clave => ejecutarAccion(clave, menu.filas)" />
 
     <!-- MODALES -->
-    <batch-action-modal ref="batchActionModalRef" />
+    <batch-action-modal ref="batchActionModalRef" @hecha="soltarEquipos" />
 
     <add-order ref="editarOrdenRef" @guardada="alCambiarLineas" />
     <certificate-modal ref="certificateModalRef" />
@@ -287,6 +287,7 @@ import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import { useOrderActions } from '@/composables/useOrderActions'
 import { useOrderCobro } from '@/composables/useOrderCobro'
+import { seguirLaLista, soltar } from '@/composables/useCurrentRows'
 import { useOrderDateColumn } from '@/composables/useOrderDateColumn'
 import { fechaCorta } from '@/utils/dates'
 import { FILTRO_DE_ESTADO, SERVICIO, esDeServicio, viva } from '@/utils/orders/estado'
@@ -336,6 +337,7 @@ const batchActionModalRef = ref(null)
 const abrirBatchModal = (accion, certs) => {
   batchActionModalRef.value?.open(accion, certs, certs.length === 1)
 }
+const soltarEquipos = (certs) => soltar(equipos_seleccionados, certs)
 
 const openCertificateModal = (cert) => {
   certificateModalRef.value?.open(cert)
@@ -354,36 +356,15 @@ const { anchoDeLaLista, fechaEnColumna, headers } = useOrderDateColumn(columnas)
 
 // Datos de tabla
 const orders = ref([])
+seguirLaLista(orders, ordenes_seleccionadas)
 const { foco, abierto: enCobro, abrirCobro, cerrarCobro, alSemaforo } = useOrderCobro(orders, ordenes_seleccionadas)
-const expanded = ref([])
 // Los avisos de equipos llegan por certificado: una linea se reconoce por el suyo.
-const { cargarItems, actualizarItems, reemplazarOrdenes } = useOrderItems(orders, 'items', {
-  clave: linea => linea.certificate?.id,
-  anulado: lineaAnulada,
-})
+const {
+  expanded, idOrdenExpandida, isOrderExpanded, cargarItems, actualizarItems, reemplazarOrdenes,
+} = useOrderItems(orders, 'items', { clave: linea => linea.certificate?.id, anulado: lineaAnulada })
 
-// --- LÓGICA DE EXPANSIÓN ROBUSTA (Resiliencia a return-object) ---
-const getSafeId = (val) => {
-  if (!val) return null
-  return typeof val === 'object' ? (val.id || val.raw?.id || val.value) : val
-}
-
-const isOrderExpanded = (item) => {
-  const targetId = getSafeId(item)
-  return expanded.value.some(e => getSafeId(e) === targetId)
-}
-
-// Una sola orden abierta a la vez. Sus equipos marcados se van con ella.
-watch(expanded, (newVal) => {
-  if (newVal.length > 1) {
-    expanded.value = [newVal[newVal.length - 1]]
-    return
-  }
-  equipos_seleccionados.value = []
-  if (expanded.value.length === 1) {
-    cargarItems(getSafeId(expanded.value[0]), { mostrarCarga: true })
-  }
-})
+// Los equipos marcados son de la orden abierta: al cambiar de orden se desmarcan.
+watch(idOrdenExpandida, () => { equipos_seleccionados.value = [] })
 const total_orders = ref(0)
 const loading_list = ref(false)
 const options = ref({ page: 1, itemsPerPage: 30 })
@@ -472,7 +453,7 @@ const retrieveOrders = () => {
   )
       .then((res) => {
         if (!isLatestOrdersLoad(token)) return   // llegó una carga más nueva → no pisar
-        reemplazarOrdenes(res.data.results.map(orden => OrderMappers.getMap(orden)), idOrdenExpandida())
+        reemplazarOrdenes(res.data.results.map(orden => OrderMappers.getMap(orden)))
         total_orders.value = res.data.count
       })
       .finally(() => {
@@ -508,15 +489,11 @@ const imprimirIngreso = (o) => abrirIngreso(o.id)
                                title: mensajeDeError(error, 'No se pudo abrir el ingreso.') }))
 
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, accionesDeCobro, ejecutarAccion } =
-  useOrderActions(ordenes_seleccionadas, {
+  useOrderActions(orders, ordenes_seleccionadas, {
     editar: abrirEditarOrden,
     imprimirIngreso,
     abrirCobro,
   })
-
-const idOrdenExpandida = () => (
-  expanded.value.length === 1 ? getSafeId(expanded.value[0]) : null
-)
 
 // WebSockets
 // La fila de la orden: barra, estado y cobro. Sus equipos tienen sus propios

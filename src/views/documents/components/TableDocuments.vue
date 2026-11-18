@@ -187,7 +187,9 @@ async function refrescarFila (event) {
 }
 
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, ejecutarAccion } =
-  useDocumentActions({ editar: documento => emit('editar', documento), crearOrden: documento => emit('crear-orden', documento) })
+  useDocumentActions(documentos, {
+    editar: documento => emit('editar', documento), crearOrden: documento => emit('crear-orden', documento),
+  })
 
 // El documento cuyo PDF se ve al lado de la lista (PdfSplitView).
 const vista = ref(null)

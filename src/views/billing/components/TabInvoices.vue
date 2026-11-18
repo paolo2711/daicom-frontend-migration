@@ -117,13 +117,13 @@
     <dialog-emit-invoice ref="emision" @emitida="alEmitir" />
     <dialog-credit-note ref="nota" @emitida="alEmitirNota" />
     <panel-sunat :abierto="Boolean(notaAbierta)" tipo="creditnote" :id="notaAbierta?.id" nombre="Nota de crédito"
-                 :numero="notaFresca?.numero" :estado-sunat="notaFresca?.estado" :respuesta="notaFresca?.respuesta"
+                 :numero="notaAbierta?.numero" :estado-sunat="notaAbierta?.estado" :respuesta="notaAbierta?.respuesta"
                  :filas="filasDeNota" :acciones="accionesDeNota" :corregible="notaCorregible"
                  @cerrar="notaAbierta = null" @accion="accionDeNota" />
     <panel-info-invoice v-model="abierta" :corregible="corregible" :acciones="abierta ? accionesDe([abierta]) : []"
                         @corregir="corregir" @accion="clave => ejecutarAccion(clave, [abierta])"
                         @cambiada="reemplazar" />
-    <dialog-cancel-invoice v-model="enBaja" @enviada="f => { reemplazar(f); abierta = f }" />
+    <dialog-cancel-invoice v-model="enBaja" @enviada="f => { abierta = reemplazar(f) }" />
   </pdf-drop-zone>
 </template>
 
@@ -141,6 +141,7 @@ import FilterPill from '@/components/shared/FilterPill.vue'
 import PdfSplitView from '@/components/shared/PdfSplitView.vue'
 import StateLegend from '@/components/shared/StateLegend.vue'
 import { useContextMenu } from '@/composables/useContextMenu'
+import { useOpenRow } from '@/composables/useCurrentRows'
 import { useDateRangeFilter } from '@/composables/useDateRangeFilter'
 import { useDownload } from '@/composables/useDownload'
 import { useEmissionPanel } from '@/composables/useEmissionPanel'
@@ -227,17 +228,19 @@ async function refrescarFila (event) {
     const fresca = (await BillingDataService.listInvoices({ invoice_id: event.detail })).data.results[0]
     if (!fresca) return recargar()
     facturas.value[posicion] = InvoiceMappers.getMap(fresca)
-    if (conAbonos.value?.id === event.detail) conAbonos.value = facturas.value[posicion]
   } catch {
     recargar()
   }
 }
 
-// La que se anula, y reemplazar la fila con lo que vuelve.
+// La que se anula. Lo que vuelve reemplaza su fila y la del panel, que puede no estar en la pagina.
 const enBaja = ref(null)
 function reemplazar (fresca) {
-  const posicion = facturas.value.findIndex(f => f.id === fresca.id)
-  if (posicion !== -1) facturas.value.splice(posicion, 1, InvoiceMappers.getMap(fresca))
+  const fila = InvoiceMappers.getMap(fresca)
+  const posicion = facturas.value.findIndex(f => f.id === fila.id)
+  if (posicion !== -1) facturas.value.splice(posicion, 1, fila)
+  if (abierta.value?.id === fila.id) abierta.value = fila
+  return fila
 }
 
 const creando = ref(false)
@@ -245,7 +248,7 @@ const pdfSoltado = ref(null)
 const editando = ref(false)
 const enEdicion = ref(null)
 const enAbonos = ref(false)
-const conAbonos = ref(null)
+const conAbonos = useOpenRow(facturas)
 
 function subir (pdf = null) {
   pdfSoltado.value = pdf
@@ -254,22 +257,21 @@ function subir (pdf = null) {
 
 const emision = ref(null)
 // La que se mira en su panel: la de Ver informacion o la recien emitida.
-const { abierta, corregible, alEmitir, corregir } = useEmissionPanel(emision, recargar, InvoiceMappers.getMap)
+const { abierta, corregible, alEmitir, corregir } =
+  useEmissionPanel(emision, recargar, facturas, InvoiceMappers.getMap)
 
 // La nota de credito: su formulario y, al emitirla, su panel como el de la factura.
 const nota = ref(null)
 const notasDeLaLista = computed(() => facturas.value.flatMap(f => f.notas))
 const { abierta: notaAbierta, corregible: notaCorregible, alEmitir: alEmitirNota, corregir: corregirNota } =
-  useEmissionPanel(nota, recargar)
-const notaFresca = computed(() => notaAbierta.value &&
-  (notasDeLaLista.value.find(n => n.id === notaAbierta.value.id) || notaAbierta.value))
-const filasDeNota = computed(() => notaFresca.value ? [
-  ['Cliente', notaFresca.value.cliente], ['Factura', notaFresca.value.factura_numero],
-  ['Total', monto(notaFresca.value.total, notaFresca.value.moneda)],
+  useEmissionPanel(nota, recargar, notasDeLaLista)
+const filasDeNota = computed(() => notaAbierta.value ? [
+  ['Cliente', notaAbierta.value.cliente], ['Factura', notaAbierta.value.factura_numero],
+  ['Total', monto(notaAbierta.value.total, notaAbierta.value.moneda)],
 ] : [])
-const accionesDeNota = computed(() => notaFresca.value?.pdf_url
+const accionesDeNota = computed(() => notaAbierta.value?.pdf_url
   ? [{ clave: 'pdf', grupo: 'ver', texto: OTRA_PESTANA, icono: 'mdi-open-in-new' }] : [])
-const accionDeNota = (clave) => clave === 'corregir' ? corregirNota() : abrirEnOtraPestana(notaFresca.value.pdf_url)
+const accionDeNota = (clave) => clave === 'corregir' ? corregirNota() : abrirEnOtraPestana(notaAbierta.value.pdf_url)
 async function abrirNota (factura) {
   try {
     nota.value.open((await BillingDataService.newCreditNote(factura.id)).data)
@@ -331,7 +333,7 @@ async function eliminar (factura) {
   }
 }
 
-const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu()
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(facturas)
 const { descargar } = useDownload()
 const accionesDe = (filas) => accionesPara(ACCIONES_FACTURA, filas, () => true)
 function ejecutarAccion (clave, [factura]) {

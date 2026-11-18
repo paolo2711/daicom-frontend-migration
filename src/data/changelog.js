@@ -19,6 +19,18 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.11.1.1',
+    fecha: '2026-11-18',
+    cambio: [
+      'Órdenes y Certificados: al terminar una acción, sus certificados se desmarcan; los demás marcados siguen.',
+    ],
+    arreglo: [
+      'Facturas y guías: al quedar aceptadas por SUNAT, su panel activa todas sus opciones sin tener que cerrarlo.',
+      'Órdenes: la orden abierta ya no se cierra sola cuando la lista se actualiza, y los equipos marcados muestran sus opciones al día.',
+      'Certificados: lo marcado ya no se desmarca solo cuando la lista se actualiza.',
+    ],
+  },
+  {
     version: '3.11.1.0',
     fecha: '2026-11-18',
     nuevo: [

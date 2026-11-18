@@ -47,6 +47,16 @@
           </div>
         </v-alert>
 
+        <v-checkbox
+          v-if="action === 'excel'"
+          v-model="sinPlantilla"
+          label="PDF sin plantilla, para imprimir en hojas con membrete (solo se descarga, no se guarda)"
+          density="compact"
+          hide-details
+          color="primary"
+          class="mb-2"
+        />
+
         <v-text-field
           v-if="modalConfig.fecha"
           v-model="fecha"
@@ -198,6 +208,7 @@ import { mensajeDeError } from '@/utils/errors'
 import { SE_RENUMERA } from '@/utils/certificates/tipos'
 import { opcionPorClave } from '@/composables/useOrderServices'
 import { ACCIONES, colorDe, esAviso, estaAdjuntado } from './batchActions'
+import { uuid } from '@/utils/uuid'
 
 const LoadSheet = defineAsyncComponent(() => import('@/views/certificates/components/LoadSheet.vue'))
 
@@ -216,6 +227,7 @@ const loadSheetModalRef = ref(null)
 const force_select = ref(false)
 const fecha = ref('')
 const opcion = ref(null)
+const sinPlantilla = ref(false)
 
 const modalConfig = computed(() => ACCIONES[action.value] || ACCIONES.excel)
 
@@ -267,6 +279,7 @@ const open = async (actionType, selectedCerts, forceSelect = false) => {
   force_select.value = forceSelect
   fecha.value = accion.fecha ? hoyISO() : ''
   opcion.value = null
+  sinPlantilla.value = false
 
   items.value = selectedCerts.map(cert => ({
     ...cert,
@@ -474,16 +487,14 @@ const confirmAction = async () => {
       const yaHechos  = aptos.filter(c => c.validation_status === 'manual_pdf_base')
       const aConvertir = aptos.filter(c => c.validation_status !== 'manual_pdf_base')
 
+      // Sin plantilla, cada uno es una descarga con su propia tarea: no toca el certificado.
+      const tareaDe = (cert) => (sinPlantilla.value
+        ? { id: uuid(), tipo: 'suelto', conversion: 'sin_plantilla', certificado: cert.id,
+            code: `${cert.registry_code} sin plantilla` }
+        : { id: cert.id, code: cert.registry_code })
       aConvertir.forEach(cert => {
-        // soporte hibrido para carga en lote de nativos y manuales en un solo foreach
         window.dispatchEvent(new CustomEvent('wss-sheet-start', {
-          detail: {
-            id: cert.id,
-            code: cert.registry_code,
-            native_filename: cert.native_filename,
-            file: cert.file,
-            password: cert.password
-          }
+          detail: { ...tareaDe(cert), native_filename: cert.native_filename, file: cert.file, password: cert.password }
         }))
       })
 
@@ -493,7 +504,7 @@ const confirmAction = async () => {
         })
       }
 
-      if (yaHechos.length) await guardarPdfsBase(yaHechos)
+      if (yaHechos.length && !sinPlantilla.value) await guardarPdfsBase(yaHechos)
 
       emit('clearSelection')
       close()

@@ -11,24 +11,24 @@ import { fechaCorta } from '@/utils/dates'
 const HECHO = 'hecho'      // ya esta hecho, o listo para esta accion
 const BLOQUEA = 'bloquea'  // no se puede
 const NEUTRO = 'neutro'    // ni una cosa ni la otra
-const ESPERA = 'espera'    // depende de otra persona
 const AVISO = 'aviso'      // se puede, pero se pierde algo
 
 export const esAviso = (estado) => estado.nivel === AVISO
 
-const COLOR_POR_NIVEL = {
-  [BLOQUEA]: 'error', [NEUTRO]: 'grey', [ESPERA]: 'orange-darken-2', [AVISO]: 'warning',
-}
+// Color solo para lo que hay que mirar: lo que no se puede y lo que cambia algo.
+const COLOR_POR_NIVEL = { [BLOQUEA]: 'error', [AVISO]: 'warning' }
 
-export const colorDe = (nivel, colorDeLaAccion) => COLOR_POR_NIVEL[nivel] || colorDeLaAccion
+export const colorDe = (nivel) => COLOR_POR_NIVEL[nivel] || 'grey'
 
 // En la accion Excel se puede adjuntar el Excel a convertir o el PDF ya hecho.
 const ADJUNTADO = {
-  manual:          { icono: 'mdi-file-excel',   titulo: 'Excel adjuntado, se convertirá al continuar' },
-  manual_pdf_base: { icono: 'mdi-file-pdf-box', titulo: 'PDF adjuntado, se guardará al continuar' },
+  manual:          { icono: 'mdi-file-excel',   titulo: 'Excel adjuntado: se convierte' },
+  manual_pdf_base: { icono: 'mdi-file-pdf-box', titulo: 'PDF adjuntado: queda listo para firmar' },
 }
 
 export const estaAdjuntado = (item) => item.validation_status in ADJUNTADO
+
+const SIN_PDF = { icono: 'mdi-close-circle', nivel: BLOQUEA, titulo: 'No tiene PDF para firmar' }
 
 // Las mismas reglas que por_que_no_se_corrige en el back. `clave`: la opcion de servicio elegida.
 const impideCorregir = (cert, clave) => {
@@ -40,71 +40,93 @@ const impideCorregir = (cert, clave) => {
   return null
 }
 
+// `contexto` trae lo elegido arriba del modal: `opcion` (el servicio) y `sinPlantilla`.
 export const ACCIONES = {
   excel: {
-    titulo: 'Auto-Carga de Excels Nativos',
-    icono: 'mdi-folder-search',
+    titulo: 'Subir Excel',
+    icono: 'mdi-microsoft-excel',
     color: 'green-darken-2',
-    subtitulo: 'Se generarán los PDFs para los siguientes certificados:',
-    iconoAccion: 'mdi-server-network',
+    descripcion: 'Cada Excel se convierte a PDF para revisarlo antes de guardarlo. Los acreditados con hoja de '
+      + 'datos salen con la carátula que arma la plataforma.',
+    verbo: 'Convertir',
     escaneaElServidor: true,
+    ayudaGrafica: true,
 
     preparar: (cert) => ({ disabled: false, already_has_it: tieneExcelBase(cert) }),
 
-    estadoPrevio: (item) => item.already_has_it
-      ? { texto: 'Tiene Excel', nivel: HECHO }
-      : { texto: 'Sin Excel', nivel: NEUTRO },
+    ahora: (item) => item.already_has_it ? 'Con PDF' : 'Sin PDF',
 
-    validacion: (item) => {
+    validacion: (item, { sinPlantilla }) => {
+      if (item.validation_status === 'manual_pdf_base' && sinPlantilla) {
+        return { icono: 'mdi-file-pdf-box', nivel: NEUTRO, titulo: 'PDF ya hecho: sin plantilla no se usa' }
+      }
       if (estaAdjuntado(item)) {
         const { icono, titulo } = ADJUNTADO[item.validation_status]
-        return { icono, nivel: HECHO, titulo }
+        return { icono, nivel: HECHO, titulo: sinPlantilla ? 'Excel adjuntado: se descarga sin plantilla' : titulo }
       }
-      return item.validation_status === 'found'
-        ? { icono: 'mdi-check-circle', nivel: HECHO, titulo: 'Encontrado en el servidor' }
-        : { icono: 'mdi-close-circle', nivel: BLOQUEA, titulo: 'No está en el servidor' }
+      if (item.validation_status === 'conflict') {
+        return { icono: 'mdi-close-circle', nivel: BLOQUEA, titulo: 'Hay más de un Excel con ese número' }
+      }
+      if (item.validation_status !== 'found') {
+        return { icono: 'mdi-close-circle', nivel: BLOQUEA, titulo: 'No está en el servidor' }
+      }
+      if (sinPlantilla) return { icono: 'mdi-download', nivel: HECHO, titulo: 'Encontrado: se descarga sin plantilla' }
+      return item.already_has_it
+        ? { icono: 'mdi-sync', nivel: AVISO, titulo: 'Encontrado: reemplaza el PDF' }
+        : { icono: 'mdi-check-circle', nivel: HECHO, titulo: 'Encontrado: se convierte' }
     },
   },
 
   qr: {
-    titulo: 'Firma Múltiple y Código QR',
+    titulo: 'Firmar y publicar',
     icono: 'mdi-qrcode-scan',
     color: 'primary',
-    subtitulo: 'Se firmarán en lote los siguientes certificados:',
-    iconoAccion: 'mdi-pen',
+    descripcion: 'Cada PDF se firma con el certificado digital, lleva su QR y se publica en la nube.',
+    verbo: 'Firmar',
     // Solo el día del sello. La hora y la firma criptográfica van con el reloj.
     fecha: { label: 'Fecha del sello de firma', permiteFutura: false },
+    ayuda: [
+      'Solo se firman los que ya tienen PDF: primero se sube el Excel o el PDF hecho.',
+      'La fecha cambia solo el día que se ve en el sello; la firma digital lleva el momento real.',
+      'Si uno ya está en la nube, se vuelve a firmar y reemplaza al publicado.',
+      'Si lo firmaste por fuera, adjunta el PDF firmado en su fila: se publica tal cual.',
+      'El avance de cada firma se ve en el panel de subidas; si una falla, las demás siguen.',
+    ],
 
     preparar: (cert) => ({
       disabled: !tieneExcelBase(cert),
       already_has_it: tieneExcelBase(cert) && Boolean(cert.uploaded),
     }),
 
-    estadoPrevio: (item) => {
-      if (item.disabled) return { texto: 'Sin Excel', nivel: BLOQUEA }
-      if (item.already_has_it) return { texto: 'En Nube', nivel: HECHO }
+    ahora: (item) => {
+      if (item.disabled) return 'Sin PDF'
+      if (item.already_has_it) return 'En la nube'
       // Quien firma necesita saber a cuales los esta esperando gerencia.
-      return item.signature_requested
-        ? { texto: 'Solicitado', nivel: ESPERA }
-        : { texto: 'Con PDF', nivel: NEUTRO }
+      return item.signature_requested ? 'Firma solicitada' : 'Con PDF'
     },
 
     validacion: (item) => {
       if (item.validation_status === 'manual_pdf') {
-        return { icono: 'mdi-file-pdf-box', nivel: HECHO, titulo: 'PDF firmado adjuntado' }
+        return { icono: 'mdi-file-pdf-box', nivel: HECHO, titulo: 'PDF firmado adjuntado: se publica' }
       }
-      return item.disabled
-        ? { icono: 'mdi-close-circle', nivel: BLOQUEA, titulo: 'No tiene certificado base' }
-        : { icono: 'mdi-check-circle', nivel: HECHO, titulo: 'Listo para firmar' }
+      if (item.disabled) return SIN_PDF
+      return item.already_has_it
+        ? { icono: 'mdi-sync', nivel: AVISO, titulo: 'En la nube: se vuelve a firmar' }
+        : { icono: 'mdi-check-circle', nivel: HECHO, titulo: 'Se firma y se publica' }
     },
   },
 
   notify: {
-    titulo: 'Solicitar Firma a Gerencia',
+    titulo: 'Solicitar firma',
     icono: 'mdi-bell-ring',
     color: 'orange-darken-2',
-    subtitulo: 'Se registrará la solicitud de firma para los siguientes equipos:',
-    iconoAccion: 'mdi-send-check',
+    descripcion: 'Se avisa a quien firma que estos certificados ya tienen su PDF y esperan la firma.',
+    verbo: 'Solicitar',
+    ayuda: [
+      'Solo avisa: no firma nada.',
+      'Le llega una notificación a quien tiene permiso de firmar, y la fila queda marcada como “Firma solicitada”.',
+      'Solo los que ya tienen PDF. Uno con una solicitud activa no se vuelve a pedir.',
+    ],
 
     preparar: (cert) => ({
       // Ya notificado se bloquea: pedir la misma firma dos veces es spam.
@@ -112,26 +134,33 @@ export const ACCIONES = {
       already_has_it: tieneExcelBase(cert) && !cert.signature_requested && Boolean(cert.uploaded),
     }),
 
-    estadoPrevio: (item) => {
-      if (item.signature_requested) return { texto: 'Notificado', nivel: ESPERA }
-      if (item.disabled) return { texto: 'Sin Excel', nivel: BLOQUEA }
-      return { texto: item.already_has_it ? 'En Nube' : 'Con PDF', nivel: NEUTRO }
+    ahora: (item) => {
+      if (item.signature_requested) return 'Firma solicitada'
+      if (item.disabled) return 'Sin PDF'
+      return item.already_has_it ? 'En la nube' : 'Con PDF'
     },
 
     validacion: (item) => {
-      if (!item.disabled) return { icono: 'mdi-bell-check', nivel: HECHO, titulo: 'Apto para notificar' }
-      if (item.signature_requested) return { icono: 'mdi-minus-circle', nivel: NEUTRO, titulo: 'Ya tiene una solicitud activa' }
-      return { icono: 'mdi-close-circle', nivel: BLOQUEA, titulo: 'No tiene certificado base' }
+      if (!item.disabled) return { icono: 'mdi-bell-check', nivel: HECHO, titulo: 'Se avisa a quien firma' }
+      if (item.signature_requested) {
+        return { icono: 'mdi-minus-circle', nivel: NEUTRO, titulo: 'Ya tiene una solicitud' }
+      }
+      return SIN_PDF
     },
   },
 
   entrega: {
-    titulo: 'Registrar Entrega',
+    titulo: 'Registrar entrega',
     icono: 'mdi-package-variant-closed-check',
     color: 'teal-darken-2',
-    subtitulo: 'Se registrará la entrega al cliente de los siguientes certificados:',
-    iconoAccion: 'mdi-check-all',
+    descripcion: 'Se anota la fecha en que el cliente recibió cada certificado.',
+    verbo: 'Registrar',
     fecha: { label: 'Fecha de entrega', permiteFutura: false },
+    ayuda: [
+      'Solo los ya firmados y publicados.',
+      'Si ya estaba entregado, la fecha nueva reemplaza a la anterior: así se corrige una fecha mal puesta.',
+      'La entrega se ve en la lista de certificados y en la orden.',
+    ],
 
     // Los ya entregados vienen desmarcados: marcarlos otra vez pisa la fecha,
     // que es como se corrige una mal puesta.
@@ -140,45 +169,57 @@ export const ACCIONES = {
       already_has_it: estaEntregado(cert),
     }),
 
-    estadoPrevio: (item) => {
-      if (estaEntregado(item)) return { texto: `Entregado ${fechaCorta(item.sent_date)}`, nivel: HECHO }
-      if (item.disabled) return { texto: 'Sin firmar', nivel: BLOQUEA }
-      return { texto: 'Sin entregar', nivel: NEUTRO }
+    ahora: (item) => {
+      if (estaEntregado(item)) return `Entregado ${fechaCorta(item.sent_date)}`
+      if (item.disabled) return 'Sin firmar'
+      return 'Sin entregar'
     },
 
     validacion: (item) => {
-      return item.disabled
-        ? { icono: 'mdi-close-circle', nivel: BLOQUEA, titulo: 'Todavía no está firmado' }
-        : { icono: 'mdi-cloud-check', nivel: HECHO, titulo: 'En la nube' }
+      if (item.disabled) return { icono: 'mdi-close-circle', nivel: BLOQUEA, titulo: 'Todavía no está firmado' }
+      return item.already_has_it
+        ? { icono: 'mdi-sync', nivel: AVISO, titulo: 'Ya entregado: cambia la fecha' }
+        : { icono: 'mdi-check-circle', nivel: HECHO, titulo: 'Se marca entregado' }
     },
   },
 
   tipo: {
-    titulo: 'Corregir Tipo de Certificado',
+    titulo: 'Corregir tipo',
     icono: 'mdi-swap-horizontal',
     color: 'indigo',
-    subtitulo: `Cada uno ${SE_RENUMERA}:`,
-    iconoAccion: 'mdi-swap-horizontal',
+    descripcion: `Cada uno ${SE_RENUMERA}.`,
+    verbo: 'Corregir',
     // Las mismas opciones que en la orden: en una orden, su linea queda con ese servicio.
     opcion: {
       label: 'Servicio correcto',
       get items () { return opcionesConCertificado().map(o => ({ value: opcionDe(o), title: o.title })) },
     },
+    ayuda: [
+      'Cada uno toma el siguiente número del tipo correcto; el que tenía queda registrado como número anterior.',
+      'Si ya tenía PDF, se descarta: hay que rehacerlo con el número nuevo.',
+      'Si ya se entregó, el cliente lo tiene con el número anterior.',
+      'Uno que está en la nube no se corrige: primero se elimina de la nube.',
+    ],
 
     preparar: (cert, clave) => ({ disabled: Boolean(impideCorregir(cert, clave)) }),
 
-    estadoPrevio: (item) => ({ texto: nombreDelTipo(item.certificate_type), nivel: NEUTRO }),
+    ahora: (item) => {
+      if (item.status === ANULADO) return 'Anulado'
+      if (estaEntregado(item)) return `Entregado ${fechaCorta(item.sent_date)}`
+      if (estaPublicado(item)) return 'En la nube'
+      return tieneExcelBase(item) ? 'Con PDF' : 'Sin PDF'
+    },
 
-    validacion: (item, clave) => {
-      const impedimento = impideCorregir(item, clave)
+    validacion: (item, { opcion }) => {
+      const impedimento = impideCorregir(item, opcion)
       if (impedimento) return { ...impedimento, icono: 'mdi-minus-circle' }
       if (estaEntregado(item)) {
         return { icono: 'mdi-alert', nivel: AVISO, titulo: 'Ya se entregó: el cliente lo tiene con el número anterior' }
       }
       if (tieneExcelBase(item)) {
-        return { icono: 'mdi-file-remove', nivel: AVISO, titulo: 'Se descarta el Excel: hay que rehacerlo con el número nuevo' }
+        return { icono: 'mdi-file-remove', nivel: AVISO, titulo: 'Se descarta su PDF: hay que rehacerlo' }
       }
-      return { icono: 'mdi-check-circle', nivel: HECHO, titulo: `Pasa a ${opcionPorClave(clave).title}` }
+      return { icono: 'mdi-check-circle', nivel: HECHO, titulo: `Pasa a ${opcionPorClave(opcion).title}` }
     },
   },
 }

@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" max-width="850" class="dialog-premium" persistent>
+  <v-dialog v-model="dialog" max-width="900" class="dialog-premium" persistent @after-leave="items = []">
     <v-card @keydown.enter="confirmarConEnter">
       <base-modal-header
         :title="modalConfig.titulo"
@@ -7,80 +7,49 @@
         :iconColor="modalConfig.color"
         @close="close"
       >
-        <span 
-          class="font-weight-bold ml-1" 
-          :class="selected_items.length > 0 ? 'text-primary' : 'text-error'"
-        >
-          {{ selected_items.length }} {{ selected_items.length <= 1 ? 'seleccionado' : 'seleccionados' }} de {{ items.length }}
-        </span>
+        <template #acciones>
+          <v-btn icon variant="text" color="grey" title="Más información" @click="verAyuda = true">
+            <v-icon>mdi-help-circle-outline</v-icon>
+          </v-btn>
+        </template>
       </base-modal-header>
 
       <v-card-text class="pt-4 pb-2">
-        <h3 class="text-subtitle-1 font-weight-bold mb-2" style="line-height: 1.2;">
-          {{ modalConfig.subtitulo }}
-        </h3>
+        <p class="text-body-2 text-medium-emphasis mb-3">{{ modalConfig.descripcion }}</p>
 
-        <v-alert
-          v-if="action === 'excel'"
-          type="info" density="compact" variant="tonal" class="mb-4 rounded-lg text-caption"
-        >
-          <div class="mb-1">
-            <span class="font-weight-bold">Se buscan en</span>
-            <code class="ruta">H:\Certificados Nativos\</code>
-            <span class="text-medium-emphasis">— subcarpeta Acreditados, No Acreditados u Operatividad según el tipo.</span>
-          </div>
-          <div class="mb-1">
-            <span class="font-weight-bold">Se imprime la hoja</span>
-            <code class="ruta">CERTIFICADO</code>
-            <span class="text-medium-emphasis">en los acreditados (</span>
-            <code class="ruta">RESULTADOS CERTIFICADO</code>
-            <span class="text-medium-emphasis">si traen la hoja</span>
-            <code class="ruta">DATOS CERTIFICADO</code>
-            <span class="text-medium-emphasis">) y la hoja</span>
-            <code class="ruta">IMPRESION</code>
-            <span class="text-medium-emphasis">o</span>
-            <code class="ruta">IMPRIMIR</code>
-            <span class="text-medium-emphasis">en los demás.</span>
-          </div>
-          <div class="text-medium-emphasis">
-            Si el archivo no aparece, puede adjuntarlo: un Excel para convertir, o un PDF ya hecho.
-          </div>
-        </v-alert>
+        <div v-if="tieneOpciones" class="d-flex flex-wrap align-center ga-4 mb-3">
+          <v-text-field
+            v-if="modalConfig.fecha"
+            v-model="fecha"
+            type="date"
+            :label="modalConfig.fecha.label"
+            :max="fechaMaxima"
+            density="compact"
+            variant="outlined"
+            hide-details
+            class="campo-de-la-accion"
+          />
+          <v-select
+            v-if="modalConfig.opcion"
+            v-model="opcion"
+            :items="modalConfig.opcion.items"
+            :label="modalConfig.opcion.label"
+            density="compact"
+            variant="outlined"
+            hide-details
+            class="campo-de-la-accion"
+          />
+          <v-checkbox
+            v-if="action === 'excel'"
+            v-model="sinPlantilla"
+            label="PDF sin plantilla, para imprimir en hojas con membrete (solo se descarga, no se guarda)"
+            density="compact"
+            hide-details
+            color="primary"
+          />
+        </div>
 
-        <v-checkbox
-          v-if="action === 'excel'"
-          v-model="sinPlantilla"
-          label="PDF sin plantilla, para imprimir en hojas con membrete (solo se descarga, no se guarda)"
-          density="compact"
-          hide-details
-          color="primary"
-          class="mb-2"
-        />
-
-        <v-text-field
-          v-if="modalConfig.fecha"
-          v-model="fecha"
-          type="date"
-          :label="modalConfig.fecha.label"
-          :max="fechaMaxima"
-          density="compact"
-          variant="outlined"
-          hide-details
-          class="campo-de-la-accion mb-4"
-        />
-
-        <v-select
-          v-if="modalConfig.opcion"
-          v-model="opcion"
-          :items="modalConfig.opcion.items"
-          :label="modalConfig.opcion.label"
-          density="compact"
-          variant="outlined"
-          hide-details
-          class="campo-de-la-accion mb-4"
-        />
-
-        <v-table density="compact" class="border rounded-lg bg-surface mt-2" style="max-height: 350px; overflow-y: auto;">
+        <v-table density="compact" class="border rounded-lg bg-surface" style="max-height: 22rem; overflow-y: auto;">
           <thead>
             <tr>
               <th class="text-center" style="width: 50px;">
@@ -95,16 +64,17 @@
                 ></v-checkbox>
               </th>
               <th class="text-left font-weight-bold">Código</th>
-              <th class="text-left font-weight-bold">Equipo y Marca</th>
-              <th class="text-center font-weight-bold">Estado Previo</th>
-              <th class="text-center font-weight-bold">Validación</th>
+              <th class="text-left font-weight-bold">Equipo y marca</th>
+              <th class="text-center font-weight-bold">Tipo</th>
+              <th class="text-left font-weight-bold">Ahora</th>
+              <th class="text-left font-weight-bold">Qué va a pasar</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading_validation">
-              <td colspan="5" class="text-center py-6">
+              <td colspan="6" class="text-center py-6">
                 <v-progress-circular indeterminate color="primary" size="32" class="mb-2"></v-progress-circular>
-                <div class="text-caption text-medium-emphasis">Escaneando servidor local...</div>
+                <div class="text-caption text-medium-emphasis">Buscando los Excel en el servidor...</div>
               </td>
             </tr>
             <tr v-else v-for="item in items" :key="item.id" :class="{ 'fila-bloqueada': item.disabled }">
@@ -120,27 +90,22 @@
               </td>
               <td class="font-weight-medium">{{ item.registry_code }}</td>
               <td class="text-caption">{{ item.equipment }}</td>
+              <td class="text-center text-caption text-medium-emphasis">{{ siglaDelTipo(item.certificate_type) }}</td>
+              <td class="text-caption text-medium-emphasis">{{ ahora(item) }}</td>
 
-              <td class="text-center">
-                <v-chip :color="estadoPrevio(item).color" size="x-small" variant="tonal">
-                  {{ estadoPrevio(item).texto }}
-                </v-chip>
-              </td>
-
-              <td class="text-center">
-                <div class="d-flex align-center justify-center">
-                  <v-icon :color="validacion(item).color" size="small" :title="validacion(item).titulo">
-                    {{ validacion(item).icono }}
-                  </v-icon>
+              <td>
+                <div class="d-flex align-center ga-2">
+                  <v-icon :color="validacion(item).color" size="small">{{ validacion(item).icono }}</v-icon>
+                  <span class="text-caption">{{ validacion(item).titulo }}</span>
 
                   <template v-if="action === 'excel'">
-                    <v-btn v-if="estaAdjuntado(item)" icon variant="text" size="small" color="grey" class="ml-1"
+                    <v-btn v-if="estaAdjuntado(item)" icon variant="text" size="small" color="grey" class="ml-auto"
                            title="Quitar el archivo adjuntado" @click.stop="discardExcel(item)">
                       <v-icon>mdi-close</v-icon>
                     </v-btn>
                     <v-menu v-else location="bottom end">
                       <template v-slot:activator="{ props }">
-                        <v-btn v-bind="props" icon variant="text" size="small" color="primary" class="ml-1"
+                        <v-btn v-bind="props" icon variant="text" size="small" color="primary" class="ml-auto"
                                title="Adjuntar archivo" @click.stop>
                           <v-icon>mdi-upload</v-icon>
                         </v-btn>
@@ -159,11 +124,11 @@
                   </template>
 
                   <template v-else-if="action === 'qr'">
-                    <v-btn v-if="item.validation_status === 'manual_pdf'" icon variant="text" size="small" color="grey" class="ml-1"
-                           title="Quitar el PDF adjuntado" @click.stop="discardManualPdf(item)">
+                    <v-btn v-if="item.validation_status === 'manual_pdf'" icon variant="text" size="small" color="grey"
+                           class="ml-auto" title="Quitar el PDF adjuntado" @click.stop="discardManualPdf(item)">
                       <v-icon>mdi-close</v-icon>
                     </v-btn>
-                    <v-btn v-else icon variant="text" size="small" color="primary" class="ml-1"
+                    <v-btn v-else icon variant="text" size="small" color="primary" class="ml-auto"
                            title="Adjuntar PDF firmado" @click.stop="openManualPdfUpload(item)">
                       <v-icon>mdi-upload</v-icon>
                     </v-btn>
@@ -176,9 +141,16 @@
       </v-card-text>
 
       <v-card-actions class="px-6 pb-4 pt-2">
-              <load-sheet ref="loadSheetModalRef" @file-attached="onFileAttached" />
+        <load-sheet ref="loadSheetModalRef" @file-attached="onFileAttached" />
+        <span class="text-body-2 text-medium-emphasis">
+          <span class="font-weight-bold text-high-emphasis">{{ selected_items.length }}</span>
+          {{ selected_items.length === 1 ? 'se procesa' : 'se procesan' }}<template v-if="noSePueden">
+          · {{ noSePueden }} {{ noSePueden === 1 ? 'no se puede' : 'no se pueden' }}</template>
+        </span>
         <v-spacer/>
-        <v-btn variant="flat" class="font-weight-bold mr-3 px-4" @click="close" :disabled="is_processing">Cancelar</v-btn>
+        <v-btn variant="outlined" class="font-weight-bold mr-3 px-4" @click="close" :disabled="is_processing">
+          Cancelar
+        </v-btn>
         <v-btn
           color="primary"
           class="font-weight-bold px-4 text-white"
@@ -187,10 +159,12 @@
           :loading="is_processing"
           :disabled="!puedeConfirmar"
         >
-          <v-icon start>{{ modalConfig.iconoAccion }}</v-icon> Continuar
+          {{ modalConfig.verbo }}
         </v-btn>
       </v-card-actions>
     </v-card>
+
+    <ayuda-lote v-model="verAyuda" :accion="action" />
   </v-dialog>
 </template>
 
@@ -205,12 +179,13 @@ import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { alPresionarEnter } from '@/utils/keyboard'
 import { hoyISO } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
-import { SE_RENUMERA } from '@/utils/certificates/tipos'
+import { SE_RENUMERA, siglaDelTipo } from '@/utils/certificates/tipos'
 import { opcionPorClave } from '@/composables/useOrderServices'
 import { ACCIONES, colorDe, esAviso, estaAdjuntado } from './batchActions'
 import { uuid } from '@/utils/uuid'
 
 const LoadSheet = defineAsyncComponent(() => import('@/views/certificates/components/LoadSheet.vue'))
+const AyudaLote = defineAsyncComponent(() => import('@/views/certificates/components/AyudaLote.vue'))
 
 const emit = defineEmits(['clearSelection', 'corregido'])
 const { appContext } = getCurrentInstance()
@@ -228,8 +203,12 @@ const force_select = ref(false)
 const fecha = ref('')
 const opcion = ref(null)
 const sinPlantilla = ref(false)
+const verAyuda = ref(false)
 
 const modalConfig = computed(() => ACCIONES[action.value] || ACCIONES.excel)
+const tieneOpciones = computed(() =>
+  Boolean(modalConfig.value.fecha || modalConfig.value.opcion) || action.value === 'excel')
+const noSePueden = computed(() => items.value.filter(i => i.disabled).length)
 
 // Ahora es válido simplemente si el usuario marcó al menos una fila
 const hayItemsValidos = computed(() => selected_items.value.length > 0)
@@ -319,10 +298,11 @@ watch(opcion, (valor) => {
   selected_items.value = selected_items.value.filter(id => habilitados.has(id))
 })
 
-const pintar = (estado) => ({ ...estado, color: colorDe(estado.nivel, modalConfig.value.color) })
-
-const estadoPrevio = (item) => pintar(modalConfig.value.estadoPrevio(item, opcion.value))
-const validacion   = (item) => pintar(modalConfig.value.validacion(item, opcion.value))
+const ahora = (item) => modalConfig.value.ahora(item)
+const validacion = (item) => {
+  const estado = modalConfig.value.validacion(item, { opcion: opcion.value, sinPlantilla: sinPlantilla.value })
+  return { ...estado, color: colorDe(estado.nivel) }
+}
 
 const discardManualPdf = (item) => {
   item.validation_status = 'pending'
@@ -553,9 +533,9 @@ const confirmAction = async () => {
   }
 }
 
+// La lista se vacia cuando el modal termina de cerrarse (`after-leave`), para que no se vea vacia mientras se va.
 const close = () => {
   dialog.value = false
-  items.value = []
 }
 
 defineExpose({ open })
@@ -570,15 +550,5 @@ defineExpose({ open })
 
 .campo-de-la-accion {
   max-width: 260px;
-}
-
-.ruta {
-  background: rgba(var(--v-theme-on-surface), 0.06);
-  border-radius: 4px;
-  padding: 1px 5px;
-  margin: 0 2px;
-  font-size: 0.95em;
-  font-weight: 600;
-  white-space: nowrap;
 }
 </style>

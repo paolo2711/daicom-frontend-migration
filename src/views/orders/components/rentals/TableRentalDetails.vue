@@ -147,7 +147,7 @@ const ACCIONES_LINEA = [
 ]
 const accionesDe = (lineas) => accionesPara(ACCIONES_LINEA, lineas, () => true)
 
-const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu()
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(filas)
 
 function ejecutarAccion (clave, [linea]) {
   if (clave === 'ver') return verEquipo(linea)

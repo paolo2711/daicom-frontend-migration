@@ -103,6 +103,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import DetailEmpty from '@/components/shared/DetailEmpty.vue'
+import { useOpenRow } from '@/composables/useCurrentRows'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import InvoiceMappers from '@/mappers/invoiceMappers'
 import BillingDataService from '@/services/billing/billingDataService'
@@ -179,7 +180,6 @@ async function recargar () {
     if (!isLatest(turno)) return
     facturas.value = lista.data.results.map(InvoiceMappers.getMap)
     totales.value = resumen.data.totales
-    if (conAbonos.value) conAbonos.value = facturas.value.find(f => f.id === conAbonos.value.id) || conAbonos.value
   } catch {
     if (!isLatest(turno)) return
     facturas.value = []
@@ -207,7 +207,7 @@ async function quitar (factura) {
 }
 
 const enAbonos = ref(false)
-const conAbonos = ref(null)
+const conAbonos = useOpenRow(facturas)
 function abrirAbonos (factura) {
   conAbonos.value = factura
   enAbonos.value = true

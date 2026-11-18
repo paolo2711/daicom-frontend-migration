@@ -302,6 +302,7 @@ import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import { useOrderActions } from '@/composables/useOrderActions'
 import { useOrderCobro } from '@/composables/useOrderCobro'
+import { seguirLaLista } from '@/composables/useCurrentRows'
 import { useOrderDateColumn } from '@/composables/useOrderDateColumn'
 import { fechaCorta } from '@/utils/dates'
 import { ALQUILER, FILTRO_DE_ESTADO, esAlquiler, viva } from '@/utils/orders/estado'
@@ -337,19 +338,9 @@ const { anchoDeLaLista, fechaEnColumna, headers } = useOrderDateColumn(columnas)
 
 // ── Tabla + filtros ──
 const orders = ref([])
+seguirLaLista(orders, ordenes_seleccionadas)
 const { foco, abierto: enCobro, abrirCobro, cerrarCobro, alSemaforo } = useOrderCobro(orders, ordenes_seleccionadas)
-const expanded = ref([])
-const { cargarItems, reemplazarOrdenes } = useOrderItems(orders, 'rentals')
-
-// Resiliencia a return-object: el id puede venir suelto o dentro de un objeto.
-const getSafeId = (val) => {
-  if (!val) return null
-  return typeof val === 'object' ? (val.id || val.raw?.id || val.value) : val
-}
-const isOrderExpanded = (item) => {
-  const targetId = getSafeId(item)
-  return expanded.value.some(e => getSafeId(e) === targetId)
-}
+const { expanded, idOrdenExpandida, isOrderExpanded, cargarItems, reemplazarOrdenes } = useOrderItems(orders, 'rentals')
 const filter_order = ref('')
 const filter_client_ref = ref('')
 const filter_invoice = ref('')
@@ -380,7 +371,7 @@ const retrieveOrders = () => {
     filter_invoice.value
   ).then(res => {
     if (!isLatestOrdersLoad(token)) return   // llegó una carga más nueva → no pisar
-    reemplazarOrdenes(res.data.results.map(orden => OrderMappers.getMap(orden)), idOrdenExpandida())
+    reemplazarOrdenes(res.data.results.map(orden => OrderMappers.getMap(orden)))
     total_orders.value = res.data.count
   }).finally(() => {
     if (isLatestOrdersLoad(token)) loading_list.value = false
@@ -424,10 +415,6 @@ const limpiarFechas = () => { filter_date_gt.value = ''; filter_date_lt.value = 
 // ── WebSockets ──
 const handleWssReload = () => { retrieveOrders(); refrescarResumenes() }
 
-const idOrdenExpandida = () => (
-  expanded.value.length === 1 ? getSafeId(expanded.value[0]) : null
-)
-
 const fetchAndInjectSingleOrder = (event) => {
   OrderDataService.getFila(event.detail).then(response => {
     const fila = response?.data
@@ -454,7 +441,7 @@ const editarOrdenRef = ref(null)
 const abrirEditarOrden = (o) => editarOrdenRef.value?.editar(o)
 
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, accionesDeCobro, ejecutarAccion } =
-  useOrderActions(ordenes_seleccionadas, {
+  useOrderActions(orders, ordenes_seleccionadas, {
     editar: abrirEditarOrden,
     abrirCobro,
   })
@@ -468,16 +455,6 @@ watch(filter_client_id, () => { applyFilters() })
 watch(filter_status, () => { applyFilters() })
 watch(() => route.query.buscar_orden, (val) => { if (val) filter_order.value = val })
 watch(() => route.query.buscar_factura, (val) => { if (val) filter_invoice.value = val })
-// Expansión única + carga perezosa de equipos alquilados
-watch(expanded, (newVal) => {
-  if (newVal.length > 1) {
-    expanded.value = [newVal[newVal.length - 1]]
-    return
-  }
-  if (expanded.value.length === 1) {
-    cargarItems(getSafeId(expanded.value[0]), { mostrarCarga: true })
-  }
-})
 
 
 onMounted(() => {

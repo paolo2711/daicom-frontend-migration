@@ -10,9 +10,9 @@ import { mensajeDeError } from '@/utils/errors'
 
 // Lo que hace cada accion de ACCIONES_DOCUMENTO, y el menu de la tabla. Cada
 // tipo de documento dice como abre su formulario y, la cotizacion, su orden.
-export function useDocumentActions({ editar, crearOrden }) {
+export function useDocumentActions(lista, { editar, crearOrden }) {
   const swal = useSwal()
-  const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu()
+  const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(lista)
   const { descargar } = useDownload()
 
   const accionesDe = (documentos) => accionesPara(ACCIONES_DOCUMENTO, documentos, () => true)

@@ -13,10 +13,10 @@
       />
       <v-spacer />
       <template v-if="puedeEditar">
-        <v-btn variant="outlined" prepend-icon="mdi-file-download-outline" class="mr-2" @click="descargaModalRef?.open()">
+        <v-btn variant="tonal" prepend-icon="mdi-file-download-outline" class="mr-2" @click="descargaModalRef?.open()">
           Descargar precios
         </v-btn>
-        <v-btn variant="outlined" prepend-icon="mdi-file-upload-outline" class="mr-2" @click="preciosModalRef?.open()">
+        <v-btn variant="tonal" prepend-icon="mdi-file-upload-outline" class="mr-2" @click="preciosModalRef?.open()">
           Subir precios
         </v-btn>
         <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" @click="equipoModalRef?.open()">
@@ -92,7 +92,7 @@
                 density="comfortable"
                 @click.stop="deleteEquipo(item)"
               >
-                <v-icon>mdi-delete-outline</v-icon>
+                <v-icon>mdi-delete</v-icon>
               </v-btn>
             </template>
             <span>Eliminar Equipo</span>
@@ -111,7 +111,7 @@
                   </span>
                   <v-spacer/>
                   <v-btn v-if="puedeEditar" size="x-small" color="secondary" variant="flat" class="text-white" @click="servicioModalRef?.open(null, item.id)">
-                    <v-icon start size="x-small">mdi-plus</v-icon> Añadir Servicio
+                    <v-icon start size="x-small">mdi-plus</v-icon> Agregar Servicio
                   </v-btn>
                 </v-toolbar>
 
@@ -130,13 +130,13 @@
                       <td><v-chip size="x-small" variant="outlined" color="primary">{{ serv.tipo_servicio_label }}</v-chip></td>
                       <td style="max-width: 300px;" class="text-truncate" :title="serv.nombre">{{ serv.nombre }}</td>
                       <td class="text-right font-weight-bold">{{ monto(serv.precio_estandar) }}</td>
-                      <td class="text-right font-weight-bold text-primary">{{ monto(serv.precio_corporativo) }}</td>
+                      <td class="text-right font-weight-bold">{{ monto(serv.precio_corporativo) }}</td>
                       <td v-if="puedeEditar" class="text-center">
                         <v-btn icon variant="text" density="comfortable" size="x-small" color="primary" @click="servicioModalRef?.open(serv, item.id)">
                           <v-icon>mdi-pencil</v-icon>
                         </v-btn>
                         <v-btn icon variant="text" density="comfortable" size="x-small" color="error" @click="deleteServicio(serv)">
-                          <v-icon>mdi-delete-outline</v-icon>
+                          <v-icon>mdi-delete</v-icon>
                         </v-btn>
                       </td>
                     </tr>

@@ -48,7 +48,7 @@
           <v-tooltip location="bottom" color="error">
             <template v-slot:activator="{ props }">
               <v-btn v-bind="props" icon color="red-darken-2" variant="text" density="comfortable" @click="deleteLabConfirm(item)">
-                <v-icon>mdi-delete-outline</v-icon>
+                <v-icon>mdi-delete</v-icon>
               </v-btn>
             </template>
             <span>Eliminar Laboratorio</span>

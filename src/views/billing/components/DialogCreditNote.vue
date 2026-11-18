@@ -47,7 +47,7 @@
                 <div class="titulo-de-hoja titulo-principal flex-wrap ga-2 py-2">
                   <span class="mr-auto">{{ LISTAS[grupo].titulo }}</span>
                   <span class="text-caption text-medium-emphasis">{{ LISTAS[grupo].ayuda }}</span>
-                  <v-btn v-if="grupo === CUOTAS" variant="outlined" class="font-weight-bold" prepend-icon="mdi-plus"
+                  <v-btn v-if="grupo === CUOTAS" variant="tonal" class="font-weight-bold" prepend-icon="mdi-plus"
                          @click="datos.cuotas.push({ monto: '', fecha: '' })">Agregar cuota</v-btn>
                 </div>
 
@@ -60,7 +60,7 @@
                         <td><date-picker :date="cuota.fecha" label="Fecha" :min="datos.fecha" :campo="CAMPO"
                                          @setPickedDate="f => (cuota.fecha = f)" /></td>
                         <td><v-text-field v-model="cuota.monto" type="number" v-bind="CAMPO" class="campo-numero" /></td>
-                        <td><v-btn icon="mdi-delete-outline" variant="text" size="small" @click="datos.cuotas.splice(i, 1)" /></td>
+                        <td><v-btn icon="mdi-delete" variant="text" size="small" color="red" title="Quitar la cuota" @click="datos.cuotas.splice(i, 1)" /></td>
                       </tr>
                     </tbody>
                   </v-table>
@@ -151,38 +151,19 @@
         </div>
       </v-card-text>
 
-      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin flex-shrink-0">
-        <v-spacer />
-        <v-btn variant="flat" class="font-weight-bold px-4" @click="dialog = false">Cancelar</v-btn>
-        <v-btn variant="outlined" class="font-weight-bold px-4" prepend-icon="mdi-eye-outline"
-               :disabled="!grupo" :loading="armandoVista" @click="verVistaPrevia">Vista previa</v-btn>
-        <v-btn color="primary" variant="flat" class="font-weight-bold px-4" prepend-icon="mdi-send"
-               :disabled="!grupo" :loading="emitiendo" @click="emitir">Emitir nota</v-btn>
-      </v-card-actions>
+      <form-footer accion="Emitir nota" icono="mdi-send" :listo="Boolean(grupo)" :ocupado="emitiendo"
+                   :vista="vista" titulo="Nota de crédito" @cancelar="dialog = false" @confirmar="emitir" />
     </v-card>
-
-    <pdf-preview-dialog v-model="vistaPrevia" :url="urlDeVista">
-      <template #encabezado>
-        <v-icon class="mr-2">mdi-file-eye-outline</v-icon>
-        <span class="text-subtitle-1 font-weight-bold text-truncate">Vista previa · Nota de crédito</span>
-      </template>
-      <template #acciones>
-        <v-btn variant="text" class="mr-2 font-weight-bold" prepend-icon="mdi-pencil" :disabled="emitiendo"
-               @click="vistaPrevia = false">Seguir editando</v-btn>
-        <v-btn color="primary" variant="flat" class="font-weight-bold" prepend-icon="mdi-send" :loading="emitiendo"
-               @click="emitir">Emitir nota</v-btn>
-      </template>
-    </pdf-preview-dialog>
   </v-dialog>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, reactive } from 'vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import DetailEmpty from '@/components/shared/DetailEmpty.vue'
 import OptionRows from '@/components/shared/OptionRows.vue'
-import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
+import FormFooter from '@/components/shared/FormFooter.vue'
 import SegmentedField from '@/components/shared/SegmentedField.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import { useLatestRequest } from '@/composables/useLatestRequest'
@@ -294,9 +275,9 @@ function noSePudo (titulo, porDefecto, error) {
   swal.fire({ icon: 'error', title: titulo, text: mensajeDeError(error, porDefecto) })
 }
 
-const { abierta: vistaPrevia, url: urlDeVista, armando: armandoVista, ver: verVistaPrevia } = usePdfPreview(
+const vista = reactive(usePdfPreview(
   () => BillingDataService.previewCreditNote(factura.value.id, paraElBack()),
-  error => noSePudo('No se armó la vista previa', 'No se pudo armar la vista previa.', error))
+  error => noSePudo('No se armó la vista previa', 'No se pudo armar la vista previa.', error)))
 
 // `nueva`: lo que devuelve el back para la factura (sus datos, motivos, items, cuotas y la sugerencia del deposito).
 function open (nueva) {
@@ -317,7 +298,7 @@ async function emitir () {
   emitiendo.value = true
   try {
     const { data } = await BillingDataService.emitCreditNote(factura.value.id, paraElBack())
-    vistaPrevia.value = false
+    vista.cerrar()
     dialog.value = false
     emitidaDe.value = data.id
     emit('emitida', data)

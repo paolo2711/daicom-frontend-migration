@@ -5,7 +5,7 @@
 
     <template v-else-if="clave === 'observaciones'">
       <div class="text-caption text-medium-emphasis">Solo salen en el PDF si agrega alguna.</div>
-      <text-list-field v-model="quote.observations" texto-agregar="Añadir observación" :maxlength="LIMITES.observacion" />
+      <text-list-field v-model="quote.observations" texto-agregar="Agregar observación" :maxlength="LIMITES.observacion" />
     </template>
 
     <template v-else-if="clave === 'pago'">
@@ -17,13 +17,13 @@
       <section v-for="(categoria, i) in quote.terms" :key="i" class="seccion">
         <div class="d-flex align-center ga-1">
           <v-text-field v-model="categoria.title" label="Categoría" class="font-weight-bold" v-bind="CAMPO" />
-          <v-btn icon="mdi-delete-outline" variant="text" size="small" color="error" title="Quitar la categoría"
+          <v-btn icon="mdi-delete" variant="text" size="small" color="red" title="Quitar la categoría"
                  @click="quote.terms.splice(i, 1)" />
         </div>
-        <text-list-field v-model="categoria.items" texto-agregar="Añadir cláusula" />
+        <text-list-field v-model="categoria.items" texto-agregar="Agregar cláusula" />
       </section>
-      <v-btn variant="outlined" prepend-icon="mdi-plus" class="align-self-start"
-             @click="quote.terms.push({ title: '', items: [''] })">Añadir categoría</v-btn>
+      <v-btn variant="tonal" prepend-icon="mdi-plus" class="align-self-start"
+             @click="quote.terms.push({ title: '', items: [''] })">Agregar categoría</v-btn>
     </template>
   </detail-panel>
 </template>

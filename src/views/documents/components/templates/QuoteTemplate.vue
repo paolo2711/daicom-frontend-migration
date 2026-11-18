@@ -4,7 +4,7 @@
       <base-modal-header :title="titulo" :icon="tipo.icono" @close="close">
         <span>
           <template v-if="!numero && numeroNuevo">
-            Correlativo: <span class="font-weight-bold text-primary ml-1">{{ numeroNuevo }}</span> ·
+            Correlativo: <span class="font-weight-bold ml-1">{{ numeroNuevo }}</span> ·
           </template>
           {{ tipo.texto }}
         </span>
@@ -30,10 +30,10 @@
                 <span class="mr-auto">
                   Ítems <span class="text-medium-emphasis font-weight-regular">({{ cantidadDeItems }})</span>
                 </span>
-                <v-btn variant="outlined" class="font-weight-bold" prepend-icon="mdi-format-list-group"
-                       @click="agregar(grupoVacio())">Añadir grupo</v-btn>
-                <v-btn variant="outlined" class="font-weight-bold" prepend-icon="mdi-plus"
-                       @click="agregar(itemVacio(tipo.unidad))">Añadir ítem</v-btn>
+                <v-btn variant="tonal" class="font-weight-bold" prepend-icon="mdi-format-list-group"
+                       @click="agregar(grupoVacio())">Agregar grupo</v-btn>
+                <v-btn variant="tonal" class="font-weight-bold" prepend-icon="mdi-plus"
+                       @click="agregar(itemVacio(tipo.unidad))">Agregar ítem</v-btn>
               </div>
 
               <div class="flex-grow-1 overflow-y-auto" style="min-height: 0;">
@@ -61,7 +61,7 @@
                 </v-table>
                 <div v-else class="d-flex flex-column align-center justify-center fill-height ga-2 pa-8 text-medium-emphasis">
                   <v-icon size="x-large">mdi-format-list-numbered</v-icon>
-                  Sin ítems. Agrega uno con "Añadir ítem".
+                  Sin ítems. Agrega uno con "Agregar ítem".
                 </div>
               </div>
 
@@ -81,7 +81,7 @@
                                   :indice="numeros[indiceAbierto] - 1" :moneda="cotizacion.meta.currency"
                                   :error="errores[indiceAbierto]" :unidades="UNIDADES" :acreditaciones="acreditaciones"
                                   etiqueta-del-detalle="Comentario (opcional)" @cerrar="abierto = null"
-                                  @borrar="borrar(indiceAbierto)" />
+                                  @otro-igual="otroIgual" @borrar="borrar(indiceAbierto)" />
               <detail-panel v-else-if="abierto?.fila" titulo="Grupo" @cerrar="abierto = null">
                 <v-text-field v-model="abierto.fila.description" label="Título del grupo" :maxlength="LIMITES.grupo"
                               class="titulo-de-grupo" v-bind="CAMPO" />
@@ -89,8 +89,7 @@
                   Los ítems de abajo, hasta el siguiente grupo, salen bajo este título en el PDF.
                 </div>
                 <template #pie>
-                  <v-spacer />
-                  <v-btn variant="text" color="red" prepend-icon="mdi-delete" @click="borrar(indiceAbierto)">Quitar</v-btn>
+                  <item-actions @quitar="borrar(indiceAbierto)" />
                 </template>
               </detail-panel>
               <panel-quote-option v-else-if="abierto" :key="abierto.clave" v-model:quote="cotizacion"
@@ -105,47 +104,20 @@
         </div>
       </v-card-text>
 
-      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin flex-shrink-0">
-        <v-spacer />
-        <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
-        <v-btn variant="outlined" class="font-weight-bold px-4" prepend-icon="mdi-file-eye-outline"
-               :loading="armandoVista" :disabled="!clienteId || !cantidadDeItems" @click="verVistaPrevia">
-          Vista previa
-        </v-btn>
-        <v-btn color="primary" variant="flat" class="font-weight-bold px-4" prepend-icon="mdi-content-save"
-               :loading="guardando" :disabled="!clienteId || !cantidadDeItems" @click="guardar">
-          Guardar {{ definicion.nombre }}
-        </v-btn>
-      </v-card-actions>
-
-      <!-- El PDF tal como saldria, sin guardar: desde aca se guarda o se vuelve a editar. -->
-      <pdf-preview-dialog v-model="vistaPrevia" :url="urlDeVista">
-        <template #encabezado>
-          <v-icon class="mr-2">mdi-file-eye-outline</v-icon>
-          <span class="text-subtitle-1 font-weight-bold text-truncate">Vista previa · {{ titulo }}</span>
-        </template>
-        <template #acciones>
-          <v-btn variant="text" class="mr-2 font-weight-bold" prepend-icon="mdi-pencil" :disabled="guardando"
-                 @click="vistaPrevia = false">
-            Seguir editando
-          </v-btn>
-          <v-btn color="primary" variant="flat" class="font-weight-bold px-4" prepend-icon="mdi-content-save"
-                 :loading="guardando" @click="guardar">
-            Guardar {{ definicion.nombre }}
-          </v-btn>
-        </template>
-      </pdf-preview-dialog>
+      <form-footer :accion="`Guardar ${definicion.nombre}`" :listo="Boolean(clienteId && cantidadDeItems)"
+                   :ocupado="guardando" :vista="vista" :titulo="titulo" @cancelar="close" @confirmar="guardar" />
     </v-card>
   </v-dialog>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, reactive } from 'vue'
 import CompanyDataService from '@/services/company/companyDataService'
 import DocumentsDataService from '@/services/documents/documentsDataService'
 import DetailEmpty from '@/components/shared/DetailEmpty.vue'
 import DetailPanel from '@/components/shared/DetailPanel.vue'
-import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
+import ItemActions from '@/components/shared/ItemActions.vue'
+import FormFooter from '@/components/shared/FormFooter.vue'
 import OptionRows from '@/components/shared/OptionRows.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
@@ -164,6 +136,7 @@ import {
 } from '@/utils/documents/quoteDefaults'
 import { COTIZACION } from '@/utils/documents/tipos'
 import { mensajeDeError } from '@/utils/errors'
+import { copiarDebajo } from '@/utils/lists'
 import { CAMPO } from '@/utils/fields'
 import { MONEDAS, monto } from '@/utils/money'
 import BillingClientPanel from '../shared/BillingClientPanel.vue'
@@ -245,6 +218,7 @@ function agregar (fila) {
   cotizacion.value.items.push(fila)
   abrir(null, fila)
 }
+const otroIgual = () => abrir(null, copiarDebajo(cotizacion.value.items, indiceAbierto.value))
 function borrar (indice) {
   if (cotizacion.value.items[indice] === abierto.value?.fila) abierto.value = null
   cotizacion.value.items.splice(indice, 1)
@@ -331,7 +305,7 @@ function mostrarRechazo (error, encabezado, porDefecto) {
   const filas = error.response?.data?.filas
   if (filas) {
     marcarErrores(filas)
-    vistaPrevia.value = false
+    vista.cerrar()
   }
   swal.fire({ icon: 'error', title: encabezado, text: mensajeDeError(error, porDefecto) })
 }
@@ -343,7 +317,7 @@ async function guardar () {
       ? await DocumentsDataService.update(documentoId.value, payload())
       : await DocumentsDataService.create(payload())
     avisarHecho(`${data.document_number} ${documentoId.value ? 'actualizada' : 'creada'}`, data)
-    vistaPrevia.value = false
+    vista.cerrar()
     close()
   } catch (error) {
     const nombre = definicion.value.nombre
@@ -353,9 +327,9 @@ async function guardar () {
   }
 }
 
-const { abierta: vistaPrevia, url: urlDeVista, armando: armandoVista, ver: verVistaPrevia } = usePdfPreview(
+const vista = reactive(usePdfPreview(
   () => DocumentsDataService.vistaPrevia(payload()),
-  error => mostrarRechazo(error, 'No se pudo armar la vista previa', 'No se pudo armar la vista previa.'))
+  error => mostrarRechazo(error, 'No se pudo armar la vista previa', 'No se pudo armar la vista previa.')))
 
 defineExpose({ open })
 </script>

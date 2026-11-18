@@ -40,12 +40,8 @@
       <div v-if="error" class="text-caption text-error">{{ error }}</div>
 
     <template #pie>
-      <v-btn variant="outlined" prepend-icon="mdi-content-copy" title="Mismo equipo, marca, modelo y servicio, sin serie"
-             @click="emit('otro-igual')">Otro igual</v-btn>
-      <v-spacer />
-      <v-btn v-if="seQuita(eq)" variant="text" color="red" prepend-icon="mdi-delete" @click="emit('borrar', indice)">
-        Quitar
-      </v-btn>
+      <item-actions copia="Mismo equipo, marca, modelo y servicio, sin serie" :se-quita="seQuita(eq)"
+                    @otro-igual="emit('otro-igual')" @quitar="emit('borrar', indice)" />
     </template>
   </detail-panel>
 </template>
@@ -59,6 +55,7 @@ import EquipmentMappers from '@/mappers/equipmentMappers'
 import LabMappers from '@/mappers/labMappers'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
 import DetailPanel from '@/components/shared/DetailPanel.vue'
+import ItemActions from '@/components/shared/ItemActions.vue'
 import { conOpcion, itemsDeSeleccion, opcionDe, seQuita, useOrderServices } from '@/composables/useOrderServices'
 import { SE_RENUMERA } from '@/utils/certificates/tipos'
 import { CAMPO } from '@/utils/fields'

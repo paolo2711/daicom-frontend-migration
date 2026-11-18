@@ -58,7 +58,7 @@ const retrieveLogs = () => {
 const icono = (action) => {
   if (action.includes('POST')) return 'mdi-plus'
   if (action.includes('PUT') || action.includes('PATCH')) return 'mdi-pencil'
-  if (action.includes('DELETE')) return 'mdi-delete-outline'
+  if (action.includes('DELETE')) return 'mdi-delete'
   return 'mdi-eye'
 }
 

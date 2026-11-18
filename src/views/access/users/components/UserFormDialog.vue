@@ -131,7 +131,7 @@
             </v-row>
           </v-form>
           <div class="d-flex justify-end mt-3">
-            <v-btn color="primary" variant="tonal" class="font-weight-bold" :loading="resettingPw" :disabled="!resetValid" @click="doResetPassword">
+            <v-btn variant="tonal" class="font-weight-bold" :loading="resettingPw" :disabled="!resetValid" @click="doResetPassword">
               <v-icon start size="small">mdi-lock-reset</v-icon> Restablecer contraseña
             </v-btn>
           </div>

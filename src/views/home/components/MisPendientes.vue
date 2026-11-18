@@ -29,7 +29,7 @@
               <span class="pend-code">{{ it.titulo }}</span>
               <span class="pend-detail">{{ it.detalle }}</span>
             </button>
-            <v-btn v-if="it.accion" size="x-small" variant="outlined" :loading="haciendo === it.id"
+            <v-btn v-if="it.accion" size="x-small" variant="tonal" :loading="haciendo === it.id"
                    @click="hacer(it)">{{ it.accion.texto }}</v-btn>
           </div>
         </div>

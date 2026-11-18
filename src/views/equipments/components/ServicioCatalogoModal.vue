@@ -1,7 +1,7 @@
 <template>
   <v-dialog width="700" v-model="dialog" class="dialog-premium" persistent>
     <v-card>
-      <base-modal-header :title="isEdit ? 'Editar Servicio' : 'Añadir Servicio al Catálogo'" icon="mdi-currency-usd" @close="close" />
+      <base-modal-header :title="isEdit ? 'Editar Servicio' : 'Agregar Servicio al Catálogo'" icon="mdi-currency-usd" @close="close" />
       <v-form ref="formRef" @submit.prevent v-model="is_valid">
         <v-card-text class="pt-6">
           <v-select 
@@ -63,7 +63,7 @@
           <v-spacer/>
           <v-btn variant="flat" class="font-weight-bold rounded-lg mr-3 px-6" @click="close">Cancelar</v-btn>
           <v-btn color="secondary" variant="flat" class="font-weight-bold rounded-lg px-6 text-white" @click="save" :disabled="!is_valid" :loading="is_saving">
-            {{ isEdit ? 'Guardar Cambios' : 'Añadir Servicio' }}
+            {{ isEdit ? 'Guardar Cambios' : 'Agregar Servicio' }}
           </v-btn>
         </v-card-actions>
       </v-form>

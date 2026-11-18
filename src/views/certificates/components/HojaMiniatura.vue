@@ -1,5 +1,5 @@
 <template>
-  <div class="hoja" :class="{ chica }">
+  <div class="miniatura" :class="{ chica }">
     <div v-for="(parte, i) in partes" :key="i" :class="parte"></div>
     <div v-if="franja" class="franja"><i></i><i></i><i></i></div>
   </div>
@@ -16,7 +16,7 @@ defineProps({
 </script>
 
 <style scoped>
-.hoja {
+.miniatura {
   position: relative;
   width: 55%;
   max-width: 7rem;
@@ -28,7 +28,7 @@ defineProps({
   box-shadow: 0 0.05rem 0.25rem rgba(0, 0, 0, 0.25);
 }
 
-.hoja.chica {
+.miniatura.chica {
   width: 4.5rem;
   margin: 0;
   padding: 0.45rem 0.4rem;

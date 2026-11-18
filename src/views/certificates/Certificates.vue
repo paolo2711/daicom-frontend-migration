@@ -12,7 +12,7 @@
           <v-spacer />
 
           <!-- Excel suelto: no pasa por la lista porque no es de ningún certificado -->
-          <v-btn variant="outlined" color="primary" class="mr-3" @click="printSheetRef?.open()">
+          <v-btn variant="tonal" class="mr-3" @click="printSheetRef?.open()">
             <template v-slot:prepend>
               <v-icon>mdi-printer</v-icon>
             </template>

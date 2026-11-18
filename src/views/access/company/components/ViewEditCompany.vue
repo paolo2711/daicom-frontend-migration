@@ -115,7 +115,7 @@
                 <v-divider></v-divider>
                 <div class="d-flex align-center my-3">
                   <div class="text-subtitle-2 font-weight-bold text-grey-darken-1 mr-auto">Cuentas bancarias de la factura</div>
-                  <v-btn v-if="isEditing" variant="outlined" size="small" prepend-icon="mdi-plus"
+                  <v-btn v-if="isEditing" variant="tonal" size="small" prepend-icon="mdi-plus"
                          @click="company.bank_accounts.push(cuentaVacia())">Cuenta</v-btn>
                 </div>
                 <v-row dense class="mb-2">

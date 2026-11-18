@@ -27,7 +27,7 @@
         </v-col>
       </v-row>
       <div class="d-flex justify-end mt-4">
-        <v-btn color="primary" variant="tonal" size="small" class="font-weight-bold" @click="aplicar">Aplicar</v-btn>
+        <v-btn color="primary" variant="flat" size="small" class="font-weight-bold" @click="aplicar">Aplicar</v-btn>
       </div>
     </v-card>
   </v-menu>

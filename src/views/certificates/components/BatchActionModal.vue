@@ -148,7 +148,7 @@
           · {{ noSePueden }} {{ noSePueden === 1 ? 'no se puede' : 'no se pueden' }}</template>
         </span>
         <v-spacer/>
-        <v-btn variant="outlined" class="font-weight-bold mr-3 px-4" @click="close" :disabled="is_processing">
+        <v-btn variant="flat" class="font-weight-bold mr-3 px-4" @click="close" :disabled="is_processing">
           Cancelar
         </v-btn>
         <v-btn

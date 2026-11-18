@@ -127,7 +127,7 @@ export const ACCIONES_FACTURA = [
   },
   {
     clave: 'eliminar', grupo: 'peligro', varios: false,
-    icono: 'mdi-delete-outline', texto: 'Eliminar factura',
+    icono: 'mdi-delete', texto: 'Eliminar factura',
     visible: (filas) => !emitida(filas),
   },
 ]

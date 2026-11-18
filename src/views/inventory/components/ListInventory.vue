@@ -160,7 +160,7 @@
           <v-tooltip v-if="puedeEliminar" location="top">
             <template v-slot:activator="{ props }">
               <v-btn icon variant="text" size="small" color="error" v-bind="props" @click="deleteItem(item)">
-                <v-icon size="small">mdi-delete-outline</v-icon>
+                <v-icon size="small">mdi-delete</v-icon>
               </v-btn>
             </template>
             <span>Eliminar equipo</span>

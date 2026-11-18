@@ -166,7 +166,7 @@
               <v-card variant="tonal" :color="certVigencia.chipColor" class="mx-auto pa-4 mb-4 text-left" max-width="360" rounded="lg">
                 <div class="d-flex justify-space-between align-center mb-2">
                   <span class="text-caption text-medium-emphasis">Expediente</span>
-                  <span class="font-weight-bold text-primary">{{ form.latest_certificate.registry_code }}</span>
+                  <span class="font-weight-bold">{{ form.latest_certificate.registry_code }}</span>
                 </div>
                 <div class="d-flex justify-space-between align-center mb-2">
                   <span class="text-caption text-medium-emphasis">Emitido</span>
@@ -179,7 +179,7 @@
               </v-card>
 
               <div class="d-flex justify-center" style="gap: 10px;">
-                <v-btn color="primary" variant="outlined" :href="form.latest_certificate.link_nube" target="_blank" :disabled="!form.latest_certificate.link_nube">
+                <v-btn variant="tonal" :href="form.latest_certificate.link_nube" target="_blank" :disabled="!form.latest_certificate.link_nube">
                   <v-icon start>mdi-qrcode-scan</v-icon> Ver Certificado
                 </v-btn>
                 <v-btn color="error" variant="text" @click="unlinkCertificate" :loading="linkingCert">
@@ -200,7 +200,7 @@
 
               <v-expand-transition>
                 <v-card v-if="foundCert" variant="outlined" class="mt-4 pa-3 text-left bg-grey-lighten-4">
-                  <div class="subtitle-2 font-weight-bold mb-1 text-primary">Vista Previa:</div>
+                  <div class="subtitle-2 font-weight-bold mb-1">Vista Previa:</div>
                   <div><strong>Expediente:</strong> {{ foundCert.registry_code }}</div>
                   <div><strong>Equipo:</strong> {{ foundCert.equipment }}</div>
                   <v-btn block color="success" variant="flat" class="mt-3 text-white" @click="linkCertificate" :loading="linkingCert">

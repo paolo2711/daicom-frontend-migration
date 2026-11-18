@@ -33,7 +33,7 @@
               </div>
             </div>
 
-            <v-btn color="primary" variant="outlined" prepend-icon="mdi-pencil-plus-outline" @click="listClients?.openAddDialog()">
+            <v-btn variant="tonal" prepend-icon="mdi-pencil-plus-outline" @click="listClients?.openAddDialog()">
               CARGA MANUAL
             </v-btn>
           </div>

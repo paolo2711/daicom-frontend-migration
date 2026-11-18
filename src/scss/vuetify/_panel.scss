@@ -9,7 +9,7 @@
 // con un selector de tres clases.
 .v-card.panel-flotante {
   border-radius: 16px;
-  background: #dce4f0 !important;
+  background: rgb(var(--v-theme-panel)) !important;
   border: 1px solid rgba(0, 0, 0, 0.10);
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.22) !important;
   overflow: hidden;
@@ -17,7 +17,6 @@
 
 .v-theme--dark .v-card.panel-flotante,
 .v-card.panel-flotante.v-theme--dark {
-  background: #2c3849 !important;
   border-color: rgba(255, 255, 255, 0.12);
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.60) !important;
 }

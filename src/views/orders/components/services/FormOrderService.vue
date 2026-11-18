@@ -93,6 +93,7 @@ import { useOrderServices } from '@/composables/useOrderServices'
 import { estaPublicado, vivo } from '@/utils/certificates/estado'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useRowDrag } from '@/composables/useRowDrag'
+import { copiarDebajo } from '@/utils/lists'
 import { usePermissions } from '@/composables/usePermissions'
 import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
 
@@ -182,9 +183,9 @@ function agregar(equipo) {
 }
 
 function otroIgual() {
-  const { name, lab, lab_data, tipo_servicio, certificate_type, marca, modelo, titular, titular_data } = elegida.value
-  abrir({ modo: 'nuevo', name, lab, lab_data, tipo_servicio, certificate_type, marca, modelo, titular, titular_data },
-        indiceElegida.value)
+  elegida.value = copiarDebajo(equipments.value, indiceElegida.value,
+    ({ name, lab, lab_data, tipo_servicio, certificate_type, marca, modelo, titular, titular_data }) =>
+      ({ modo: 'nuevo', name, lab, lab_data, tipo_servicio, certificate_type, marca, modelo, titular, titular_data }))
 }
 
 function cerrarPanel() {

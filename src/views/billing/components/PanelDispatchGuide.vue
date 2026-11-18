@@ -24,8 +24,8 @@
     <div v-if="error" class="text-caption text-error">{{ error }}</div>
 
     <template #pie>
-      <v-spacer />
-      <v-btn variant="text" color="red" prepend-icon="mdi-delete" @click="emit('borrar', indice)">Quitar</v-btn>
+      <item-actions copia="El mismo ítem, con su cantidad y peso" @otro-igual="emit('otro-igual')"
+                    @quitar="emit('borrar', indice)" />
     </template>
   </detail-panel>
 </template>
@@ -33,6 +33,7 @@
 <script setup>
 // Lo de un item de DialogDispatchGuide. La descripcion sugiere los equipos registrados y acepta cualquier texto.
 import DetailPanel from '@/components/shared/DetailPanel.vue'
+import ItemActions from '@/components/shared/ItemActions.vue'
 import { LARGO_DE_LA_DESCRIPCION } from '@/utils/billing/guias'
 import { CAMPO } from '@/utils/fields'
 import CatalogDescriptionField from '@/views/documents/components/shared/CatalogDescriptionField.vue'
@@ -42,5 +43,5 @@ defineProps({
   indice: { type: Number, required: true },
   error: { type: String, default: '' },
 })
-const emit = defineEmits(['cerrar', 'borrar'])
+const emit = defineEmits(['cerrar', 'otro-igual', 'borrar'])
 </script>

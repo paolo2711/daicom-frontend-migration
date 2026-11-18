@@ -18,8 +18,12 @@ const dark_theme = {
         modal_warning: '#E65100',
         // Los tres planos de una pantalla de trabajo: el fondo, la hoja principal y las de apoyo.
         fondo_de_trabajo: '#141414',
-        hoja: '#272727',
-        hoja_de_apoyo: '#1E1E1E'
+        hoja: '#2B2B2B',
+        hoja_de_apoyo: '#232323',
+        // El de los paneles que flotan; en los formularios marca la fila elegida y el panel que abre.
+        panel: '#2C3849',
+        // La marca de lo elegido: 3:1 contra el tono del panel.
+        seleccion: '#6C9BE8'
     }
 }
 
@@ -34,9 +38,11 @@ const light_theme = {
         default: '#563dea',
         modal_header: '#1F4690',
         modal_warning: '#F57C00',
-        fondo_de_trabajo: '#EEF1F6',
+        fondo_de_trabajo: '#CFD4DB',
         hoja: '#FFFFFF',
-        hoja_de_apoyo: '#F8F9FC'
+        hoja_de_apoyo: '#F1F4F8',
+        panel: '#DCE4F0',
+        seleccion: '#1F4690'
     }
 }
 

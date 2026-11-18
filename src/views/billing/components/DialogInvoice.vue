@@ -13,10 +13,10 @@
         icon="mdi-file-document-outline"
         @close="closeDialog"
       >
-        <span v-if="order">Orden: <b class="text-primary">{{ order.order_number }}</b></span>
+        <span v-if="order">Orden: <b>{{ order.order_number }}</b></span>
         <span v-else-if="esMulti">
           {{ orders.length === 1 ? 'Orden' : `${orders.length} órdenes` }}:
-          <span class="text-primary">{{ orders.map(o => o.order_number).join(', ') }}</span>
+          <span>{{ orders.map(o => o.order_number).join(', ') }}</span>
         </span>
         <span v-else>Factura independiente</span>
       </base-modal-header>
@@ -134,7 +134,7 @@
 
       <v-card-actions class="px-6 pb-4 pt-2 border-t-thin">
         <v-btn v-if="editando" color="error" variant="text" @click="eliminar" :loading="isDeleting">
-          <v-icon start>mdi-delete-outline</v-icon> Eliminar
+          <v-icon start>mdi-delete</v-icon> Eliminar
         </v-btn>
         <v-spacer />
         <v-btn variant="flat" class="font-weight-bold mr-3 px-4" @click="closeDialog">Cancelar</v-btn>

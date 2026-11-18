@@ -26,5 +26,7 @@ export function usePdfPreview (pedir, alFallar) {
     }
   }
 
-  return { abierta, url, armando, ver }
+  const cerrar = () => { abierta.value = false }
+
+  return { abierta, url, armando, ver, cerrar }
 }

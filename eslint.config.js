@@ -28,7 +28,15 @@ export default defineConfig([
     rules: {
       // Una fila edita los campos de su item; reemplazar el prop entero si es error.
       'vue/no-mutating-props': ['error', { shallowOnly: true }],
+      // Los slots de las tablas de Vuetify llevan el campo en el nombre: `item.estado`.
+      'vue/valid-v-slot': ['error', { allowModifiers: true }],
     },
+  },
+
+  {
+    // Las paginas se nombran por su seccion: Clients, Certificates.
+    files: ['src/views/**/*.vue'],
+    rules: { 'vue/multi-word-component-names': 'off' },
   },
 
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),

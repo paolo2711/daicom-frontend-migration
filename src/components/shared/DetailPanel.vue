@@ -1,11 +1,10 @@
 <template>
   <div class="d-flex flex-column fill-height">
-    <div class="titulo-de-hoja bg-primary flex-shrink-0">
+    <div class="titulo-de-hoja bg-panel flex-shrink-0">
       <v-btn icon="mdi-arrow-left" variant="text" size="small" density="comfortable" title="Volver"
              @click="emit('cerrar')" />
       <span class="mr-auto text-truncate">{{ titulo }}</span>
-      <v-btn icon="mdi-check" color="white" variant="flat" size="x-small" class="text-primary" title="Listo"
-             @click="emit('cerrar')" />
+      <v-btn icon="mdi-check" variant="text" size="small" density="comfortable" title="Listo" @click="emit('cerrar')" />
     </div>
     <div class="contenido d-flex flex-column ga-3 pa-3 overflow-y-auto flex-grow-1">
       <slot />

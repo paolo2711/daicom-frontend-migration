@@ -46,7 +46,7 @@
                 <span class="mr-auto">
                   Ítems <span class="text-medium-emphasis font-weight-regular">({{ datos.items.length }})</span>
                 </span>
-                <v-btn variant="outlined" class="font-weight-bold" prepend-icon="mdi-plus" @click="agregar">
+                <v-btn variant="tonal" class="font-weight-bold" prepend-icon="mdi-plus" @click="agregar">
                   Agregar ítem
                 </v-btn>
               </div>
@@ -87,7 +87,7 @@
             <template #detalle>
               <panel-service-item v-if="abierto?.item" :item="abierto.item" :indice="indiceAbierto"
                                   :moneda="datos.moneda" :error="errores[indiceAbierto]" @cerrar="abierto = null"
-                                  @borrar="borrar" />
+                                  @otro-igual="otroIgual" @borrar="borrar" />
               <panel-invoice-payment v-else-if="abierto?.clave === 'pago'" :datos="datos" :cuenta="cuenta"
                                      @cerrar="abierto = null" />
               <panel-invoice-option v-else-if="abierto" :key="abierto.clave" :clave="abierto.clave" :datos="datos"
@@ -109,40 +109,18 @@
         </div>
       </v-card-text>
 
-      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin flex-shrink-0">
-        <v-spacer />
-        <v-btn variant="flat" class="font-weight-bold px-4" @click="dialog = false">Cancelar</v-btn>
-        <v-btn variant="outlined" class="font-weight-bold px-4" prepend-icon="mdi-eye-outline"
-               :disabled="!sePuedeEmitir" :loading="armandoVista" @click="verVistaPrevia">Vista previa</v-btn>
-        <v-btn color="primary" variant="flat" class="font-weight-bold px-4" prepend-icon="mdi-send"
-               :disabled="!sePuedeEmitir" :loading="emitiendo" @click="emitir">Emitir factura</v-btn>
-      </v-card-actions>
+      <form-footer accion="Emitir factura" icono="mdi-send" :listo="sePuedeEmitir" :ocupado="emitiendo"
+                   :vista="vista" titulo="Factura" @cancelar="dialog = false" @confirmar="emitir" />
     </v-card>
-
-    <pdf-preview-dialog v-model="vistaPrevia" :url="urlDeVista">
-      <template #encabezado>
-        <v-icon class="mr-2">mdi-file-eye-outline</v-icon>
-        <span class="text-subtitle-1 font-weight-bold text-truncate">Vista previa · Factura</span>
-      </template>
-      <template #acciones>
-        <v-btn variant="text" class="mr-2 font-weight-bold" prepend-icon="mdi-pencil" :disabled="emitiendo"
-               @click="vistaPrevia = false">
-          Seguir editando
-        </v-btn>
-        <v-btn color="primary" variant="flat" class="font-weight-bold" prepend-icon="mdi-send" :loading="emitiendo"
-               @click="emitir">Emitir factura</v-btn>
-      </template>
-    </pdf-preview-dialog>
-
   </v-dialog>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, reactive } from 'vue'
 import { useRowDrag } from '@/composables/useRowDrag'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
-import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
+import FormFooter from '@/components/shared/FormFooter.vue'
 import SegmentedField from '@/components/shared/SegmentedField.vue'
 import OptionRows from '@/components/shared/OptionRows.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
@@ -156,6 +134,7 @@ import { UNIDAD_DE_FACTURA } from '@/utils/billing/facturas'
 import { itemVacio } from '@/utils/documents/quoteDefaults'
 import { debounce } from '@/utils/debounce'
 import { mensajeDeError } from '@/utils/errors'
+import { copiarDebajo } from '@/utils/lists'
 import { CAMPO } from '@/utils/fields'
 import { MONEDAS, monto } from '@/utils/money'
 import { ALQUILER, SERVICIO } from '@/utils/orders/estado'
@@ -266,6 +245,8 @@ function agregar () {
   abrir(null, item)
 }
 
+const otroIgual = () => abrir(null, copiarDebajo(datos.value.items, indiceAbierto.value))
+
 function borrar (indice) {
   if (datos.value.items[indice] === abierto.value?.item) abierto.value = null
   datos.value.items.splice(indice, 1)
@@ -276,9 +257,9 @@ function noSePudo (titulo, porDefecto, error) {
   swal.fire({ icon: 'error', title: titulo, text: mensajeDeError(error, porDefecto) })
 }
 
-const { abierta: vistaPrevia, url: urlDeVista, armando: armandoVista, ver: verVistaPrevia } = usePdfPreview(
+const vista = reactive(usePdfPreview(
   () => BillingDataService.previewInvoice(paraElBack()),
-  error => noSePudo('No se armó la vista previa', 'No se pudo armar la vista previa.', error))
+  error => noSePudo('No se armó la vista previa', 'No se pudo armar la vista previa.', error)))
 
 // `nueva` es lo que devuelve el back: cliente, ordenes, tipo, serie, catalogo de detraccion y datos. Con `plantilla`
 // (otra factura emitida) van su cliente, items y condiciones; la fecha es hoy y guias, OC y cuotas quedan vacias.
@@ -310,7 +291,7 @@ async function emitir () {
   emitiendo.value = true
   try {
     const { data } = await BillingDataService.emitInvoice(paraElBack())
-    vistaPrevia.value = false
+    vista.cerrar()
     dialog.value = false
     emitidaDe.value = data.id
     emit('emitida', data)

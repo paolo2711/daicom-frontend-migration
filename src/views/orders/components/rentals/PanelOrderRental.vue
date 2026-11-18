@@ -33,8 +33,7 @@
       <div v-if="error" class="text-caption text-error">{{ error }}</div>
 
     <template v-if="seQuitaElAlquiler(eq)" #pie>
-      <v-spacer />
-      <v-btn variant="text" color="red" prepend-icon="mdi-delete" @click="emit('borrar', indice)">Quitar</v-btn>
+      <item-actions @quitar="emit('borrar', indice)" />
     </template>
   </detail-panel>
 </template>
@@ -42,6 +41,7 @@
 <script setup>
 import { computed } from 'vue'
 import DetailPanel from '@/components/shared/DetailPanel.vue'
+import ItemActions from '@/components/shared/ItemActions.vue'
 import { fechaCorta, hoyISO } from '@/utils/dates'
 import { CAMPO } from '@/utils/fields'
 import {

@@ -17,6 +17,7 @@
           </div>
         </div>
 
+        <slot name="acciones"></slot>
         <v-btn icon variant="text" @click="$emit('close')" color="grey" class="ms-4 flex-shrink-0">
           <v-icon>mdi-close</v-icon>
         </v-btn>

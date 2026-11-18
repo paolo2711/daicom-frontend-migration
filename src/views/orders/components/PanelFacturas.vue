@@ -58,9 +58,9 @@
                 <div class="botones mt-3">
                   <v-btn color="primary" variant="flat" size="small" class="text-none" prepend-icon="mdi-cash-plus"
                          @click="abrirAbonos(factura)">Abonar</v-btn>
-                  <v-btn v-if="factura.pdf_url" variant="outlined" size="small" class="text-none"
+                  <v-btn v-if="factura.pdf_url" variant="tonal" size="small" class="text-none"
                          prepend-icon="mdi-file-pdf-box" @click="abrirEnOtraPestana(factura.pdf_url)">PDF</v-btn>
-                  <v-btn v-if="factura.es_fiscal && !varias" variant="outlined" size="small" class="text-none"
+                  <v-btn v-if="factura.es_fiscal && !varias" variant="tonal" size="small" class="text-none"
                          prepend-icon="mdi-link-off" @click="quitar(factura)">Desvincular</v-btn>
                 </div>
               </div>

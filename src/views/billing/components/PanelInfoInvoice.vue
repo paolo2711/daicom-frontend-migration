@@ -11,7 +11,7 @@
           <div class="text-caption text-medium-emphasis">{{ nota.motivo }} · {{ nota.motivo_nombre }}</div>
         </div>
         <span class="text-no-wrap">{{ Number(nota.total) ? `− ${monto(nota.total, nota.moneda)}` : 'Sin monto' }}</span>
-        <v-btn size="small" variant="outlined" class="text-none" prepend-icon="mdi-file-pdf-box"
+        <v-btn size="small" variant="tonal" class="text-none" prepend-icon="mdi-file-pdf-box"
                :disabled="!nota.pdf_url" @click="abrirEnOtraPestana(nota.pdf_url)">PDF</v-btn>
       </div>
     </div>

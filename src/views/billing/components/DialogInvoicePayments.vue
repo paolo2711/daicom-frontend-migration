@@ -8,7 +8,7 @@
       >
         <span v-if="invoice">
           Factura:
-          <span class="font-weight-bold text-primary ml-1">{{ invoice.invoice_number || 'Sin número' }}</span>
+          <span class="font-weight-bold ml-1">{{ invoice.invoice_number || 'Sin número' }}</span>
         </span>
       </base-modal-header>
 

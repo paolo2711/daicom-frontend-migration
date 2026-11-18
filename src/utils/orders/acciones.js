@@ -52,7 +52,7 @@ export const ACCIONES_ORDEN = [
   },
   {
     clave: 'anular', grupo: 'peligro', varios: true, permiso: 1004,
-    icono: 'mdi-delete-outline', texto: 'Anular',
+    icono: 'mdi-delete', texto: 'Anular',
     visible: algunaViva,
   },
 ]

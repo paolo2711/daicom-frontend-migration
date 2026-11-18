@@ -11,7 +11,7 @@
         </span>
         <v-btn v-if="d.pdf" icon="mdi-file-pdf-box" size="small" variant="text" title="Abrir"
                @click="abrirEnOtraPestana(d.pdf)" />
-        <v-btn :icon="d.id ? 'mdi-link-off' : 'mdi-delete-outline'" size="small" variant="text" color="error"
+        <v-btn :icon="d.id ? 'mdi-link-off' : 'mdi-delete'" size="small" variant="text" color="red"
                title="Quitar" @click="desvincular(v, d)" />
       </div>
       <paginated-autocomplete v-model="buscadas[v.campo]" :fetch="buscadores[v.campo]" :mapper="v.aOpcion"
@@ -65,7 +65,7 @@
           <span class="text-caption text-medium-emphasis">· {{ d.detalle }}</span></span>
         <v-btn v-if="d.pdf" icon="mdi-file-pdf-box" size="small" variant="text" title="Abrir"
                @click="abrirEnOtraPestana(d.pdf)" />
-        <v-btn icon="mdi-delete-outline" size="small" variant="text" color="error" title="Quitar" @click="borrar(d)" />
+        <v-btn icon="mdi-delete" size="small" variant="text" color="red" title="Quitar" @click="borrar(d)" />
       </div>
       <div class="d-flex align-center ga-1 mt-1">
         <v-text-field v-model="numeroDeOc" label="N.° (opcional)" density="compact" variant="outlined"

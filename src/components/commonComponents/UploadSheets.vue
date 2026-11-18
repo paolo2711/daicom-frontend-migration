@@ -33,6 +33,14 @@ const CONVERSIONES = {
     cuerpo: (tarea, subido) => conArchivo(subido, { tarea: tarea.id }),
     enviar: (cuerpo) => CertificateDataService.buildPDFSuelto(cuerpo),
   },
+  // El certificado en fondo blanco: la tarea es de descarga, como el suelto.
+  sin_plantilla: {
+    cuerpo: (tarea, subido) => {
+      const campos = { related_certificate: tarea.certificado, tarea: tarea.id, sin_plantilla: 'true' }
+      return subido.file ? conArchivo(subido, campos) : { ...campos, native_filename: tarea.native_filename }
+    },
+    enviar: (cuerpo) => CertificateDataService.buildPDF(cuerpo),
+  },
 }
 
 const getTask = (id, tipo) => appStore.uploadTasks.find(
@@ -42,8 +50,8 @@ const getTask = (id, tipo) => appStore.uploadTasks.find(
 // Lo que hace falta para repetir la conversion vive en la tarea: el nativo lo
 // vuelve a leer el servidor, el del navegador viajo una sola vez. La clave del
 // Excel no va ahi, que el store se guarda en localStorage.
-function registrar({ id, code, tipo, native_filename }) {
-  const propios = { code, native_filename, source: native_filename ? 'nativo' : 'manual' }
+function registrar({ id, code, tipo, native_filename, conversion, certificado }) {
+  const propios = { code, native_filename, conversion, certificado, source: native_filename ? 'nativo' : 'manual' }
   if (getTask(id, tipo)) {
     appStore.updateUploadTask(id, tipo, propios)
     return
@@ -65,7 +73,7 @@ async function processSheet(id, tipo, subido = {}) {
     status: 'generating', progress: 0, step: ENVIANDO, error_msg: '',
   })
 
-  const conversion = CONVERSIONES[tipo]
+  const conversion = CONVERSIONES[tarea.conversion || tipo]
   try {
     await conversion.enviar(conversion.cuerpo(tarea, subido))
   } catch (error) {
@@ -77,8 +85,8 @@ async function processSheet(id, tipo, subido = {}) {
 }
 
 function handleSheetStart(e) {
-  const { id, code, tipo = 'sheet', file, password, native_filename } = e.detail
-  registrar({ id, code, tipo, native_filename })
+  const { id, code, tipo = 'sheet', file, password, native_filename, conversion, certificado } = e.detail
+  registrar({ id, code, tipo, native_filename, conversion, certificado })
   processSheet(id, tipo, { file, password })
 }
 

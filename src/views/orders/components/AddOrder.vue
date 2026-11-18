@@ -3,7 +3,7 @@
     <v-card class="d-flex flex-column" style="height: 100%;">
       <base-modal-header :title="titulo" icon="mdi-file-document-plus" @close="close">
         <span v-if="!editando && next_order_number">
-          Sig. Orden: <span class="font-weight-bold text-primary ml-1">{{ next_order_number }}</span>
+          Sig. Orden: <span class="font-weight-bold ml-1">{{ next_order_number }}</span>
         </span>
       </base-modal-header>
 
@@ -40,46 +40,20 @@
         </v-form>
       </v-card-text>
 
-      <!-- Agregamos un borde superior para delimitar los botones cuando el contenido hace scroll -->
-      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin">
-        <div class="d-flex flex-wrap align-center ga-2 columna-de-trabajo">
+      <form-footer accion="Guardar orden" :listo="sePuedeGuardar" :ocupado="is_on_sending_process"
+                   :vista="esDeServicio(order) ? vista : null" :titulo="titulo"
+                   accion-en-vista="Guardar e imprimir" icono-en-vista="mdi-printer"
+                   @cancelar="close" @confirmar="save()" @confirmar-en-vista="save(true)">
+        <template #inicio>
           <resumen-equipos :filas="items_to_save" :por-tipo="esDeServicio(order)" />
-          <v-spacer />
-          <v-btn variant="flat" class="font-weight-bold px-4" @click="close">Cancelar</v-btn>
-          <template v-if="esDeServicio(order)">
-            <v-btn variant="outlined" class="font-weight-bold px-4" prepend-icon="mdi-file-eye-outline"
-                   :loading="armandoVista" :disabled="!sePuedeGuardar" @click="verVistaPrevia">
-              Vista previa
-            </v-btn>
-            <v-btn variant="outlined" class="font-weight-bold px-4" prepend-icon="mdi-printer"
-                   :disabled="!sePuedeGuardar || is_on_sending_process" @click="save(true)">
-              Guardar e imprimir
-            </v-btn>
-          </template>
-          <v-btn color="primary" variant="flat" class="font-weight-bold px-4" @click="save()"
-                 :disabled="!sePuedeGuardar" :loading="is_on_sending_process">
-            Guardar orden
-          </v-btn>
-        </div>
-      </v-card-actions>
-
-      <!-- El ingreso tal como saldria, sin guardar: desde aca se guarda o se vuelve a editar. -->
-      <pdf-preview-dialog v-model="vistaPrevia" :url="urlDeVista">
-        <template #encabezado>
-          <v-icon class="mr-2">mdi-file-eye-outline</v-icon>
-          <span class="text-subtitle-1 font-weight-bold text-truncate">Vista previa · {{ titulo }}</span>
         </template>
-        <template #acciones>
-          <v-btn variant="text" class="mr-2 font-weight-bold" prepend-icon="mdi-pencil"
-                 :disabled="is_on_sending_process" @click="vistaPrevia = false">
-            Seguir editando
-          </v-btn>
-          <v-btn color="primary" variant="flat" class="font-weight-bold px-4" prepend-icon="mdi-printer"
-                 :loading="is_on_sending_process" @click="save(true)">
+        <template v-if="esDeServicio(order)" #extra>
+          <v-btn variant="tonal" class="font-weight-bold px-4" prepend-icon="mdi-printer"
+                 :disabled="!sePuedeGuardar || is_on_sending_process" @click="save(true)">
             Guardar e imprimir
           </v-btn>
         </template>
-      </pdf-preview-dialog>
+      </form-footer>
     </v-card>
     <dialog-certificate-owners :cambio="cambioDeCliente" @volver="volverAlCliente" @aplicado="aceptarCliente" />
   </v-dialog>
@@ -87,7 +61,7 @@
 
 <script setup>
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
-import { ref, computed, watch, nextTick, getCurrentInstance } from 'vue'
+import { ref, computed, watch, nextTick, getCurrentInstance, reactive } from 'vue'
 import { useLocalDraft } from '@/composables/useLocalDraft'
 import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useSavedNumbers } from '@/composables/useSavedNumbers'
@@ -102,7 +76,7 @@ import { sinPendientes, subirPendientes, vinculosAlCrear } from '@/utils/orders/
 import ResumenEquipos from './ResumenEquipos.vue'
 import DialogCertificateOwners from './services/DialogCertificateOwners.vue'
 import VersionsOrderService from './services/VersionsOrderService.vue'
-import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
+import FormFooter from '@/components/shared/FormFooter.vue'
 import { abrirIngreso } from '@/utils/orders/ingreso'
 import ClientDataService from '@/services/clients/clientDataService'
 import { sinServicio, useOrderServices } from '@/composables/useOrderServices'
@@ -293,12 +267,12 @@ async function guardarEdicion() {
 const imprimirIngreso = (id) => abrirIngreso(id).catch(error => $swal.fire('La orden se guardó',
   mensajeDeError(error, 'No se pudo abrir el ingreso: imprímalo desde el menú de la orden.'), 'warning'))
 
-const { abierta: vistaPrevia, url: urlDeVista, armando: armandoVista, ver: verVistaPrevia } = usePdfPreview(
+const vista = reactive(usePdfPreview(
   () => OrderDataService.vistaPreviaIngreso({ client: order.value.client, items: items_to_save.value }),
-  error => $swal.fire('No se pudo armar la vista previa', mensajeDeError(error, 'No se pudo armar la vista previa.'), 'error'))
+  error => $swal.fire('No se pudo armar la vista previa', mensajeDeError(error, 'No se pudo armar la vista previa.'), 'error')))
 
 function close() {
-  vistaPrevia.value = false
+  vista.cerrar()
   if (conBorrador()) borrador.descartar()
   order.value.client = null
   items_to_save.value = []

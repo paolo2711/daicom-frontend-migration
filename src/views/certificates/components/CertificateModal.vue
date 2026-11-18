@@ -3,7 +3,7 @@
     <v-card>
       <base-modal-header :title="titulo" icon="mdi-certificate-outline" @close="close">
         <template v-if="!isEdit && codigoNuevo">
-          Correlativo: <span class="font-weight-bold text-primary ml-1">{{ codigoNuevo }}</span>
+          Correlativo: <span class="font-weight-bold ml-1">{{ codigoNuevo }}</span>
         </template>
       </base-modal-header>
 

@@ -3,7 +3,7 @@
     <v-toolbar density="compact" flat color="transparent" class="pl-3">
       <div class="d-flex align-center">
         <v-icon start color="primary">mdi-clipboard-list</v-icon>
-        <span class="text-subtitle-2 font-weight-bold text-primary">
+        <span class="text-subtitle-2 font-weight-bold">
           Equipos en este Servicio: {{ order.order_number }}
         </span>
         <span v-if="muestraFecha && order.created_at" class="text-caption text-medium-emphasis ml-3 mt-1 font-weight-medium d-flex align-center">

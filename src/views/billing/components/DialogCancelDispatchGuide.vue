@@ -14,7 +14,7 @@
         Anular
       </v-btn>
       <template v-else>
-        <v-btn variant="outlined" class="font-weight-bold px-4" :disabled="!motivo"
+        <v-btn variant="tonal" class="font-weight-bold px-4" :disabled="!motivo"
                :loading="anulando === false" @click="anular(motivo, false)">
           La daré de baja después
         </v-btn>

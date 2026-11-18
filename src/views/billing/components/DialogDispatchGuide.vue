@@ -69,7 +69,7 @@
                 <span class="mr-auto">
                   Ítems <span class="text-medium-emphasis font-weight-regular">({{ datos.items.length }})</span>
                 </span>
-                <v-btn variant="outlined" class="font-weight-bold" prepend-icon="mdi-plus" @click="agregar">
+                <v-btn variant="tonal" class="font-weight-bold" prepend-icon="mdi-plus" @click="agregar">
                   Agregar ítem
                 </v-btn>
               </div>
@@ -102,7 +102,8 @@
 
             <template #detalle>
               <panel-dispatch-guide :item="elegido" :indice="indiceElegido" :error="errores[indiceElegido]"
-                                    @cerrar="elegido = null" @borrar="borrar" />
+                                    @cerrar="elegido = null" @otro-igual="otroIgual"
+                                    @borrar="borrar" />
             </template>
 
             <template #sin-detalle>
@@ -113,50 +114,19 @@
         </div>
       </v-card-text>
 
-      <v-card-actions class="px-6 pb-4 pt-2 border-t-thin flex-shrink-0">
-        <div class="d-flex flex-wrap align-center ga-2 columna-de-trabajo">
-          <v-spacer />
-          <v-btn variant="flat" class="font-weight-bold px-4" @click="dialog = false">Cancelar</v-btn>
-          <v-btn variant="outlined" class="font-weight-bold px-4" prepend-icon="mdi-file-eye-outline"
-                 :loading="armandoVista" :disabled="!sePuedeEmitir" @click="verVistaPrevia">
-            Vista previa
-          </v-btn>
-          <v-btn color="primary" variant="flat" class="font-weight-bold px-4" prepend-icon="mdi-send"
-                 :loading="emitiendo" :disabled="!sePuedeEmitir" @click="emitir">
-            Emitir guía
-          </v-btn>
-        </div>
-      </v-card-actions>
-
-      <!-- La guia tal como saldria, sin emitir: desde aca se emite o se vuelve a editar. -->
-      <pdf-preview-dialog v-model="vistaPrevia" :url="urlDeVista">
-        <template #encabezado>
-          <v-icon class="mr-2">mdi-file-eye-outline</v-icon>
-          <span class="text-subtitle-1 font-weight-bold text-truncate">Vista previa · Guía de remisión</span>
-        </template>
-        <template #acciones>
-          <v-btn variant="text" class="mr-2 font-weight-bold" prepend-icon="mdi-pencil" :disabled="emitiendo"
-                 @click="vistaPrevia = false">
-            Seguir editando
-          </v-btn>
-          <v-btn color="primary" variant="flat" class="font-weight-bold px-4" prepend-icon="mdi-send"
-                 :loading="emitiendo" @click="emitir">
-            Emitir guía
-          </v-btn>
-        </template>
-      </pdf-preview-dialog>
+      <form-footer accion="Emitir guía" icono="mdi-send" :listo="sePuedeEmitir" :ocupado="emitiendo"
+                   :vista="vista" titulo="Guía de remisión" @cancelar="dialog = false" @confirmar="emitir" />
     </v-card>
-
   </v-dialog>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, reactive } from 'vue'
 import { useRowDrag } from '@/composables/useRowDrag'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import DetailEmpty from '@/components/shared/DetailEmpty.vue'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
-import PdfPreviewDialog from '@/components/shared/PdfPreviewDialog.vue'
+import FormFooter from '@/components/shared/FormFooter.vue'
 import UbigeoField from '@/components/shared/UbigeoField.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
@@ -167,6 +137,7 @@ import BillingDataService from '@/services/billing/billingDataService'
 import { OTROS, itemVacio } from '@/utils/billing/guias'
 import { hoyISO } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
+import { copiarDebajo } from '@/utils/lists'
 import { CAMPO } from '@/utils/fields'
 import PanelDispatchGuide from './PanelDispatchGuide.vue'
 import RowDispatchGuide from './RowDispatchGuide.vue'
@@ -211,9 +182,9 @@ function noSePudo (titulo, porDefecto, error) {
   swal.fire({ icon: 'error', title: titulo, text: mensajeDeError(error, porDefecto) })
 }
 
-const { abierta: vistaPrevia, url: urlDeVista, armando: armandoVista, ver: verVistaPrevia } = usePdfPreview(
+const vista = reactive(usePdfPreview(
   () => BillingDataService.previewDispatchGuide(paraElBack()),
-  error => noSePudo('No se armó la vista previa', 'No se pudo armar la vista previa.', error))
+  error => noSePudo('No se armó la vista previa', 'No se pudo armar la vista previa.', error)))
 
 const resumen = computed(() => {
   const { codigo, descripcion } = datos.value.motivo
@@ -229,6 +200,8 @@ function agregar() {
   datos.value.items.push(item)
   elegido.value = item
 }
+
+const otroIgual = () => { elegido.value = copiarDebajo(datos.value.items, indiceElegido.value) }
 
 function borrar(indice) {
   if (datos.value.items[indice] === elegido.value) elegido.value = null
@@ -257,7 +230,7 @@ async function emitir() {
   emitiendo.value = true
   try {
     const { data } = await BillingDataService.createDispatchGuide(paraElBack())
-    vistaPrevia.value = false
+    vista.cerrar()
     dialog.value = false
     emitidaDe.value = data.id
     emit('emitida', data)

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="text-subtitle-1 font-weight-bold text-primary mb-3">
+    <div class="titulo-de-seccion mb-3">
       <v-icon size="small" class="mr-1">mdi-domain</v-icon> Cliente a facturar
     </div>
 
@@ -72,7 +72,7 @@
 
     <v-divider class="my-4" />
 
-    <div class="text-subtitle-1 font-weight-bold text-primary mb-3">
+    <div class="titulo-de-seccion mb-3">
       <v-icon size="small" class="mr-1">mdi-text-box-outline</v-icon> Condiciones
     </div>
     <v-row dense>

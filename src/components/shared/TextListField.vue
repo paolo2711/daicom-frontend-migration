@@ -30,7 +30,7 @@ import InnerCounter from '@/components/shared/InnerCounter.vue'
 const lista = defineModel({ type: Array, required: true })
 
 defineProps({
-  textoAgregar: { type: String, default: 'Añadir' },
+  textoAgregar: { type: String, default: 'Agregar' },
   placeholder: { type: String, default: '' },
   maxlength: { type: Number, default: 0 },
 })

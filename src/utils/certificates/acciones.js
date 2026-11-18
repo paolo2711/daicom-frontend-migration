@@ -80,7 +80,7 @@ export const ACCIONES_CERTIFICADO = [
   },
   {
     clave: 'anular', grupo: 'peligro', varios: true, permiso: 1003,
-    icono: 'mdi-delete-outline', texto: 'Anular',
+    icono: 'mdi-delete', texto: 'Anular',
     visible: algunoVivo,
   },
   {

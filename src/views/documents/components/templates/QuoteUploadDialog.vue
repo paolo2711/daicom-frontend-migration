@@ -5,7 +5,7 @@
       <pdf-drop-zone :label="`Suelta el PDF de la ${nombre}`" @file="f => (pdf = f)" @invalid="avisarSoloPdf"
                      style="display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0;">
         <base-modal-header :title="`Subir ${nombre} en PDF`" icon="mdi-file-upload-outline" @close="close">
-          <span v-if="numero">Se registrará como <span class="font-weight-bold text-primary ml-1">{{ numero }}</span></span>
+          <span v-if="numero">Se registrará como <span class="font-weight-bold ml-1">{{ numero }}</span></span>
         </base-modal-header>
 
         <v-card-text class="pt-4" style="overflow-y: auto; flex-grow: 1; min-height: 0;">

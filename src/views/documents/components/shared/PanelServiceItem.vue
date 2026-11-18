@@ -38,8 +38,8 @@
     <div v-if="error" class="text-caption text-error">{{ error }}</div>
 
     <template #pie>
-      <v-spacer />
-      <v-btn variant="text" color="red" prepend-icon="mdi-delete" @click="emit('borrar', indice)">Quitar</v-btn>
+      <item-actions copia="El mismo ítem, con su precio y cantidad" @otro-igual="emit('otro-igual')"
+                    @quitar="emit('borrar', indice)" />
     </template>
   </detail-panel>
 </template>
@@ -48,6 +48,7 @@
 // El item elegido de una factura, cotizacion o valorizacion. La descripcion sugiere servicios y acepta cualquier texto.
 import { computed, ref } from 'vue'
 import DetailPanel from '@/components/shared/DetailPanel.vue'
+import ItemActions from '@/components/shared/ItemActions.vue'
 import SegmentedField from '@/components/shared/SegmentedField.vue'
 import { LIMITES, preciosDelCatalogo } from '@/utils/documents/quoteDefaults'
 import { CAMPO } from '@/utils/fields'
@@ -65,7 +66,7 @@ const props = defineProps({
   acreditaciones: { type: Array, default: () => [] },
   etiquetaDelDetalle: { type: String, default: 'Detalle' },
 })
-const emit = defineEmits(['cerrar', 'borrar'])
+const emit = defineEmits(['cerrar', 'otro-igual', 'borrar'])
 
 const IGV = [{ valor: false, texto: 'Más IGV' }, { valor: true, texto: 'Incluye IGV' }]
 const opcionesDeAcreditacion = computed(() => [

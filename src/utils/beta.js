@@ -2,7 +2,9 @@
 // o una entrada del menu con `beta: true`. Solo se ve con VITE_BETA=true (el
 // .env de cada entorno); el build del server no la lleva, asi que ahi ni la
 // pestaña ni la ruta existen.
-const VER_BETA = import.meta.env.VITE_BETA === 'true'
+
+// Para lo beta que no es ruta ni menu, como un boton.
+export const VER_BETA = import.meta.env.VITE_BETA === 'true'
 
 export const esBeta = (item) => Boolean(item?.meta?.beta ?? item?.beta)
 

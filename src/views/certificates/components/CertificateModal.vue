@@ -58,7 +58,7 @@
                 :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap" recurso="equipos"
                 :return-object="false" item-title="name" item-value="id"
                 :seed="equipSeed" @selected="conSuLaboratorio"
-                label="Equipo" :readonly="publicado"
+                label="Equipo" :disabled="publicado"
                 density="compact" variant="outlined" hide-details="auto"
                 prepend-inner-icon="mdi-toolbox-outline"
                 clearable
@@ -75,7 +75,7 @@
                                       :return-object="false" item-title="name" item-value="id"
                                       density="compact" hide-details="auto"
                                       prepend-inner-icon="mdi-flask-outline"
-                                      clearable variant="outlined" label="Laboratorio" :readonly="publicado">
+                                      clearable variant="outlined" label="Laboratorio" :disabled="publicado">
                 <template #append>
                   <add-new-button texto="Nuevo laboratorio" @click="labDialogOpen = true" />
                 </template>
@@ -86,7 +86,7 @@
               <v-row dense>
                 <v-col v-for="campo in DEL_EQUIPO" :key="campo.clave" cols="12" md="4">
                   <v-text-field v-model="form[campo.clave]" :label="campo.etiqueta" :prepend-inner-icon="campo.icono"
-                                maxlength="256" :readonly="publicado" density="compact" variant="outlined"
+                                maxlength="256" :disabled="publicado" density="compact" variant="outlined"
                                 hide-details="auto" />
                 </v-col>
                 <v-col v-if="publicado" cols="12" class="text-caption text-medium-emphasis pt-0">

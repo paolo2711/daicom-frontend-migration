@@ -5,7 +5,7 @@ export default {
             v => (v && v.length <= 120) || "No debe ser mayor a 120 caracteres",
             v => (v && v.trim().length !== 0) || "Ingrese Usuario válido",
             v => (v && v.replace(/\s/g, '').length === v.length) || "Usuario no puede contener espacios en blanco",
-            v => (v && v.length >= 6) || "Usuario es de al menos 6 caracteres"
+            v => (v && v.length >= 3) || "Usuario es de al menos 3 caracteres"
         ]
     },
     first_name_rules(){

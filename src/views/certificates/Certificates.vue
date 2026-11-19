@@ -19,12 +19,12 @@
             Excel a PDF
           </v-btn>
 
-          <!-- Nuevo certificado: abre el modal del hijo directamente -->
-          <v-btn color="primary" @click="abrirNuevoCertificado">
+          <!-- En desarrollo (beta): abre el modal del hijo directamente. -->
+          <v-btn v-if="VER_BETA" color="primary" @click="abrirNuevoCertificado">
             <template v-slot:prepend>
               <v-icon>mdi-plus</v-icon>
             </template>
-            Nuevo Certificado
+            Nuevo Certificado (beta)
           </v-btn>
 
         </div>
@@ -44,6 +44,7 @@
 
 <script setup>
 import { ref, defineAsyncComponent } from 'vue'
+import { VER_BETA } from '@/utils/beta'
 
 // Carga lazy idéntica al original
 const ListCertificates = defineAsyncComponent(

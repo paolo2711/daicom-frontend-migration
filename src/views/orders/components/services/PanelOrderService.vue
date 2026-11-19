@@ -5,9 +5,9 @@
         <paginated-autocomplete v-model="eq.name" :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
                                 recurso="equipos" :seed="semillaDeEquipo" @selected="conSuLaboratorio"
                                 label="Equipo" :return-object="false" item-title="name" item-value="id"
-                                :readonly="eq.publicado" v-bind="CAMPO" />
+                                :disabled="eq.publicado" v-bind="CAMPO" />
         <v-textarea v-for="campo in CAMPOS" :key="campo.clave" v-model="eq[campo.clave]"
-                    :label="campo.etiqueta" :maxlength="largos[campo.clave]" :readonly="eq.publicado" v-bind="TEXTO" />
+                    :label="campo.etiqueta" :maxlength="largos[campo.clave]" :disabled="eq.publicado" v-bind="TEXTO" />
         <div v-if="eq.publicado" class="text-caption text-medium-emphasis">
           Su certificado está en la nube: equipo, laboratorio, marca, modelo, serie y titular ya no cambian.
         </div>
@@ -23,7 +23,7 @@
         <paginated-autocomplete v-model="eq.lab" :fetch="fetchLabs" :mapper="LabMappers.getMap"
                                 recurso="labs" :seed="eq.lab_data" @selected="l => (eq.lab_data = l)"
                                 label="Laboratorio" :return-object="false" item-title="name" item-value="id"
-                                :readonly="eq.publicado" v-bind="CAMPO" />
+                                :disabled="eq.publicado" v-bind="CAMPO" />
         <template v-if="eq.certificate_type">
           <div class="text-caption text-medium-emphasis mt-1">Certificado a nombre de</div>
           <client-select :model-value="eq.titular ?? cliente?.id" :seed="eq.titular_data ?? cliente"

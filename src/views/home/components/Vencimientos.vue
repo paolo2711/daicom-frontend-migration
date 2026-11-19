@@ -96,13 +96,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import Swal from 'sweetalert2'
 import HomeDataService from '@/services/home/homeDataService'
 import { mensajeDeError } from '@/utils/errors'
 import { fechaCorta, fechaHora, horaCorta, hoyISO } from '@/utils/dates'
 
-const emit = defineEmits(['ir'])
+const emit = defineEmits(['ir', 'resumen'])
 
 const VISIBLES = 5
 
@@ -132,6 +132,15 @@ const grupos = computed(() => {
     // Solo llega para quien ve Ordenes, y no sale del escaneo: se lee al pedirla.
     ...(d.facturas ? [{ id: 'facturas', titulo: 'Facturas a crédito', ...d.facturas, vacio: 'Ninguna por vencer' }] : []),
   ]
+})
+
+// Para la tarjeta de resumen de Inicio: cuantos vencidos hay y de que.
+watch(grupos, (gs) => {
+  const con = gs.filter(g => g.vencidos)
+  emit('resumen', {
+    total: con.reduce((suma, g) => suma + g.vencidos, 0),
+    detalle: con.map(g => `${g.vencidos} ${g.titulo.toLowerCase()}`).join(' · '),
+  })
 })
 
 const textoDias = (d) => (d < 0 ? `${Math.abs(d)} d vencido` : `en ${d} d`)
@@ -247,7 +256,7 @@ onMounted(cargar)
 
 .venc-mas {
   margin-top: .45rem; padding: .1rem .35rem; border-radius: .3rem;
-  font-size: .72rem; font-weight: 600; color: rgb(var(--v-theme-primary));
+  font-size: .72rem; font-weight: 600; color: rgb(var(--v-theme-seleccion));
   display: flex; align-items: center; gap: .1rem;
   background: none; border: 0; cursor: pointer;
 }

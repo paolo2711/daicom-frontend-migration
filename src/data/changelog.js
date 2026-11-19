@@ -19,6 +19,17 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.11.1.2',
+    fecha: '2026-11-19',
+    cambio: [
+      'Certificados: se quita el botón «Nuevo Certificado».',
+      'Usuarios: el nombre de usuario puede tener desde 3 letras.',
+    ],
+    arreglo: [
+      'Certificado en la nube: equipo, laboratorio, marca, modelo y serie se ven bloqueados y ya no dejan hacer clic ni borrar.',
+    ],
+  },
+  {
     version: '3.11.1.1',
     fecha: '2026-11-18',
     cambio: [

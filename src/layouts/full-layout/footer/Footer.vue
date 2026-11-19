@@ -6,7 +6,13 @@
     <v-col cols="12" class="d-flex justify-space-between align-center px-4">
       <span class="text-subtitle-2 text-medium-emphasis">© {{ new Date().getFullYear() }} — DAICOM S.A.C.</span>
       
-      <span class="text-caption font-weight-bold text-grey">v{{ appVersion }}</span>
+      <span class="d-flex align-center ga-4">
+        <!-- La licencia gratis de Storyset pide la atribucion. -->
+        <a href="https://storyset.com" target="_blank" rel="noopener" class="text-caption text-medium-emphasis">
+          Ilustraciones de Storyset
+        </a>
+        <span class="text-caption font-weight-bold text-grey">v{{ appVersion }}</span>
+      </span>
     </v-col>
   </v-footer>
 </template>

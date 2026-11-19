@@ -23,7 +23,8 @@ import { ref } from 'vue'
 const props = defineProps({
   // Texto del overlay mientras se arrastra.
   label:    { type: String,  default: 'Suelta el PDF aquí' },
-  // Mime aceptado: exacto ('application/pdf') o comodin ('image/*'). '*' = todo.
+  // Mime aceptado: exacto ('application/pdf'), comodin ('image/*') o una lista como la del input
+  // ('image/png, image/jpeg'). '*' = todo.
   accept:   { type: String,  default: 'application/pdf' },
   // Permite soltar varios archivos.
   multiple: { type: Boolean, default: false },
@@ -34,11 +35,13 @@ const emit = defineEmits(['file', 'files', 'invalid'])
 
 const arrastrando = ref(false)
 
-const acepta = (file) => {
-  const a = props.accept
-  if (!a || a === '*') return true
+const aceptaUno = (file, a) => {
   if (a.endsWith('/*')) return file.type.startsWith(a.slice(0, -1)) // 'image/*' -> 'image/'
   return file.type === a
+}
+const acepta = (file) => {
+  if (!props.accept || props.accept === '*') return true
+  return props.accept.split(',').some(a => aceptaUno(file, a.trim()))
 }
 
 const onDragOver = (e) => {

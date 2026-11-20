@@ -18,13 +18,13 @@
           </div>
 
           <v-card-text class="pa-4">
-            <list-roles ref="listRoles" @selectedRole="setSelectedRole" />
+            <ListRoles ref="listRoles" @selectedRole="setSelectedRole" />
           </v-card-text>
         </v-card>
       </v-col>
 
       <v-col cols="12" md="7">
-        <list-permissions ref="listPermissions" />
+        <ListPermissions ref="listPermissions" />
       </v-col>
     </v-row>
   </v-container>

@@ -63,16 +63,15 @@
                   :disabled="loading_validation"
                 ></v-checkbox>
               </th>
-              <th class="text-left font-weight-bold">Código</th>
+              <th class="text-left font-weight-bold">Certificado</th>
               <th class="text-left font-weight-bold">Equipo y marca</th>
-              <th class="text-center font-weight-bold">Tipo</th>
               <th class="text-left font-weight-bold">Ahora</th>
               <th class="text-left font-weight-bold">Qué va a pasar</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loading_validation">
-              <td colspan="6" class="text-center py-6">
+              <td colspan="5" class="text-center py-6">
                 <v-progress-circular indeterminate color="primary" size="32" class="mb-2"></v-progress-circular>
                 <div class="text-caption text-medium-emphasis">Buscando los Excel en el servidor...</div>
               </td>
@@ -88,9 +87,8 @@
                   color="primary"
                 ></v-checkbox>
               </td>
-              <td class="font-weight-medium">{{ item.registry_code }}</td>
+              <td class="font-weight-medium text-no-wrap" :title="item.registry_code">{{ item.numero }}</td>
               <td class="text-caption">{{ item.equipment }}</td>
-              <td class="text-center text-caption text-medium-emphasis">{{ siglaDelTipo(item.certificate_type) }}</td>
               <td class="text-caption text-medium-emphasis">{{ ahora(item) }}</td>
 
               <td>
@@ -179,7 +177,7 @@ import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { alPresionarEnter } from '@/utils/keyboard'
 import { hoyISO } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
-import { SE_RENUMERA, siglaDelTipo } from '@/utils/certificates/tipos'
+import { SE_RENUMERA } from '@/utils/certificates/tipos'
 import { opcionPorClave } from '@/composables/useOrderServices'
 import { ACCIONES, colorDe, esAviso, estaAdjuntado } from './batchActions'
 import { uuid } from '@/utils/uuid'
@@ -391,7 +389,7 @@ const guardarPdfsBase = async (certs) => {
     try {
       await CertificateDataService.subirPdfBase(cert.id, formData)
     } catch (error) {
-      fallados.push(`${cert.registry_code}: ${mensajeDeError(error, 'no se pudo subir')}`)
+      fallados.push(`${cert.numero}: ${mensajeDeError(error, 'no se pudo subir')}`)
     }
   }
 
@@ -470,8 +468,8 @@ const confirmAction = async () => {
       // Sin plantilla, cada uno es una descarga con su propia tarea: no toca el certificado.
       const tareaDe = (cert) => (sinPlantilla.value
         ? { id: uuid(), tipo: 'suelto', conversion: 'sin_plantilla', certificado: cert.id,
-            code: `${cert.registry_code} sin plantilla` }
-        : { id: cert.id, code: cert.registry_code })
+            code: `${cert.numero} sin plantilla` }
+        : { id: cert.id, code: cert.numero })
       aConvertir.forEach(cert => {
         window.dispatchEvent(new CustomEvent('wss-sheet-start', {
           detail: { ...tareaDe(cert), native_filename: cert.native_filename, file: cert.file, password: cert.password }

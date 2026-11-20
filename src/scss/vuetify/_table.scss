@@ -90,11 +90,13 @@ div.cae-despues {
   }
 }
 
-// La marca de lo elegido, para que no dependa solo del color: una pildora corta a la izquierda.
+// La marca de lo elegido o destacado, para que no dependa solo del color: una pildora corta a la izquierda.
 .lista-de-tarjetas .fila-elegida > td:first-child,
-.fila-que-abre.abierta { position: relative; }
+.fila-que-abre.abierta,
+.con-marca { position: relative; }
 .lista-de-tarjetas .fila-elegida > td:first-child::before,
-.fila-que-abre.abierta::before {
+.fila-que-abre.abierta::before,
+.con-marca::before {
   content: '';
   position: absolute;
   left: 0.25rem;

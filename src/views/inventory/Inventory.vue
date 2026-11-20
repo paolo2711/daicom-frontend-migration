@@ -12,7 +12,7 @@
           </v-btn>
         </div>
         
-        <inventory-table ref="inventoryTable" @view-history="openHistory" @edit-item="openEdit" />
+        <InventoryTable ref="inventoryTable" @view-history="openHistory" @edit-item="openEdit" />
       </v-col>
     </v-row>
 

@@ -2,8 +2,7 @@
   <detail-panel :titulo="titulo" @cerrar="emit('cerrar')">
       <section class="seccion">
         <div class="titulo-de-seccion">Equipo</div>
-        <paginated-autocomplete v-model="eq.name" :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
-                                recurso="equipos" :seed="semillaDeEquipo" @selected="conSuLaboratorio"
+        <paginated-autocomplete v-model="eq.name" lista="equipos" :seed="semillaDeEquipo" @selected="conSuLaboratorio"
                                 label="Equipo" :return-object="false" item-title="name" item-value="id"
                                 :disabled="eq.publicado" v-bind="CAMPO" />
         <v-textarea v-for="campo in CAMPOS" :key="campo.clave" v-model="eq[campo.clave]"
@@ -18,10 +17,9 @@
         <v-select v-model="opcion" :items="itemsDeSeleccion(opciones)" label="Servicio"
                   :error="!eq.tipo_servicio" v-bind="CAMPO" />
         <div v-if="otraSerie" class="text-caption text-warning">
-          Al guardar, el {{ eq.registry_code }} {{ SE_RENUMERA }}.
+          Al guardar, el {{ eq.numero }} {{ SE_RENUMERA }}.
         </div>
-        <paginated-autocomplete v-model="eq.lab" :fetch="fetchLabs" :mapper="LabMappers.getMap"
-                                recurso="labs" :seed="eq.lab_data" @selected="l => (eq.lab_data = l)"
+        <paginated-autocomplete v-model="eq.lab" lista="laboratorios" :seed="eq.lab_data" @selected="l => (eq.lab_data = l)"
                                 label="Laboratorio" :return-object="false" item-title="name" item-value="id"
                                 :disabled="eq.publicado" v-bind="CAMPO" />
         <template v-if="eq.certificate_type">
@@ -49,10 +47,6 @@
 <script setup>
 import { computed } from 'vue'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
-import EquipmentDataService from '@/services/equipments/equipmentDataService'
-import LabDataService from '@/services/labs/labDataService'
-import EquipmentMappers from '@/mappers/equipmentMappers'
-import LabMappers from '@/mappers/labMappers'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
 import DetailPanel from '@/components/shared/DetailPanel.vue'
 import ItemActions from '@/components/shared/ItemActions.vue'
@@ -73,7 +67,7 @@ const props = defineProps({
 const emit = defineEmits(['cerrar', 'otro-igual', 'borrar'])
 
 const titulo = computed(() => {
-  if (props.eq.registry_code) return `Equipo ${props.indice + 1} · Certificado ${props.eq.registry_code}`
+  if (props.eq.numero) return `Equipo ${props.indice + 1} · Certificado ${props.eq.numero}`
   return props.eq.certificate_type ? `Equipo ${props.indice + 1} · N° estimado ${props.estimado}` : `Equipo ${props.indice + 1}`
 })
 
@@ -90,8 +84,6 @@ function alEnter(e) {
   emit('cerrar')
 }
 
-const fetchEquipments = (page, size, query) => EquipmentDataService.getFiltered(page, size, query)
-const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)
 // El equipo se guarda como su nombre, que en el catalogo es tambien el id.
 const semillaDeEquipo = computed(() => (props.eq.name ? { id: props.eq.name, name: props.eq.name } : null))
 

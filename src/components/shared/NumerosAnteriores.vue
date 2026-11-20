@@ -5,15 +5,14 @@
         Mod. {{ numeros.length }}
       </span>
     </template>
-    <div v-for="n in numeros" :key="`${n.certificate_type}-${n.registry_code}`">
-      Antes: {{ siglaDelTipo(n.certificate_type) }} {{ n.registry_code }}
+    <div v-for="n in numeros" :key="n.numero">
+      Antes: {{ n.numero }}
       · {{ fechaCorta(n.created_at) }} · {{ n.created_by }}
     </div>
   </v-tooltip>
 </template>
 
 <script setup>
-import { siglaDelTipo } from '@/utils/certificates/tipos'
 import { fechaCorta } from '@/utils/dates'
 
 defineProps({

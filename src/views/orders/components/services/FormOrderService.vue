@@ -10,8 +10,7 @@
     <template #lista>
       <div class="titulo-de-hoja titulo-principal flex-wrap ga-2 py-2">
         <span class="mr-auto">Equipos <span class="text-medium-emphasis font-weight-regular">({{ equipments.length }})</span></span>
-        <paginated-autocomplete ref="buscador" v-model="buscado" :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
-                                recurso="equipos" label="Agregar equipo del catálogo" :return-object="false"
+        <paginated-autocomplete ref="buscador" v-model="buscado" lista="equipos" label="Agregar equipo del catálogo" :return-object="false"
                                 item-title="name" item-value="id" prepend-inner-icon="mdi-magnify"
                                 density="compact" variant="outlined" hide-details class="buscador-de-equipo"
                                 @selected="agregar" />
@@ -85,12 +84,11 @@ import { useDetailOptions } from '@/composables/useDetailOptions'
 import RowOrderService from './RowOrderService.vue'
 import PanelOrderService from './PanelOrderService.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService'
-import EquipmentDataService from '@/services/equipments/equipmentDataService'
-import EquipmentMappers from '@/mappers/equipmentMappers'
 import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal.vue'
 import CorrelativeDataService from '@/services/correlative/correlativeDataService'
 import { useOrderServices } from '@/composables/useOrderServices'
 import { estaPublicado, vivo } from '@/utils/certificates/estado'
+import { numeroEstimado } from '@/utils/certificates/tipos'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useRowDrag } from '@/composables/useRowDrag'
 import { copiarDebajo } from '@/utils/lists'
@@ -126,7 +124,6 @@ const pestanas = computed(() => [
 ])
 const { opcionAbierta, abrirOpcion, tituloDeOpcion } = useDetailOptions(elegida, () => props.opcionesDelPanel)
 
-const fetchEquipments = (page, size, query) => EquipmentDataService.getFiltered(page, size, query)
 const buscador = ref(null)
 const buscado = ref(null)
 const equipoMaestroModalRef = ref(null)
@@ -146,8 +143,6 @@ async function initCorrelatives() {
   }
 }
 
-const conCeros = (n) => (n == null ? '…' : String(n).padStart(8, '0'))
-
 // El numero que tomaria una fila nueva si nadie mas toma numeros antes de guardar.
 function estimadoDe(index) {
   const fila = equipments.value[index]
@@ -158,7 +153,7 @@ function estimadoDe(index) {
 }
 
 const estimados = () => equipments.value.map((e, i) => (e.modo === 'nuevo' ? estimadoDe(i) : null))
-const numerosEstimados = computed(() => estimados().map(n => conCeros(n)))
+const numerosEstimados = computed(() => estimados().map((n, i) => numeroEstimado(equipments.value[i].certificate_type, n)))
 
 function abrir(fila, despuesDe = equipments.value.length - 1) {
   equipments.value.splice(despuesDe + 1, 0, fila)
@@ -226,6 +221,7 @@ async function vincular() {
       cert_id: cert.id,
       name: cert.equipment,
       registry_code: cert.registry_code,
+      numero: cert.numero,
       lab: cert.lab,
       lab_data: cert.lab_data,
       certificate_type: cert.certificate_type,
@@ -258,6 +254,7 @@ function cargarLineas(lineas) {
     id: linea.id,
     cert_id: cert?.id ?? null,
     registry_code: cert?.registry_code,
+    numero: cert?.numero,
     name: linea.equipo,
     tipo_servicio: linea.tipo_servicio,
     certificate_type: cert?.certificate_type ?? null,

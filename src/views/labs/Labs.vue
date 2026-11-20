@@ -11,7 +11,7 @@
           </v-btn>
         </div>
 
-        <list-labs ref="listLabs" />
+        <ListLabs ref="listLabs" />
       </v-col>
     </v-row>
   </v-container>

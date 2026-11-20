@@ -2,7 +2,7 @@
   <tr :class="{ 'fila-con-error': error, 'fila-elegida': elegida }" class="fila-tarjeta" @click="emit('elegir')">
     <td class="text-no-wrap">
       <drag-handle v-bind="asa" class="mr-1" @click.stop />
-      <span v-if="eq.registry_code" class="font-weight-medium">{{ eq.registry_code }}</span>
+      <span v-if="eq.numero" class="font-weight-medium" :title="eq.registry_code">{{ eq.numero }}</span>
       <span v-else-if="eq.certificate_type" class="numero-estimado">{{ estimado }}</span>
     </td>
     <td class="text-break">

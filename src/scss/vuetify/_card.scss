@@ -48,6 +48,12 @@
   max-width: 112rem;
   margin-inline: auto;
 }
+// Una pantalla de configuracion, centrada: un formulario estirado deja campos larguisimos.
+.columna-de-configuracion {
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+}
 // Un campo de pocas cifras (RUC, N.° de certificado), con su boton "+" al lado.
 .campo-corto {
   width: 22rem;

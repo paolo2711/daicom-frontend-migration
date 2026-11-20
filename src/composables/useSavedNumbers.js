@@ -2,11 +2,10 @@ import { getCurrentInstance } from 'vue'
 import { Toast } from '@/plugins/alerts'
 import { TIPOS_CERTIFICADO } from '@/utils/certificates/tipos'
 
-const numeroDe = (codigo) => Number(String(codigo).split('-').pop())
-const conCeros = (n) => String(n).padStart(8, '0')
-const capitalizar = (texto) => texto.charAt(0) + texto.slice(1).toLowerCase()
+// El correlativo del numero que da el servidor ('ACR-1294').
+const numeroDe = (numero) => Number(String(numero).match(/\d+$/)?.[0])
 
-// 1294, 1295, 1297 -> "00001294–00001295, 00001297"
+// 1294, 1295, 1297 -> "1294 a 1295, 1297"
 function tramos(numeros) {
   const partes = []
   for (const n of [...numeros].sort((a, b) => a - b)) {
@@ -14,7 +13,7 @@ function tramos(numeros) {
     if (ultima && n === ultima[1] + 1) ultima[1] = n
     else partes.push([n, n])
   }
-  return partes.map(([desde, hasta]) => desde === hasta ? conCeros(desde) : `${conCeros(desde)}–${conCeros(hasta)}`).join(', ')
+  return partes.map(([desde, hasta]) => desde === hasta ? `${desde}` : `${desde} a ${hasta}`).join(', ')
 }
 
 function numerosPorTipo(filas, codigos) {
@@ -23,7 +22,7 @@ function numerosPorTipo(filas, codigos) {
       const numeros = filas
         .map((fila, i) => fila.modo === 'nuevo' && Number(fila.certificate_type) === tipo.value ? numeroDe(codigos[i]) : null)
         .filter(n => n !== null)
-      return numeros.length ? `${capitalizar(tipo.title)} ${tramos(numeros)}` : null
+      return numeros.length ? `${tipo.sigla}-${tramos(numeros)}` : null
     })
     .filter(Boolean)
 }

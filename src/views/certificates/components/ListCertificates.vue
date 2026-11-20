@@ -8,16 +8,14 @@
       <div class="d-flex flex-wrap align-center" style="gap: 16px;">
         
         <v-text-field
-          v-model="correlative"
+          v-model="numero"
           hide-details
           density="compact"
           prepend-inner-icon="mdi-magnify"
           variant="outlined"
-          label="Buscar Cód. Equipo"
-          type="number"
-          min="0"
+          label="Buscar N.° de certificado"
+          placeholder="ACR-1302 o 1302"
           clearable
-          max="99999999"
           style="flex: 0 0 240px;"
         />
 
@@ -154,19 +152,12 @@
           </v-tooltip>
         </template>
 
-        <!-- ── Chip de código de registro ── -->
-        <template v-slot:item.registry_code="{ item }">
-          <v-chip :color="estadoDe(item).color" class="text-white font-weight-bold">
-            {{ item.registry_code }}
-          </v-chip>
-        </template>
-
-        <!-- ── Tipo abreviado ── -->
-        <template v-slot:item.certificate_type_label="{ item }">
+        <!-- El numero de la app; el codigo oficial, al pasar el mouse. -->
+        <template v-slot:item.numero="{ item }">
           <span class="text-no-wrap">
-            <span :class="vivo(item) ? '' : 'anulado-atenuado'">
-              {{ siglaDelTipo(item.certificate_type) }}
-            </span>
+            <v-chip :color="estadoDe(item).color" class="text-white font-weight-bold" :title="item.registry_code">
+              {{ item.numero }}
+            </v-chip>
             <numeros-anteriores :numeros="item.previous_numbers" />
           </span>
         </template>
@@ -185,11 +176,13 @@
           </span>
         </template>
 
-        <!-- ── Nombre equipo ── -->
         <template v-slot:item.equipment="{ item }">
-          <span :class="vivo(item) ? '' : 'anulado-atenuado'">
-            {{ item.equipment }}
-          </span>
+          <div :class="vivo(item) ? '' : 'anulado-atenuado'">
+            <div>{{ item.equipment }}</div>
+            <div v-if="datosDelEquipo(item.brand, item.model, item.serie)" class="text-caption text-medium-emphasis">
+              {{ datosDelEquipo(item.brand, item.model, item.serie) }}
+            </div>
+          </div>
         </template>
 
         <template v-slot:item.uploaded_xls="{ item }">
@@ -412,7 +405,7 @@
     
     
     
-    <certificate-modal ref="certificateModal" />
+    <CertificateModal ref="certificateModal" />
 
     <batch-action-modal
       ref="batchActionModalRef"
@@ -434,14 +427,13 @@ import FluentPagination    from '@/components/commonComponents/FluentPagination.
 import SelectionBar         from '@/components/commonComponents/SelectionBar.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import { LISTAS } from '@/utils/comboLists'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useUploadState }   from '@/composables/useUploadState'
 import { debounce }         from '@/utils/debounce'
 import OrderDataService    from '@/services/orders/orderDataService.js'
 import CertificateMappers  from '@/mappers/certificateMappers'
 import CertificateModal    from '@/views/certificates/components/CertificateModal.vue'
-import LabDataService      from '@/services/labs/labDataService'
-import LabMappers          from '@/mappers/labMappers'
 
 import OrderSummaryCard    from './OrderSummaryCard.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
@@ -451,7 +443,8 @@ import { tieneExcelBase }  from '@/utils/certificates/excelBase'
 import { estaEntregado } from '@/utils/certificates/entrega'
 import { NUBE_DESACTUALIZADA, ESTADOS, estadoDe, vivo } from '@/utils/certificates/estado'
 import { ANULADA } from '@/utils/orders/estado'
-import { TIPOS_CERTIFICADO, siglaDelTipo } from '@/utils/certificates/tipos'
+import { TIPOS_CERTIFICADO } from '@/utils/certificates/tipos'
+import { datosDelEquipo } from '@/utils/equipments/datos'
 import { ACCIONES_CERTIFICADO } from '@/utils/certificates/acciones'
 import { accionesPara } from '@/utils/actions'
 import { usePermissions } from '@/composables/usePermissions'
@@ -516,10 +509,10 @@ const {
   searchQuery: search_lab, 
   retrieveData: retrieveLabs 
 } = usePaginatedSearch(
-  (page, size, query) => LabDataService.getFiltered(page, size, query),
-  LabMappers.getMap,
+  LISTAS.laboratorios.fetch,
+  LISTAS.laboratorios.mapper,
   () => lab_id.value,
-  'labs'
+  'laboratorios'
 )
 
 // El filtro vive dentro del panel plegado: la lista se pide al desplegarlo.
@@ -535,7 +528,7 @@ const client_id = ref(null)
 
 // ─── Tipo de certificado ──────────────────────────────────────────────────────
 const certificate_type  = ref(null)
-const correlative = ref('')
+const numero = ref('')
 const equipment = ref('')
 
 // ─── Órdenes / menús ─────────────────────────────────────────────────────────
@@ -559,11 +552,10 @@ const ver_bandeja_firmas = computed(() => {
 // ─── Headers de la tabla ──────────────────────────────────────────────────────
 // Vuetify 3: "title" en lugar de "text", "key" en lugar de "value"
 const headers = [
-  { title: 'Cód. Registro',       key: 'registry_code',         align: 'start',  sortable: false },
-  { title: 'Tipo',                key: 'certificate_type_label', align: 'start',  sortable: false },
+  { title: 'Certificado',         key: 'numero',                align: 'start',  sortable: false },
   { title: 'Cliente Certificado', key: 'client_data.name',                        sortable: false },
   { title: 'Lab.',                key: 'lab_data.code',                            sortable: false },
-  { title: 'Nombre',              key: 'equipment',                               sortable: false },
+  { title: 'Equipo',              key: 'equipment',                               sortable: false },
   { title: 'XLS',                 key: 'uploaded_xls',          align: 'center', sortable: false },
   { title: 'Firma/QR',            key: 'uploaded',              align: 'center', sortable: false },
   { title: 'Orden',               key: 'order',                                   sortable: false },
@@ -591,9 +583,8 @@ const { begin: beginCertLoad, isLatest: isLatestCertLoad } = useLatestRequest()
 // ─── Watchers ─────────────────────────────────────────────────────────────────
 watch(options, () => retrieveAllCertificates(), { deep: true })
 
-// Busqueda enlazada: si llega/cambia ?correlativo (incluso ya estando en la
-// pestana), lo aplicamos y el watch de `correlative` dispara la busqueda.
-watch(() => route.query.correlativo, (v) => { correlative.value = v || '' })
+// Busqueda enlazada: si llega o cambia ?certificado (tambien ya estando en la pestana), el watch de `numero` busca.
+watch(() => route.query.certificado, (v) => { numero.value = v || '' })
 
 // Igual para ?firma_pendiente (notificacion de firma solicitada): activa el filtro.
 watch(() => route.query.firma_pendiente, (v) => {
@@ -605,7 +596,7 @@ watch(() => route.query.excel_pendiente, (v) => {
   if (v) { filtro_excel_pendiente.value = true; options.value.page = 1; retrieveAllCertificates() }
 })
 
-watch(correlative,       () => { options.value.page = 1; retrieveAllCertificates() })
+watch(numero,            () => { options.value.page = 1; retrieveAllCertificates() })
 // Texto libre: espera a que termine de escribir en vez de consultar por letra.
 watch(equipment, debounce(() => { options.value.page = 1; retrieveAllCertificates() }))
 watch(certificate_type,  () => { options.value.page = 1; retrieveAllCertificates() })
@@ -639,8 +630,8 @@ onMounted(() => {
   user_permissions.value = user.action_permissions || []
   permiso_resumen.value         = is_admin.value || user_permissions.value.includes(1002)
 
-  if (route.query.correlativo) {
-    correlative.value = route.query.correlativo
+  if (route.query.certificado) {
+    numero.value = route.query.certificado
   }
 
   // Desde la notificacion de "firma solicitada": llega ?firma_pendiente=1 -> activa
@@ -785,13 +776,12 @@ function retrieveAllCertificates (opciones) {
   const token = beginCertLoad()   // guard de secuencia: solo aplica la carga más reciente
   const pedidoEn = Date.now()     // lo que termine despues de esto, esta carga no lo vio
   const itemsPerPage       = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
-  const correlativeNumber  = correlative.value > 0 ? Number(correlative.value) : ''
 
   // Pasamos los parámetros al final
   CertificateDataService.getFiltered({
     page: options.value.page,
     page_size: itemsPerPage,
-    correlative: correlativeNumber,
+    numero: (numero.value || '').trim(),
     equipment: equipment.value || '',
     client: client_id.value || '',
     lab: lab_id.value || '',

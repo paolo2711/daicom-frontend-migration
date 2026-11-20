@@ -52,7 +52,9 @@ export default {
       cdr: element.cdr || null,
       respuesta: element.respuesta || {},
       anulable: element.anulable || false,
+      se_anula_en_la_app: element.se_anula_en_la_app || false,
       baja_en_proceso: element.baja_en_proceso || false,
+      reintentar_hasta: element.reintentar_hasta || null,
       // Sus notas de credito y lo que bajaron.
       notas: element.notas || [],
       rebajado: element.rebajado != null ? Number(element.rebajado) : 0,

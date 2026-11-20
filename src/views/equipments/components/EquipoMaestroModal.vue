@@ -13,8 +13,7 @@
             prepend-inner-icon="mdi-format-title"
             :rules="[v => !!v || 'Requerido']"
           />
-          <paginated-autocomplete v-model="form.laboratorio" :fetch="fetchLabs" :mapper="LabMappers.getMap"
-                                  recurso="labs" :seed="laboratorio" @selected="l => laboratorio = l"
+          <paginated-autocomplete v-model="form.laboratorio" lista="laboratorios" :seed="laboratorio" @selected="l => laboratorio = l"
                                   label="Laboratorio que lo calibra" :return-object="false" item-title="name" item-value="id"
                                   prepend-inner-icon="mdi-flask-outline" variant="outlined" density="compact" clearable
                                   hint="La orden y el certificado lo proponen al elegir este equipo" persistent-hint />
@@ -36,8 +35,6 @@ import { Toast } from '@/plugins/alerts'
 import { ref, reactive } from 'vue'
 import Swal from 'sweetalert2'
 import EquipmentDataService from '@/services/equipments/equipmentDataService'
-import LabDataService from '@/services/labs/labDataService'
-import LabMappers from '@/mappers/labMappers'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 
 const emit = defineEmits(['reload'])
@@ -50,7 +47,6 @@ const formRef = ref(null)
 const form = reactive({ id: null, nombre_tecnico: '', laboratorio: null })
 // El laboratorio elegido, para que se vea sin buscarlo.
 const laboratorio = ref(null)
-const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)
 
 const open = (item = null) => {
   isEdit.value = !!item

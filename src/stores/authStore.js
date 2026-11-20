@@ -55,6 +55,13 @@ export const useAuthStore = defineStore('auth', {
       this.cerrarSesionLocal();
     },
 
+    // Cambia el usuario guardado sin volver a entrar: las subidas y los avisos lo leen de aca.
+    cambiarUsuario(username) {
+      if (!this.user) return;
+      this.user = { ...this.user, username };
+      localStorage.setItem('user', JSON.stringify(this.user));
+    },
+
     // Unico lugar que cierra la sesion en el navegador. Recarga la pagina entera
     // para que se corten el WebSocket y lo que quedo en memoria de la sesion.
     cerrarSesionLocal(motivo = '') {

@@ -153,7 +153,7 @@ watch(() => store.items.length, async () => {
 
 // Rutas por OBJETO (target_type + target_id): llevan al item puntual.
 const RUTAS = {
-  certificate: (id) => ({ path: '/certificates', query: { correlativo: id } }),
+  certificate: (numero) => ({ path: '/certificates', query: { certificado: numero } }),
   inventory_item: (id) => ({ path: '/inventario', query: { buscar: id } }),
   order: () => ({ path: '/orders/servicios' }),
 }

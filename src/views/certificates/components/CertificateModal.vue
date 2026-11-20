@@ -55,7 +55,7 @@
               <paginated-autocomplete
                 ref="equipCatalogRef"
                 v-model="form.equipment"
-                :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap" recurso="equipos"
+                lista="equipos"
                 :return-object="false" item-title="name" item-value="id"
                 :seed="equipSeed" @selected="conSuLaboratorio"
                 label="Equipo" :disabled="publicado"
@@ -71,7 +71,7 @@
 
             <v-col cols="12">
               <paginated-autocomplete ref="labComboRef" v-model="form.lab"
-                                      :fetch="fetchLabs" :mapper="LabMappers.getMap" :seed="labPropuesto || ficha.lab_data" recurso="labs"
+                                      lista="laboratorios" :seed="labPropuesto || ficha.lab_data"
                                       :return-object="false" item-title="name" item-value="id"
                                       density="compact" hide-details="auto"
                                       prepend-inner-icon="mdi-flask-outline"
@@ -138,17 +138,13 @@ import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutoco
 import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
 import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal.vue'
-import EquipmentDataService from '@/services/equipments/equipmentDataService.js'
-import EquipmentMappers from '@/mappers/equipmentMappers.js'
 import { usePermissions } from '@/composables/usePermissions'
 import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
-import LabDataService from '@/services/labs/labDataService.js'
-import LabMappers from '@/mappers/labMappers.js'
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
 import CertificateMappers from '@/mappers/certificateMappers.js'
 import CorrelativeDataService from '@/services/correlative/correlativeDataService.js'
 import Characters from '@/validators/commonValidators/characters.js'
-import { TIPOS_CERTIFICADO, nombreDelTipo, siglaDelTipo } from '@/utils/certificates/tipos'
+import { TIPOS_CERTIFICADO, nombreDelTipo } from '@/utils/certificates/tipos'
 import { ANULADO, estaFirmado, estaPublicado, estadoDe } from '@/utils/certificates/estado'
 import { estaEntregado } from '@/utils/certificates/entrega'
 import { fechaCorta, hoyISO } from '@/utils/dates'
@@ -178,8 +174,6 @@ const puedeCrearEquipo = usePermissions().hasAction(EDITAR_CATALOGO)
 const batchActionModalRef = ref(null)
 const equipCatalogRef = ref(null)
 const labComboRef = ref(null)
-const fetchLabs = (page, size, query) => LabDataService.getFiltered(page, size, query)
-const fetchEquipments = (page, size, query) => EquipmentDataService.getFiltered(page, size, query)
 // El equipo se guarda como texto, no como id del catalogo.
 const equipSeed = computed(() => ficha.value.equipment ? { id: ficha.value.equipment, name: ficha.value.equipment } : null)
 
@@ -205,7 +199,7 @@ const NOMBRES = {
 
 const titulo = computed(() => {
   if (!isEdit.value) return 'Nuevo Certificado'
-  return ficha.value.registry_code ? `Certificado ${ficha.value.registry_code}` : 'Certificado'
+  return ficha.value.numero ? `Certificado ${ficha.value.numero} · ${ficha.value.registry_code}` : 'Certificado'
 })
 
 const codigoNuevo = computed(() => {
@@ -231,7 +225,7 @@ const creado = computed(() =>
 )
 
 const anteriores = computed(() => (ficha.value.previous_numbers || [])
-  .map(n => `${siglaDelTipo(n.certificate_type)} ${n.registry_code} (${fechaCorta(n.created_at)} · ${n.created_by})`)
+  .map(n => `${n.numero} (${fechaCorta(n.created_at)} · ${n.created_by})`)
   .join(', '))
 
 // La fila no trae el certificado entero: se pide al abrir.

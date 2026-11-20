@@ -11,7 +11,7 @@
           </v-btn>
         </div>
 
-        <list-users ref="listUsers" />
+        <ListUsers ref="listUsers" />
       </v-col>
     </v-row>
   </v-container>

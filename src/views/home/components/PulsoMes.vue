@@ -42,16 +42,15 @@
         </div>
       </div>
 
-      <!-- Tendencia: cuantas facturas por mes -->
+      <!-- Tendencia: certificados y facturas por mes -->
       <div class="pcell">
-        <div class="d-flex align-baseline justify-space-between" style="gap: .5rem;">
+        <div class="d-flex align-baseline flex-wrap" style="gap: .5rem;">
+          <span class="p-num">{{ mesEnCurso?.certificados ?? 0 }}</span>
+          <span class="p-sub">certificados y</span>
           <span class="p-num">{{ datos.facturas_del_mes }}</span>
           <span class="p-sub">facturas este mes</span>
         </div>
-        <tendencia-facturas :meses="datos.tendencia || []" />
-        <div v-if="mesEnCurso" class="p-foot">
-          {{ mesEnCurso.etiqueta }} va por el dia {{ mesEnCurso.dias }} de {{ mesEnCurso.dias_mes }}
-        </div>
+        <tendencia-mensual :meses="datos.tendencia || []" />
       </div>
 
       <!-- Sin cobrar separado: lo del mes no queda tapado por la deuda vieja -->
@@ -72,7 +71,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import HomeDataService from '@/services/home/homeDataService'
-import TendenciaFacturas from '@/views/home/components/TendenciaFacturas.vue'
+import TendenciaMensual from '@/views/home/components/TendenciaMensual.vue'
 
 const emit = defineEmits(['disponible'])
 

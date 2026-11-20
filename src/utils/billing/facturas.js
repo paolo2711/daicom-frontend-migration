@@ -5,7 +5,7 @@ import { mensajeDeError } from '@/utils/errors'
 import { importe, monto } from '@/utils/money'
 import { vencimiento } from '@/utils/orders/cobro'
 import { ABONADO, ANULADA, CREDITO, DEUDA, EN_PROCESO, ESTADOS, EXCEDIDO, PAGADO, tonoDe } from '@/utils/orders/estado'
-import { ESTADOS as ESTADOS_SUNAT, POR_ENVIAR, REVISAR } from '@/utils/billing/sunat'
+import { ACEPTADA as ACEPTADA_SUNAT, ESTADOS as ESTADOS_SUNAT, POR_ENVIAR, RECHAZADA, REVISAR } from '@/utils/billing/sunat'
 
 // Lo de una factura que comparten la pestaña Facturas y el panel de la orden.
 
@@ -21,13 +21,18 @@ export const TIPOS = {
   interna: { texto: 'Sin comprobante', icono: 'mdi-lock-outline' },
   alerta: { texto: 'Falta algo con SUNAT', icono: 'mdi-alert' },
 }
+// La nota de credito que SUNAT todavia no acepto, si hay.
+export const notaPendiente = (factura) => factura.notas?.find(n => n.estado !== ACEPTADA_SUNAT)
+
 export function tipoDe (factura) {
   if (!factura.es_fiscal) return TIPOS.interna
   if (!factura.estado_sunat) return TIPOS.keyfacil
-  if ([POR_ENVIAR, REVISAR].includes(factura.estado_sunat)) {
+  if ([POR_ENVIAR, RECHAZADA, REVISAR].includes(factura.estado_sunat)) {
     return { ...TIPOS.alerta, texto: ESTADOS_SUNAT[factura.estado_sunat].texto }
   }
-  if (factura.baja_en_proceso) return { ...TIPOS.alerta, texto: 'Baja en proceso: esperando a SUNAT' }
+  if (factura.baja_en_proceso) return { ...TIPOS.alerta, texto: 'Baja sin respuesta de SUNAT' }
+  const nota = notaPendiente(factura)
+  if (nota) return { ...TIPOS.alerta, texto: `Nota ${nota.numero}: ${ESTADOS_SUNAT[nota.estado].texto}` }
   return TIPOS.emitida
 }
 
@@ -84,7 +89,7 @@ export const PILDORAS_DE_FACTURAS = [
   { valor: 'a_credito', texto: 'A crédito', color: 'teal', icono: 'mdi-calendar-clock',
     detalle: 'Facturas a crédito que todavía no vencen' },
   { valor: 'sunat', texto: 'Pendiente en SUNAT', color: 'warning', icono: 'mdi-alert-outline',
-    detalle: 'Por enviar, por revisar en SOL o con la baja en proceso' },
+    detalle: 'No enviadas, por revisar en SOL, con la baja sin respuesta o una nota sin aceptar' },
 ]
 
 const fallo = (titulo, porDefecto) => (error) => {

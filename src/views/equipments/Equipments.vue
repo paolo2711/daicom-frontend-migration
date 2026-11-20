@@ -7,7 +7,7 @@
           <h2 class="text-h5 font-weight-bold mb-0">Catálogo de Equipos y Servicios</h2>
         </div>
 
-        <list-equipments ref="listEquipments" />
+        <ListEquipments ref="listEquipments" />
       </v-col>
     </v-row>
   </v-container>

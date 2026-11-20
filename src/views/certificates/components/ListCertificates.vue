@@ -412,7 +412,7 @@
     
     
     
-    <certificate-modal ref="certificateModal" />
+    <CertificateModal ref="certificateModal" />
 
     <batch-action-modal
       ref="batchActionModalRef"
@@ -434,14 +434,13 @@ import FluentPagination    from '@/components/commonComponents/FluentPagination.
 import SelectionBar         from '@/components/commonComponents/SelectionBar.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import { LISTAS } from '@/utils/comboLists'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useUploadState }   from '@/composables/useUploadState'
 import { debounce }         from '@/utils/debounce'
 import OrderDataService    from '@/services/orders/orderDataService.js'
 import CertificateMappers  from '@/mappers/certificateMappers'
 import CertificateModal    from '@/views/certificates/components/CertificateModal.vue'
-import LabDataService      from '@/services/labs/labDataService'
-import LabMappers          from '@/mappers/labMappers'
 
 import OrderSummaryCard    from './OrderSummaryCard.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
@@ -516,10 +515,10 @@ const {
   searchQuery: search_lab, 
   retrieveData: retrieveLabs 
 } = usePaginatedSearch(
-  (page, size, query) => LabDataService.getFiltered(page, size, query),
-  LabMappers.getMap,
+  LISTAS.laboratorios.fetch,
+  LISTAS.laboratorios.mapper,
   () => lab_id.value,
-  'labs'
+  'laboratorios'
 )
 
 // El filtro vive dentro del panel plegado: la lista se pide al desplegarlo.

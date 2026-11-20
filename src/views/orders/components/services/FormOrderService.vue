@@ -10,8 +10,7 @@
     <template #lista>
       <div class="titulo-de-hoja titulo-principal flex-wrap ga-2 py-2">
         <span class="mr-auto">Equipos <span class="text-medium-emphasis font-weight-regular">({{ equipments.length }})</span></span>
-        <paginated-autocomplete ref="buscador" v-model="buscado" :fetch="fetchEquipments" :mapper="EquipmentMappers.getMap"
-                                recurso="equipos" label="Agregar equipo del catálogo" :return-object="false"
+        <paginated-autocomplete ref="buscador" v-model="buscado" lista="equipos" label="Agregar equipo del catálogo" :return-object="false"
                                 item-title="name" item-value="id" prepend-inner-icon="mdi-magnify"
                                 density="compact" variant="outlined" hide-details class="buscador-de-equipo"
                                 @selected="agregar" />
@@ -85,8 +84,6 @@ import { useDetailOptions } from '@/composables/useDetailOptions'
 import RowOrderService from './RowOrderService.vue'
 import PanelOrderService from './PanelOrderService.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService'
-import EquipmentDataService from '@/services/equipments/equipmentDataService'
-import EquipmentMappers from '@/mappers/equipmentMappers'
 import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal.vue'
 import CorrelativeDataService from '@/services/correlative/correlativeDataService'
 import { useOrderServices } from '@/composables/useOrderServices'
@@ -126,7 +123,6 @@ const pestanas = computed(() => [
 ])
 const { opcionAbierta, abrirOpcion, tituloDeOpcion } = useDetailOptions(elegida, () => props.opcionesDelPanel)
 
-const fetchEquipments = (page, size, query) => EquipmentDataService.getFiltered(page, size, query)
 const buscador = ref(null)
 const buscado = ref(null)
 const equipoMaestroModalRef = ref(null)

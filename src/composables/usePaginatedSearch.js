@@ -10,7 +10,7 @@ const ESPERA_TECLEO = 300
  * @param {Function} apiServiceCall - (page, size, query) => Promise
  * @param {Function} mapperFunction - mapea cada resultado
  * @param {Function} getActiveId - id elegido en el v-model, para no perderlo de la lista
- * @param {String} recurso - nombre para la memoria corta ('clientes', 'labs'...). Vacío = sin memoria.
+ * @param {String} recurso - nombre de la lista (utils/comboLists.js) para la memoria corta. Vacío = sin memoria.
  */
 export function usePaginatedSearch(apiServiceCall, mapperFunction, getActiveId = () => null, recurso = '') {
   const items = ref([])

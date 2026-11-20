@@ -1,5 +1,4 @@
-// Memoria corta para las listas de los desplegables: clientes, laboratorios,
-// catálogo de equipos. Vive en la pestaña y vence sola.
+// Memoria corta para las listas de los desplegables (utils/comboLists.js). Vive en la pestaña y vence sola.
 const VIDA = 60_000
 
 const guardado = new Map()

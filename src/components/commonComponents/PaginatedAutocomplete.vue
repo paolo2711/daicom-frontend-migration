@@ -25,17 +25,19 @@
 </template>
 
 <script setup>
-// Combobox con busqueda server-side paginada. El comportamiento (traer 10, buscar
-// al teclear, aviso de "hay mas", preservar el seleccionado) esta definido aca una
-// sola vez. Cada combobox solo pasa su fetch, su label y sus slots si los necesita.
+// Combobox con busqueda server-side paginada: traer 10, buscar al teclear, avisar "hay mas" y no perder lo
+// elegido. Cada combobox pasa su `lista` (utils/comboLists.js), o su fetch si depende de otro dato.
 import { computed, nextTick, ref, watch } from 'vue'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import { LISTAS } from '@/utils/comboLists'
 import MoreResultsHint from '@/components/shared/MoreResultsHint.vue'
 
 const props = defineProps({
   modelValue: { default: null },
-  // (page, size, query) => Promise -> tu servicio paginado que ya busca en el back.
-  fetch: { type: Function, required: true },
+  // El nombre de una de LISTAS: de ahi salen su consulta, su mapper y su memoria corta.
+  lista: { type: String, default: '' },
+  // Sin `lista`: (page, size, query) => Promise, para una lista que depende de otro dato. Sin memoria.
+  fetch: { type: Function, default: null },
   mapper: { type: Function, default: (x) => x },
   label: { type: String, default: '' },
   placeholder: { type: String, default: '' },
@@ -44,11 +46,12 @@ const props = defineProps({
   returnObject: { type: Boolean, default: true },
   excludeIds: { type: Array, default: () => [] },   // ids a ocultar (ej. ya agregados)
   seed: { default: null },   // item ya seleccionado (para que se muestre al editar, sin buscar)
-  // Nombre del recurso para la memoria corta ('clientes', 'labs'...). Vacio la apaga.
-  recurso: { type: String, default: '' },
   // false en una lista que depende de otro dato (cliente, tipo...): se vuelve a pedir cada vez que se abre.
   cache: { type: Boolean, default: true },
 })
+const definida = props.lista ? LISTAS[props.lista] : null
+if (props.lista && !definida) throw new Error(`No hay una lista "${props.lista}" en utils/comboLists.js`)
+const siempreDeNuevo = !props.cache || definida?.memoria === false
 // 'selected' emite el OBJETO elegido (util si el padre necesita otros campos, ej.
 // el nombre) sin tener que leer toda la lista.
 const emit = defineEmits(['update:modelValue', 'selected'])
@@ -64,9 +67,9 @@ const elegidoId = ref(idDe(props.modelValue))
 watch(() => props.modelValue, (valor) => { elegidoId.value = idDe(valor) })
 const selectedId = () => elegidoId.value
 
-const { items, loading, searchQuery: search, retrieveData, olvidar, total } =
-  usePaginatedSearch((page, size, q) => props.fetch(page, size, q), props.mapper, selectedId,
-  props.cache ? props.recurso : '')
+const { items, loading, searchQuery: search, retrieveData, olvidar, total } = usePaginatedSearch(
+  (page, size, q) => (definida?.fetch ?? props.fetch)(page, size, q), definida?.mapper ?? props.mapper, selectedId,
+  definida && !siempreDeNuevo ? props.lista : '')
 
 const visibleItems = computed(() => {
   const base = items.value.filter(it => !props.excludeIds.includes(it[props.itemValue]))
@@ -92,7 +95,7 @@ function onSelect(v) {
 // muestra sin pedir nada.
 function alAbrir(estaAbierto) {
   if (!estaAbierto) return
-  if (!props.cache) {
+  if (siempreDeNuevo) {
     olvidar()
     retrieveData(search.value || '')
   } else if (!items.value.length) {

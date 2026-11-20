@@ -12,8 +12,8 @@
         <span class="mr-auto">
           Equipos <span class="text-medium-emphasis font-weight-regular">({{ equipments.length }})</span>
         </span>
-        <paginated-autocomplete ref="buscador" v-model="buscado" :fetch="fetchEquipos"
-                                :exclude-ids="equipments.map(e => e.equipment_id)" recurso="equipos"
+        <paginated-autocomplete ref="buscador" v-model="buscado" lista="inventario"
+                                :exclude-ids="equipments.map(e => e.equipment_id)"
                                 label="Agregar del inventario" :return-object="false" prepend-inner-icon="mdi-magnify"
                                 density="compact" variant="outlined" hide-details class="buscador-de-equipo"
                                 @selected="agregar">
@@ -79,7 +79,6 @@ import DetailPanel from '@/components/shared/DetailPanel.vue'
 import OptionRows from '@/components/shared/OptionRows.vue'
 import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
 import { useDetailOptions } from '@/composables/useDetailOptions'
-import InventoryDataService from '@/services/inventory/inventoryDataService'
 import RowOrderRental from './RowOrderRental.vue'
 import PanelOrderRental from './PanelOrderRental.vue'
 import { useRowErrors } from '@/composables/useRowErrors'
@@ -113,9 +112,6 @@ const conEstado = computed(() => equipments.value.some(e => e.estado))
 const buscador = ref(null)
 const buscado = ref(null)
 const nuevoEnInventario = ref(null)
-// Solo los disponibles; al guardar, el back lo vuelve a revisar.
-const fetchEquipos = (page, size, query) =>
-  InventoryDataService.getAll({ status: 1, search: query || '', page, page_size: size })
 const detalleDe = (equipo) => [equipo.brand, equipo.series && `SN ${equipo.series}`].filter(Boolean).join(' · ')
 
 watch(equipments, (val) => { emit('update-list', val) }, { deep: true })

@@ -29,8 +29,8 @@ class BillingDataService {
   retryDispatchGuide(id) {
     return axios.post(`billing/dispatch-guides/${id}/reintentar/`, {}, { headers: authHeader() });
   }
-  retryPendingDispatchGuides() {
-    return axios.post("billing/dispatch-guides/reintentar/", {}, { headers: authHeader() });
+  consultDispatchGuide(id) {
+    return axios.post(`billing/dispatch-guides/${id}/consultar/`, {}, { headers: authHeader() });
   }
   createDispatchGuide(data) {
     return axios.post("billing/dispatch-guides/", data, { headers: authHeader() });
@@ -80,8 +80,11 @@ class BillingDataService {
   retryInvoice(id) {
     return axios.post(`billing/invoices/${id}/reintentar/`, {}, { headers: authHeader() });
   }
-  retryPendingInvoices() {
-    return axios.post("billing/invoices/reintentar/", {}, { headers: authHeader() });
+  consultInvoice(id) {
+    return axios.post(`billing/invoices/${id}/consultar/`, {}, { headers: authHeader() });
+  }
+  retryCreditNote(id) {
+    return axios.post(`billing/notas/${id}/reintentar/`, {}, { headers: authHeader() });
   }
   emitInvoice(datos) {
     return axios.post("billing/invoices/emitir/", datos, { headers: authHeader() });

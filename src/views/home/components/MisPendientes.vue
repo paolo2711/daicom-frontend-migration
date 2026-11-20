@@ -44,8 +44,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import HomeDataService from '@/services/home/homeDataService'
 import ThemedIllustration from '@/components/shared/ThemedIllustration.vue'
-import { registrarBajaEnSol, reintentarEnvio, reintentarFactura, reintentarLasFacturasPendientes, reintentarLasPendientes }
-  from '@/utils/billing/pendientes'
+import { registrarBajaEnSol, reintentarEnvio, reintentarFactura } from '@/utils/billing/pendientes'
 import { debounce } from '@/utils/debounce'
 
 const VISIBLES = 3
@@ -88,8 +87,6 @@ const recargar = debounce(cargar)
 
 onMounted(() => {
   cargar()
-  reintentarLasPendientes()
-  reintentarLasFacturasPendientes()
   AVISOS_QUE_LOS_CAMBIAN.forEach(aviso => window.addEventListener(aviso, recargar))
 })
 onUnmounted(() => AVISOS_QUE_LOS_CAMBIAN.forEach(aviso => window.removeEventListener(aviso, recargar)))

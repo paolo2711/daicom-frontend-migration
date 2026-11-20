@@ -5,7 +5,7 @@
                     variant="outlined" label="Buscar N.° o cliente" clearable />
       <template #pildoras>
         <filter-pill :active="filtros.sunat" color="warning" icon="mdi-alert-outline"
-                     tooltip="Por enviar, esperando a SUNAT, por revisar o con la baja en SOL pendiente"
+                     tooltip="No enviadas, sin respuesta de SUNAT, por revisar o con la baja en SOL pendiente"
                      @click="filtros.sunat = !filtros.sunat">Pendiente en SUNAT</filter-pill>
       </template>
       <template #avanzados>
@@ -91,7 +91,7 @@ import { debounce } from '@/utils/debounce'
 import { fechaCorta } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 import { ACCIONES_GUIA } from '@/utils/billing/acciones'
-import { registrarBajaEnSol, reintentarEnvio, reintentarLasPendientes } from '@/utils/billing/pendientes'
+import { preguntarGuia, registrarBajaEnSol, reintentarEnvio } from '@/utils/billing/pendientes'
 import { ESTADOS, FILTRO_DE_ESTADO, bajaPendienteEnSol } from '@/utils/billing/guias'
 import { abrirEnOtraPestana } from '@/utils/pdf'
 import DialogCancelDispatchGuide from './DialogCancelDispatchGuide.vue'
@@ -185,10 +185,7 @@ function ejecutarAccion (clave, [guia]) {
     case 'descargar': return descargar(guia.pdf, guia.nombre_pdf, 'el PDF')
     case 'xml': return abrirEnOtraPestana(guia.xml)
     case 'cdr': return abrirEnOtraPestana(guia.cdr)
-    // Ver informacion le pregunta a SUNAT y sigue preguntando hasta que responda.
-    case 'consultar':
-      abierta.value = guia
-      return
+    case 'consultar': return resolver(preguntarGuia, guia)
     case 'plantilla': return abrirFormulario([], guia)
     case 'anular':
       porAnular.value = guia
@@ -210,7 +207,7 @@ watch(filtros, debounce(() => {
 // Desde Órdenes llega con ?ordenes=1,2: el formulario se abre lleno con sus equipos.
 onMounted(() => {
   // Despues de la lista: las que no llegaron van en segundo plano y la lista se refresca sola al guardarse.
-  recargar().then(reintentarLasPendientes)
+  recargar()
   window.addEventListener('wss-reload-dispatch-guides', recargar)
   const ids = String(route.query.ordenes || '').split(',').filter(Boolean)
   if (!ids.length) return

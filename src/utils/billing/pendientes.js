@@ -1,7 +1,6 @@
 import Swal from 'sweetalert2'
 import BillingDataService from '@/services/billing/billingDataService'
-import { avisoDelEstado } from '@/utils/billing/guias'
-import { ACEPTADA } from '@/utils/billing/sunat'
+import { ANULADA, avisoDelEstado, rechazoDeLaBaja } from '@/utils/billing/sunat'
 import { avisarHecho } from '@/utils/documents/avisos'
 import { mensajeDeError } from '@/utils/errors'
 
@@ -22,18 +21,40 @@ export function registrarBajaEnSol (id, numero) {
 
 export function reintentarEnvio (id, numero) {
   return BillingDataService.retryDispatchGuide(id).then(({ data }) => {
-    avisarHecho(`${numero} reintentada`, { warning: avisoDelEstado(data) || data.warning })
+    avisarHecho(`${numero} reintentada`, { warning: avisoDelEstado(data.estado, data.respuesta) || data.warning })
     return data
   }, fallo('No se reintentó', 'No se pudo reintentar el envío.'))
 }
 
 export function reintentarFactura (id, numero) {
   return BillingDataService.retryInvoice(id).then(({ data }) => {
-    avisarHecho(`${numero} reintentada`, { warning: data.estado_sunat === ACEPTADA ? '' : data.respuesta?.descripcion })
+    avisarHecho(`${numero} reintentada`, { warning: avisoDelEstado(data.estado_sunat, data.respuesta) })
     return data
   }, fallo('No se reintentó', 'No se pudo reintentar el envío.'))
 }
 
-// Al abrir Guias o Inicio, en segundo plano: un error no se muestra, la proxima vez se reintenta.
-export const reintentarLasPendientes = () => BillingDataService.retryPendingDispatchGuides().catch(() => null)
-export const reintentarLasFacturasPendientes = () => BillingDataService.retryPendingInvoices().catch(() => null)
+// Preguntar a SUNAT, a mano: despues de enviarlo ya no se le pregunta sola.
+export function preguntarGuia (id, numero) {
+  return BillingDataService.consultDispatchGuide(id).then(({ data }) => {
+    avisarHecho(`${numero}: consultada a SUNAT`, { warning: avisoDelEstado(data.estado, data.respuesta) || data.warning })
+    return data
+  }, fallo('No se consultó', 'No se pudo preguntar a SUNAT.'))
+}
+
+export function preguntarFactura (id, numero) {
+  return BillingDataService.consultInvoice(id).then(({ data }) => {
+    const baja = data.respuesta?.baja
+    const warning = data.baja_en_proceso ? 'SUNAT recibió la baja. Su respuesta está pendiente.'
+      : (baja?.codigo && data.estado_sunat !== ANULADA ? `SUNAT no aceptó la baja. ${rechazoDeLaBaja(baja)}` : '')
+    avisarHecho(`${numero}: consultada a SUNAT`, { warning })
+    return data
+  }, fallo('No se consultó', 'No se pudo preguntar a SUNAT.'))
+}
+
+export function reintentarNota (nota) {
+  return BillingDataService.retryCreditNote(nota.id).then(({ data }) => {
+    const enviada = data.notas.find(n => n.id === nota.id)
+    avisarHecho(`${nota.numero} reintentada`, { warning: avisoDelEstado(enviada?.estado, enviada?.respuesta) })
+    return data
+  }, fallo('No se reintentó', 'No se pudo reintentar el envío.'))
+}

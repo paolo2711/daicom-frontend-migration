@@ -1,8 +1,10 @@
 <template>
   <dialog-baja v-model="abierto" :titulo="`Anular ${factura?.invoice_number}`" :largo="LARGO_DEL_MOTIVO">
     <div class="text-body-2">
-      Se manda la comunicación de baja a SUNAT, que responde en unos minutos. Al quedar anulada, sus abonos se
-      quedan en ella y sus órdenes quedan libres para facturar de nuevo.
+      {{ factura?.se_anula_en_la_app
+        ? 'No llegó a SUNAT: se anula solo en la app, sin baja. Antes se le pregunta a SUNAT, por si la recibió.'
+        : 'Se manda la comunicación de baja a SUNAT, que responde en unos minutos.' }}
+      Al quedar anulada, sus abonos se quedan en ella y sus órdenes quedan libres para facturar de nuevo.
     </div>
 
     <template #acciones="{ motivo }">

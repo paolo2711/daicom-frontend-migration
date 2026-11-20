@@ -84,8 +84,11 @@
             <div v-if="item.es_fiscal" class="text-caption text-no-wrap text-medium-emphasis">
               {{ item.detraccion_applies ? `Detracción ${importe(item.detraccion_amount)}` : 'Sin detracción' }}
             </div>
-            <div v-for="nota in item.notas" :key="nota.id" class="text-caption text-no-wrap text-medium-emphasis">
-              Con nota {{ nota.numero }}{{ Number(nota.total) ? ` · − ${monto(nota.total, item.currency)}` : '' }}
+            <div v-for="nota in item.notas" :key="nota.id" class="text-caption text-no-wrap"
+                 :class="nota.estado === ACEPTADA ? 'text-medium-emphasis' : `text-${ESTADOS_SUNAT[nota.estado].color}`">
+              {{ nota.estado === ACEPTADA ? 'Con nota' : 'Nota' }} {{ nota.numero }}
+              {{ Number(nota.total) ? ` · − ${monto(nota.total, item.currency)}` : '' }}
+              <template v-if="nota.estado !== ACEPTADA"> · {{ ESTADOS_SUNAT[nota.estado].texto }}</template>
             </div>
           </template>
           <template #item.cobro="{ item }">
@@ -154,7 +157,8 @@ import { ACCIONES_FACTURA } from '@/utils/billing/acciones'
 import {
   EMITIR, FILTRO_DE_ESTADO, PILDORAS_DE_FACTURAS, TIPOS, cobroDe, condicionDe, desvincular, estadoDe, montoDe, tipoDe,
 } from '@/utils/billing/facturas'
-import { reintentarFactura, reintentarLasFacturasPendientes } from '@/utils/billing/pendientes'
+import { preguntarFactura, reintentarFactura } from '@/utils/billing/pendientes'
+import { ACEPTADA, ESTADOS as ESTADOS_SUNAT } from '@/utils/billing/sunat'
 import { fechaCorta } from '@/utils/dates'
 import { debounce } from '@/utils/debounce'
 import { avisarHecho } from '@/utils/documents/avisos'
@@ -342,11 +346,11 @@ function ejecutarAccion (clave, [factura]) {
     case 'descargar': return descargar(factura.pdf_url, factura.nombre_pdf, 'el PDF')
     case 'xml': return abrirEnOtraPestana(factura.xml)
     case 'cdr': return abrirEnOtraPestana(factura.cdr)
-    // Ver informacion le pregunta a SUNAT y sigue preguntando hasta que responda.
     case 'info':
-    case 'consultar':
       abierta.value = factura
       return
+    case 'consultar':
+      return preguntarFactura(factura.id, factura.invoice_number).then(r => r && reemplazar(r))
     case 'plantilla': return abrirEmision([], factura)
     case 'reintentar':
       return reintentarFactura(factura.id, factura.invoice_number).then(r => r && reemplazar(r))
@@ -374,7 +378,7 @@ onMounted(() => {
   window.addEventListener('wss-reload-invoices', recargar)
   window.addEventListener('wss-update-invoice-row', refrescarFila)
   // Despues de la lista: las por enviar y las bajas en proceso van en segundo plano y sus filas se refrescan solas.
-  recargar().then(reintentarLasFacturasPendientes)
+  recargar()
   const ids = String(route.query.ordenes || '').split(',').filter(Boolean)
   if (!ids.length) return
   router.replace({ query: {} })

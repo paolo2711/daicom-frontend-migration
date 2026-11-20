@@ -1,5 +1,5 @@
 import { bajaPendienteEnSol } from '@/utils/billing/guias'
-import { ACEPTADA, ENVIADA, POR_ENVIAR, REVISAR } from '@/utils/billing/sunat'
+import { ACEPTADA, ENVIADA, POR_ENVIAR, REVISAR, fueraDePlazo } from '@/utils/billing/sunat'
 import { OTRA_PESTANA } from '@/utils/pdf'
 
 // Lo que se puede hacer con una guia emitida, para el menu de la tabla. Los campos, en utils/actions.js.
@@ -28,7 +28,7 @@ export const ACCIONES_GUIA = [
   },
   {
     clave: 'cdr', grupo: 'ver', varios: false,
-    icono: 'mdi-file-check-outline', texto: 'Descargar constancia de SUNAT',
+    icono: 'mdi-file-check-outline', texto: 'Descargar CDR',
     disponible: ([guia]) => Boolean(guia.cdr),
   },
   {
@@ -39,7 +39,7 @@ export const ACCIONES_GUIA = [
   {
     clave: 'reintentar', grupo: 'trabajo', varios: false,
     icono: 'mdi-send', texto: 'Reintentar envío',
-    visible: ([guia]) => guia.estado === POR_ENVIAR,
+    visible: ([guia]) => guia.estado === POR_ENVIAR && !fueraDePlazo(guia.reintentar_hasta),
   },
   {
     clave: 'plantilla', grupo: 'trabajo', varios: false,
@@ -83,7 +83,7 @@ export const ACCIONES_FACTURA = [
   },
   {
     clave: 'cdr', grupo: 'ver', varios: false,
-    icono: 'mdi-file-check-outline', texto: 'Descargar constancia de SUNAT',
+    icono: 'mdi-file-check-outline', texto: 'Descargar CDR',
     visible: emitida, disponible: ([factura]) => Boolean(factura.cdr),
   },
   {
@@ -94,7 +94,7 @@ export const ACCIONES_FACTURA = [
   {
     clave: 'reintentar', grupo: 'trabajo', varios: false,
     icono: 'mdi-send', texto: 'Reintentar envío',
-    visible: ([factura]) => factura.estado_sunat === POR_ENVIAR,
+    visible: ([factura]) => factura.estado_sunat === POR_ENVIAR && !fueraDePlazo(factura.reintentar_hasta),
   },
   {
     clave: 'plantilla', grupo: 'trabajo', varios: false,
@@ -123,7 +123,7 @@ export const ACCIONES_FACTURA = [
   {
     clave: 'anular', grupo: 'peligro', varios: false,
     icono: 'mdi-cancel', texto: 'Anular',
-    visible: ([factura]) => factura.anulable,
+    visible: ([factura]) => factura.anulable || factura.se_anula_en_la_app,
   },
   {
     clave: 'eliminar', grupo: 'peligro', varios: false,

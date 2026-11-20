@@ -19,6 +19,34 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.11.2.0',
+    fecha: '2026-11-20',
+    nuevo: [
+      'Inicio: tarjetas con lo pendiente, gráfico de certificados y facturas por mes, y las Novedades arriba.',
+      'Facturas: «Anular» también sirve para una factura que no llegó a SUNAT o que SUNAT rechazó; antes se le pregunta a SUNAT si la tiene.',
+      'Facturas y notas: si un reintento sale rechazado, la app le pregunta a SUNAT si ya la tenía y la deja aceptada o rechazada según su respuesta.',
+      'Notas de crédito: se pueden reintentar solas, y su factura avisa cuando la nota no llegó a SUNAT.',
+      'Certificados: la lista muestra la marca, el modelo y la serie del equipo.',
+      'Cotizaciones, valorizaciones y facturas hechas desde una orden llevan el expediente del certificado, como la guía.',
+      'Empresa y Mi perfil: los archivos se pueden arrastrar y soltar.',
+    ],
+    cambio: [
+      'Facturación: lo que no llega a SUNAT ya no se reintenta solo; queda «No se envió», con su botón Reintentar y la fecha límite de SUNAT.',
+      'Guías y bajas: al enviarlas se espera la respuesta de SUNAT unos segundos; si no llega, quedan «Sin respuesta de SUNAT» con el botón Preguntar.',
+      'Ver información de facturas y guías muestra arriba, con su botón, lo que falta con SUNAT.',
+      'Certificados: el número se ve con su tipo (ACR-1302) en toda la app; el código oficial sigue en el PDF, el QR y el portal.',
+      'Certificados: se busca por número con o sin el tipo, o con el código oficial.',
+      'Inventario: al vincular un certificado, si el número existe en varios tipos se elige cuál.',
+      'Empresa y Mi perfil: cada sección se edita directo y se guarda por separado, y cambiar la contraseña tiene su propia ventana.',
+      'Facturas y guías: «Descargar constancia de SUNAT» pasa a llamarse «Descargar CDR».',
+    ],
+    arreglo: [
+      'Órdenes: al agregar equipos, alquiler ya no muestra la lista de servicio (ni al revés) cuando se abrió una antes.',
+      'Mi perfil: al cambiar el nombre de usuario, subir Excel funciona sin volver a entrar.',
+      'Facturas: el aviso de una baja sin respuesta de SUNAT ya no se repite cada vez que se abre Facturas.',
+    ],
+  },
+  {
     version: '3.11.1.2',
     fecha: '2026-11-19',
     cambio: [

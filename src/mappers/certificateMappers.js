@@ -12,6 +12,7 @@ export default {
       certificate_type_label: element.certificate_type_label,
       correlative: element.correlative,
       registry_code: element.registry_code,
+      numero: element.numero,
       previous_numbers: element.previous_numbers,
       
       // Entidades Relacionadas
@@ -22,6 +23,8 @@ export default {
       // Especificaciones del Equipo
       equipment: element.equipment,
       brand: element.brand,
+      model: element.model,
+      serie: element.serie,
 
       // Fechas
       emission_date: element.emission_date,

@@ -22,7 +22,7 @@
                 <v-icon v-if="fila.publicado" size="small" color="medium-emphasis">mdi-lock-outline</v-icon>
                 <v-checkbox-btn v-else v-model="pasan" :value="fila.id" density="compact" />
               </td>
-              <td class="text-no-wrap">{{ fila.registry_code }}</td>
+              <td class="text-no-wrap" :title="fila.registry_code">{{ fila.numero }}</td>
               <td>{{ [fila.name, fila.serie].filter(Boolean).join(' · ') }}</td>
               <td>
                 {{ duenoDe(fila).name }}

@@ -156,7 +156,7 @@
             </div>
             
             <h3 class="text-h6 font-weight-bold mb-2">Vincular Certificado DAICOM</h3>
-            <p class="text-body-2 px-10 text-grey">Vincula un certificado de operatividad emitido por tu laboratorio a este equipo.</p>
+            <p class="text-body-2 px-10 text-grey">Vincula a este equipo un certificado emitido por tu laboratorio: acreditado, no acreditado o de operatividad.</p>
 
             <div v-if="form.latest_certificate" class="mb-6 mt-4">
               <v-chip :color="certVigencia.chipColor" variant="flat" class="text-white font-weight-bold text-subtitle-2 px-4 py-4 mb-4">
@@ -165,8 +165,8 @@
 
               <v-card variant="tonal" :color="certVigencia.chipColor" class="mx-auto pa-4 mb-4 text-left" max-width="360" rounded="lg">
                 <div class="d-flex justify-space-between align-center mb-2">
-                  <span class="text-caption text-medium-emphasis">Expediente</span>
-                  <span class="font-weight-bold">{{ form.latest_certificate.registry_code }}</span>
+                  <span class="text-caption text-medium-emphasis">Certificado</span>
+                  <span class="font-weight-bold" :title="form.latest_certificate.registry_code">{{ form.latest_certificate.numero }}</span>
                 </div>
                 <div class="d-flex justify-space-between align-center mb-2">
                   <span class="text-caption text-medium-emphasis">Emitido</span>
@@ -191,17 +191,25 @@
             <div v-else class="mx-auto mt-6" style="max-width: 400px;">
               <v-row dense align="center">
                 <v-col cols="8">
-                  <v-text-field v-model="correlative_search" label="Nro. Correlativo (Ej: 15)" type="number" variant="outlined" density="compact" hide-details @keyup.enter="buscarCertificado"></v-text-field>
+                  <v-text-field v-model="correlative_search" label="N.° de certificado" placeholder="ACR-15 o 15" variant="outlined" density="compact" hide-details @keyup.enter="buscarCertificado"></v-text-field>
                 </v-col>
                 <v-col cols="4">
                   <v-btn color="secondary" variant="flat" block @click="buscarCertificado" :loading="searchingCert"><v-icon start>mdi-magnify</v-icon> Buscar</v-btn>
                 </v-col>
               </v-row>
 
+              <!-- El mismo numero se repite entre tipos: sin la sigla, se elige. -->
+              <v-list v-if="opcionesDeCertificado.length > 1" density="compact" class="mt-4 text-left">
+                <v-list-subheader>Hay {{ opcionesDeCertificado.length }} con ese número: elige cuál</v-list-subheader>
+                <v-list-item v-for="c in opcionesDeCertificado" :key="c.id" :title="c.numero"
+                             :subtitle="[c.equipment, c.client_data?.name].filter(Boolean).join(' · ')"
+                             @click="elegirCertificado(c)" />
+              </v-list>
+
               <v-expand-transition>
                 <v-card v-if="foundCert" variant="outlined" class="mt-4 pa-3 text-left bg-grey-lighten-4">
                   <div class="subtitle-2 font-weight-bold mb-1">Vista Previa:</div>
-                  <div><strong>Expediente:</strong> {{ foundCert.registry_code }}</div>
+                  <div><strong>Certificado:</strong> {{ foundCert.numero }}</div>
                   <div><strong>Equipo:</strong> {{ foundCert.equipment }}</div>
                   <v-btn block color="success" variant="flat" class="mt-3 text-white" @click="linkCertificate" :loading="linkingCert">
                     <v-icon start>mdi-link-variant</v-icon> Vincular a este equipo
@@ -280,6 +288,7 @@ const viewerIndex = ref(0)
 const correlative_search = ref('')
 const searchingCert = ref(false)
 const foundCert = ref(null)
+const opcionesDeCertificado = ref([])
 const linkingCert = ref(false)
 
 // Sugerencias de nombre (catalogo de equipos maestro), editable.
@@ -395,6 +404,7 @@ const resetForm = () => {
   tab.value = 0
   correlative_search.value = ''
   foundCert.value = null
+  opcionesDeCertificado.value = []
 }
 
 const onFileChange = (event) => {
@@ -475,20 +485,28 @@ const buscarCertificado = async () => {
   if (!correlative_search.value) return
   searchingCert.value = true
   foundCert.value = null
+  opcionesDeCertificado.value = []
 
   try {
-    const res = await CertificateDataService.getFiltered({ page_size: 10, correlative: Number(correlative_search.value) })
+    const res = await CertificateDataService.getFiltered({ page_size: 10, numero: String(correlative_search.value).trim() })
     const validos = res.data.results.filter(vivo)
-    if (validos.length > 0) {
+    if (validos.length === 1) {
       foundCert.value = validos[0]
+    } else if (validos.length > 1) {
+      opcionesDeCertificado.value = validos
     } else {
-      Swal.fire('No encontrado', 'No existe un certificado válido con ese correlativo.', 'warning')
+      Swal.fire('No encontrado', 'No hay un certificado vigente con ese número.', 'warning')
     }
   } catch {
     Swal.fire('Error', 'Hubo un problema al buscar.', 'error')
   } finally {
     searchingCert.value = false
   }
+}
+
+const elegirCertificado = (cert) => {
+  foundCert.value = cert
+  opcionesDeCertificado.value = []
 }
 
 const linkCertificate = async () => {

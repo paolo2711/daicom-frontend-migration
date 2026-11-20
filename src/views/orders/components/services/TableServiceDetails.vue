@@ -52,7 +52,7 @@
           </td>
           <td>
             <template v-if="linea.certificate">
-              <strong>{{ linea.certificate.registry_code }}</strong>
+              <strong :title="linea.certificate.registry_code">{{ linea.certificate.numero }}</strong>
               <numeros-anteriores :numeros="linea.certificate.previous_numbers" />
             </template>
             <span v-else class="text-disabled">—</span>
@@ -150,6 +150,7 @@ import { tieneExcelBase } from '@/utils/certificates/excelBase'
 import { ACCIONES_LINEA, avanceDeLinea, certificadosDe, lineaAnulada, servicioDe } from '@/utils/orders/lineas'
 import { viva } from '@/utils/orders/estado'
 import { fechaCorta } from '@/utils/dates'
+import { datosDelEquipo } from '@/utils/equipments/datos'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
 import NumerosAnteriores from '@/components/shared/NumerosAnteriores.vue'
@@ -170,7 +171,7 @@ const { hasAction } = usePermissions()
 const { opciones } = useOrderServices()
 
 const certificados = computed(() => certificadosDe(props.order.items))
-const delEquipo = (linea) => [linea.marca, linea.modelo, linea.serie].filter(Boolean).join(' · ')
+const delEquipo = (linea) => datosDelEquipo(linea.marca, linea.modelo, linea.serie)
 
 // Como en Certificados, un anulado no se marca.
 const marcables = computed(() => certificados.value.filter(vivo))

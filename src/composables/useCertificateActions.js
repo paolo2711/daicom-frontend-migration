@@ -15,7 +15,7 @@ export function useCertificateActions({ abrirLote, abrirFicha, seleccion = null 
   // Recien firmado, el link llega en la tarea antes que la fila se actualice.
   const linkDe = (cert) => cert.link_nube || tareaDe(cert.id, 'qr')?.url || ''
 
-  const cuales = (certs) => (certs.length === 1 ? certs[0].registry_code : `${certs.length} certificados`)
+  const cuales = (certs) => (certs.length === 1 ? certs[0].numero : `${certs.length} certificados`)
 
   // Uno solo, el link pelado: se pega en el navegador. Varios, cada uno bajo su
   // codigo y separados por una linea en blanco, para saber cual es cual y que
@@ -49,7 +49,7 @@ export function useCertificateActions({ abrirLote, abrirFicha, seleccion = null 
       case 'firma':
         if (!solo) return abrirLote('notify', certs)
         return llamarSinPreguntar(() => CertificateDataService.requestBatchSignatures([cert.id]),
-          `Firma solicitada para ${cert.registry_code}`, 'No se pudo notificar a gerencia.')
+          `Firma solicitada para ${cert.numero}`, 'No se pudo notificar a gerencia.')
       case 'cancelar_firma':
         return llamarSinPreguntar(() => CertificateDataService.cancelarSolicitudes(ids(certs)),
           `Solicitud cancelada: ${cuales(certs)}`, 'No se pudo cancelar la solicitud.')
@@ -58,7 +58,7 @@ export function useCertificateActions({ abrirLote, abrirFicha, seleccion = null 
       case 'entrega':
         if (!solo || !estaEntregado(cert)) return abrirLote('entrega', certs)
         return confirmarYLlamar({
-          titulo: '¿Quitar la entrega?', texto: `${cert.registry_code} volverá a figurar como no entregado.`,
+          titulo: '¿Quitar la entrega?', texto: `${cert.numero} volverá a figurar como no entregado.`,
           boton: 'Sí, quitar', llamar: () => CertificateDataService.registrarEntrega([cert.id], null),
           exito: 'Entrega quitada', fallo: 'No se pudo quitar la entrega.',
         })

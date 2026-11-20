@@ -17,7 +17,7 @@
         <v-select v-model="opcion" :items="itemsDeSeleccion(opciones)" label="Servicio"
                   :error="!eq.tipo_servicio" v-bind="CAMPO" />
         <div v-if="otraSerie" class="text-caption text-warning">
-          Al guardar, el {{ eq.registry_code }} {{ SE_RENUMERA }}.
+          Al guardar, el {{ eq.numero }} {{ SE_RENUMERA }}.
         </div>
         <paginated-autocomplete v-model="eq.lab" lista="laboratorios" :seed="eq.lab_data" @selected="l => (eq.lab_data = l)"
                                 label="Laboratorio" :return-object="false" item-title="name" item-value="id"
@@ -67,7 +67,7 @@ const props = defineProps({
 const emit = defineEmits(['cerrar', 'otro-igual', 'borrar'])
 
 const titulo = computed(() => {
-  if (props.eq.registry_code) return `Equipo ${props.indice + 1} · Certificado ${props.eq.registry_code}`
+  if (props.eq.numero) return `Equipo ${props.indice + 1} · Certificado ${props.eq.numero}`
   return props.eq.certificate_type ? `Equipo ${props.indice + 1} · N° estimado ${props.estimado}` : `Equipo ${props.indice + 1}`
 })
 

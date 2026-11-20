@@ -88,6 +88,7 @@ import EquipoMaestroModal from '@/views/equipments/components/EquipoMaestroModal
 import CorrelativeDataService from '@/services/correlative/correlativeDataService'
 import { useOrderServices } from '@/composables/useOrderServices'
 import { estaPublicado, vivo } from '@/utils/certificates/estado'
+import { numeroEstimado } from '@/utils/certificates/tipos'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useRowDrag } from '@/composables/useRowDrag'
 import { copiarDebajo } from '@/utils/lists'
@@ -142,8 +143,6 @@ async function initCorrelatives() {
   }
 }
 
-const conCeros = (n) => (n == null ? '…' : String(n).padStart(8, '0'))
-
 // El numero que tomaria una fila nueva si nadie mas toma numeros antes de guardar.
 function estimadoDe(index) {
   const fila = equipments.value[index]
@@ -154,7 +153,7 @@ function estimadoDe(index) {
 }
 
 const estimados = () => equipments.value.map((e, i) => (e.modo === 'nuevo' ? estimadoDe(i) : null))
-const numerosEstimados = computed(() => estimados().map(n => conCeros(n)))
+const numerosEstimados = computed(() => estimados().map((n, i) => numeroEstimado(equipments.value[i].certificate_type, n)))
 
 function abrir(fila, despuesDe = equipments.value.length - 1) {
   equipments.value.splice(despuesDe + 1, 0, fila)
@@ -222,6 +221,7 @@ async function vincular() {
       cert_id: cert.id,
       name: cert.equipment,
       registry_code: cert.registry_code,
+      numero: cert.numero,
       lab: cert.lab,
       lab_data: cert.lab_data,
       certificate_type: cert.certificate_type,
@@ -254,6 +254,7 @@ function cargarLineas(lineas) {
     id: linea.id,
     cert_id: cert?.id ?? null,
     registry_code: cert?.registry_code,
+    numero: cert?.numero,
     name: linea.equipo,
     tipo_servicio: linea.tipo_servicio,
     certificate_type: cert?.certificate_type ?? null,

@@ -2,7 +2,7 @@
   <v-dialog v-model="dialog" class="dialog-premium" max-width="500" width="90%" persistent>
     <v-card v-if="certificate" @keydown.enter.stop="guardarConEnter">
       <base-modal-header :title="config.titulo" :icon="config.icono" @close="close">
-        <span v-if="certificate">Correlativo: <span class="font-weight-bold ml-1">{{ certificate.registry_code }}</span></span>
+        <span v-if="certificate">Certificado <span class="font-weight-bold ml-1">{{ certificate.numero }}</span></span>
       </base-modal-header>
 
       <v-card-text class="pt-4 pb-0">

@@ -12,6 +12,8 @@ const tipoDe = (valor) => TIPOS_CERTIFICADO.find(t => t.value === Number(valor))
 
 export const nombreDelTipo = (valor) => tipoDe(valor)?.title || ''
 export const siglaDelTipo = (valor) => tipoDe(valor)?.sigla || ''
+// El que tomaria uno nuevo, igual que `numero` del back: 'ACR-1303'.
+export const numeroEstimado = (tipo, correlativo) => (correlativo == null ? '…' : `${siglaDelTipo(tipo)}-${correlativo}`)
 
 // "3 no acreditados · 1 acreditado", en el orden de TIPOS_CERTIFICADO.
 export function resumenPorTipo(filas) {

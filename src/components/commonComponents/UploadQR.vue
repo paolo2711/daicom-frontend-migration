@@ -54,7 +54,7 @@ function handleQRStart(e) {
     // Viaja en la tarea para que el reintento use la misma fecha que el original.
     const tarea = { ...EN_COLA, username, fecha_firma: fechaFirma }
     if (getTask(certificate.id)) appStore.updateUploadTask(certificate.id, 'qr', tarea)
-    else appStore.addUploadTask({ id: certificate.id, code: certificate.registry_code, type: 'qr', ...tarea })
+    else appStore.addUploadTask({ id: certificate.id, code: certificate.numero, type: 'qr', ...tarea })
   })
 
   encolar(certificates.map(c => c.id), fechaFirma)
@@ -87,13 +87,13 @@ function handleManualPdfStart(e) {
     })
   } else {
     appStore.addUploadTask({
-      id: certificate.id, code: certificate.registry_code,
+      id: certificate.id, code: certificate.numero,
       status: 'uploading', progress: 50, attempts: 0,
       username, type: 'qr', source: 'manual', step: 'Subiendo PDF rescatado a la nube...'
     })
   }
 
-  sendWSProgress(certificate.id, 50, 'uploading', certificate.registry_code, 0)
+  sendWSProgress(certificate.id, 50, 'uploading', certificate.numero, 0)
   processManualPdf(certificate.id, file)
 }
 

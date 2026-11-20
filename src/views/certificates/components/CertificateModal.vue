@@ -144,7 +144,7 @@ import CertificateDataService from '@/services/certificates/certificateDataServi
 import CertificateMappers from '@/mappers/certificateMappers.js'
 import CorrelativeDataService from '@/services/correlative/correlativeDataService.js'
 import Characters from '@/validators/commonValidators/characters.js'
-import { TIPOS_CERTIFICADO, nombreDelTipo, siglaDelTipo } from '@/utils/certificates/tipos'
+import { TIPOS_CERTIFICADO, nombreDelTipo } from '@/utils/certificates/tipos'
 import { ANULADO, estaFirmado, estaPublicado, estadoDe } from '@/utils/certificates/estado'
 import { estaEntregado } from '@/utils/certificates/entrega'
 import { fechaCorta, hoyISO } from '@/utils/dates'
@@ -199,7 +199,7 @@ const NOMBRES = {
 
 const titulo = computed(() => {
   if (!isEdit.value) return 'Nuevo Certificado'
-  return ficha.value.registry_code ? `Certificado ${ficha.value.registry_code}` : 'Certificado'
+  return ficha.value.numero ? `Certificado ${ficha.value.numero} · ${ficha.value.registry_code}` : 'Certificado'
 })
 
 const codigoNuevo = computed(() => {
@@ -225,7 +225,7 @@ const creado = computed(() =>
 )
 
 const anteriores = computed(() => (ficha.value.previous_numbers || [])
-  .map(n => `${siglaDelTipo(n.certificate_type)} ${n.registry_code} (${fechaCorta(n.created_at)} · ${n.created_by})`)
+  .map(n => `${n.numero} (${fechaCorta(n.created_at)} · ${n.created_by})`)
   .join(', '))
 
 // La fila no trae el certificado entero: se pide al abrir.

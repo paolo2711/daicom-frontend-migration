@@ -293,7 +293,7 @@ const getStatusColor = (val) => {
 const certInfo = (item) => {
   const c = item.latest_certificate
   if (!c || !c.registry_code) return { has: false }
-  const info = { has: true, code: c.registry_code, emitido: fechaCorta(c.emission_date) || '—', vence: '—', label: 'VIGENTE' }
+  const info = { has: true, code: c.numero, emitido: fechaCorta(c.emission_date) || '—', vence: '—', label: 'VIGENTE' }
   if (c.emission_date) {
     const emis = new Date(c.emission_date)
     if (!isNaN(emis.getTime())) {

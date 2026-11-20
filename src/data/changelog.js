@@ -19,6 +19,16 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.11.2.1',
+    fecha: '2026-11-20',
+    cambio: [
+      'Inicio: «Falta emitir factura» y «Falta pago» cuentan lo mismo que las píldoras de Órdenes.',
+    ],
+    arreglo: [
+      'Inicio: el pulso del mes y los vencimientos cuentan también las facturas emitidas sin orden y las subidas sueltas.',
+    ],
+  },
+  {
     version: '3.11.2.0',
     fecha: '2026-11-20',
     nuevo: [

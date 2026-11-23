@@ -45,11 +45,12 @@
             <v-col cols="12" md="6">
               <v-text-field
                 v-model="facturaData.invoice_number"
-                label="N° de comprobante"
+                label="N° de comprobante (*)"
                 variant="outlined" density="compact"
                 prepend-inner-icon="mdi-pound"
                 placeholder="F001-00123"
                 :disabled="sinComprobante"
+                :rules="[v => sinComprobante || !!v?.trim() || 'Requerido']"
               />
             </v-col>
             <v-col cols="12" md="6">
@@ -310,6 +311,10 @@ const buildFormData = () => {
 }
 
 const save = async () => {
+  if (!sinComprobante.value && !facturaData.value.invoice_number?.trim()) {
+    Swal.fire('Falta el número', 'El número de comprobante es obligatorio.', 'warning')
+    return
+  }
   if (!facturaData.value.invoice_date || !facturaData.value.amount || parseFloat(facturaData.value.amount) <= 0) {
     Swal.fire('Faltan datos', 'La fecha y el monto son obligatorios.', 'warning')
     return

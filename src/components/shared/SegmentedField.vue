@@ -2,7 +2,8 @@
   <div class="segmentos" role="radiogroup">
     <button v-for="opcion in opciones" :key="String(opcion.valor)" type="button" role="radio"
             :aria-checked="opcion.valor === modelValue" class="segmento"
-            :class="{ elegido: opcion.valor === modelValue }" @click="emit('update:modelValue', opcion.valor)">
+            :class="{ elegido: opcion.valor === modelValue }" :disabled="opcion.desactivada"
+            @click="emit('update:modelValue', opcion.valor)">
       {{ opcion.texto }}
     </button>
   </div>
@@ -12,7 +13,7 @@
 // Elegir una entre pocas opciones a la vista (contado o credito, servicio o alquiler).
 defineProps({
   modelValue: { type: [String, Number, Boolean], default: null },
-  // [{ valor, texto }]
+  // [{ valor, texto, desactivada }]
   opciones: { type: Array, required: true },
 })
 const emit = defineEmits(['update:modelValue'])
@@ -34,7 +35,8 @@ const emit = defineEmits(['update:modelValue'])
   color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
   transition: background-color 0.15s;
 }
-.segmento:hover:not(.elegido) { background: rgba(var(--v-theme-on-surface), 0.06); }
+.segmento:disabled { opacity: 0.4; cursor: not-allowed; }
+.segmento:hover:not(.elegido):not(:disabled) { background: rgba(var(--v-theme-on-surface), 0.06); }
 .segmento.elegido {
   background: rgb(var(--v-theme-primary));
   color: rgb(var(--v-theme-on-primary));

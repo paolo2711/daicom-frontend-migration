@@ -104,9 +104,8 @@ class BillingDataService {
   unlinkInvoice(invoiceId, orderId) {
     return axios.post(`billing/invoices/${invoiceId}/unlink/`, { order_id: orderId }, { headers: authHeader() });
   }
-  linkInvoice(invoiceId, orderIds) {
-    const order_ids = Array.isArray(orderIds) ? orderIds : [orderIds];
-    return axios.post(`billing/invoices/${invoiceId}/link/`, { order_ids }, { headers: authHeader() });
+  linkInvoice(invoiceId, ordenes) {
+    return axios.post(`billing/invoices/${invoiceId}/link/`, { ordenes }, { headers: authHeader() });
   }
   extractInvoiceData(data) {
     return axios.post("billing/invoices/extract/", data, { headers: authHeader() });

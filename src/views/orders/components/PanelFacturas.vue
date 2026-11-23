@@ -35,7 +35,7 @@
               <div class="d-flex align-center ga-2 text-body-2">
                 <v-icon size="small" class="text-medium-emphasis" :title="tipoDe(factura).texto">
                   {{ tipoDe(factura).icono }}</v-icon>
-                <span class="font-weight-bold">{{ factura.invoice_number || 'Sin número' }}</span>
+                <span class="font-weight-bold">{{ nombreDe(factura) }}</span>
                 <v-spacer />
                 <span class="font-weight-bold text-no-wrap">
                   {{ montoDe(factura) ? monto(factura.amount, factura.currency) : '—' }}</span>
@@ -49,17 +49,15 @@
 
             <v-expand-transition>
               <div v-if="abierta === factura.id" class="detalle mx-3 pb-3">
-                <amount-breakdown v-if="factura.es_fiscal" v-bind="desgloseDeFactura(factura, factura.payments)" />
-                <div v-for="abono in factura.es_fiscal ? [] : factura.payments" :key="abono.id" class="dato">
-                  <span>Abono {{ fechaCorta(abono.payment_date) }} · {{ FORMA_DE_PAGO[abono.payment_method] }}</span>
-                  <span>{{ monto(abono.amount, abono.currency) }}</span>
-                </div>
+                <amount-breakdown v-bind="desgloseDeFactura(factura, factura.payments)" />
 
                 <div class="botones mt-3">
                   <v-btn color="primary" variant="flat" size="small" class="text-none" prepend-icon="mdi-cash-plus"
                          @click="abrirAbonos(factura)">Abonar</v-btn>
                   <v-btn v-if="factura.pdf_url" variant="tonal" size="small" class="text-none"
                          prepend-icon="mdi-file-pdf-box" @click="abrirEnOtraPestana(factura.pdf_url)">PDF</v-btn>
+                  <v-btn v-if="!factura.estado_sunat" variant="tonal" size="small" class="text-none"
+                         prepend-icon="mdi-pencil" @click="abrirEdicion(factura)">Editar</v-btn>
                   <v-btn v-if="factura.es_fiscal && !varias" variant="tonal" size="small" class="text-none"
                          prepend-icon="mdi-link-off" @click="quitar(factura)">Desvincular</v-btn>
                 </div>
@@ -68,9 +66,7 @@
           </div>
         </table-loading-overlay>
 
-        <div v-if="!clienteUnico" class="text-caption text-medium-emphasis">
-          Las órdenes marcadas son de clientes distintos: no pueden ir en la misma factura.
-        </div>
+        <div v-if="motivoDeNoVincular" class="text-caption text-medium-emphasis">{{ motivoDeNoVincular }}</div>
         <paginated-autocomplete v-else :key="buscador" :model-value="null" v-bind="CAMPO"
                                 :fetch="buscarFacturas" :cache="false"
                                 :mapper="InvoiceMappers.getMap" :exclude-ids="yaVinculadas"
@@ -86,13 +82,15 @@
 
       <div v-if="acciones.length" class="d-flex flex-wrap ga-2 pa-3 border-t-thin flex-shrink-0">
         <v-btn v-for="(a, i) in acciones" :key="a.clave" class="flex-grow-1 text-none" :prepend-icon="a.icono"
-               :color="i === 0 ? 'primary' : undefined" :variant="i === 0 ? 'flat' : 'outlined'"
+               :color="i === 0 ? 'primary' : undefined" :variant="i === 0 ? 'flat' : 'tonal'"
                @click="hacer(a.clave)">{{ a.texto }}</v-btn>
       </div>
     </template>
 
     <dialog-invoice-payments v-model="enAbonos" :invoice="conAbonos" @close="enAbonos = false" />
     <dialog-invoice v-model="subiendo" :orders="aCobrar" @close="recargar" />
+    <dialog-invoice v-model="marcando" :orders="aCobrar" sin_comprobante @marcada="cobrarYa" />
+    <dialog-invoice v-model="editando" :invoice-to-edit="enEdicion" @close="recargar" />
   </v-card>
 </template>
 
@@ -108,10 +106,11 @@ import { useLatestRequest } from '@/composables/useLatestRequest'
 import InvoiceMappers from '@/mappers/invoiceMappers'
 import BillingDataService from '@/services/billing/billingDataService'
 import OrderDataService from '@/services/orders/orderDataService'
-import { FORMA_DE_PAGO, desvincular, estadoDe, montoDe, tipoDe, vincular } from '@/utils/billing/facturas'
+import { desvincular, estadoDe, montoDe, nombreDe, tipoDe, vincular } from '@/utils/billing/facturas'
 import { fechaCorta } from '@/utils/dates'
 import { CAMPO } from '@/utils/fields'
 import { monto } from '@/utils/money'
+import { viva } from '@/utils/orders/estado'
 import { SIN_COMPROBANTE, marcaDe } from '@/utils/orders/sinFactura'
 import { abrirEnOtraPestana } from '@/utils/pdf'
 import DialogInvoice from '@/views/billing/components/DialogInvoice.vue'
@@ -140,6 +139,13 @@ const clienteUnico = computed(() => {
   const ids = new Set(aCobrar.value.map(o => o.client_data?.id))
   return ids.size === 1 ? [...ids][0] ?? null : null
 })
+const motivoDeNoVincular = computed(() => {
+  if (!aCobrar.value.every(viva)) {
+    return varias.value ? 'Entre las órdenes marcadas hay anuladas: a esas no se les vincula ninguna factura.'
+      : 'La orden está anulada: no se le vincula ninguna factura.'
+  }
+  return clienteUnico.value ? '' : 'Las órdenes marcadas son de clientes distintos: no pueden ir en la misma factura.'
+})
 const acciones = computed(() => props.accionesDe(aCobrar.value).filter(a => !a.disabled))
 
 const titulo = computed(() => {
@@ -155,7 +161,7 @@ const subtitulo = computed(() => {
 
 // Con varias ordenes, cada comprobante dice a cuales va.
 const detalleDe = (factura) => [varias.value ? factura.ordenes_vinculadas.map(o => o.order_number).join(', ') : '',
-  factura.cliente, fechaCorta(factura.invoice_date), factura.es_fiscal ? '' : 'Sin comprobante'].filter(Boolean).join(' · ')
+  factura.cliente, fechaCorta(factura.invoice_date)].filter(Boolean).join(' · ')
 
 const facturas = ref([])
 const totales = ref([])
@@ -213,17 +219,24 @@ function abrirAbonos (factura) {
   enAbonos.value = true
 }
 
-// Al dejar una orden sin comprobante se abre el abono de su registro interno; se puede cerrar sin cobrar.
-// Subir la de KeyFacil abre su dialogo aca; lo demas lo hace la pantalla de ordenes.
+const editando = ref(false)
+const enEdicion = useOpenRow(facturas)
+function abrirEdicion (factura) {
+  enEdicion.value = factura
+  editando.value = true
+}
+
+// Subir la de KeyFacil y marcar sin comprobante abren su formulario aca; lo demas lo hace la pantalla de ordenes.
 const subiendo = ref(false)
+const marcando = ref(false)
 async function hacer (clave) {
-  if (clave === SUBIR) {
-    subiendo.value = true
-    return
-  }
-  const cobrarYa = clave === SIN_COMPROBANTE && !vinculando.value && marcaDe(aCobrar.value) !== SIN_COMPROBANTE
-  const hecho = await props.ejecutarAccion(clave, aCobrar.value)
-  if (!hecho || !cobrarYa) return
+  if (clave === SUBIR) subiendo.value = true
+  else if (clave === SIN_COMPROBANTE && marcaDe(aCobrar.value) !== SIN_COMPROBANTE) marcando.value = true
+  else if (await props.ejecutarAccion(clave, aCobrar.value)) recargar()
+}
+
+// Recien marcada, se abre su ventana de abonos; se puede cerrar sin cobrar.
+async function cobrarYa () {
   await recargar()
   const interna = facturas.value.find(f => !f.es_fiscal)
   if (interna) abrirAbonos(interna)

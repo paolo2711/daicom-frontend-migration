@@ -442,7 +442,7 @@ import StateLegend         from '@/components/shared/StateLegend.vue'
 import { tieneExcelBase }  from '@/utils/certificates/excelBase'
 import { estaEntregado } from '@/utils/certificates/entrega'
 import { NUBE_DESACTUALIZADA, ESTADOS, estadoDe, vivo } from '@/utils/certificates/estado'
-import { ANULADA } from '@/utils/orders/estado'
+import { ABONADO, ANULADA, CREDITO, DEUDA, EXCEDIDO, PAGADO } from '@/utils/orders/estado'
 import { TIPOS_CERTIFICADO } from '@/utils/certificates/tipos'
 import { datosDelEquipo } from '@/utils/equipments/datos'
 import { ACCIONES_CERTIFICADO } from '@/utils/certificates/acciones'
@@ -708,14 +708,11 @@ const getSemaforoColor = (item) => {
   // lado del dinero esta cerrado igual que una pagada.
   if (orden.order_requiere_pago === false) return 'success'
 
-  const hasInv = orden.order_has_invoices
-  const hasPay = orden.order_has_payments
+  if (orden.order_estado === CREDITO) return 'teal'  // No se cobra hasta que vence
+  if ([PAGADO, EXCEDIDO].includes(orden.order_estado)) return 'success'
+  if ([DEUDA, ABONADO].includes(orden.order_estado)) return 'warning'
 
-  if (orden.order_vence) return 'teal'    // A credito: no se cobra hasta que vence
-  if (hasInv && hasPay) return 'success'  // Verde: Facturado y pagado
-  if (hasInv || hasPay) return 'warning'  // Amarillo: Hay plata moviéndose (falta factura o falta pago)
-  
-  // Si llegamos aquí, es porque NO hay factura y NO hay pago
+  // Sin factura ni cobro.
   if (tieneExcelBase(item)) return 'red'  // Rojo Alerta: Trabajo técnico hecho, pero no han cobrado
   return 'primary'                        // Azul: Borrador recién creado, nadie ha trabajado ni cobrado
 }
@@ -725,15 +722,11 @@ const getSemaforoText = (item) => {
   if (orden.order_status === ANULADA) return 'Orden Anulada'
   if (orden.order_requiere_pago === false) return 'Sin cargo, no se cobra'
 
-  const hasInv = orden.order_has_invoices
-  const hasPay = orden.order_has_payments
+  if (orden.order_estado === CREDITO) return `A crédito · vence ${fechaCorta(orden.order_vence)}`
+  if ([PAGADO, EXCEDIDO].includes(orden.order_estado)) return 'Cobrada'
+  if (orden.order_estado === ABONADO) return 'Abono parcial, falta cobrar'
+  if (orden.order_estado === DEUDA) return 'Falta cobrar'
 
-  if (orden.order_vence) return `A crédito · vence ${fechaCorta(orden.order_vence)}`
-  if (hasInv && hasPay) return 'Facturación y Liquidación Completadas'
-  if (hasInv && !hasPay) return 'Facturada (Pendiente de Liquidación)'
-  if (!hasInv && hasPay) return 'Liquidación en Proceso (Pendiente de Facturación)'
-  
-  // Si llegamos aquí, es porque NO hay factura y NO hay pago
   if (tieneExcelBase(item)) return 'Trabajo técnico listo, falta Facturar y Cobrar'
   return 'Pendiente de Trabajo Técnico y Cobro'
 }

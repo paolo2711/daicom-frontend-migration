@@ -6,8 +6,8 @@ export const ABONADO = 3
 export const ANULADA = 4
 export const PAGADO = 5
 export const EXCEDIDO = 6
-// Una Deuda a credito que todavia no vence. No es una columna: el back la
-// calcula al leer (Invoice.estado_de_cobro y Order.estado_financiero).
+export const SIN_CARGO = 7
+// Una Deuda a credito que todavia no vence.
 export const CREDITO = 8
 
 export const ESTADOS = {
@@ -18,6 +18,7 @@ export const ESTADOS = {
   [PAGADO]: { texto: 'Pagado' },
   [EXCEDIDO]: { texto: 'Excedido' },
   [ANULADA]: { texto: 'Anulada' },
+  [SIN_CARGO]: { texto: 'Sin cargo' },
 }
 
 // El color del cobro: lo que falta cobrar en rojo, el credito al dia en teal (como su pildora), lo cobrado en verde
@@ -34,9 +35,7 @@ const TONO_DEL_ESTADO = {
 }
 export const tonoDe = (estado) => TONOS[TONO_DEL_ESTADO[estado] || 'abierta']
 
-// El filtro de la columna de la orden. Credito no esta: no se guarda, se
-// calcula al leer.
-export const FILTRO_DE_ESTADO = [EN_PROCESO, DEUDA, ABONADO, PAGADO, EXCEDIDO, ANULADA]
+export const FILTRO_DE_ESTADO = [EN_PROCESO, DEUDA, CREDITO, ABONADO, PAGADO, EXCEDIDO, SIN_CARGO, ANULADA]
   .map(id => ({ id, name: ESTADOS[id].texto }))
 
 // Order.OrderType.

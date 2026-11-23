@@ -108,12 +108,12 @@ export const ACCIONES_FACTURA = [
   {
     clave: 'editar', grupo: 'trabajo', varios: false,
     icono: 'mdi-pencil', texto: 'Editar factura',
-    visible: ([factura]) => factura.es_fiscal && !factura.estado_sunat,
+    visible: ([factura]) => !factura.estado_sunat,
   },
   {
     clave: 'desvincular', grupo: 'trabajo', varios: false,
     icono: 'mdi-link-off', texto: 'Desvincular una orden',
-    visible: ([factura]) => factura.es_fiscal && factura.ordenes_vinculadas.length > 0,
+    visible: ([factura]) => factura.ordenes_vinculadas.length > 0,
   },
   {
     clave: 'nota', grupo: 'peligro', varios: false,

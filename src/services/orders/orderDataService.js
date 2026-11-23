@@ -87,8 +87,8 @@ class OrderDataService {
 
     // marca: sin_comprobante | sin_cargo | con_factura. La que no se puede no
     // frena a las demas: vuelve en `rechazos`.
-    marcarComprobante(ids, marca, currency) {
-        return axios.post('orders/marcar-comprobante', { order_ids: ids, marca, currency }, { headers: authHeader() });
+    marcarComprobante(ids, marca, cobro = {}) {
+        return axios.post('orders/marcar-comprobante', { order_ids: ids, marca, ...cobro }, { headers: authHeader() });
     }
 
     create(data) {

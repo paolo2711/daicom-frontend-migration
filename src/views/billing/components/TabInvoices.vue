@@ -31,10 +31,6 @@
                     label="Detracción" clearable density="compact" variant="outlined" hide-details />
         </v-col>
         <v-col cols="12" sm="6" md="3">
-          <v-select v-model="filtros.tipo" :items="TIPO" prepend-inner-icon="mdi-file-document-outline" label="Tipo"
-                    clearable density="compact" variant="outlined" hide-details />
-        </v-col>
-        <v-col cols="12" sm="6" md="3">
           <v-select v-model="filtros.order_type" :items="TIPO_DE_ORDEN" prepend-inner-icon="mdi-briefcase-outline"
                     label="Órdenes de" clearable density="compact" variant="outlined" hide-details />
         </v-col>
@@ -81,7 +77,7 @@
           </template>
           <template #item.total="{ item }">
             <div class="font-weight-medium text-no-wrap">{{ montoDe(item) ? monto(item.amount, item.currency) : '—' }}</div>
-            <div v-if="item.es_fiscal" class="text-caption text-no-wrap text-medium-emphasis">
+            <div class="text-caption text-no-wrap text-medium-emphasis">
               {{ item.detraccion_applies ? `Detracción ${importe(item.detraccion_amount)}` : 'Sin detracción' }}
             </div>
             <div v-for="nota in item.notas" :key="nota.id" class="text-caption text-no-wrap"
@@ -109,7 +105,7 @@
       </table-loading-overlay>
     </pdf-split-view>
 
-    <state-legend titulo="Cobro:" :estados="TONOS" />
+    <state-legend titulo="Cobro:" :estados="TONOS_DE_FACTURA" />
     <state-legend titulo="Tipos:" :estados="TIPOS" />
 
     <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
@@ -155,7 +151,7 @@ import BillingDataService from '@/services/billing/billingDataService'
 import { accionesPara } from '@/utils/actions'
 import { ACCIONES_FACTURA } from '@/utils/billing/acciones'
 import {
-  EMITIR, FILTRO_DE_ESTADO, PILDORAS_DE_FACTURAS, TIPOS, cobroDe, condicionDe, desvincular, eliminar, estadoDe, montoDe, tipoDe,
+  EMITIR, FILTRO_DE_ESTADO, PILDORAS_DE_FACTURAS, TIPOS, TONOS_DE_FACTURA, cobroDe, condicionDe, desvincular, eliminar, estadoDe, montoDe, tipoDe,
 } from '@/utils/billing/facturas'
 import { preguntarFactura, reintentarFactura } from '@/utils/billing/pendientes'
 import { ACEPTADA, ESTADOS as ESTADOS_SUNAT } from '@/utils/billing/sunat'
@@ -163,7 +159,7 @@ import { fechaCorta } from '@/utils/dates'
 import { debounce } from '@/utils/debounce'
 import { mensajeDeError } from '@/utils/errors'
 import { MONEDAS, importe, monto } from '@/utils/money'
-import { ALQUILER, SERVICIO, TONOS } from '@/utils/orders/estado'
+import { ALQUILER, SERVICIO } from '@/utils/orders/estado'
 import { OTRA_PESTANA, abrirEnOtraPestana, avisarSoloPdf } from '@/utils/pdf'
 import DialogCancelInvoice from './DialogCancelInvoice.vue'
 import DialogCreditNote from './DialogCreditNote.vue'
@@ -178,7 +174,6 @@ const route = useRoute()
 const router = useRouter()
 
 const DETRACCION = [{ title: 'Con detracción', value: 'si' }, { title: 'Sin detracción', value: 'no' }]
-const TIPO = [{ title: 'Facturas', value: 'fiscal' }, { title: 'Sin comprobante', value: 'interna' }]
 const TIPO_DE_ORDEN = [{ title: 'Servicio', value: SERVICIO }, { title: 'Alquiler', value: ALQUILER }]
 
 const EN_LA_LISTA_ANGOSTA = ['numero', 'cliente', 'cobro']
@@ -196,7 +191,7 @@ const total = ref(0)
 const cargando = ref(false)
 const opciones = ref({ page: 1, itemsPerPage: 30 })
 const filtros = ref({ q: '', pildora: null, cliente: null, desde: '', hasta: '', estado: null, currency: null,
-                      detraccion: null, tipo: null, order_type: null })
+                      detraccion: null, order_type: null })
 const alternarPildora = (valor) => { filtros.value.pildora = filtros.value.pildora === valor ? null : valor }
 const { rango, aplicarRango, limpiarRango } = useDateRangeFilter(filtros)
 const vista = ref(null)
@@ -210,7 +205,7 @@ async function recargar () {
   const conValor = Object.fromEntries(Object.entries(filtros.value).filter(([, v]) => v))
   try {
     const { page, itemsPerPage } = opciones.value
-    const { data } = await BillingDataService.listInvoices({ ...conValor, page, page_size: itemsPerPage })
+    const { data } = await BillingDataService.listInvoices({ ...conValor, tipo: 'fiscal', page, page_size: itemsPerPage })
     if (!isLatest(turno)) return
     facturas.value = data.results.map(InvoiceMappers.getMap)
     total.value = data.count

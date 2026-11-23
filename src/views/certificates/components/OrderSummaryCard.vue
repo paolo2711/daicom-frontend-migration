@@ -91,9 +91,9 @@
                    :title="pay.payment_proof ? 'Ver comprobante' : ''"
                    @click="abrirDoc(pay.payment_proof)">
             <div class="d-flex align-center">
-              <v-icon size="small" :color="getColorPago(pay.payment_method)" class="mr-2">{{ getIconoPago(pay.payment_method) }}</v-icon>
+              <v-icon size="small" class="mr-2 text-medium-emphasis">{{ formaDePago(pay).icono }}</v-icon>
               <div class="d-flex flex-column">
-                <span class="text-body-2 font-weight-bold text-capitalize">{{ (pay.payment_method || '').toLowerCase() }}</span>
+                <span class="text-body-2 font-weight-bold">{{ formaDePago(pay).texto }}</span>
                 <span class="text-caption text-medium-emphasis">{{ fechaCorta(pay.payment_date) }}</span>
               </div>
             </div>
@@ -150,6 +150,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import OrderDataService from '@/services/orders/orderDataService.js'
 import { fechaCorta } from '@/utils/dates'
+import { formaDePago } from '@/utils/billing/facturas'
 import { monto } from '@/utils/money'
 import { vencimiento } from '@/utils/orders/cobro'
 
@@ -198,20 +199,6 @@ const abrirDoc = (url) => { if (url) window.open(url, '_blank') }
 
 const irAOrden = () => {
   router.push({ path: '/orders', query: { buscar_orden: props.orderNumber } }).catch(()=>{})
-}
-
-const getIconoPago = (metodo) => {
-  if (metodo === 'EFECTIVO') return 'mdi-cash'
-  if (metodo === 'BILLETERA') return 'mdi-cellphone-nfc'
-  if (metodo === 'TRANSFERENCIA') return 'mdi-bank-transfer'
-  return 'mdi-cash-register'
-}
-
-const getColorPago = (metodo) => {
-  if (metodo === 'EFECTIVO') return 'green-darken-1'
-  if (metodo === 'BILLETERA') return 'purple-darken-1'
-  if (metodo === 'TRANSFERENCIA') return 'blue-darken-1'
-  return 'grey'
 }
 </script>
 

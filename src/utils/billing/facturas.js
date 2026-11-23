@@ -4,7 +4,7 @@ import { avisarHecho } from '@/utils/documents/avisos'
 import { mensajeDeError } from '@/utils/errors'
 import { importe, monto } from '@/utils/money'
 import { vencimiento } from '@/utils/orders/cobro'
-import { ABONADO, ANULADA, CREDITO, DEUDA, EN_PROCESO, ESTADOS, EXCEDIDO, PAGADO, tonoDe } from '@/utils/orders/estado'
+import { ABONADO, ANULADA, CREDITO, DEUDA, ESTADOS, EXCEDIDO, PAGADO, tonoDe } from '@/utils/orders/estado'
 import { ACEPTADA as ACEPTADA_SUNAT, ESTADOS as ESTADOS_SUNAT, POR_ENVIAR, RECHAZADA, REVISAR } from '@/utils/billing/sunat'
 
 // Lo de una factura que comparten la pestaña Facturas y el panel de la orden.
@@ -18,14 +18,15 @@ export function estadoDe (factura) {
 export const TIPOS = {
   emitida: { texto: 'Emitida en la plataforma', icono: 'mdi-send-outline' },
   keyfacil: { texto: 'Subida de KeyFacil', icono: 'mdi-file-upload-outline' },
-  interna: { texto: 'Sin comprobante', icono: 'mdi-lock-outline' },
   alerta: { texto: 'Falta algo con SUNAT', icono: 'mdi-alert' },
 }
 // La nota de credito que SUNAT todavia no acepto, si hay.
 export const notaPendiente = (factura) => factura.notas?.find(n => n.estado !== ACEPTADA_SUNAT)
 
+const SIN_COMPROBANTE = { texto: 'Sin comprobante', icono: 'mdi-file-remove-outline' }
+
 export function tipoDe (factura) {
-  if (!factura.es_fiscal) return TIPOS.interna
+  if (!factura.es_fiscal) return SIN_COMPROBANTE
   if (!factura.estado_sunat) return TIPOS.keyfacil
   if ([POR_ENVIAR, RECHAZADA, REVISAR].includes(factura.estado_sunat)) {
     return { ...TIPOS.alerta, texto: ESTADOS_SUNAT[factura.estado_sunat].texto }
@@ -47,24 +48,31 @@ export const OPCIONES_NUEVA_FACTURA = [
 // La unidad de los items de la factura; a SUNAT va como servicio (ZZ).
 export const UNIDAD_DE_FACTURA = 'und'
 
-export const FORMA_DE_PAGO = { EFECTIVO: 'efectivo', BILLETERA: 'billetera virtual', TRANSFERENCIA: 'transferencia' }
+export const DETRACCION = 'DETRACCION'
+export const FORMAS_DE_PAGO = {
+  TRANSFERENCIA: { texto: 'Transferencia', icono: 'mdi-bank-transfer' },
+  EFECTIVO: { texto: 'Efectivo', icono: 'mdi-cash' },
+  BILLETERA: { texto: 'Billetera', icono: 'mdi-cellphone-nfc' },
+  [DETRACCION]: { texto: 'Detracción', icono: 'mdi-bank-outline' },
+}
+export const formaDePago = (abono) => FORMAS_DE_PAGO[abono.payment_method] || { texto: '', icono: 'mdi-cash-register' }
 
-export const FILTRO_DE_ESTADO =[EN_PROCESO, DEUDA, CREDITO, ABONADO, PAGADO, EXCEDIDO, ANULADA]
+export const FILTRO_DE_ESTADO = [DEUDA, CREDITO, ABONADO, PAGADO, EXCEDIDO, ANULADA]
   .map(id => ({ id, name: ESTADOS[id].texto }))
+export const TONOS_DE_FACTURA = Object.fromEntries([DEUDA, CREDITO, PAGADO, ANULADA].map(tonoDe).map(tono => [tono.texto, tono]))
 
-// El contenedor sin comprobante nace en 0 hasta su primer abono.
 export const montoDe = (factura) => (factura.amount > 0 ? factura.amount : null)
 
-export const anulada = (factura) => factura.status === ANULADA
+export const nombreDe = (factura) =>
+  (factura.es_fiscal ? factura.invoice_number || 'Sin número' : SIN_COMPROBANTE.texto)
 
-// La columna Cobro: cuanto falta, lo abonado de lo que el cliente paga y la barra. La sin comprobante, lo cobrado.
+export const anulada = (factura) => factura.estado === ANULADA
+
+// La columna Cobro: cuanto falta, lo abonado de lo que el cliente paga y la barra.
 export function cobroDe (factura) {
-  const { por_cobrar: neto, total_pagado: pagado, saldo_pendiente: saldo, currency } = factura
+  const { a_recibir: neto, total_pagado: pagado, saldo_pendiente: saldo, currency } = factura
   const abonos = `${factura.cantidad_de_abonos} ${factura.cantidad_de_abonos === 1 ? 'abono' : 'abonos'}`
   if (anulada(factura)) return { texto: 'Anulada', detalle: pagado > 0 ? abonos : '', porcentaje: null }
-  if (!factura.es_fiscal) {
-    return { texto: pagado > 0 ? `Cobrado ${monto(pagado, currency)}` : 'Sin abonos', detalle: '', porcentaje: null }
-  }
   const porcentaje = neto > 0 ? Math.min(100, Math.round((pagado / neto) * 100)) : 0
   if (saldo < 0) return { texto: `Excedido ${monto(-saldo, currency)}`, detalle: abonos, porcentaje, tono: 'warning' }
   if (saldo === 0 && pagado > 0) return { texto: 'Pagada', detalle: abonos, porcentaje, tono: 'success' }
@@ -74,7 +82,6 @@ export function cobroDe (factura) {
 
 // Debajo de la fecha: contado, cuando vence o cuantos dias lleva vencida.
 export function condicionDe (factura) {
-  if (!factura.es_fiscal) return { texto: '' }
   if (factura.dias_de_atraso) {
     const dias = factura.dias_de_atraso
     return { texto: `${vencimiento(factura)} · ${dias} ${dias === 1 ? 'día' : 'días'}`, vencida: true }

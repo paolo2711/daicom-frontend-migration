@@ -40,21 +40,4 @@ export default {
       documentos: element.documentos || { oc_count: 0, val_count: 0, oc_ref: '', oc_last_pdf: null, val_last_pdf: null },
     };
   },
-  
-  putMap(element) {
-    if (!element) return null;
-    
-    // El putMap de órdenes es más ligero porque la mayoría de acciones 
-    // complejas (subir PDFs, vincular facturas) se hacen por FormData
-    // en endpoints dedicados, no en el PUT general del objeto Order.
-    return {
-      id: element.id,
-      status: element.status,
-      order_type: element.order_type,
-      client: element.client,
-      wants_invoice: element.wants_invoice,
-      requiere_pago: element.requiere_pago ?? true,
-      client_order_reference: element.client_order_reference
-    };
-  }
 };

@@ -13,8 +13,7 @@
         icon="mdi-file-document-outline"
         @close="closeDialog"
       >
-        <span v-if="order">Orden: <b>{{ order.order_number }}</b></span>
-        <span v-else-if="esMulti">
+        <span v-if="paraOrdenes">
           {{ orders.length === 1 ? 'Orden' : `${orders.length} órdenes` }}:
           <span>{{ orders.map(o => o.order_number).join(', ') }}</span>
         </span>
@@ -164,13 +163,11 @@ import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
 
 const props = defineProps({
   modelValue:    { type: Boolean, default: false },
-  order:         { type: Object, default: null },   // opcional: factura para UNA orden
-  orders:        { type: Array,  default: null },   // opcional: UNA factura para VARIAS órdenes (selección)
+  orders:        { type: Array,  default: null },   // opcional: las órdenes que cubre la factura nueva
   invoiceToEdit: { type: Object, default: null },   // opcional: editar una factura existente
   pdf:           { type: File,   default: null },   // opcional: PDF soltado sobre el panel; se lee al abrir
-  order_type:    { type: Number, default: null },   // tipo de la pestaña (1=servicio/2=alquiler): tipa la factura suelta al crearla
 })
-const emit = defineEmits(['update:modelValue', 'updateOrder', 'close'])
+const emit = defineEmits(['update:modelValue', 'close'])
 
 const dialogModel = computed({
   get: () => props.modelValue,
@@ -184,12 +181,9 @@ const monedaSuelta = ref('PEN')
 const formRef = ref(null)
 
 const editando = computed(() => !!props.invoiceToEdit)
-// Multi-orden: una sola factura para varias órdenes marcadas (viene de la
-// barra de selección). Se crea suelta y se vinculan todas de una.
-const esMulti = computed(() => !!(props.orders && props.orders.length))
+const paraOrdenes = computed(() => !!(props.orders && props.orders.length))
 
-// Moneda efectiva: al editar, la de la factura; al crear (orden, multi o
-// suelta) la elegida en el toggle del dialogo.
+// Al editar, la de la factura; al crear, la elegida en el toggle del dialogo.
 const monedaActual = computed(() => {
   if (props.invoiceToEdit) return props.invoiceToEdit.currency || 'PEN'
   return monedaSuelta.value
@@ -197,8 +191,7 @@ const monedaActual = computed(() => {
 const esUSD = computed(() => monedaActual.value === 'USD')
 
 // La factura suelta todavia no tiene tipo: el back toma el de servicio hasta que se vincule.
-const tipoOrden = computed(() => props.order?.order_type ?? props.orders?.[0]?.order_type
-  ?? props.invoiceToEdit?.order_type ?? props.order_type)
+const tipoOrden = computed(() => props.orders?.[0]?.order_type ?? props.invoiceToEdit?.order_type)
 
 const facturaData = ref({
   invoice_number: '',
@@ -308,9 +301,6 @@ const buildFormData = () => {
   // Al contado el back borra el vencimiento.
   data.append('es_credito', facturaData.value.es_credito)
   if (facturaData.value.es_credito) data.append('due_date', facturaData.value.due_date)
-  // Tipo de la pestaña: tipa la factura suelta al crearla (el backend lo usa
-  // solo en la creación suelta; en editar/crear-en-orden lo ignora).
-  if (props.order_type != null) data.append('order_type', props.order_type)
   if (facturaData.value.pdf) data.append('pdf', facturaData.value.pdf)
   return data
 }
@@ -339,19 +329,12 @@ const save = async () => {
     const data = buildFormData()
     if (editando.value) {
       await BillingDataService.updateInvoice(props.invoiceToEdit.id, data)
-    } else if (esMulti.value) {
-      // Una sola factura para varias órdenes: se crea suelta y se vinculan
-      // todas de una (el backend valida moneda/tipo al vincular).
-      const res = await BillingDataService.createInvoiceSuelta(data)
-      await BillingDataService.linkInvoice(res.data.id, props.orders.map(o => o.id))
-    } else if (props.order) {
-      await BillingDataService.createInvoice(props.order.id, data)
     } else {
-      await BillingDataService.createInvoiceSuelta(data)
+      const res = await BillingDataService.createInvoice(data)
+      if (paraOrdenes.value) await BillingDataService.linkInvoice(res.data.id, props.orders.map(o => o.id))
     }
     Toast.fire({ timer: 2200, icon: 'success', title: editando.value ? 'Factura actualizada' : 'Factura guardada' })
     resetForm()
-    emit('updateOrder')
     closeDialog()
   } catch (err) {
     Swal.fire('Operación rechazada', mensajeDeError(err, 'No se pudo guardar la factura.'), 'error')

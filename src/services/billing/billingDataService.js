@@ -92,11 +92,7 @@ class BillingDataService {
   listInvoices(filtros = {}) {
     return axios.get("billing/invoices/", { params: filtros, headers: authHeader() });
   }
-  // Una factura para una orden; la suelta (sin orden) nace con el tipo de la pestaña.
-  createInvoice(orderId, data) {
-    return axios.post(`billing/orders/${orderId}/invoices/`, data, { headers: authHeader() });
-  }
-  createInvoiceSuelta(data) {
+  createInvoice(data) {
     return axios.post("billing/invoices/create/", data, { headers: authHeader() });
   }
   updateInvoice(invoiceId, data) {

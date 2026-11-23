@@ -1,5 +1,5 @@
 // Order.OrderStatus en el back. Es tambien el estado_financiero de la orden y,
-// con los mismos numeros, el estado de una factura (OrderInvoice.InvoiceStatus).
+// con los mismos numeros, el estado de una factura (Invoice.InvoiceStatus).
 export const EN_PROCESO = 1
 export const DEUDA = 2
 export const ABONADO = 3
@@ -7,7 +7,7 @@ export const ANULADA = 4
 export const PAGADO = 5
 export const EXCEDIDO = 6
 // Una Deuda a credito que todavia no vence. No es una columna: el back la
-// calcula al leer (OrderInvoice.estado y Order.estado_financiero).
+// calcula al leer (Invoice.estado_de_cobro y Order.estado_financiero).
 export const CREDITO = 8
 
 export const ESTADOS = {

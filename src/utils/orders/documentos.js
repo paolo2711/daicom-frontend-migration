@@ -68,7 +68,7 @@ export function subirArchivo(ordenId, { destino, numero, archivo }) {
     return OrderDataService.addDocument(ordenId, datos)
   }
   datos.append(destino, archivo)
-  return OrderDataService.uploadInvoice(ordenId, datos)
+  return OrderDataService.subirGuia(ordenId, datos)
 }
 
 export function vincularDocumento(ordenId, { tipo, llave }, id) {

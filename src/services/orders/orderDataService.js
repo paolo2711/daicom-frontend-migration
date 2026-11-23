@@ -97,18 +97,13 @@ class OrderDataService {
         return axios.post("orders", data, { headers });
     }
 
-    delete(id) {
-        return axios.delete(`orders/${id}`, { headers: authHeader() });
-    }
-
     patch(id, data) {
         let headers = authHeader();
         headers['Content-Type'] = "application/json";
         return axios.patch(`orders/${id}`, data, { headers });
     }
 
-    /** @deprecated Usar createInvoice() / deleteInvoice(). Se mantiene para compatibilidad durante la transición. */
-    uploadInvoice(id, data) {
+    subirGuia(id, data) {
         let headers = authHeader();
         headers['Content-Type'] = "multipart/form-data";
         return axios.patch(`orders/${id}`, data, { headers });

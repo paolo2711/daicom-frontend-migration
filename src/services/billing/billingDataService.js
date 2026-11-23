@@ -102,9 +102,11 @@ class BillingDataService {
   updateInvoice(invoiceId, data) {
     return axios.patch(`billing/invoices/${invoiceId}/`, data, { headers: authHeader() });
   }
-  // Con `orderId` solo la desvincula de esa orden; se borra si era la última.
-  deleteInvoice(invoiceId, orderId) {
-    return axios.delete(`billing/invoices/${invoiceId}/`, { params: { order_id: orderId }, headers: authHeader() });
+  deleteInvoice(invoiceId) {
+    return axios.post(`billing/invoices/${invoiceId}/eliminar/`, {}, { headers: authHeader() });
+  }
+  unlinkInvoice(invoiceId, orderId) {
+    return axios.post(`billing/invoices/${invoiceId}/unlink/`, { order_id: orderId }, { headers: authHeader() });
   }
   linkInvoice(invoiceId, orderIds) {
     const order_ids = Array.isArray(orderIds) ? orderIds : [orderIds];

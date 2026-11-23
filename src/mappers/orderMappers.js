@@ -8,7 +8,6 @@ export default {
       order_type: element.order_type || 1, // 1: Servicio, 2: Alquiler
       status: element.status,
       created_at: element.created_at,
-      sent: element.sent,
       
       // ─── ESTADO FINANCIERO (reflejo del estado de las facturas) ───
       // La orden ya no tiene moneda: cada factura maneja la suya.
@@ -55,8 +54,7 @@ export default {
       client: element.client,
       wants_invoice: element.wants_invoice,
       requiere_pago: element.requiere_pago ?? true,
-      client_order_reference: element.client_order_reference,
-      sent: element.sent
+      client_order_reference: element.client_order_reference
     };
   }
 };

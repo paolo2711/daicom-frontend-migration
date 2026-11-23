@@ -47,7 +47,7 @@
           :count="appStore.pendingPaymentsServiceCount"
           color="error"
           icon="mdi-cash-remove"
-          tooltip="Filtrar órdenes facturadas pero sin abonos"
+          tooltip="Filtrar órdenes con algo por cobrar"
           @click="toggleFiltroPago"
         >Falta Pago</filter-pill>
 

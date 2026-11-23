@@ -97,7 +97,7 @@ const fallo = (titulo, porDefecto) => (error) => {
   return false
 }
 
-// Quita una orden de la factura; si era la ultima, el back borra la factura. True si se hizo.
+// Quita una orden ({ id, order_number }) de la factura. True si se hizo.
 export async function desvincular (factura, orden) {
   const { isConfirmed } = await Swal.fire({
     title: '¿Desvincular esta orden?', icon: 'question', showCancelButton: true,
@@ -106,10 +106,27 @@ export async function desvincular (factura, orden) {
     confirmButtonText: 'Sí, desvincular', cancelButtonText: 'Cancelar',
   })
   if (!isConfirmed) return false
-  return BillingDataService.deleteInvoice(factura.id, orden.order_id).then(() => {
+  return BillingDataService.unlinkInvoice(factura.id, orden.id).then(() => {
     avisarHecho(`${orden.order_number} desvinculada`)
     return true
   }, fallo('No se desvinculó', 'No se pudo desvincular.'))
+}
+
+// Borra la factura con su PDF y sus abonos. True si se hizo.
+export async function eliminar (factura) {
+  const vinculadas = factura.ordenes_vinculadas.length
+  const { isConfirmed } = await Swal.fire({
+    title: '¿Eliminar esta factura?', icon: 'warning', showCancelButton: true,
+    html: `<b>${factura.invoice_number || 'Sin número'}</b><br>`
+      + (vinculadas ? `Está vinculada a ${vinculadas} ${vinculadas === 1 ? 'orden' : 'órdenes'}. ` : '')
+      + 'Se eliminará la factura y todos sus abonos.',
+    confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar',
+  })
+  if (!isConfirmed) return false
+  return BillingDataService.deleteInvoice(factura.id).then(() => {
+    avisarHecho('Factura eliminada')
+    return true
+  }, fallo('No se eliminó', 'No se pudo eliminar.'))
 }
 
 // Vincula las ordenes a la factura, sin monto. True si se hizo.

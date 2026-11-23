@@ -155,13 +155,12 @@ import BillingDataService from '@/services/billing/billingDataService'
 import { accionesPara } from '@/utils/actions'
 import { ACCIONES_FACTURA } from '@/utils/billing/acciones'
 import {
-  EMITIR, FILTRO_DE_ESTADO, PILDORAS_DE_FACTURAS, TIPOS, cobroDe, condicionDe, desvincular, estadoDe, montoDe, tipoDe,
+  EMITIR, FILTRO_DE_ESTADO, PILDORAS_DE_FACTURAS, TIPOS, cobroDe, condicionDe, desvincular, eliminar, estadoDe, montoDe, tipoDe,
 } from '@/utils/billing/facturas'
 import { preguntarFactura, reintentarFactura } from '@/utils/billing/pendientes'
 import { ACEPTADA, ESTADOS as ESTADOS_SUNAT } from '@/utils/billing/sunat'
 import { fechaCorta } from '@/utils/dates'
 import { debounce } from '@/utils/debounce'
-import { avisarHecho } from '@/utils/documents/avisos'
 import { mensajeDeError } from '@/utils/errors'
 import { MONEDAS, importe, monto } from '@/utils/money'
 import { ALQUILER, SERVICIO, TONOS } from '@/utils/orders/estado'
@@ -306,35 +305,20 @@ function abrir (factura) {
 }
 
 async function desvincularUna (factura) {
-  const ordenes = factura.ordenes_vinculadas
+  const ordenes = factura.ordenes_vinculadas.map(o => ({ id: o.order_id, order_number: o.order_number }))
   let orden = ordenes[0]
   if (ordenes.length > 1) {
     const { value } = await swal.fire({
       title: '¿De qué orden?', input: 'select', showCancelButton: true, cancelButtonText: 'Cancelar',
-      inputOptions: Object.fromEntries(ordenes.map(o => [o.order_id, o.order_number])),
+      inputOptions: Object.fromEntries(ordenes.map(o => [o.id, o.order_number])),
     })
-    orden = ordenes.find(o => String(o.order_id) === value)
+    orden = ordenes.find(o => String(o.id) === value)
   }
   if (orden && await desvincular(factura, orden)) recargar()
 }
 
-async function eliminar (factura) {
-  const vinculadas = factura.ordenes_vinculadas.length
-  const { isConfirmed } = await swal.fire({
-    title: '¿Eliminar esta factura?', icon: 'warning', showCancelButton: true,
-    html: `<b>${factura.invoice_number || 'Sin número'}</b><br>`
-      + (vinculadas ? `Está vinculada a ${vinculadas} ${vinculadas === 1 ? 'orden' : 'órdenes'}. ` : '')
-      + 'Se eliminará la factura y todos sus abonos.',
-    confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar',
-  })
-  if (!isConfirmed) return
-  try {
-    await BillingDataService.deleteInvoice(factura.id)
-    avisarHecho('Factura eliminada')
-    recargar()
-  } catch (error) {
-    swal.fire({ icon: 'error', title: 'No se eliminó', text: mensajeDeError(error, 'No se pudo eliminar.') })
-  }
+async function eliminarUna (factura) {
+  if (await eliminar(factura)) recargar()
 }
 
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(facturas)
@@ -363,7 +347,7 @@ function ejecutarAccion (clave, [factura]) {
     case 'anular':
       enBaja.value = factura
       return
-    case 'eliminar': return eliminar(factura)
+    case 'eliminar': return eliminarUna(factura)
   }
 }
 

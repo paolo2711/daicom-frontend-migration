@@ -133,7 +133,7 @@
       </v-card-text>
 
       <v-card-actions class="px-6 pb-4 pt-2 border-t-thin">
-        <v-btn v-if="editando" color="error" variant="text" @click="eliminar" :loading="isDeleting">
+        <v-btn v-if="editando" color="error" variant="text" @click="eliminarEsta">
           <v-icon start>mdi-delete</v-icon> Eliminar
         </v-btn>
         <v-spacer />
@@ -156,6 +156,7 @@ import { avisarSoloPdf } from '@/utils/pdf'
 import Swal from 'sweetalert2'
 import BillingDataService from '@/services/billing/billingDataService'
 import { mensajeDeError } from '@/utils/errors'
+import { eliminar } from '@/utils/billing/facturas'
 import { MONEDAS, monto, simboloDe } from '@/utils/money'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
@@ -178,7 +179,6 @@ const dialogModel = computed({
 
 const isExtracting = ref(false)
 const isSaving = ref(false)
-const isDeleting = ref(false)
 const extraerCorrelativo = ref(true)
 const monedaSuelta = ref('PEN')
 const formRef = ref(null)
@@ -360,25 +360,8 @@ const save = async () => {
   }
 }
 
-const eliminar = async () => {
-  const r = await Swal.fire({
-    title: '¿Eliminar esta factura?',
-    text: 'Se eliminará el comprobante de forma permanente.',
-    icon: 'warning', showCancelButton: true,
-    confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar',
-  })
-  if (!r.isConfirmed) return
-  isDeleting.value = true
-  try {
-    await BillingDataService.deleteInvoice(props.invoiceToEdit.id, props.order?.id)
-    Toast.fire({ timer: 2200, icon: 'success', title: 'Factura eliminada' })
-    emit('updateOrder')
-    closeDialog()
-  } catch (err) {
-    Swal.fire('Error', mensajeDeError(err, 'No se pudo eliminar.'), 'error')
-  } finally {
-    isDeleting.value = false
-  }
+const eliminarEsta = async () => {
+  if (await eliminar(props.invoiceToEdit)) closeDialog()
 }
 
 const closeDialog = () => {

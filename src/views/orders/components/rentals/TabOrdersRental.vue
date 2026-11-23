@@ -47,7 +47,7 @@
           :count="appStore.pendingPaymentsRentalCount"
           color="error"
           icon="mdi-cash-remove"
-          tooltip="Filtrar alquileres facturados sin abonos"
+          tooltip="Filtrar alquileres con algo por cobrar"
           @click="toggleFiltroPago"
         >Falta Pago</filter-pill>
 

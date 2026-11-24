@@ -29,7 +29,7 @@
               <td class="font-weight-medium">{{ h.order_number }}</td>
               <td>{{ h.client_name }}</td>
               <td class="text-center" :class="{ 'text-medium-emphasis': !h.departure_date }">
-                {{ salidaDe(h) }}
+                {{ fechaCorta(h.departure_date) || '—' }}
               </td>
               <td class="text-center" :class="h.actual_return_date ? 'text-success font-weight-bold' : 'text-medium-emphasis'">
                 {{ fechaCorta(h.actual_return_date) || '—' }}
@@ -66,7 +66,7 @@
 import { ref, computed } from 'vue'
 import { useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
-import { ESTADOS_ALQUILER, FECHAS_ALQUILER, salidaDe } from '@/utils/orders/alquiler'
+import { ESTADOS_ALQUILER, FECHAS_ALQUILER } from '@/utils/orders/alquiler'
 import { fechaCorta } from '@/utils/dates'
 
 const theme = useTheme()

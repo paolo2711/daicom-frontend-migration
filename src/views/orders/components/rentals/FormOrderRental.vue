@@ -36,7 +36,6 @@
               <th style="width: 7rem;">ID</th>
               <th>Equipo</th>
               <th style="width: 8rem;">{{ FECHAS_ALQUILER.departure_date }}</th>
-              <th style="width: 9rem;">{{ FECHAS_ALQUILER.expected_return_date }}</th>
               <th v-if="conEstado" style="width: 7rem;">Estado</th>
               <th style="width: 3rem;"></th>
             </tr>
@@ -122,7 +121,7 @@ const detalleDe = (equipo) => [equipo.brand, equipo.series && `SN ${equipo.serie
 
 watch(equipments, (val) => { emit('update-list', val) }, { deep: true })
 
-// La salida y la devolucion pactada se repiten del ultimo agregado: un alquiler suele salir y volver junto.
+// El inicio y la devolucion pactada se repiten del ultimo agregado: un alquiler suele ir y volver junto.
 function agregar(equipo) {
   if (!equipo) return
   const anterior = equipments.value.findLast(e => e.modo === 'nuevo')

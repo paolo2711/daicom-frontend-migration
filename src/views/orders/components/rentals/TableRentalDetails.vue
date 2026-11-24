@@ -28,7 +28,6 @@
           <th class="text-overline">EQUIPO Y OBSERVACIONES</th>
           <th class="text-overline">SERIE</th>
           <th class="text-center text-overline">{{ FECHAS_ALQUILER.departure_date }}</th>
-          <th class="text-center text-overline">{{ FECHAS_ALQUILER.expected_return_date }}</th>
           <th class="text-center text-overline">{{ FECHAS_ALQUILER.actual_return_date }}</th>
           <th class="text-center text-overline">ESTADO</th>
           <th></th>
@@ -48,10 +47,7 @@
           </td>
           <td>{{ linea.equipment_series || '—' }}</td>
           <td class="text-center" :class="{ 'text-medium-emphasis': !linea.departure_date }">
-            {{ salidaDe(linea) }}
-          </td>
-          <td class="text-center" :class="{ 'text-medium-emphasis': !linea.expected_return_date }">
-            {{ fechaCorta(linea.expected_return_date) || '—' }}
+            {{ fechaCorta(linea.departure_date) || '—' }}
           </td>
           <td class="text-center" :class="linea.actual_return_date ? 'text-success font-weight-bold' : 'text-medium-emphasis'">
             {{ fechaCorta(linea.actual_return_date) || '—' }}
@@ -60,9 +56,6 @@
             <v-chip size="x-small" :color="linea.presentacion.color" variant="outlined" label>
               {{ linea.presentacion.texto }}
             </v-chip>
-            <div v-if="linea.duracion" class="text-caption text-medium-emphasis mt-1" style="line-height: 1;">
-              {{ linea.duracion }}
-            </div>
           </td>
           <td class="text-center">
             <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" size="x-small" color="grey-darken-1"
@@ -70,7 +63,7 @@
           </td>
         </tr>
         <tr v-if="filas.length === 0">
-          <td colspan="8" class="text-center text-medium-emphasis py-6 font-weight-medium">
+          <td colspan="7" class="text-center text-medium-emphasis py-6 font-weight-medium">
             No se encontraron equipos en este alquiler.
           </td>
         </tr>
@@ -97,7 +90,7 @@ import AddEquipment from '@/views/inventory/components/AddEquipment.vue'
 import { useTheme } from 'vuetify'
 import OrderDataService from '@/services/orders/orderDataService'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
-import { ESTADOS_ALQUILER, FECHAS_ALQUILER, duracionDe, salidaDe } from '@/utils/orders/alquiler'
+import { ESTADOS_ALQUILER, FECHAS_ALQUILER } from '@/utils/orders/alquiler'
 import { viva } from '@/utils/orders/estado'
 import { fechaCorta } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
@@ -123,7 +116,6 @@ const anulada = computed(() => !viva(props.order))
 const filas = computed(() => (props.order.rentals || []).map(linea => ({
   ...linea,
   presentacion: ESTADOS_ALQUILER[linea.estado],
-  duracion: duracionDe(linea),
 })))
 
 // Lo que se puede hacer con un equipo del alquiler. Las lineas no se marcan:
@@ -135,10 +127,10 @@ const ACCIONES_LINEA = [
   },
   {
     clave: 'gestionar', grupo: 'trabajo', varios: false,
-    icono: 'mdi-calendar-edit', texto: 'Salida, devolución y fechas',
+    icono: 'mdi-calendar-edit', texto: 'Inicio, devolución y fechas',
     visible: ([linea]) => linea.estado !== 'anulado',
   },
-  // Lo que ya salio no se quita: se devuelve.
+  // Lo que esta en obra no se quita: se devuelve.
   {
     clave: 'quitar', grupo: 'peligro', varios: false,
     icono: 'mdi-minus-circle-outline', texto: 'Quitar de la orden',
@@ -167,7 +159,7 @@ async function verEquipo(linea) {
 async function quitar(linea) {
   const { isConfirmed } = await $swal.fire({
     title: `¿Quitar ${linea.equipment_internal_id} de la orden?`,
-    text: 'Todavía no salió: vuelve a estar disponible en el inventario.',
+    text: 'Vuelve a estar disponible en el inventario.',
     icon: 'warning',
     showCancelButton: true,
     confirmButtonText: 'Sí, quitar',

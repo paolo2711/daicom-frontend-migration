@@ -130,7 +130,7 @@ class OrderDataService {
 
     // ─── ALQUILERES ──────────────────────────────────────────────────────────
 
-    // salida | devolucion | deshacer-devolucion
+    // inicio | devolucion | deshacer-devolucion
     darPasoDeAlquiler(rental_id, paso, fecha = null) {
         let headers = authHeader();
         headers['Content-Type'] = "application/json";

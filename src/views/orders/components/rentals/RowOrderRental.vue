@@ -6,10 +6,7 @@
       <div v-if="detalle" class="text-caption text-medium-emphasis notas">{{ detalle }}</div>
       <div v-if="error" class="text-caption text-error">{{ error }}</div>
     </td>
-    <td :class="{ 'text-medium-emphasis': !eq.departure_date }">{{ salidaDe(eq) }}</td>
-    <td :class="{ 'text-medium-emphasis': !eq.expected_return_date }">
-      {{ fechaCorta(eq.expected_return_date) || '—' }}
-    </td>
+    <td :class="{ 'text-medium-emphasis': !eq.departure_date }">{{ fechaCorta(eq.departure_date) || '—' }}</td>
     <td v-if="conEstado">
       <v-chip v-if="eq.estado" size="x-small" :color="ESTADOS_ALQUILER[eq.estado].color" variant="outlined" label>
         {{ ESTADOS_ALQUILER[eq.estado].texto }}
@@ -25,7 +22,7 @@
 <script setup>
 import { computed } from 'vue'
 import { fechaCorta } from '@/utils/dates'
-import { ESTADOS_ALQUILER, salidaDe, seQuitaElAlquiler } from '@/utils/orders/alquiler'
+import { ESTADOS_ALQUILER, seQuitaElAlquiler } from '@/utils/orders/alquiler'
 
 // Una fila de FormOrderRental, solo para leer: se edita en PanelOrderRental.
 const props = defineProps({

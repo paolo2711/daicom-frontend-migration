@@ -90,7 +90,7 @@
                         :model-value="isEditing ? form.internal_id : (nextId || 'Calculando...')"
                         :label="isEditing ? 'ID Interno' : 'ID Interno (se asignará este)'"
                         variant="outlined" density="compact"
-                        readonly :disabled="!isEditing"
+                        disabled
                         prepend-inner-icon="mdi-identifier"
                       ></v-text-field>
                     </v-col>
@@ -125,7 +125,7 @@
                         model-value="Alquilado"
                         label="Estado actual"
                         variant="outlined" density="compact"
-                        readonly disabled
+                        disabled
                         prepend-inner-icon="mdi-truck-fast"
                         hint="Gestionado por los alquileres" persistent-hint
                       ></v-text-field>

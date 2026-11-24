@@ -1,5 +1,3 @@
-import { diasEntre, fechaCorta, hoyISO } from '@/utils/dates'
-
 // `estado` lo manda el back (RentalDetail.estado); aca se decide como se ve.
 export const ESTADOS_ALQUILER = {
   reservado: { texto: 'RESERVADO', color: 'grey' },
@@ -10,7 +8,7 @@ export const ESTADOS_ALQUILER = {
 
 // Los nombres de las tres fechas, iguales en todas las pantallas.
 export const FECHAS_ALQUILER = {
-  departure_date: 'Salió el',
+  departure_date: 'Inicio',
   expected_return_date: 'Devolución pactada',
   actual_return_date: 'Volvió el',
 }
@@ -18,25 +16,7 @@ export const FECHAS_ALQUILER = {
 // Reglas de las fechas de una linea, en el formato de :rules de Vuetify (true o
 // el mensaje). El back revisa lo mismo al guardar (orders/services.py).
 export const reglaNoFutura = (hoy) => (fecha) => !fecha || fecha <= hoy || 'No puede ser a futuro'
-export const reglaNoAntesDe = (salida) => (fecha) => !fecha || !salida || fecha >= salida || 'Es antes de la salida'
+export const reglaNoAntesDe = (inicio) => (fecha) => !fecha || !inicio || fecha >= inicio || 'Es antes del inicio'
 
-// Se quita lo que no salio: una linea guardada solo si sigue reservada (quitar_alquiler en el back).
+// Se quita lo reservado: una linea guardada solo si sigue reservada (quitar_alquiler en el back).
 export const seQuitaElAlquiler = (fila) => fila.modo !== 'linea' || fila.estado === 'reservado'
-
-export function salidaDe(linea) {
-  if (linea.departure_date) return fechaCorta(linea.departure_date)
-  return linea.estado === 'anulado' ? 'No salió' : 'Aún no sale'
-}
-
-const dias = (n) => `${n} ${n === 1 ? 'día' : 'días'}`
-
-// Un alquiler cuenta al menos un dia, aunque vuelva el mismo dia.
-export function duracionDe(linea) {
-  if (linea.estado === 'en_obra') {
-    return `${dias(Math.max(1, diasEntre(linea.departure_date, hoyISO())))} fuera`
-  }
-  if (linea.estado === 'devuelto') {
-    return `Duró ${dias(Math.max(1, diasEntre(linea.departure_date, linea.actual_return_date)))}`
-  }
-  return ''
-}

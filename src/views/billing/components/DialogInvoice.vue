@@ -130,6 +130,7 @@ import { ref, computed, watch } from 'vue'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { debounce } from '@/utils/debounce'
 import { Toast } from '@/plugins/alerts'
+import { avisarHecho } from '@/utils/documents/avisos'
 import { avisarSoloPdf } from '@/utils/pdf'
 import Swal from 'sweetalert2'
 import BillingDataService from '@/services/billing/billingDataService'
@@ -343,15 +344,17 @@ const save = async () => {
       }
       return
     }
+    let respuesta
     if (sinComprobante.value) {
-      await BillingDataService.updateInvoice(props.invoiceToEdit.id, { amount: facturaData.value.amount })
+      respuesta = await BillingDataService.updateInvoice(props.invoiceToEdit.id, { amount: facturaData.value.amount })
     } else if (editando.value) {
-      await BillingDataService.updateInvoice(props.invoiceToEdit.id, data)
+      respuesta = await BillingDataService.updateInvoice(props.invoiceToEdit.id, data)
     } else {
       if (paraOrdenes.value) data.append('ordenes', props.orders.map(o => o.id).join(','))
-      await BillingDataService.createInvoice(data)
+      respuesta = await BillingDataService.createInvoice(data)
     }
-    Toast.fire({ timer: 2200, icon: 'success', title: sinComprobante.value ? 'Monto actualizado' : editando.value ? 'Factura actualizada' : 'Factura guardada' })
+    avisarHecho(sinComprobante.value ? 'Monto actualizado' : editando.value ? 'Factura actualizada' : 'Factura guardada',
+                respuesta.data)
     resetForm()
     closeDialog()
   } catch (err) {

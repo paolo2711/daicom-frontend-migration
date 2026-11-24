@@ -127,10 +127,11 @@ async function recargar () {
   const turno = begin()
   const conValor = Object.fromEntries(Object.entries(filtros.value).filter(([, v]) => v))
   try {
-    const { data } = await BillingDataService.listDispatchGuides({ ...conValor, ...opciones.value })
+    const { page, itemsPerPage } = opciones.value
+    const { data } = await BillingDataService.listDispatchGuides({ ...conValor, page, page_size: itemsPerPage })
     if (!isLatest(turno)) return
     guias.value = data.results
-    total.value = data.totalItems
+    total.value = data.count
   } catch {
     if (!isLatest(turno)) return
     guias.value = []

@@ -13,7 +13,6 @@
           label="Buscar Nro Orden"
           clearable
           style="max-width: 220px;"
-          @update:model-value="applyFilters"
         />
 
         <v-text-field
@@ -25,7 +24,6 @@
           label="Nro Certificado"
           clearable
           style="max-width: 220px;"
-          @update:model-value="applyFilters"
         />
 
         <v-text-field
@@ -37,7 +35,6 @@
           label="Nro Factura"
           clearable
           style="max-width: 220px;"
-          @update:model-value="applyFilters"
         />
 
         <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
@@ -73,7 +70,7 @@
             </v-col>
 
             <v-col cols="12" md="4">
-              <client-select v-model="filter_client_id" @update:model-value="applyFilters" />
+              <client-select v-model="filter_client_id" />
             </v-col>
 
             <v-col cols="12" md="4">
@@ -88,7 +85,6 @@
                 density="compact"
                 hide-details="auto"
                 label="Estado"
-                @update:model-value="applyFilters"
               />
             </v-col>
           </v-row>
@@ -269,9 +265,11 @@ import { lineaAnulada } from '@/utils/orders/lineas'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
 import { useOrderRouteFilters } from '@/composables/useOrderRouteFilters'
+import { usePage } from '@/composables/usePage'
 import { debounce } from '@/utils/debounce'
 import { throttle } from '@/utils/throttle'
 import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemaforoFinanciero } from '@/utils/orders/cobro'
+import { leerPagina } from '@/utils/pagination'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
 import AddOrder from '../AddOrder.vue'
@@ -342,7 +340,7 @@ const {
 watch(idOrdenExpandida, () => { equipos_seleccionados.value = [] })
 const total_orders = ref(0)
 const loading_list = ref(false)
-const options = ref({ page: 1, itemsPerPage: 30 })
+const { opciones: options, alInicio } = usePage(() => retrieveOrders())
 
 // Filtros
 const filter_order = ref('')
@@ -361,8 +359,7 @@ const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestReques
 
 // Funciones de filtro
 const applyFilters = () => {
-  options.value.page = 1
-  retrieveOrders()
+  alInicio()
   cargarResumenes() // Sincroniza las píldoras cada vez que filtras
 }
 
@@ -392,10 +389,9 @@ const limpiarFechas = () => {
 const retrieveOrders = () => {
   loading_list.value = true
   const token = beginOrdersLoad()   // guard de secuencia: gana la carga más reciente
-  const limite = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
   OrderDataService.getFiltered(
     options.value.page,
-    limite,
+    options.value.itemsPerPage,
     filter_client_id.value,
     filter_order.value,
     filter_correlative.value,
@@ -408,8 +404,9 @@ const retrieveOrders = () => {
   )
       .then((res) => {
         if (!isLatestOrdersLoad(token)) return   // llegó una carga más nueva → no pisar
-        reemplazarOrdenes(res.data.results.map(orden => OrderMappers.getMap(orden)))
-        total_orders.value = res.data.count
+        const pagina = leerPagina(res.data)
+        reemplazarOrdenes(pagina.filas.map(orden => OrderMappers.getMap(orden)))
+        total_orders.value = pagina.total
       })
       .finally(() => {
         if (isLatestOrdersLoad(token)) loading_list.value = false
@@ -450,10 +447,7 @@ const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, accionesD
     abrirCobro,
   })
 
-// WebSockets
-// La fila de la orden: barra, estado y cobro. Sus equipos tienen sus propios
-// avisos, los de cada certificado.
-// Devuelve la fila si la orden es de servicio, o null.
+// La fila de la orden (barra, estado y cobro), o null si no es de servicio. Los equipos avisan por su certificado.
 const refrescarFila = (orderId) => OrderDataService.getFila(orderId)
   .then(response => {
     const fila = response?.data
@@ -493,12 +487,9 @@ const handleWssReload = () => {
   refrescarResumenes()
 }
 
-// Watchers (igual que en ListCertificates)
 useOrderRouteFilters(filter_order, pildora, applyFilters)
-watch(options, () => { retrieveOrders() }, { deep: true })
 
-// Quitamos filter_date_gt y filter_date_lt para que solo se apliquen con el botón "Aplicar"
-// Debounce: espera a que el usuario deje de teclear antes de pegarle al backend.
+// Las fechas no: se aplican con su botón.
 watch([filter_order, filter_correlative, filter_invoice, filter_client_id, filter_status], debounce(applyFilters))
 
 // Ciclo de vida

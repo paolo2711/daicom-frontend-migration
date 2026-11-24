@@ -75,7 +75,7 @@
                 v-model:desde="emission_date__gt"
                 v-model:hasta="emission_date__lt"
                 label="Rango de Emisión"
-                @apply="aplicarFiltroFechas"
+                @apply="alInicio"
               />
             </v-col>
 
@@ -455,8 +455,10 @@ import { fechaCorta, fechaISO, hoyISO } from '@/utils/dates'
 import FilterPill          from '@/components/shared/FilterPill.vue'
 import DateRangeFilter     from '@/components/shared/DateRangeFilter.vue'
 import { decidirRefresco } from '@/utils/changedRows'
+import { leerPagina, porPagina } from '@/utils/pagination'
 import { useCertificateActions } from '@/composables/useCertificateActions'
 import { seguirLaLista, soltar } from '@/composables/useCurrentRows'
+import { usePage } from '@/composables/usePage'
 
 // Componentes async (lazy-loading igual que en Vue 2)
 // carga diferida de LoadSheet movida a BatchActionModal
@@ -484,7 +486,7 @@ const ordenes                  = ref({})
 const ordenDe                  = (item) => ordenes.value[item.order] || {}
 const total_certificates       = ref(0)
 const loading_list             = ref(false)
-const options                  = ref({ page: 1, itemsPerPage: 30 })
+const { opciones: options, alInicio } = usePage(() => retrieveAllCertificates())
 
 // Una pildora prendida a la vez; cada una es un filtro del back.
 const POR_FIRMAR = 'signature_requested'
@@ -583,22 +585,17 @@ function getRowProps ({ item }) {
 const { begin: beginCertLoad, isLatest: isLatestCertLoad } = useLatestRequest()
 
 // ─── Watchers ─────────────────────────────────────────────────────────────────
-watch(options, () => retrieveAllCertificates(), { deep: true })
-
 // Desde Inicio o una notificacion. Sin `desde` ni `hasta`, los ultimos ocho meses; vacios, sin limite de fecha.
 useRouteFilters(({ certificado, pildora: pedida, desde, hasta }) => {
   numero.value = certificado || ''
   pildora.value = pedida || null
   emission_date__gt.value = desde ?? haceOchoMeses()
   emission_date__lt.value = hasta ?? hoyISO()
-}, () => { options.value.page = 1; retrieveAllCertificates() })
+}, alInicio)
 
-watch(numero,            () => { options.value.page = 1; retrieveAllCertificates() })
+watch([numero, certificate_type, client_id, lab_id], alInicio)
 // Texto libre: espera a que termine de escribir en vez de consultar por letra.
-watch(equipment, debounce(() => { options.value.page = 1; retrieveAllCertificates() }))
-watch(certificate_type,  () => { options.value.page = 1; retrieveAllCertificates() })
-watch(client_id,         () => { options.value.page = 1; retrieveAllCertificates() })
-watch(lab_id,            () => { options.value.page = 1; retrieveAllCertificates() })
+watch(equipment, debounce(alInicio))
 
 // El modal de lote muestra fila por fila que va a pasar. Con uno solo la fila
 // va marcada aunque ya tenga lo suyo: elegirlo es pedir reemplazarlo.
@@ -648,13 +645,7 @@ onBeforeUnmount(() => {
 
 function alternarPildora (valor) {
   pildora.value = pildora.value === valor ? null : valor
-  options.value.page = 1
-  retrieveAllCertificates()
-}
-
-function aplicarFiltroFechas () {
-  options.value.page = 1    // Reinicia la paginación a la página 1
-  retrieveAllCertificates() // Dispara 1 sola búsqueda limpia al backend
+  alInicio()
 }
 
 function seleccionarTodaLaOrden (orderId) {
@@ -740,12 +731,10 @@ function retrieveAllCertificates (opciones) {
   if (!silencioso) loading_list.value = true
   const token = beginCertLoad()   // guard de secuencia: solo aplica la carga más reciente
   const pedidoEn = Date.now()     // lo que termine despues de esto, esta carga no lo vio
-  const itemsPerPage       = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
 
   // Pasamos los parámetros al final
   CertificateDataService.getFiltered({
-    page: options.value.page,
-    page_size: itemsPerPage,
+    ...porPagina(options.value.page, options.value.itemsPerPage),
     numero: (numero.value || '').trim(),
     equipment: equipment.value || '',
     client: client_id.value || '',
@@ -756,9 +745,10 @@ function retrieveAllCertificates (opciones) {
     ...(pildora.value && { [pildora.value]: true }),
   }).then((response) => {
     if (!isLatestCertLoad(token)) return   // llegó una carga más nueva → no pisar
-    certificates.value = response.data.results.map(cert => CertificateMappers.getMap(cert))
+    const pagina = leerPagina(response.data)
+    certificates.value = pagina.filas.map(cert => CertificateMappers.getMap(cert))
     ordenes.value = response.data.ordenes || {}
-    total_certificates.value = response.data.count
+    total_certificates.value = pagina.total
     // La lista viene del server, asi que manda ella sobre cualquier tarea terminada.
     certificates.value.forEach(c => confirmarFila(c.id, pedidoEn))
   }).catch(() => {}).finally(() => {

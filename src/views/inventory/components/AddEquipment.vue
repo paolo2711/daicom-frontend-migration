@@ -260,6 +260,8 @@ import EquipmentDataService from '@/services/equipments/equipmentDataService'
 import { mensajeDeError } from '@/utils/errors'
 import { fechaCorta } from '@/utils/dates'
 import { vivo } from '@/utils/certificates/estado'
+import { debounce } from '@/utils/debounce'
+import { leerPagina, porPagina } from '@/utils/pagination'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
 
 const emit = defineEmits(['saved'])
@@ -295,17 +297,13 @@ const linkingCert = ref(false)
 const nameSuggestions = ref([])
 const nameSearch = ref('')
 const loadingNames = ref(false)
-let nameDebounce = null
-watch(nameSearch, (q) => {
-  clearTimeout(nameDebounce)
-  nameDebounce = setTimeout(() => {
-    loadingNames.value = true
-    EquipmentDataService.getFiltered(1, 20, q || '')
-      .then(r => { nameSuggestions.value = (r.data.results || []).map(e => e.nombre_tecnico).filter(Boolean) })
-      .catch(() => { nameSuggestions.value = [] })
-      .finally(() => { loadingNames.value = false })
-  }, 300)
-})
+watch(nameSearch, debounce((q) => {
+  loadingNames.value = true
+  EquipmentDataService.getFiltered(1, 20, q || '')
+    .then(r => { nameSuggestions.value = leerPagina(r.data).filas.map(e => e.nombre_tecnico).filter(Boolean) })
+    .catch(() => { nameSuggestions.value = [] })
+    .finally(() => { loadingNames.value = false })
+}))
 
 const form = reactive({
   id: null,
@@ -387,9 +385,7 @@ const openViewer = (index) => {
 }
 
 const close = () => {
-  // Solo se limpian los errores, NO los valores: vaciar los campos requeridos
-  // los vuelve a marcar en rojo, y como el modal todavia se esta cerrando se ve
-  // el parpadeo. Los valores ya los reinicia open() antes de cargar el equipo.
+  // Los valores los reinicia open(): vaciarlos mientras se cierra los marca en rojo.
   formRef.value?.resetValidation()
   dialog.value = false
 }
@@ -488,8 +484,8 @@ const buscarCertificado = async () => {
   opcionesDeCertificado.value = []
 
   try {
-    const res = await CertificateDataService.getFiltered({ page_size: 10, numero: String(correlative_search.value).trim() })
-    const validos = res.data.results.filter(vivo)
+    const res = await CertificateDataService.getFiltered({ ...porPagina(1, 10), numero: String(correlative_search.value).trim() })
+    const validos = leerPagina(res.data).filas.filter(vivo)
     if (validos.length === 1) {
       foundCert.value = validos[0]
     } else if (validos.length > 1) {

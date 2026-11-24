@@ -7,6 +7,7 @@ import { DOCUMENTOS, TIPOS_DE_COTIZACION } from '@/utils/documents/quoteDefaults
 import { COTIZACION as DE_COTIZACION, VALORIZACION as DE_VALORIZACION } from '@/utils/documents/tipos'
 import { mensajeDeError } from '@/utils/errors'
 import { monto } from '@/utils/money'
+import { porPagina } from '@/utils/pagination'
 
 // OrderDocument.Tipo en el back.
 export const ORDEN_DE_COMPRA = 1
@@ -21,7 +22,7 @@ function deDocumentos (tipo, documento, campo) {
     sinResultados: (kind) => `El cliente no tiene ${DOCUMENTOS[documento].plural.toLowerCase()} de ${kind} emitidas`,
     buscar: ({ cliente, kind, query, page, size }) => DocumentsDataService.getAll({
       document_type: documento, kind, status: 'EMITIDO', client: cliente,
-      document_number: query || undefined, page, itemsPerPage: size,
+      document_number: query || undefined, ...porPagina(page, size),
     }),
     aOpcion: (d) => ({
       id: d.id, name: d.document_number, pdf: d.pdf_file, tipo: TIPOS_DE_COTIZACION[d.kind]?.texto,
@@ -39,7 +40,7 @@ export const VINCULABLES = [
     tipo: GUIA_REMISION, campo: 'guias', llave: 'guia', nombre: 'guía', plural: 'Guías de remisión', enPdf: true,
     sinResultados: () => 'El cliente no tiene guías de remisión vigentes',
     buscar: ({ cliente, query, page, size }) => BillingDataService.listDispatchGuides({
-      cliente, q: query || undefined, vigentes: true, page, itemsPerPage: size,
+      cliente, q: query || undefined, vigentes: true, ...porPagina(page, size),
     }),
     aOpcion: (g) => ({ id: g.id, name: g.numero, pdf: g.pdf, tipo: ESTADOS[g.estado].texto,
                        detalle: fechaCorta(g.fecha_emision) }),

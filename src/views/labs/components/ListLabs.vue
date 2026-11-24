@@ -9,7 +9,7 @@
         hide-details
         variant="outlined"
         density="compact"
-        @update:model-value="applyFilters"
+        @update:model-value="alInicio"
       />
     </v-card>
 
@@ -27,11 +27,9 @@
       >
         <template v-slot:bottom>
           <fluent-pagination
-            :page="options.page"
-            :itemsPerPage="options.itemsPerPage"
+            v-model:page="options.page"
+            v-model:itemsPerPage="options.itemsPerPage"
             :totalItems="total_labs"
-            @update:page="onPageChange"
-            @update:itemsPerPage="onItemsPerPageChange"
           />
         </template>
 
@@ -68,9 +66,11 @@ import Swal from 'sweetalert2'
 import LabDataService from '@/services/labs/labDataService'
 import LabMappers from '@/mappers/labMappers'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { usePage } from '@/composables/usePage'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import { useAppStore } from '@/stores/appStore'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
+import { leerPagina } from '@/utils/pagination'
 
 const LabFormDialog = defineAsyncComponent(() => import('@/views/labs/components/LabFormDialog.vue'))
 
@@ -88,7 +88,7 @@ const headers = [
 const labs = ref([])
 const total_labs = ref(0)
 const loading_list = ref(false)
-const options = ref({ page: 1, itemsPerPage: 30 })
+const { opciones: options, alInicio } = usePage(() => retrieveAllLabs())
 const search = ref('')
 const dialogOpen = ref(false)
 const selectedLab = ref(null)
@@ -98,12 +98,12 @@ const { begin: beginLoad, isLatest: isLatestLoad } = useLatestRequest()
 const retrieveAllLabs = () => {
   loading_list.value = true
   const token = beginLoad()   // guard de secuencia: gana la carga más reciente
-  const pageSize = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
-  LabDataService.getFiltered(options.value.page, pageSize, search.value || '')
+  LabDataService.getFiltered(options.value.page, options.value.itemsPerPage, search.value || '')
     .then((response) => {
       if (!isLatestLoad(token)) return
-      labs.value = response.data.results.map(LabMappers.getMap)
-      total_labs.value = response.data.count
+      const pagina = leerPagina(response.data)
+      labs.value = pagina.filas.map(LabMappers.getMap)
+      total_labs.value = pagina.total
     })
     .catch(() => {})
     .finally(() => {
@@ -111,21 +111,6 @@ const retrieveAllLabs = () => {
     })
 }
 
-const applyFilters = () => {
-  options.value.page = 1
-  retrieveAllLabs()
-}
-
-const onPageChange = (newPage) => {
-  options.value.page = newPage
-  retrieveAllLabs()
-}
-
-const onItemsPerPageChange = (newItemsPerPage) => {
-  options.value.itemsPerPage = newItemsPerPage
-  options.value.page = 1
-  retrieveAllLabs()
-}
 
 const deleteLab = (lab) => {
   LabDataService.delete(lab.id).then((response) => {
@@ -161,5 +146,5 @@ onMounted(() => {
   retrieveAllLabs()
 })
 
-defineExpose({ retrieveAllLabs, openAddDialog })
+defineExpose({ openAddDialog })
 </script>

@@ -1,10 +1,9 @@
 import { defineStore } from 'pinia'
 import NotificationDataService from '@/services/notifications/notificationDataService'
+import { leerPagina } from '@/utils/pagination'
 import { throttle } from '@/utils/throttle'
 
-// Lo que llega por WS pasa por el freno de los contadores (utils/throttle).
-// fetchUnread y fetchFirst quedan sin freno para el arranque y para el panel,
-// donde el usuario si esta esperando.
+// Lo que llega por WS pasa por el freno de los contadores; el arranque y el panel, donde alguien espera, no.
 let destino = null
 
 const refrescarPorWs = throttle(() => {
@@ -55,9 +54,9 @@ export const useNotificationStore = defineStore('notifications', {
           noLeidas: this.soloNoLeidas,
           tipos: this.tipos,
         })
-        const results = r.data.results ?? r.data ?? []
-        this.items.push(...results)
-        this.total = r.data.count ?? this.items.length
+        const { filas, total } = leerPagina(r.data)
+        this.items.push(...filas)
+        this.total = total
         this.page++
       } catch (e) { /* silencioso */ } finally {
         this.loading = false

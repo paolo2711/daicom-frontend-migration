@@ -1,6 +1,7 @@
 import axios from "axios";
 import authHeader from "@/services/auth-header";
 import { archivoDe } from "@/utils/files";
+import { porPagina } from "@/utils/pagination";
 
 class OrderDataService {
 
@@ -9,7 +10,7 @@ class OrderDataService {
     // `pildora`: missing_payment, missing_invoice o a_credito.
     getFiltered(page, itemsPerPage, client, order_number, correlative, date_gt, date_lt, status, order_type, pildora = null, invoice_number = '') {
         let headers = authHeader();
-        let params = { page: page, page_size: itemsPerPage };
+        let params = porPagina(page, itemsPerPage);
 
         if (client)            params.client            = client;
         if (order_number)      params.order_number      = order_number;

@@ -94,6 +94,7 @@ import { useRowDrag } from '@/composables/useRowDrag'
 import { copiarDebajo } from '@/utils/lists'
 import { usePermissions } from '@/composables/usePermissions'
 import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
+import { leerPagina, porPagina } from '@/utils/pagination'
 
 const props = defineProps({
   // El cliente de la orden, {id, name}: el titular de los certificados que no dicen otro.
@@ -206,8 +207,8 @@ async function vincular() {
   if (!correlativo.value) return
   buscandoCertificado.value = true
   try {
-    const res = await CertificateDataService.getFiltered({ page_size: 50, correlative: Number(correlativo.value) })
-    const cert = res.data.results.find(c => !c.order && vivo(c))
+    const res = await CertificateDataService.getFiltered({ ...porPagina(1, 50), correlative: Number(correlativo.value) })
+    const cert = leerPagina(res.data).filas.find(c => !c.order && vivo(c))
     if (!cert) {
       $swal.fire('No encontrado', 'No se encontró un certificado suelto o válido con ese número.', 'warning')
       return

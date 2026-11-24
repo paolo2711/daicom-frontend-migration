@@ -116,6 +116,7 @@ import { abrirEnOtraPestana } from '@/utils/pdf'
 import DialogInvoice from '@/views/billing/components/DialogInvoice.vue'
 import DialogInvoicePayments from '@/views/billing/components/DialogInvoicePayments.vue'
 import { SUBIR } from '@/utils/orders/acciones'
+import { leerPagina, porPagina } from '@/utils/pagination'
 
 // El cobro de la orden elegida, o de las marcadas: sus comprobantes, vincular, emitir o cobrar sin comprobante.
 const props = defineProps({
@@ -180,11 +181,11 @@ async function recargar () {
   const turno = begin()
   try {
     const [lista, resumen] = await Promise.all([
-      BillingDataService.listInvoices({ order_ids: ids.join(','), page_size: 100, con_abonos: true }),
+      BillingDataService.listInvoices({ order_ids: ids.join(','), ...porPagina(1, 100), con_abonos: true }),
       OrderDataService.getTotales(ids),
     ])
     if (!isLatest(turno)) return
-    facturas.value = lista.data.results.map(InvoiceMappers.getMap)
+    facturas.value = leerPagina(lista.data).filas.map(InvoiceMappers.getMap)
     totales.value = resumen.data.totales
   } catch {
     if (!isLatest(turno)) return
@@ -197,7 +198,7 @@ async function recargar () {
 
 // Las del cliente y las sueltas, que se le pueden vincular.
 const buscarFacturas = (page, size, q) => BillingDataService.listInvoices({
-  page, page_size: size, q: q || undefined, tipo: 'fiscal', order_type: props.order_type,
+  ...porPagina(page, size), q: q || undefined, tipo: 'fiscal', order_type: props.order_type,
   para_cliente: clienteUnico.value,
 })
 

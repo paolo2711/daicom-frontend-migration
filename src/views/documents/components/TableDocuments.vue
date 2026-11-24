@@ -99,10 +99,12 @@ import StateLegend from '@/components/shared/StateLegend.vue'
 import PdfSplitView from '@/components/shared/PdfSplitView.vue'
 import { useDocumentActions } from '@/composables/useDocumentActions'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { usePage } from '@/composables/usePage'
 import { debounce } from '@/utils/debounce'
 import { fechaCorta } from '@/utils/dates'
 import { ESTADOS, FILTRO_DE_ESTADO, vivo } from '@/utils/documents/estado'
 import { MONEDAS, monto } from '@/utils/money'
+import { leerPagina, porPagina } from '@/utils/pagination'
 
 // La lista de un tipo de documento. Columnas y filtros leen campos del
 // documento, no su JSON: sirven igual para cualquier pestaña.
@@ -130,7 +132,7 @@ const columnas = computed(() => [
 const documentos = ref([])
 const total = ref(0)
 const cargando = ref(false)
-const opciones = ref({ page: 1, itemsPerPage: 30 })
+const { opciones, alInicio } = usePage(() => recargar())
 const filtros = ref({
   document_number: '', kind: null, client: null, status: null, currency: null, date_gt: '', date_lt: '',
 })
@@ -159,12 +161,12 @@ async function recargar () {
     const { data } = await DocumentsDataService.getAll({
       document_type: props.tipo,
       ...conValor,
-      page: opciones.value.page,
-      itemsPerPage: opciones.value.itemsPerPage,
+      ...porPagina(opciones.value.page, opciones.value.itemsPerPage),
     })
     if (!isLatest(turno)) return
-    documentos.value = data.results
-    total.value = data.totalItems
+    const pagina = leerPagina(data)
+    documentos.value = pagina.filas
+    total.value = pagina.total
   } catch {
     if (!isLatest(turno)) return
     documentos.value = []
@@ -200,11 +202,7 @@ const alRecargar = (event) => {
   if (!event.detail || event.detail === props.tipo) recargar()
 }
 
-watch(opciones, recargar, { deep: true })
-watch(filtros, debounce(() => {
-  if (opciones.value.page === 1) recargar()
-  else opciones.value.page = 1
-}), { deep: true })
+watch(filtros, debounce(alInicio), { deep: true })
 
 onMounted(() => {
   recargar()

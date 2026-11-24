@@ -145,6 +145,7 @@ import { useDateRangeFilter } from '@/composables/useDateRangeFilter'
 import { useDownload } from '@/composables/useDownload'
 import { useEmissionPanel } from '@/composables/useEmissionPanel'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { usePage } from '@/composables/usePage'
 import { useRouteFilters } from '@/composables/useRouteFilters'
 import { useSwal } from '@/composables/useSwal'
 import InvoiceMappers from '@/mappers/invoiceMappers'
@@ -161,6 +162,7 @@ import { debounce } from '@/utils/debounce'
 import { mensajeDeError } from '@/utils/errors'
 import { MONEDAS, importe, monto } from '@/utils/money'
 import { ALQUILER, SERVICIO } from '@/utils/orders/estado'
+import { leerPagina, porPagina } from '@/utils/pagination'
 import { OTRA_PESTANA, abrirEnOtraPestana, avisarSoloPdf } from '@/utils/pdf'
 import DialogCancelInvoice from './DialogCancelInvoice.vue'
 import DialogCreditNote from './DialogCreditNote.vue'
@@ -190,7 +192,7 @@ const columnas = computed(() => [
 const facturas = ref([])
 const total = ref(0)
 const cargando = ref(false)
-const opciones = ref({ page: 1, itemsPerPage: 30 })
+const { opciones, alInicio } = usePage(() => recargar())
 const filtros = ref({ q: '', pildora: null, cliente: null, desde: '', hasta: '', estado: null, currency: null,
                       detraccion: null, order_type: null })
 useRouteFilters(({ q, pildora }) => {
@@ -210,10 +212,11 @@ async function recargar () {
   const conValor = Object.fromEntries(Object.entries(filtros.value).filter(([, v]) => v))
   try {
     const { page, itemsPerPage } = opciones.value
-    const { data } = await BillingDataService.listInvoices({ ...conValor, tipo: 'fiscal', page, page_size: itemsPerPage })
+    const { data } = await BillingDataService.listInvoices({ ...conValor, tipo: 'fiscal', ...porPagina(page, itemsPerPage) })
     if (!isLatest(turno)) return
-    facturas.value = data.results.map(InvoiceMappers.getMap)
-    total.value = data.count
+    const pagina = leerPagina(data)
+    facturas.value = pagina.filas.map(InvoiceMappers.getMap)
+    total.value = pagina.total
   } catch {
     if (!isLatest(turno)) return
     facturas.value = []
@@ -228,7 +231,7 @@ async function refrescarFila (event) {
   const posicion = facturas.value.findIndex(f => f.id === event.detail)
   if (posicion === -1) return recargar()
   try {
-    const fresca = (await BillingDataService.listInvoices({ invoice_id: event.detail })).data.results[0]
+    const fresca = leerPagina((await BillingDataService.listInvoices({ invoice_id: event.detail })).data).filas[0]
     if (!fresca) return recargar()
     facturas.value[posicion] = InvoiceMappers.getMap(fresca)
   } catch {
@@ -351,11 +354,7 @@ function ejecutarAccion (clave, [factura]) {
   }
 }
 
-watch(opciones, recargar, { deep: true })
-watch(filtros, debounce(() => {
-  if (opciones.value.page === 1) recargar()
-  else opciones.value.page = 1
-}), { deep: true })
+watch(filtros, debounce(alInicio), { deep: true })
 
 // Desde Órdenes llega con ?ordenes=1,2: la factura se abre llena con sus equipos.
 onMounted(() => {

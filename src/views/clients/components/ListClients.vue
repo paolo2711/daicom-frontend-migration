@@ -12,7 +12,7 @@
           label="Buscar cliente por nombre o documento..."
           clearable
           style="max-width: 300px;"
-          @update:model-value="applyFilters"
+          @update:model-value="alInicio"
         />
         <v-switch
           v-model="filterNeedsReview"
@@ -20,7 +20,7 @@
           color="warning"
           hide-details
           density="compact"
-          @update:model-value="applyFilters"
+          @update:model-value="alInicio"
         />
       </div>
     </v-card>
@@ -40,11 +40,9 @@
       >
         <template v-slot:bottom>
           <fluent-pagination
-            :page="options.page"
-            :itemsPerPage="options.itemsPerPage"
+            v-model:page="options.page"
+            v-model:itemsPerPage="options.itemsPerPage"
             :totalItems="total_clients"
-            @update:page="onPageChange"
-            @update:itemsPerPage="onItemsPerPageChange"
           />
         </template>
 
@@ -105,10 +103,12 @@ import Swal from 'sweetalert2'
 import ClientDataService from '@/services/clients/clientDataService'
 import ClientMappers from '@/mappers/clientMappers'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { usePage } from '@/composables/usePage'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import { useAppStore } from '@/stores/appStore'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import CopyableText from '@/components/shared/CopyableText.vue'
+import { leerPagina } from '@/utils/pagination'
 
 const ClientFormDialog = defineAsyncComponent(() => import('@/views/clients/components/ClientFormDialog.vue'))
 
@@ -128,7 +128,7 @@ const headers = [
 const clients = ref([])
 const total_clients = ref(0)
 const loading_list = ref(false)
-const options = ref({ page: 1, itemsPerPage: 15 })
+const { opciones: options, alInicio } = usePage(() => retrieveAllClients())
 const search = ref('')
 const filterNeedsReview = ref(false)
 const dialogOpen = ref(false)
@@ -140,35 +140,21 @@ const { begin: beginLoad, isLatest: isLatestLoad } = useLatestRequest()
 const retrieveAllClients = () => {
   loading_list.value = true
   const token = beginLoad()   // guard de secuencia: gana la carga más reciente
-  const pageSize = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
 
   const reviewParam = filterNeedsReview.value ? 'true' : ''
 
-  ClientDataService.getFiltered(options.value.page, pageSize, search.value || '', reviewParam)
+  ClientDataService.getFiltered(options.value.page, options.value.itemsPerPage, search.value || '', reviewParam)
     .then((response) => {
       if (!isLatestLoad(token)) return
-      clients.value = response.data.results.map(ClientMappers.getMap)
-      total_clients.value = response.data.count
+      const pagina = leerPagina(response.data)
+      clients.value = pagina.filas.map(ClientMappers.getMap)
+      total_clients.value = pagina.total
     })
     .finally(() => {
       if (isLatestLoad(token)) loading_list.value = false
     })
 }
 
-const applyFilters = () => {
-  options.value.page = 1
-  retrieveAllClients()
-}
-const onPageChange = (newPage) => {
-  options.value.page = newPage
-  retrieveAllClients()
-}
-
-const onItemsPerPageChange = (newItemsPerPage) => {
-  options.value.itemsPerPage = newItemsPerPage
-  options.value.page = 1
-  retrieveAllClients()
-}
 
 
 const deleteClient = (client) => {

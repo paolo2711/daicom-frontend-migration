@@ -41,11 +41,9 @@
       >
         <template v-slot:bottom>
           <fluent-pagination
-            :page="options.page"
-            :itemsPerPage="options.itemsPerPage"
+            v-model:page="options.page"
+            v-model:itemsPerPage="options.itemsPerPage"
             :totalItems="filteredRolesCount"
-            @update:page="options.page = $event"
-            @update:itemsPerPage="onItemsPerPageChange"
           />
         </template>
 
@@ -82,6 +80,7 @@ import RoleDataService from '@/services/roles/roleDataService'
 import RoleMappers from '@/mappers/roleMappers'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import { useAppStore } from '@/stores/appStore'
+import { primeraPagina } from '@/utils/pagination'
 
 const RoleFormDialog = defineAsyncComponent(() => import('@/views/access/roles/components/RoleFormDialog.vue'))
 
@@ -100,7 +99,7 @@ const headers = [
 const roles = ref([])
 const loading = ref(false)
 const search = ref('')
-const options = ref({ page: 1, itemsPerPage: 30 })
+const options = ref(primeraPagina())
 
 const dialogOpen = ref(false)
 const selectedRole = ref(null)
@@ -121,11 +120,6 @@ const retrieveAllRoles = () => {
   }).finally(() => {
     loading.value = false
   })
-}
-
-const onItemsPerPageChange = (newVal) => {
-  options.value.itemsPerPage = newVal
-  options.value.page = 1
 }
 
 const deleteRole = (role) => {
@@ -167,5 +161,5 @@ onMounted(() => {
   retrieveAllRoles()
 })
 
-defineExpose({ retrieveAllRoles, openAddDialog })
+defineExpose({ openAddDialog })
 </script>

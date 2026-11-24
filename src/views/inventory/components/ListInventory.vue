@@ -80,11 +80,9 @@
       >
         <template v-slot:bottom>
           <fluent-pagination
-            :page="options.page"
-            :itemsPerPage="options.itemsPerPage"
+            v-model:page="options.page"
+            v-model:itemsPerPage="options.itemsPerPage"
             :totalItems="total"
-            @update:page="onPageChange"
-            @update:itemsPerPage="onItemsPerPageChange"
           />
         </template>
 
@@ -180,7 +178,10 @@ import Swal from 'sweetalert2'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import { mensajeDeError } from '@/utils/errors'
 import { fechaCorta } from '@/utils/dates'
+import { debounce } from '@/utils/debounce'
+import { leerPagina, porPagina } from '@/utils/pagination'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { usePage } from '@/composables/usePage'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import FilterPill from '@/components/shared/FilterPill.vue'
@@ -192,8 +193,7 @@ const loading = ref(false)
 const puedeEliminar = ref(false)   // permiso 1007 (Eliminar Equipos) o admin
 const equipos = ref([])
 const total = ref(0)
-const options = ref({ page: 1, itemsPerPage: 30 })
-let searchTimeout = null
+const { opciones: options, alInicio } = usePage(() => loadItems())
 
 const headers = [
   { title: '', key: 'photo', sortable: false, width: '64px', align: 'center' },
@@ -236,46 +236,23 @@ const loadItems = () => {
   loading.value = true
   const token = beginLoad()   // guard de secuencia: gana la carga más reciente
   InventoryDataService.getAll({
-    page: options.value.page,
-    page_size: options.value.itemsPerPage,
+    ...porPagina(options.value.page, options.value.itemsPerPage),
     search: search.value || undefined,
     status: estadoFilter.value || undefined,
     expediente: expedienteFilter.value || undefined,
     vencido: vencidoFilter.value ? 1 : undefined,
   }).then(response => {
     if (!isLatestLoad(token)) return
-    equipos.value = response.data.results ?? response.data ?? []
-    total.value = response.data.count ?? equipos.value.length
+    const pagina = leerPagina(response.data)
+    equipos.value = pagina.filas
+    total.value = pagina.total
   }).catch(() => {
     Swal.fire('Error', 'No se pudieron cargar los equipos.', 'error')
   }).finally(() => { if (isLatestLoad(token)) loading.value = false })
 }
 
-const onPageChange = (nuevaPagina) => {
-  options.value.page = nuevaPagina
-  loadItems()
-}
-
-const onItemsPerPageChange = (nuevoTamano) => {
-  options.value.itemsPerPage = nuevoTamano
-  options.value.page = 1
-  loadItems()
-}
-
-// Búsqueda con debounce (vuelve a página 1)
-watch(search, () => {
-  clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    options.value.page = 1
-    loadItems()
-  }, 350)
-})
-
-// Cualquier filtro recarga de inmediato (vuelve a pagina 1)
-watch([estadoFilter, expedienteFilter, vencidoFilter], () => {
-  options.value.page = 1
-  loadItems()
-})
+watch(search, debounce(alInicio))
+watch([estadoFilter, expedienteFilter, vencidoFilter], alInicio)
 
 // Reservado: apartado para una orden, pero todavia en el almacen.
 const textoDeEstado = (item) => {
@@ -334,17 +311,10 @@ const deleteItem = (item) => {
   })
 }
 
-// El padre puede pedir refrescar tras crear/editar (server-side: recargamos la página actual).
-const updateRow = () => loadItems()
-const addRow = () => { options.value.page = 1; loadItems() }
-
-// Recarga inteligente por WebSocket (igual que orders/certificates): el back
-// dispara RELOAD_INVENTORY al crear/editar/eliminar equipos y al alquilar/devolver.
+// El back avisa al crear, editar o eliminar equipos y al alquilar o devolver.
 const onWsReloadInventory = () => { loadItems() }
 
-// Busqueda enlazada: al hacer clic en una notificacion de expediente, la ruta
-// trae ?buscar=<id interno> -> lo ponemos en la busqueda (aqui y si cambia estando
-// ya en la pestana). El watch(search) recarga la tabla.
+// Una notificacion de expediente llega con ?buscar=<id interno>.
 const route = useRoute()
 watch(() => route.query.buscar, (v) => { if (v) search.value = String(v) })
 
@@ -360,5 +330,5 @@ onUnmounted(() => {
   window.removeEventListener('wss-reload-inventory', onWsReloadInventory)
 })
 
-defineExpose({ loadItems, updateRow, addRow })
+defineExpose({ loadItems })
 </script>

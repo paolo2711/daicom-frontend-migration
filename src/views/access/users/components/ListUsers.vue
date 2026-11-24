@@ -26,11 +26,9 @@
       >
         <template v-slot:bottom>
           <fluent-pagination
-            :page="options.page"
-            :itemsPerPage="options.itemsPerPage"
+            v-model:page="options.page"
+            v-model:itemsPerPage="options.itemsPerPage"
             :totalItems="filteredUsersCount"
-            @update:page="options.page = $event"
-            @update:itemsPerPage="onItemsPerPageChange"
           />
         </template>
 
@@ -65,6 +63,7 @@ import UserMappers from '@/mappers/userMappers'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import { useAppStore } from '@/stores/appStore'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
+import { leerPagina, primeraPagina } from '@/utils/pagination'
 
 const UserFormDialog = defineAsyncComponent(() => import('@/views/access/users/components/UserFormDialog.vue'))
 
@@ -85,7 +84,7 @@ const headers = [
 const users = ref([])
 const loading = ref(false)
 const search = ref('')
-const options = ref({ page: 1, itemsPerPage: 30 })
+const options = ref(primeraPagina())
 
 const dialogOpen = ref(false)
 const selectedUser = ref(null)
@@ -104,17 +103,12 @@ const filteredUsersCount = computed(() => {
 const retrieveAllUsers = () => {
   loading.value = true
   UserDataService.getAll().then((response) => {
-    users.value = response.data.results ? response.data.results.map(UserMappers.getMap) : response.data.map(UserMappers.getMap)
+    users.value = leerPagina(response.data).filas.map(UserMappers.getMap)
   }).catch((e) => {
     console.error(e)
   }).finally(() => {
     loading.value = false
   })
-}
-
-const onItemsPerPageChange = (newVal) => {
-  options.value.itemsPerPage = newVal
-  options.value.page = 1
 }
 
 const deleteUser = (user) => {
@@ -149,5 +143,5 @@ onMounted(() => {
   retrieveAllUsers()
 })
 
-defineExpose({ retrieveAllUsers, openAddDialog })
+defineExpose({ openAddDialog })
 </script>

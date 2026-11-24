@@ -13,7 +13,6 @@
           label="Buscar Nro Orden"
           clearable
           style="max-width: 220px;"
-          @update:model-value="applyFilters"
         />
 
         <v-text-field
@@ -25,7 +24,6 @@
           label="Ref. OC Cliente"
           clearable
           style="max-width: 220px;"
-          @update:model-value="applyFilters"
         />
 
         <v-text-field
@@ -37,7 +35,6 @@
           label="Nro Factura"
           clearable
           style="max-width: 220px;"
-          @update:model-value="applyFilters"
         />
 
         <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
@@ -73,7 +70,7 @@
             </v-col>
 
             <v-col cols="12" md="4">
-              <client-select v-model="filter_client_id" @update:model-value="applyFilters" />
+              <client-select v-model="filter_client_id" />
             </v-col>
 
             <v-col cols="12" md="4">
@@ -88,7 +85,6 @@
                 density="compact"
                 hide-details="auto"
                 label="Estado"
-                @update:model-value="applyFilters"
               />
             </v-col>
           </v-row>
@@ -283,8 +279,11 @@ import { ALQUILER, FILTRO_DE_ESTADO, esAlquiler, viva } from '@/utils/orders/est
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
 import { useOrderRouteFilters } from '@/composables/useOrderRouteFilters'
+import { usePage } from '@/composables/usePage'
+import { debounce } from '@/utils/debounce'
 import { throttle } from '@/utils/throttle'
 import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemaforoFinanciero } from '@/utils/orders/cobro'
+import { leerPagina } from '@/utils/pagination'
 import { useAppStore } from '@/stores/appStore'
 import AddOrder from '../AddOrder.vue'
 import TableRentalDetails from './TableRentalDetails.vue'
@@ -330,7 +329,7 @@ const cuentas = computed(() => ({ missing_payment: appStore.pendingPaymentsRenta
 
 const loading_list = ref(false)
 const total_orders = ref(0)
-const options = ref({ page: 1, itemsPerPage: 15 })
+const { opciones: options, alInicio } = usePage(() => retrieveOrders())
 
 // ── Data ──
 const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestRequest()
@@ -338,16 +337,16 @@ const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestReques
 const retrieveOrders = () => {
   loading_list.value = true
   const token = beginOrdersLoad()   // guard de secuencia: gana la carga más reciente
-  const limite = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
   OrderDataService.getFiltered(
-    options.value.page, limite, filter_client_id.value, filter_order.value,
+    options.value.page, options.value.itemsPerPage, filter_client_id.value, filter_order.value,
     filter_client_ref.value, filter_date_gt.value, filter_date_lt.value,
     filter_status.value, 2, pildora.value,
     filter_invoice.value
   ).then(res => {
     if (!isLatestOrdersLoad(token)) return   // llegó una carga más nueva → no pisar
-    reemplazarOrdenes(res.data.results.map(orden => OrderMappers.getMap(orden)))
-    total_orders.value = res.data.count
+    const pagina = leerPagina(res.data)
+    reemplazarOrdenes(pagina.filas.map(orden => OrderMappers.getMap(orden)))
+    total_orders.value = pagina.total
   }).finally(() => {
     if (isLatestOrdersLoad(token)) loading_list.value = false
   })
@@ -367,8 +366,7 @@ const cargarResumenes = () => Promise.all([
 const refrescarResumenes = throttle(cargarResumenes)
 
 const applyFilters = () => {
-  options.value.page = 1
-  retrieveOrders()
+  alInicio()
   cargarResumenes() // Sincroniza las píldoras al filtrar
 }
 
@@ -410,12 +408,7 @@ const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, accionesD
 
 // ── Watchers ──
 useOrderRouteFilters(filter_order, pildora, applyFilters)
-watch(options, () => { retrieveOrders() }, { deep: true })
-watch(filter_order, () => { applyFilters() })
-watch(filter_invoice, () => { applyFilters() })
-watch(filter_client_ref, () => { applyFilters() })
-watch(filter_client_id, () => { applyFilters() })
-watch(filter_status, () => { applyFilters() })
+watch([filter_order, filter_client_ref, filter_invoice, filter_client_id, filter_status], debounce(applyFilters))
 
 onMounted(() => {
   retrieveOrders()

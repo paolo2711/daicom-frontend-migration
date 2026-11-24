@@ -1,24 +1,11 @@
 import axios from "axios";
 import authHeader from "@/services/auth-header";
+import { porPagina } from "@/utils/pagination";
 
 
 class LabDataService {
     getFiltered(page, page_size, name) {
-        return axios.get(  `labs?page=${page}&page_size=${page_size}&name=${name} `, {
-            headers: authHeader()
-        });
-    }
-
-    getAll() {
-        return axios.get( 'labs?page_size=1000000000', {
-            headers: authHeader()
-        });
-    }
-
-    get(id) {
-        return axios.get(`labs/${id}`,  {
-            headers: authHeader()
-        });
+        return axios.get("labs", { params: { ...porPagina(page, page_size), name }, headers: authHeader() });
     }
 
     create(data) {

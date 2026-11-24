@@ -171,7 +171,6 @@
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
 import { Toast } from '@/plugins/alerts'
 
 import Swal from 'sweetalert2'
@@ -182,6 +181,7 @@ import { debounce } from '@/utils/debounce'
 import { leerPagina, porPagina } from '@/utils/pagination'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { usePage } from '@/composables/usePage'
+import { useRouteFilters } from '@/composables/useRouteFilters'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import FilterPill from '@/components/shared/FilterPill.vue'
@@ -251,8 +251,14 @@ const loadItems = () => {
   }).finally(() => { if (isLatestLoad(token)) loading.value = false })
 }
 
-watch(search, debounce(alInicio))
-watch([estadoFilter, expedienteFilter, vencidoFilter], alInicio)
+// Una notificacion de expediente llega con ?buscar=<id interno>.
+useRouteFilters(({ buscar }) => {
+  search.value = buscar || ''
+  estadoFilter.value = null
+  expedienteFilter.value = null
+  vencidoFilter.value = false
+})
+watch([search, estadoFilter, expedienteFilter, vencidoFilter], debounce(alInicio))
 
 // Reservado: apartado para una orden, pero todavia en el almacen.
 const textoDeEstado = (item) => {
@@ -314,15 +320,10 @@ const deleteItem = (item) => {
 // El back avisa al crear, editar o eliminar equipos y al alquilar o devolver.
 const onWsReloadInventory = () => { loadItems() }
 
-// Una notificacion de expediente llega con ?buscar=<id interno>.
-const route = useRoute()
-watch(() => route.query.buscar, (v) => { if (v) search.value = String(v) })
-
 onMounted(() => {
   const user = JSON.parse(localStorage.getItem('user')) || {}
   const isAdmin = user.kind !== undefined && user.kind < 1
   puedeEliminar.value = isAdmin || (user.action_permissions || []).includes(1007)
-  if (route.query.buscar) search.value = String(route.query.buscar)
   loadItems()
   window.addEventListener('wss-reload-inventory', onWsReloadInventory)
 })

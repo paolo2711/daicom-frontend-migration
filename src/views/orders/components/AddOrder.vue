@@ -231,13 +231,13 @@ async function save(imprimir = false) {
     const filas = items_to_save.value
     const estimados = formRef.value?.estimados?.()
     const { data } = await OrderDataService.create({ ...payload_orden, ...vinculosAlCrear(documentosNuevos.value) })
-    const noSubieron = await subirPendientes(data.id, documentosNuevos.value.archivos)
+    const { fallaron, warning } = await subirPendientes(data.id, documentosNuevos.value.archivos)
 
     close()
-    avisarNumeros(`${data.order_number} creada`, filas, data.codigos, estimados)
-    if (noSubieron.length) {
-      $swal.fire('La orden se guardó', `No se subieron: ${noSubieron.join(', ')}. Súbelos desde "Ver y editar".`,
-                 'warning')
+    avisarNumeros(`${data.order_number} creada`, filas, data.codigos, estimados, warning)
+    if (fallaron.length) {
+      $swal.fire({ icon: 'warning', title: 'La orden se guardó, sin estos documentos',
+                   text: `${fallaron.join(' ')} Súbelos desde «Ver y editar».` })
     }
     if (imprimir) await imprimirIngreso(data.id)
   } catch (error) {
@@ -259,7 +259,7 @@ async function guardarEdicion() {
   const orden = editando.value
   close()
   avisarNumeros(`${data.order_number} guardada`, nuevas.map(([fila]) => fila), data.codigos,
-                nuevas.map(([, estimado]) => estimado))
+                nuevas.map(([, estimado]) => estimado), data.warning)
   emit('guardada', orden)
 }
 

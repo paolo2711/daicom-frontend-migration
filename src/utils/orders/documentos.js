@@ -5,6 +5,7 @@ import { ESTADOS } from '@/utils/billing/guias'
 import { fechaCorta } from '@/utils/dates'
 import { DOCUMENTOS, TIPOS_DE_COTIZACION } from '@/utils/documents/quoteDefaults'
 import { COTIZACION as DE_COTIZACION, VALORIZACION as DE_VALORIZACION } from '@/utils/documents/tipos'
+import { mensajeDeError } from '@/utils/errors'
 import { monto } from '@/utils/money'
 
 // OrderDocument.Tipo en el back.
@@ -78,15 +79,17 @@ export function vincularDocumento(ordenId, { tipo, llave }, id) {
   return OrderDataService.addDocument(ordenId, datos)
 }
 
-// Los PDF elegidos al crear la orden, ya creada. Devuelve el nombre de los que no subieron.
+// Los PDF elegidos al crear la orden, ya creada: los que no subieron, con su motivo, y el aviso de su copia en la red.
 export async function subirPendientes(ordenId, archivos) {
   const fallaron = []
+  let warning = ''
   for (const pendiente of archivos) {
     try {
-      await subirArchivo(ordenId, pendiente)
-    } catch {
-      fallaron.push(pendiente.archivo.name)
+      const { data } = await subirArchivo(ordenId, pendiente)
+      warning = warning || data.warning
+    } catch (error) {
+      fallaron.push(`${pendiente.archivo.name}: ${mensajeDeError(error, 'no se pudo subir.')}`)
     }
   }
-  return fallaron
+  return { fallaron, warning }
 }

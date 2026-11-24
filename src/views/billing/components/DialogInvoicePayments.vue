@@ -218,13 +218,13 @@ import { ref, reactive, watch, computed } from 'vue'
 import { useTheme } from 'vuetify'
 import Swal from 'sweetalert2'
 import BillingDataService from '@/services/billing/billingDataService'
-import { useAppStore } from '@/stores/appStore'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 import { fechaCorta, hoyISO } from '@/utils/dates'
 import SegmentedField from '@/components/shared/SegmentedField.vue'
 import { DETRACCION, FORMAS_DE_PAGO, anulada, formaDePago, nombreDe } from '@/utils/billing/facturas'
 import { monto, nombreDe as nombreDeMoneda, simboloDe } from '@/utils/money'
+import { avisarHecho } from '@/utils/documents/avisos'
 import { mensajeDeError } from '@/utils/errors'
 
 const props = defineProps({
@@ -235,7 +235,6 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'close'])
 
 const theme = useTheme()
-const appStore = useAppStore()
 
 const dialogModel = computed({
   get: () => props.modelValue,
@@ -328,10 +327,11 @@ const save = async () => {
       ? BillingDataService.updatePayment(pago_id_editar.value, data)
       : BillingDataService.createInvoicePayment(props.invoice.id, data)
 
+    const hecho = editando.value ? 'Abono actualizado' : 'Abono registrado'
     peticion
-      .then(() => {
+      .then(({ data: guardado }) => {
         closeDialog()
-        Swal.fire(appStore.successSavedOptions)
+        avisarHecho(hecho, guardado)
       })
       .catch((err) => {
         Swal.fire('Operación rechazada', mensajeDeError(err, 'No se pudo guardar el abono.'), 'error')
@@ -361,8 +361,8 @@ const eliminarPago = (id) => {
       BillingDataService.deletePayment(id).then(() => {
         Toast.fire({ timer: 2200, icon: 'success', title: 'Abono eliminado' })
         cargarAbonos()
-      }).catch(() => {
-        Swal.fire('Error', 'No se pudo eliminar el abono.', 'error')
+      }).catch((error) => {
+        Swal.fire('No se eliminó', mensajeDeError(error, 'No se pudo eliminar el abono.'), 'error')
       })
     }
   })

@@ -83,9 +83,8 @@
 import { computed, getCurrentInstance, nextTick, reactive, ref, watch } from 'vue'
 import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
-import { Toast } from '@/plugins/alerts'
+import { avisarHecho } from '@/utils/documents/avisos'
 import OrderDataService from '@/services/orders/orderDataService'
-import { useAppStore } from '@/stores/appStore'
 import { ESTADOS } from '@/utils/billing/guias'
 import { fechaCorta } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
@@ -106,7 +105,6 @@ const pendientes = defineModel('pendientes', { type: Object, default: sinPendien
 
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
-const appStore = useAppStore()
 
 const unicos = reactive({})
 const guardados = ref([])
@@ -118,7 +116,7 @@ const buscadas = reactive(Object.fromEntries(VINCULABLES.map(v => [v.campo, null
 const subida = ref(null)
 const subiendoDe = ref(VINCULABLES[0])
 
-const fallo = (error, texto) => Toast.fire({ ...appStore.toastErrorRed, title: mensajeDeError(error, texto) })
+const fallo = (error, titulo) => $swal.fire(titulo, mensajeDeError(error, 'Intenta de nuevo.'), 'error')
 
 const tipo = computed(() => (props.alquiler ? 'alquiler' : 'servicio'))
 const buscadores = Object.fromEntries(VINCULABLES.map(v => [v.campo, (page, size, query) =>
@@ -159,7 +157,7 @@ async function cargar() {
 }
 
 watch(() => props.orden?.id, (id) => {
-  if (id) cargar().catch(e => fallo(e, 'No se pudieron traer los documentos.'))
+  if (id) cargar().catch(e => fallo(e, 'No se cargaron los documentos'))
 }, { immediate: true })
 
 async function subirHechaFuera(vinculable) {
@@ -180,7 +178,7 @@ async function vincular(vinculable, documento) {
     await vincularDocumento(props.orden.id, vinculable, documento.id)
     await cargar()
   } catch (error) {
-    fallo(error, `No se pudo vincular la ${vinculable.nombre}.`)
+    fallo(error, `No se vinculó la ${vinculable.nombre}`)
   }
 }
 
@@ -196,7 +194,7 @@ async function quitarGuardado(fila, texto) {
     await OrderDataService.deleteDocument(fila)
     await cargar()
   } catch (error) {
-    fallo(error, 'No se pudo quitar.')
+    fallo(error, 'No se quitó')
   }
 }
 
@@ -243,11 +241,11 @@ async function alElegirArchivo(evento) {
   }
   subiendo.value = destino.value
   try {
-    await subirArchivo(props.orden.id, pendiente)
+    const { data } = await subirArchivo(props.orden.id, pendiente)
     await cargar()
-    Toast.fire({ timer: 2000, icon: 'success', title: 'Documento subido' })
+    avisarHecho('Documento subido', data)
   } catch (error) {
-    fallo(error, 'No se pudo subir el documento.')
+    fallo(error, 'No se subió el documento')
   } finally {
     subiendo.value = null
   }

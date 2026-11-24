@@ -250,7 +250,7 @@
 </template>
 
 <script setup>
-import { Toast } from '@/plugins/alerts'
+import { avisarHecho } from '@/utils/documents/avisos'
 import { ref, reactive, computed, watch, nextTick } from 'vue'
 import { useTheme } from 'vuetify'
 import Swal from 'sweetalert2'
@@ -459,11 +459,11 @@ const save = async () => {
 
   try {
     if (isEditing.value) {
-      await InventoryDataService.update(form.id, formData)
-      Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo actualizado' })
+      const { data } = await InventoryDataService.update(form.id, formData)
+      avisarHecho('Equipo actualizado', data)
     } else {
-      await InventoryDataService.create(formData)
-      Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo registrado' })
+      const { data } = await InventoryDataService.create(formData)
+      avisarHecho('Equipo registrado', data)
     }
     emit('saved')
     close()

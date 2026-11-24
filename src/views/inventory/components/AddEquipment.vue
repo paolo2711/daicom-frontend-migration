@@ -159,11 +159,11 @@
             <p class="text-body-2 px-10 text-grey">Vincula a este equipo un certificado emitido por tu laboratorio: acreditado, no acreditado o de operatividad.</p>
 
             <div v-if="form.latest_certificate" class="mb-6 mt-4">
-              <v-chip :color="certVigencia.chipColor" variant="flat" class="text-white font-weight-bold text-subtitle-2 px-4 py-4 mb-4">
-                <v-icon start size="20">{{ certVigencia.icon }}</v-icon> {{ certVigencia.headline }}
+              <v-chip :color="vigencia.color" variant="flat" class="text-white font-weight-bold text-subtitle-2 px-4 py-4 mb-4">
+                <v-icon start size="20">{{ vigencia.icono }}</v-icon> {{ vigencia.texto }}
               </v-chip>
 
-              <v-card variant="tonal" :color="certVigencia.chipColor" class="mx-auto pa-4 mb-4 text-left" max-width="360" rounded="lg">
+              <v-card variant="tonal" :color="vigencia.color" class="mx-auto pa-4 mb-4 text-left" max-width="360" rounded="lg">
                 <div class="d-flex justify-space-between align-center mb-2">
                   <span class="text-caption text-medium-emphasis">Certificado</span>
                   <span class="font-weight-bold" :title="form.latest_certificate.registry_code">{{ form.latest_certificate.numero }}</span>
@@ -174,7 +174,7 @@
                 </div>
                 <div class="d-flex justify-space-between align-center">
                   <span class="text-caption text-medium-emphasis">Vence</span>
-                  <span class="font-weight-medium">{{ certVigencia.vence || '---' }}</span>
+                  <span class="font-weight-medium">{{ fechaCorta(form.latest_certificate.vence) || '---' }}</span>
                 </div>
               </v-card>
 
@@ -261,6 +261,7 @@ import { mensajeDeError } from '@/utils/errors'
 import { fechaCorta } from '@/utils/dates'
 import { vivo } from '@/utils/certificates/estado'
 import { debounce } from '@/utils/debounce'
+import { VIGENCIAS } from '@/utils/equipments/expediente'
 import { leerPagina, porPagina } from '@/utils/pagination'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
 
@@ -324,21 +325,9 @@ const statusOptions = [
   { text: 'Baja', value: 4 },
 ]
 
-// Vigencia del expediente: emision + 1 ano vs hoy -> vigente / por vencer / vencido.
-const certVigencia = computed(() => {
-  const r = { vence: '', chipColor: 'success', icon: 'mdi-check-decagram', headline: 'EQUIPO CERTIFICADO' }
-  const cert = form.latest_certificate
-  if (!cert || !cert.emission_date) return r
-  const emis = new Date(cert.emission_date)
-  if (isNaN(emis.getTime())) return r
-  const vence = new Date(emis); vence.setFullYear(vence.getFullYear() + 1)
-  r.vence = fechaCorta(vence.toISOString())
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
-  const dias = Math.round((vence - hoy) / 86400000)
-  if (dias < 0) { r.chipColor = 'error'; r.icon = 'mdi-alert-decagram'; r.headline = 'EXPEDIENTE VENCIDO' }
-  else if (dias <= 30) { r.chipColor = 'warning'; r.icon = 'mdi-calendar-alert'; r.headline = 'EXPEDIENTE POR VENCER' }
-  return r
-})
+// El elegido para un equipo nuevo todavia no tiene vigencia: se vincula al registrarlo.
+const vigencia = computed(() => VIGENCIAS[form.latest_certificate?.vigencia]
+  ?? { texto: 'Se vincula al registrar el equipo', icono: 'mdi-link-variant' })
 
 // Marca una foto existente como principal: la pone primera (la que se muestra en la lista).
 const setPrincipal = (i) => {
@@ -354,7 +343,15 @@ const onFilesDropped = (files) => {
   })
 }
 
-const open = (item = null, targetTab = 0, openViewerImage = false) => {
+// `id`: el equipo que se edita; sin el, uno nuevo.
+async function open(id = null, targetTab = 0, openViewerImage = false) {
+  let item = null
+  try {
+    if (id) item = (await InventoryDataService.get(id)).data
+  } catch (error) {
+    Swal.fire('No se abrió el equipo', mensajeDeError(error, 'Intenta de nuevo.'), 'error')
+    return
+  }
   resetForm()
   if (item) {
     isEditing.value = true
@@ -510,8 +507,8 @@ const linkCertificate = async () => {
     // Si el equipo ya existe en BD, vinculamos directamente
     linkingCert.value = true
     try {
-      await InventoryDataService.update(form.id, { latest_certificate: foundCert.value.id })
-      form.latest_certificate = foundCert.value
+      const { data } = await InventoryDataService.update(form.id, { latest_certificate: foundCert.value.id })
+      form.latest_certificate = data.latest_certificate
       Swal.fire({ title: 'Vinculado', text: 'Certificado asociado exitosamente', icon: 'success', timer: 1500, showConfirmButton: false })
       emit('saved') // Refresca la tabla por detrás
     } catch {

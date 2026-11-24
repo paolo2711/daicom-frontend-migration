@@ -33,10 +33,10 @@ const addModal = ref(null)
 const historyModal = ref(null)
 
 const openHistory = (item) => {
-  historyModal.value?.open(item)
+  historyModal.value?.open(item.id)
 }
 
 const openEdit = (item, tab = 0, viewer = false) => {
-  addModal.value?.open(item, tab, viewer)
+  addModal.value?.open(item.id, tab, viewer)
 }
 </script>

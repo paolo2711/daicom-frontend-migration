@@ -1,13 +1,13 @@
 <template>
   <v-dialog v-model="dialog" class="dialog-premium" max-width="620" persistent>
     <v-card v-if="linea">
-      <base-modal-header :title="linea.equipment_internal_id" icon="mdi-truck-delivery" icon-color="amber-darken-3"
+      <base-modal-header :title="linea.equipment_data.internal_id" icon="mdi-truck-delivery" icon-color="amber-darken-3"
                          @close="close">
-        {{ linea.equipment_name }}
+        {{ linea.equipment_data.name }}
       </base-modal-header>
 
       <v-card-text class="pt-5">
-        <div class="text-body-2 mb-5 font-weight-bold" :class="`text-${presentacion.color}`">{{ presentacion.texto }}</div>
+        <div class="text-body-2 mb-5 font-weight-bold">{{ ESTADOS_ALQUILER[linea.estado].texto }}</div>
 
         <v-form ref="deLasFechas" @submit.prevent>
           <v-row dense>
@@ -94,7 +94,6 @@ const deLasFechas = ref(null)
 const delPaso = ref(null)
 const ocupado = ref(false)
 
-const presentacion = computed(() => ESTADOS_ALQUILER[linea.value.estado])
 const paso = computed(() => PASOS[linea.value.estado] || null)
 const esDevolucion = computed(() => paso.value?.clave === 'devolucion')
 
@@ -158,7 +157,7 @@ const darPaso = () => intentar(async () => {
 async function deshacerDevolucion() {
   const { isConfirmed } = await $swal.fire({
     title: '¿Deshacer la devolución?',
-    text: `${linea.value.equipment_internal_id} vuelve a figurar en obra.`,
+    text: `${linea.value.equipment_data.internal_id} vuelve a figurar en obra.`,
     icon: 'question',
     showCancelButton: true,
     confirmButtonText: 'Sí, deshacer',

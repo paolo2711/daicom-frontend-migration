@@ -87,53 +87,16 @@
         </template>
 
         <template v-slot:item.photo="{ item }">
-          <v-avatar size="40" rounded="lg" color="grey-lighten-3" style="cursor: pointer;" @click="editItem(item, 0, !!(item.gallery && item.gallery.length))">
-            <v-img v-if="item.gallery && item.gallery.length" :src="item.gallery[0].image" cover />
-            <v-icon v-else size="20" color="grey-darken-1">mdi-toolbox-outline</v-icon>
-            <v-tooltip activator="parent" location="top">{{ (item.gallery && item.gallery.length) ? 'Ver foto y editar' : 'Agregar fotos' }}</v-tooltip>
-          </v-avatar>
+          <equipment-photo :foto="item.foto" class="cursor-pointer" title="Ver fotos"
+                           @click="editItem(item, 0, true)" />
         </template>
 
-        <!-- ID + indicador de expediente (lleno = tiene, hueco = no). Hover: detalle -->
         <template v-slot:item.internal_id="{ item }">
-          <div class="d-flex align-center" style="gap: 6px;">
-            <strong>{{ item.internal_id }}</strong>
-            <span class="d-inline-flex" style="cursor: pointer;" @click="editItem(item, 1)">
-              <v-icon size="16" :color="certInfo(item).has ? 'primary' : 'grey-lighten-1'">
-                {{ certInfo(item).has ? 'mdi-certificate' : 'mdi-certificate-outline' }}
-              </v-icon>
-              <v-tooltip activator="parent" location="top">
-                <template v-if="certInfo(item).has">
-                  <div>Expediente <strong>{{ certInfo(item).code }}</strong></div>
-                  <div>Emitido {{ certInfo(item).emitido }} · Vence {{ certInfo(item).vence }}</div>
-                  <div class="font-weight-bold">{{ certInfo(item).label }}</div>
-                  <div class="text-caption mt-1" style="opacity:.8">Clic para editar el certificado</div>
-                </template>
-                <template v-else>
-                  <div>Sin expediente</div>
-                  <div class="text-caption mt-1" style="opacity:.8">Clic para vincular uno</div>
-                </template>
-              </v-tooltip>
-            </span>
-          </div>
+          <equipment-code :codigo="item.internal_id" :estado="estadoDe(item)" :detalle="detalleDe(item)" />
         </template>
 
-        <template v-slot:item.status="{ item }">
-          <v-chip
-            :color="getStatusColor(item.status)" size="small" variant="flat" class="text-white"
-            :style="item.status === 2 ? 'cursor: pointer;' : ''"
-            @click="item.status === 2 ? $emit('view-history', item) : null"
-          >
-            {{ textoDeEstado(item) }}
-            <!-- Alquilado: el chip abre el historial de viajes; hover muestra empresa orden -->
-            <template v-if="item.status === 2">
-              <v-icon end size="14">mdi-account-arrow-right</v-icon>
-              <v-tooltip activator="parent" location="top">
-                <div v-if="item.current_rental">{{ item.current_rental.client_name }} · {{ item.current_rental.order_number }}</div>
-                <div class="text-caption" style="opacity:.8">Clic: historial de viajes</div>
-              </v-tooltip>
-            </template>
-          </v-chip>
+        <template v-slot:item.latest_certificate="{ item }">
+          <equipment-certificate :certificado="item.latest_certificate" @abrir="editItem(item, 1)" />
         </template>
 
         <template v-slot:item.actions="{ item }">
@@ -166,6 +129,8 @@
         </template>
       </v-data-table-server>
     </table-loading-overlay>
+
+    <state-legend titulo="Estados del equipo:" :estados="ESTADOS_DE_EQUIPO" />
   </v-container>
 </template>
 
@@ -176,15 +141,19 @@ import { Toast } from '@/plugins/alerts'
 import Swal from 'sweetalert2'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import { mensajeDeError } from '@/utils/errors'
-import { fechaCorta } from '@/utils/dates'
 import { debounce } from '@/utils/debounce'
+import { ESTADOS_DE_EQUIPO, estadoDe } from '@/utils/equipments/estado'
 import { leerPagina, porPagina } from '@/utils/pagination'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { usePage } from '@/composables/usePage'
 import { useRouteFilters } from '@/composables/useRouteFilters'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
+import EquipmentCertificate from '@/components/shared/EquipmentCertificate.vue'
+import EquipmentCode from '@/components/shared/EquipmentCode.vue'
+import EquipmentPhoto from '@/components/shared/EquipmentPhoto.vue'
 import FilterPill from '@/components/shared/FilterPill.vue'
+import StateLegend from '@/components/shared/StateLegend.vue'
 
 const emit = defineEmits(['edit-item', 'view-history'])
 
@@ -197,12 +166,12 @@ const { opciones: options, alInicio } = usePage(() => loadItems())
 
 const headers = [
   { title: '', key: 'photo', sortable: false, width: '64px', align: 'center' },
-  { title: 'ID Interno', key: 'internal_id' },
+  { title: 'Código', key: 'internal_id' },
   { title: 'Nombre del Equipo', key: 'name' },
   { title: 'Marca', key: 'brand' },
   { title: 'Modelo', key: 'model' },
   { title: 'N° Serie', key: 'series' },
-  { title: 'Estado', key: 'status', align: 'center' },
+  { title: 'Certificado', key: 'latest_certificate', sortable: false },
   { title: 'Acciones', key: 'actions', sortable: false, align: 'end' },
 ]
 
@@ -212,22 +181,10 @@ const estadoFilter = ref(null)          // null | 1..4
 const expedienteFilter = ref(null)      // null | 'sin'
 const vencidoFilter = ref(false)
 
-const estadoFilterOptions = [
-  { text: 'Disponible', value: 1 },
-  { text: 'Alquilado', value: 2 },
-  { text: 'Mantenimiento', value: 3 },
-  { text: 'Baja', value: 4 },
-]
+const estadoFilterOptions = [1, 2, 3, 4].map(value => ({ text: ESTADOS_DE_EQUIPO[value].texto, value }))
 
 const toggleSinExpediente = () => { expedienteFilter.value = expedienteFilter.value === 'sin' ? null : 'sin' }
 const toggleVencido = () => { vencidoFilter.value = !vencidoFilter.value }
-
-const statusOptions = [
-  { text: 'Disponible', value: 1, color: 'green' },
-  { text: 'Alquilado', value: 2, color: 'orange-darken-2' },
-  { text: 'Mantenimiento', value: 3, color: 'blue' },
-  { text: 'Baja', value: 4, color: 'grey' },
-]
 
 // ── Carga server-side (paginación + búsqueda en el backend) ──
 const { begin: beginLoad, isLatest: isLatestLoad } = useLatestRequest()
@@ -260,38 +217,8 @@ useRouteFilters(({ buscar }) => {
 })
 watch([search, estadoFilter, expedienteFilter, vencidoFilter], debounce(alInicio))
 
-// Reservado: apartado para una orden, pero todavia en el almacen.
-const textoDeEstado = (item) => {
-  if (item.current_rental?.estado === 'reservado') return 'Reservado'
-  const status = statusOptions.find(s => s.value === item.status)
-  return status ? status.text : 'Desconocido'
-}
-
-const getStatusColor = (val) => {
-  const status = statusOptions.find(s => s.value === val)
-  return status ? status.color : 'grey'
-}
-
-// Info del expediente para el icono + tooltip (vence = emision + 1 ano).
-const certInfo = (item) => {
-  const c = item.latest_certificate
-  if (!c || !c.registry_code) return { has: false }
-  const info = { has: true, code: c.numero, emitido: fechaCorta(c.emission_date) || '—', vence: '—', label: 'VIGENTE' }
-  if (c.emission_date) {
-    const emis = new Date(c.emission_date)
-    if (!isNaN(emis.getTime())) {
-      const v = new Date(emis)
-      v.setFullYear(v.getFullYear() + 1)
-      info.vence = fechaCorta(v.toISOString())
-      const hoy = new Date()
-      hoy.setHours(0, 0, 0, 0)
-      const dias = Math.round((v - hoy) / 86400000)
-      if (dias < 0) info.label = 'VENCIDO'
-      else if (dias <= 30) info.label = 'POR VENCER'
-    }
-  }
-  return info
-}
+const detalleDe = (item) => [estadoDe(item).texto, item.current_rental?.client_name, item.current_rental?.order_number]
+  .filter(Boolean).join(' · ')
 
 // tab: 0 = Datos y Fotos, 1 = Certificado. viewer: abrir el visor de imagenes.
 const editItem = (item, tab = 0, viewer = false) => {

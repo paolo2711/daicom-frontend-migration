@@ -3,7 +3,7 @@
       <section class="seccion">
         <div class="titulo-de-seccion">Equipo</div>
         <v-text-field :model-value="eq.name" label="Equipo" disabled v-bind="CAMPO" />
-        <v-text-field :model-value="eq.series || '—'" label="Serie" disabled v-bind="CAMPO" />
+        <v-text-field :model-value="eq.detalle || '—'" label="Marca, modelo y serie" disabled v-bind="CAMPO" />
       </section>
 
       <section class="seccion">

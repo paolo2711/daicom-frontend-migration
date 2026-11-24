@@ -3,8 +3,9 @@
     <v-toolbar density="compact" flat color="transparent" class="pl-3">
       <v-icon start :color="isDark ? 'amber-darken-2' : 'amber-darken-3'" class="mr-2">mdi-truck-delivery</v-icon>
       <span class="text-subtitle-2 font-weight-bold" :class="isDark ? 'text-amber-lighten-2' : 'text-amber-darken-4'">
-        Equipos en este Alquiler
+        Equipos<template v-if="order.rentals"> ({{ filas.length }})</template>
       </span>
+      <span class="text-caption text-medium-emphasis ml-3">{{ resumenPorEstado(filas) }}</span>
       <span v-if="muestraFecha && order.created_at" class="text-caption text-medium-emphasis ml-3 mt-1 font-weight-medium d-flex align-center">
         <v-icon size="x-small" class="mr-1">mdi-calendar-blank</v-icon>
         {{ fechaCorta(order.created_at) }}
@@ -24,12 +25,13 @@
     <v-table v-else density="compact" :hover="false" class="bg-transparent">
       <thead>
         <tr class="bg-transparent">
-          <th class="text-overline">ID INVENTARIO</th>
-          <th class="text-overline">EQUIPO Y OBSERVACIONES</th>
-          <th class="text-overline">SERIE</th>
+          <th class="columna-foto"></th>
+          <th class="text-overline">CÓDIGO</th>
+          <th class="text-overline">EQUIPO</th>
+          <th class="text-overline">CERTIFICADO</th>
           <th class="text-center text-overline">{{ FECHAS_ALQUILER.departure_date }}</th>
           <th class="text-center text-overline">{{ FECHAS_ALQUILER.actual_return_date }}</th>
-          <th class="text-center text-overline">ESTADO</th>
+          <th class="text-center text-overline">DÍAS</th>
           <th></th>
         </tr>
       </thead>
@@ -37,33 +39,33 @@
         <tr v-for="linea in filas" :key="linea.id"
             :class="{ 'fila-anulada': linea.estado === 'anulado', 'fila-en-menu': estaEnElMenu(linea) }"
             @contextmenu="alClickDerecho($event, { item: linea })">
-          <td><strong>{{ linea.equipment_internal_id }}</strong></td>
           <td>
-            <div class="font-weight-medium">{{ linea.equipment_name }}</div>
-            <div v-if="linea.delivery_notes" class="text-caption text-medium-emphasis">
-              <v-icon size="x-small" color="grey">mdi-message-text-outline</v-icon>
-              {{ linea.delivery_notes }}
-            </div>
+            <equipment-photo :foto="linea.equipment_data.foto" class="cursor-pointer" title="Ver fotos"
+                             @click="verEquipo(linea, 0, true)" />
           </td>
-          <td>{{ linea.equipment_series || '—' }}</td>
+          <td><equipment-code :codigo="linea.equipment_data.internal_id" :estado="ESTADOS_ALQUILER[linea.estado]" /></td>
+          <td>
+            <div class="font-weight-medium">{{ linea.equipment_data.name }}</div>
+            <div v-if="detalleDe(linea)" class="text-caption text-medium-emphasis">{{ detalleDe(linea) }}</div>
+            <div v-if="linea.delivery_notes" class="text-caption text-medium-emphasis">{{ linea.delivery_notes }}</div>
+          </td>
+          <td>
+            <equipment-certificate :certificado="linea.equipment_data.latest_certificate" @abrir="verEquipo(linea, 1)" />
+          </td>
           <td class="text-center" :class="{ 'text-medium-emphasis': !linea.departure_date }">
             {{ fechaCorta(linea.departure_date) || '—' }}
           </td>
-          <td class="text-center" :class="linea.actual_return_date ? 'text-success font-weight-bold' : 'text-medium-emphasis'">
+          <td class="text-center" :class="{ 'text-medium-emphasis': !linea.actual_return_date }">
             {{ fechaCorta(linea.actual_return_date) || '—' }}
           </td>
-          <td class="text-center">
-            <v-chip size="x-small" :color="linea.presentacion.color" variant="outlined" label>
-              {{ linea.presentacion.texto }}
-            </v-chip>
-          </td>
+          <td class="text-center" :class="{ 'text-medium-emphasis': !linea.dias }">{{ linea.dias ?? '—' }}</td>
           <td class="text-center">
             <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" size="x-small" color="grey-darken-1"
                    @click.stop="alBotonDeFila($event, linea)" />
           </td>
         </tr>
         <tr v-if="filas.length === 0">
-          <td colspan="7" class="text-center text-medium-emphasis py-6 font-weight-medium">
+          <td colspan="8" class="text-center text-medium-emphasis py-6 font-weight-medium">
             No se encontraron equipos en este alquiler.
           </td>
         </tr>
@@ -84,15 +86,18 @@ import { Toast } from '@/plugins/alerts'
 import { computed, getCurrentInstance, ref } from 'vue'
 import DialogGestionarAlquiler from './DialogGestionarAlquiler.vue'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
+import EquipmentCertificate from '@/components/shared/EquipmentCertificate.vue'
+import EquipmentCode from '@/components/shared/EquipmentCode.vue'
+import EquipmentPhoto from '@/components/shared/EquipmentPhoto.vue'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { accionesPara } from '@/utils/actions'
 import AddEquipment from '@/views/inventory/components/AddEquipment.vue'
 import { useTheme } from 'vuetify'
 import OrderDataService from '@/services/orders/orderDataService'
-import InventoryDataService from '@/services/inventory/inventoryDataService'
-import { ESTADOS_ALQUILER, FECHAS_ALQUILER } from '@/utils/orders/alquiler'
+import { ESTADOS_ALQUILER, FECHAS_ALQUILER, resumenPorEstado } from '@/utils/orders/alquiler'
 import { viva } from '@/utils/orders/estado'
 import { fechaCorta } from '@/utils/dates'
+import { datosDelEquipo } from '@/utils/equipments/datos'
 import { mensajeDeError } from '@/utils/errors'
 
 const props = defineProps({
@@ -113,10 +118,8 @@ const addEquipmentRef = ref(null)
 
 const anulada = computed(() => !viva(props.order))
 
-const filas = computed(() => (props.order.rentals || []).map(linea => ({
-  ...linea,
-  presentacion: ESTADOS_ALQUILER[linea.estado],
-})))
+const filas = computed(() => props.order.rentals || [])
+const detalleDe = ({ equipment_data: equipo }) => datosDelEquipo(equipo.brand, equipo.model, equipo.series && `SN ${equipo.series}`)
 
 // Lo que se puede hacer con un equipo del alquiler. Las lineas no se marcan:
 // el menu es de la que se toco.
@@ -147,18 +150,12 @@ function ejecutarAccion (clave, [linea]) {
   if (clave === 'quitar') return quitar(linea)
 }
 
-async function verEquipo(linea) {
-  try {
-    const { data } = await InventoryDataService.get(linea.equipment)
-    addEquipmentRef.value?.open(data)
-  } catch {
-    $swal.fire('Error', 'No se pudo cargar la información del equipo.', 'error')
-  }
-}
+// `pestana` y `fotos`, como en Inventario.
+const verEquipo = (linea, pestana = 0, fotos = false) => addEquipmentRef.value?.open(linea.equipment, pestana, fotos)
 
 async function quitar(linea) {
   const { isConfirmed } = await $swal.fire({
-    title: `¿Quitar ${linea.equipment_internal_id} de la orden?`,
+    title: `¿Quitar ${linea.equipment_data.internal_id} de la orden?`,
     text: 'Vuelve a estar disponible en el inventario.',
     icon: 'warning',
     showCancelButton: true,
@@ -184,5 +181,9 @@ async function quitar(linea) {
 }
 .fila-anulada td {
   opacity: 0.6;
+}
+/* Lo justo para la foto: el resto del ancho es para los datos. */
+.columna-foto {
+  width: 1%;
 }
 </style>

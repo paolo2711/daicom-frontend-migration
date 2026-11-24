@@ -179,7 +179,7 @@
           <tr class="fila-activa">
             <td :colspan="columns.length" class="pa-0">
               <table-rental-details :order="item" :muestra-fecha="!fechaEnColumna" @editar="abrirEditarOrden(item)"
-                                    @reload="expanded = []; retrieveOrders()" />
+                                    @reload="cargarItems(item.id)" />
             </td>
           </tr>
         </template>
@@ -191,6 +191,8 @@
                         @limpiar-seleccion="ordenes_seleccionadas = []" @limpiar-foco="cerrarCobro" />
       </template>
     </resizable-split>
+
+    <state-legend titulo="Estados del equipo:" :estados="ESTADOS_ALQUILER" />
 
     <!-- Con órdenes marcadas, la factura que se elige en el buscador del panel las vincula. -->
     <selection-bar
@@ -240,6 +242,8 @@ import TableRentalDetails from './TableRentalDetails.vue'
 import PanelFacturas from '../PanelFacturas.vue'
 import ResizableSplit from '@/components/shared/ResizableSplit.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
+import StateLegend from '@/components/shared/StateLegend.vue'
+import { ESTADOS_ALQUILER } from '@/utils/orders/alquiler'
 
 const appStore = useAppStore()
 

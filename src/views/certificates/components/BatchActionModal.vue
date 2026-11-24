@@ -1,185 +1,88 @@
 <template>
-  <v-dialog v-model="dialog" max-width="900" class="dialog-premium" persistent @after-leave="items = []">
-    <v-card @keydown.enter="confirmarConEnter">
-      <base-modal-header
-        :title="modalConfig.titulo"
-        :icon="modalConfig.icono"
-        :iconColor="modalConfig.color"
-        @close="close"
-      >
-        <template #acciones>
-          <v-btn icon variant="text" color="grey" title="Más información" @click="verAyuda = true">
-            <v-icon>mdi-help-circle-outline</v-icon>
-          </v-btn>
-        </template>
-      </base-modal-header>
+  <batch-action-dialog
+    ref="dialogo"
+    :acciones="ACCIONES"
+    :columnas="['Certificado', 'Equipo y marca']"
+    :al-confirmar="guardar"
+    :contexto="{ sinPlantilla }"
+    :cargando="buscando ? 'Buscando los Excel en el servidor...' : ''"
+    @hecha="filas => emit('hecha', filas)"
+  >
+    <template #acciones>
+      <v-btn icon variant="text" color="grey" title="Más información" @click="verAyuda = true">
+        <v-icon>mdi-help-circle-outline</v-icon>
+      </v-btn>
+    </template>
 
-      <v-card-text class="pt-4 pb-2">
-        <p class="text-body-2 text-medium-emphasis mb-3">{{ modalConfig.descripcion }}</p>
+    <template v-if="action === 'excel'" #opciones>
+      <v-checkbox
+        v-model="sinPlantilla"
+        label="PDF sin plantilla, para imprimir en hojas con membrete (solo se descarga, no se guarda)"
+        density="compact"
+        hide-details
+        color="primary"
+      />
+    </template>
 
-        <div v-if="tieneOpciones" class="d-flex flex-wrap align-center ga-4 mb-3">
-          <v-text-field
-            v-if="modalConfig.fecha"
-            v-model="fecha"
-            type="date"
-            :label="modalConfig.fecha.label"
-            :max="fechaMaxima"
-            density="compact"
-            variant="outlined"
-            hide-details
-            class="campo-de-la-accion"
-          />
-          <v-select
-            v-if="modalConfig.opcion"
-            v-model="opcion"
-            :items="modalConfig.opcion.items"
-            :label="modalConfig.opcion.label"
-            density="compact"
-            variant="outlined"
-            hide-details
-            class="campo-de-la-accion"
-          />
-          <v-checkbox
-            v-if="action === 'excel'"
-            v-model="sinPlantilla"
-            label="PDF sin plantilla, para imprimir en hojas con membrete (solo se descarga, no se guarda)"
-            density="compact"
-            hide-details
-            color="primary"
-          />
-        </div>
+    <template #celdas="{ fila }">
+      <td class="font-weight-medium text-no-wrap" :title="fila.registry_code">{{ fila.numero }}</td>
+      <td class="text-caption">{{ fila.equipment }}</td>
+    </template>
 
-        <v-table density="compact" class="border rounded-lg bg-surface" style="max-height: 22rem; overflow-y: auto;">
-          <thead>
-            <tr>
-              <th class="text-center" style="width: 50px;">
-                <v-checkbox
-                  :model-value="isAllSelected"
-                  :indeterminate="isSomeSelected"
-                  @click="toggleSelectAll"
-                  density="compact"
-                  hide-details
-                  color="primary"
-                  :disabled="loading_validation"
-                ></v-checkbox>
-              </th>
-              <th class="text-left font-weight-bold">Certificado</th>
-              <th class="text-left font-weight-bold">Equipo y marca</th>
-              <th class="text-left font-weight-bold">Ahora</th>
-              <th class="text-left font-weight-bold">Qué va a pasar</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="loading_validation">
-              <td colspan="5" class="text-center py-6">
-                <v-progress-circular indeterminate color="primary" size="32" class="mb-2"></v-progress-circular>
-                <div class="text-caption text-medium-emphasis">Buscando los Excel en el servidor...</div>
-              </td>
-            </tr>
-            <tr v-else v-for="item in items" :key="item.id" :class="{ 'fila-bloqueada': item.disabled }">
-              <td class="text-center">
-                <v-checkbox
-                  v-model="selected_items"
-                  :value="item.id"
-                  :disabled="item.disabled"
-                  density="compact"
-                  hide-details
-                  color="primary"
-                ></v-checkbox>
-              </td>
-              <td class="font-weight-medium text-no-wrap" :title="item.registry_code">{{ item.numero }}</td>
-              <td class="text-caption">{{ item.equipment }}</td>
-              <td class="text-caption text-medium-emphasis">{{ ahora(item) }}</td>
-
-              <td>
-                <div class="d-flex align-center ga-2">
-                  <v-icon :color="validacion(item).color" size="small">{{ validacion(item).icono }}</v-icon>
-                  <span class="text-caption">{{ validacion(item).titulo }}</span>
-
-                  <template v-if="action === 'excel'">
-                    <v-btn v-if="estaAdjuntado(item)" icon variant="text" size="small" color="grey" class="ml-auto"
-                           title="Quitar el archivo adjuntado" @click.stop="discardExcel(item)">
-                      <v-icon>mdi-close</v-icon>
-                    </v-btn>
-                    <v-menu v-else location="bottom end">
-                      <template v-slot:activator="{ props }">
-                        <v-btn v-bind="props" icon variant="text" size="small" color="primary" class="ml-auto"
-                               title="Adjuntar archivo" @click.stop>
-                          <v-icon>mdi-upload</v-icon>
-                        </v-btn>
-                      </template>
-                      <v-list density="compact" class="py-1">
-                        <v-list-item prepend-icon="mdi-file-excel" @click="openManualUpload(item)">
-                          <v-list-item-title class="font-weight-medium">Adjuntar Excel</v-list-item-title>
-                          <v-list-item-subtitle class="text-caption">Se convierte a PDF</v-list-item-subtitle>
-                        </v-list-item>
-                        <v-list-item prepend-icon="mdi-file-pdf-box" @click="openPdfBaseUpload(item)">
-                          <v-list-item-title class="font-weight-medium">Adjuntar PDF ya hecho</v-list-item-title>
-                          <v-list-item-subtitle class="text-caption">Queda listo para firmar</v-list-item-subtitle>
-                        </v-list-item>
-                      </v-list>
-                    </v-menu>
-                  </template>
-
-                  <template v-else-if="action === 'qr'">
-                    <v-btn v-if="item.validation_status === 'manual_pdf'" icon variant="text" size="small" color="grey"
-                           class="ml-auto" title="Quitar el PDF adjuntado" @click.stop="discardManualPdf(item)">
-                      <v-icon>mdi-close</v-icon>
-                    </v-btn>
-                    <v-btn v-else icon variant="text" size="small" color="primary" class="ml-auto"
-                           title="Adjuntar PDF firmado" @click.stop="openManualPdfUpload(item)">
-                      <v-icon>mdi-upload</v-icon>
-                    </v-btn>
-                  </template>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </v-table>
-      </v-card-text>
-
-      <v-card-actions class="px-6 pb-4 pt-2">
-        <load-sheet ref="loadSheetModalRef" @file-attached="onFileAttached" />
-        <span class="text-body-2 text-medium-emphasis">
-          <span class="font-weight-bold text-high-emphasis">{{ selected_items.length }}</span>
-          {{ selected_items.length === 1 ? 'se procesa' : 'se procesan' }}<template v-if="noSePueden">
-          · {{ noSePueden }} {{ noSePueden === 1 ? 'no se puede' : 'no se pueden' }}</template>
-        </span>
-        <v-spacer/>
-        <v-btn variant="flat" class="font-weight-bold mr-3 px-4" @click="close" :disabled="is_processing">
-          Cancelar
+    <template #fila="{ fila }">
+      <template v-if="action === 'excel'">
+        <v-btn v-if="estaAdjuntado(fila)" icon variant="text" size="small" color="grey" class="ml-auto"
+               title="Quitar el archivo adjuntado" @click.stop="discardExcel(fila)">
+          <v-icon>mdi-close</v-icon>
         </v-btn>
-        <v-btn
-          color="primary"
-          class="font-weight-bold px-4 text-white"
-          variant="flat"
-          @click="confirmAction"
-          :loading="is_processing"
-          :disabled="!puedeConfirmar"
-        >
-          {{ modalConfig.verbo }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
+        <v-menu v-else location="bottom end">
+          <template v-slot:activator="{ props }">
+            <v-btn v-bind="props" icon variant="text" size="small" color="primary" class="ml-auto"
+                   title="Adjuntar archivo" @click.stop>
+              <v-icon>mdi-upload</v-icon>
+            </v-btn>
+          </template>
+          <v-list density="compact" class="py-1">
+            <v-list-item prepend-icon="mdi-file-excel" @click="openManualUpload(fila)">
+              <v-list-item-title class="font-weight-medium">Adjuntar Excel</v-list-item-title>
+              <v-list-item-subtitle class="text-caption">Se convierte a PDF</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item prepend-icon="mdi-file-pdf-box" @click="openPdfBaseUpload(fila)">
+              <v-list-item-title class="font-weight-medium">Adjuntar PDF ya hecho</v-list-item-title>
+              <v-list-item-subtitle class="text-caption">Queda listo para firmar</v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+      </template>
 
+      <template v-else-if="action === 'qr'">
+        <v-btn v-if="fila.validation_status === 'manual_pdf'" icon variant="text" size="small" color="grey"
+               class="ml-auto" title="Quitar el PDF adjuntado" @click.stop="discardManualPdf(fila)">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+        <v-btn v-else icon variant="text" size="small" color="primary" class="ml-auto"
+               title="Adjuntar PDF firmado" @click.stop="openManualPdfUpload(fila)">
+          <v-icon>mdi-upload</v-icon>
+        </v-btn>
+      </template>
+    </template>
+
+    <load-sheet ref="loadSheetModalRef" @file-attached="onFileAttached" />
     <ayuda-lote v-model="verAyuda" :accion="action" />
-  </v-dialog>
+  </batch-action-dialog>
 </template>
 
 <script setup>
 import { Toast } from '@/plugins/alerts'
-import { ref, computed, watch, getCurrentInstance } from 'vue'
+import { defineAsyncComponent, getCurrentInstance, ref } from 'vue'
 import { useAppStore } from '@/stores/appStore'
-import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
+import BatchActionDialog from '@/components/shared/BatchActionDialog.vue'
 import CertificateDataService from '@/services/certificates/certificateDataService.js'
-import { defineAsyncComponent } from 'vue'
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
-import { alPresionarEnter } from '@/utils/keyboard'
-import { hoyISO } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 import { SE_RENUMERA } from '@/utils/certificates/tipos'
 import { opcionPorClave } from '@/composables/useOrderServices'
-import { ACCIONES, colorDe, esAviso, estaAdjuntado } from './batchActions'
+import { ACCIONES, esAviso, estaAdjuntado } from './batchActions'
 import { uuid } from '@/utils/uuid'
 
 const LoadSheet = defineAsyncComponent(() => import('@/views/certificates/components/LoadSheet.vue'))
@@ -190,95 +93,37 @@ const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
 const appStore = useAppStore()
 
-const dialog = ref(false)
+const dialogo = ref(null)
 const action = ref('')
-const items = ref([])
-const selected_items = ref([]) // IDs de los checkboxes marcados
-const loading_validation = ref(false)
-const is_processing = ref(false)
+const buscando = ref(false)
 const loadSheetModalRef = ref(null)
 const force_select = ref(false)
-const fecha = ref('')
-const opcion = ref(null)
 const sinPlantilla = ref(false)
 const verAyuda = ref(false)
 
-const modalConfig = computed(() => ACCIONES[action.value] || ACCIONES.excel)
-const tieneOpciones = computed(() =>
-  Boolean(modalConfig.value.fecha || modalConfig.value.opcion) || action.value === 'excel')
-const noSePueden = computed(() => items.value.filter(i => i.disabled).length)
-
-// Ahora es válido simplemente si el usuario marcó al menos una fila
-const hayItemsValidos = computed(() => selected_items.value.length > 0)
-
-const faltaLaFecha = computed(() => Boolean(modalConfig.value.fecha) && !fecha.value)
-const faltaLaOpcion = computed(() => Boolean(modalConfig.value.opcion) && !opcion.value)
-
-const fechaMaxima = computed(() =>
-  modalConfig.value.fecha?.permiteFutura === false ? hoyISO() : undefined
-)
-
-// Una sola condición para el botón y para el Enter, así no se separan.
-const puedeConfirmar = computed(() =>
-  !loading_validation.value && !is_processing.value && hayItemsValidos.value &&
-  !faltaLaFecha.value && !faltaLaOpcion.value
-)
-
-const confirmarConEnter = alPresionarEnter(() => {
-  if (puedeConfirmar.value) confirmAction()
-})
-
-const isAllSelected = computed(() => {
-  const validItems = items.value.filter(i => !i.disabled)
-  return validItems.length > 0 && selected_items.value.length === validItems.length
-})
-
-const isSomeSelected = computed(() => {
-  const validItems = items.value.filter(i => !i.disabled)
-  return selected_items.value.length > 0 && selected_items.value.length < validItems.length
-})
-
-const toggleSelectAll = () => {
-  if (isAllSelected.value) {
-    // Si todo lo válido estaba seleccionado, lo vaciamos
-    selected_items.value = []
-  } else {
-    // MAGIA UX: Si marca el general de la cabecera, forzamos la selección 
-    // de TODO lo que no esté bloqueado (incluso los que ya estaban listos)
-    selected_items.value = items.value.filter(i => !i.disabled).map(i => i.id)
-  }
-}
-
-const open = async (actionType, selectedCerts, forceSelect = false) => {
-  const accion = ACCIONES[actionType] || ACCIONES.excel
+function open(actionType, selectedCerts, forceSelect = false) {
   action.value = actionType
-  selected_items.value = []
   force_select.value = forceSelect
-  fecha.value = accion.fecha ? hoyISO() : ''
-  opcion.value = null
   sinPlantilla.value = false
 
-  items.value = selectedCerts.map(cert => ({
+  dialogo.value.open(actionType, selectedCerts.map(cert => ({
     ...cert,
     equipment: `${cert.equipment} ${cert.brand}`.trim(),
     validation_status: 'pending',
-    ...accion.preparar(cert, null),
-  }))
+  })), forceSelect)
 
   // La acción que escanea el servidor marca las filas al saber qué encontró.
-  if (!accion.escaneaElServidor) {
-    items.value.forEach(item => {
-      // forceSelect: el usuario pidió explícitamente esta acción para este certificado puntual
-      // (ej. botón "Reemplazar"), así que ignoramos already_has_it y lo marcamos igual.
-      if (!item.disabled && (forceSelect || !item.already_has_it)) {
-        selected_items.value.push(item.id)
-      }
-    })
+  if (ACCIONES[actionType].escaneaElServidor) {
+    dialogo.value.marcadas = []
+    validarExcelsEnServidor()
   }
+}
 
-  dialog.value = true
-
-  if (accion.escaneaElServidor) validarExcelsEnServidor()
+const marcar = (item) => {
+  if (!dialogo.value.marcadas.includes(item.id)) dialogo.value.marcadas.push(item.id)
+}
+const desmarcar = (item) => {
+  dialogo.value.marcadas = dialogo.value.marcadas.filter(id => id !== item.id)
 }
 
 const abrirAdjuntar = (item, modo) => loadSheetModalRef.value?.open(item, modo)
@@ -287,28 +132,11 @@ const openManualUpload    = (item) => abrirAdjuntar(item, 'excel')
 const openPdfBaseUpload   = (item) => abrirAdjuntar(item, 'pdf-base')
 const openManualPdfUpload = (item) => abrirAdjuntar(item, 'pdf')
 
-// Cambiar la opcion cambia que filas se pueden: se vuelven a preparar, y la
-// que queda bloqueada sale de la seleccion.
-watch(opcion, (valor) => {
-  if (!modalConfig.value.opcion) return
-  items.value.forEach(item => Object.assign(item, modalConfig.value.preparar(item, valor)))
-  const habilitados = new Set(items.value.filter(i => !i.disabled).map(i => i.id))
-  selected_items.value = selected_items.value.filter(id => habilitados.has(id))
-})
-
-const ahora = (item) => modalConfig.value.ahora(item)
-const validacion = (item) => {
-  const estado = modalConfig.value.validacion(item, { opcion: opcion.value, sinPlantilla: sinPlantilla.value })
-  return { ...estado, color: colorDe(estado.nivel) }
-}
-
 const discardManualPdf = (item) => {
   item.validation_status = 'pending'
   item.file = null
   item.disabled = !tieneExcelBase(item)
-  if (item.disabled) {
-    selected_items.value = selected_items.value.filter(id => id !== item.id)
-  }
+  if (item.disabled) desmarcar(item)
 }
 
 // El modo lo decide el modal de adjuntar, no la accion: en Excel se puede
@@ -316,17 +144,13 @@ const discardManualPdf = (item) => {
 const ESTADO_POR_MODO = { excel: 'manual', 'pdf-base': 'manual_pdf_base', pdf: 'manual_pdf' }
 
 const onFileAttached = (payload) => {
-  const item = items.value.find(i => i.id === payload.id)
+  const item = dialogo.value.filas.find(i => i.id === payload.id)
   if (item) {
     item.validation_status = ESTADO_POR_MODO[payload.modo] || 'manual'
     item.file = payload.file
     item.password = payload.modo === 'excel' ? payload.password : ''
     item.disabled = false
-
-    // marca check automatico para agilizar proceso
-    if (!selected_items.value.includes(item.id)) {
-      selected_items.value.push(item.id)
-    }
+    marcar(item)
   }
 }
 
@@ -338,23 +162,18 @@ const discardExcel = (item) => {
   item.password = ''
   item.disabled = !item.native_filename
 
-  if (item.disabled) {
-    selected_items.value = selected_items.value.filter(id => id !== item.id)
-  } else if (!selected_items.value.includes(item.id)) {
-    selected_items.value.push(item.id)
-  }
+  if (item.disabled) desmarcar(item)
+  else marcar(item)
 }
 
-
-
 const validarExcelsEnServidor = async () => {
-  loading_validation.value = true
+  buscando.value = true
   try {
-    const ids = items.value.map(i => i.id)
+    const ids = dialogo.value.filas.map(i => i.id)
     const response = await CertificateDataService.scanNativeExcels(ids)
     
     const resultados = response.data
-    items.value.forEach(item => {
+    dialogo.value.filas.forEach(item => {
       const info = resultados.find(r => r.id === item.id)
       
       if (info && info.status === 'found') {
@@ -364,7 +183,7 @@ const validarExcelsEnServidor = async () => {
         if (tieneExcelBase(item) && !force_select.value) {
           item.already_has_it = true // Ya tiene Excel (Permitido pero desmarcado)
         } else {
-          selected_items.value.push(item.id) // Nuevo o forzado (Marcado)
+          marcar(item) // Nuevo o forzado (Marcado)
         }
       } else {
         item.validation_status = info ? info.status : 'not_found'
@@ -375,7 +194,7 @@ const validarExcelsEnServidor = async () => {
     console.error("Error escaneando disco H:", error)
     $swal.fire({ icon: 'error', title: 'Error de Conexión', text: 'No se pudo acceder a la carpeta de red.' })
   } finally {
-    loading_validation.value = false
+    buscando.value = false
   }
 }
 
@@ -407,15 +226,15 @@ const guardarPdfsBase = async (certs) => {
   })
 }
 
-const confirmarCorreccion = async (aptos) => {
-  const conPerdida = aptos.filter(item => esAviso(validacion(item))).length
+const confirmarCorreccion = async (aptos, opcion) => {
+  const conPerdida = aptos.filter(item => esAviso(ACCIONES.tipo.validacion(item, { opcion }))).length
   const avisos = [`Cada uno ${SE_RENUMERA}.`]
   if (conPerdida) {
     avisos.push(`<b>${conPerdida}</b> ya tienen trabajo hecho que se pierde: revisa el ícono de su fila.`)
   }
   const { isConfirmed } = await $swal.fire({
     icon: 'warning',
-    title: `¿Pasar ${aptos.length} a ${opcionPorClave(opcion.value).title}?`,
+    title: `¿Pasar ${aptos.length} a ${opcionPorClave(opcion).title}?`,
     html: avisos.join('<br><br>'),
     showCancelButton: true,
     confirmButtonText: 'Sí, corregir',
@@ -424,129 +243,85 @@ const confirmarCorreccion = async (aptos) => {
   return isConfirmed
 }
 
-const confirmAction = async () => {
-  if (is_processing.value) return
-  is_processing.value = true
-
-  try {
-    // Usamos EXACTAMENTE los IDs que el usuario dejó marcados
-    const aptos = items.value.filter(i => selected_items.value.includes(i.id))
-    
-    if (action.value === 'notify') {
-      const ids = aptos.map(i => i.id)
-      await CertificateDataService.requestBatchSignatures(ids)
-      Toast.fire({ ...appStore.toastGuardadoExito, title: '¡Solicitud Registrada!' })
-      emit('hecha', items.value)
-      close()
-    } 
-    
-    else if (action.value === 'qr') {
-      // El PDF ya firmado se sube de a uno desde el navegador; el resto va en un
-      // solo pedido y lo firma el servidor.
-      const manuales = aptos.filter(cert => cert.validation_status === 'manual_pdf' && cert.file)
-      const aFirmar = aptos.filter(cert => !manuales.includes(cert))
-      manuales.forEach(cert => {
-        window.dispatchEvent(new CustomEvent('wss-manual-pdf-upload', { detail: { certificate: cert, file: cert.file } }))
-      })
-      if (aFirmar.length) {
-        window.dispatchEvent(new CustomEvent('wss-qr-start', {
-          detail: { certificates: aFirmar, fechaFirma: fecha.value }
-        }))
-      }
-      Toast.fire({ timer: 4000,
-        icon: 'info', title: `Procesando ${aptos.length} firmas/subidas en segundo plano...`
-      })
-      emit('hecha', items.value)
-      close()
-    }
-
-    else if (action.value === 'excel') {
-      // El PDF ya hecho no se convierte: se guarda directo y no pasa por la cola.
-      const yaHechos  = aptos.filter(c => c.validation_status === 'manual_pdf_base')
-      const aConvertir = aptos.filter(c => c.validation_status !== 'manual_pdf_base')
-
-      // Sin plantilla, cada uno es una descarga con su propia tarea: no toca el certificado.
-      const tareaDe = (cert) => (sinPlantilla.value
-        ? { id: uuid(), tipo: 'suelto', conversion: 'sin_plantilla', certificado: cert.id,
-            code: `${cert.numero} sin plantilla` }
-        : { id: cert.id, code: cert.numero })
-      aConvertir.forEach(cert => {
-        window.dispatchEvent(new CustomEvent('wss-sheet-start', {
-          detail: { ...tareaDe(cert), native_filename: cert.native_filename, file: cert.file, password: cert.password }
-        }))
-      })
-
-      if (aConvertir.length) {
-        Toast.fire({ timer: 3000,
-          icon: 'success', title: `Enviando ${aConvertir.length} archivos a procesar...`
-        })
-      }
-
-      if (yaHechos.length && !sinPlantilla.value) await guardarPdfsBase(yaHechos)
-
-      emit('hecha', items.value)
-      close()
-    }
-
-    else if (action.value === 'entrega') {
-      const { data } = await CertificateDataService.registrarEntrega(aptos.map(i => i.id), fecha.value)
-      const marcados = data?.certificados ?? aptos.length
-      Toast.fire({
-        ...appStore.toastGuardadoExito,
-        title: marcados === 1 ? 'Entrega registrada' : `Entrega registrada en ${marcados} certificados`
-      })
-      if (data?.omitidos) {
-        $swal.fire({
-          icon: 'info', title: 'Algunos quedaron sin marcar',
-          text: `${data.omitidos} todavía no están firmados.`, confirmButtonText: 'Entendido'
-        })
-      }
-      emit('hecha', items.value)
-      close()
-    }
-
-    else if (action.value === 'tipo') {
-      if (!await confirmarCorreccion(aptos)) return
-      const { data } = await CertificateDataService.corregirTipo(aptos.map(i => i.id), opcionPorClave(opcion.value))
-      const codigos = data.codigos
-      Toast.fire({
-        ...appStore.toastGuardadoExito,
-        title: codigos.length === 1
-          ? `Corregido: ahora es ${codigos[0]}`
-          : `${codigos.length} corregidos: del ${codigos[0]} al ${codigos[codigos.length - 1]}`
-      })
-      emit('corregido')
-      emit('hecha', items.value)
-      close()
-    }
-
-  } catch (error) {
-    const data = error.response?.data
-    $swal.fire({
-      icon: 'error', title: 'Error',
-      html: [data?.error || 'Hubo un problema al ejecutar la acción.', ...(data?.rechazos || [])].join('<br>'),
-    })
-  } finally {
-    is_processing.value = false
+// Lo que hace cada accion con las filas marcadas. El modal avisa del error y se cierra.
+const guardar = async (aptos, { fecha, opcion }) => {
+  if (action.value === 'notify') {
+    const ids = aptos.map(i => i.id)
+    await CertificateDataService.requestBatchSignatures(ids)
+    Toast.fire({ ...appStore.toastGuardadoExito, title: '¡Solicitud Registrada!' })
   }
-}
 
-// La lista se vacia cuando el modal termina de cerrarse (`after-leave`), para que no se vea vacia mientras se va.
-const close = () => {
-  dialog.value = false
+  else if (action.value === 'qr') {
+    // El PDF ya firmado se sube de a uno desde el navegador; el resto va en un
+    // solo pedido y lo firma el servidor.
+    const manuales = aptos.filter(cert => cert.validation_status === 'manual_pdf' && cert.file)
+    const aFirmar = aptos.filter(cert => !manuales.includes(cert))
+    manuales.forEach(cert => {
+      window.dispatchEvent(new CustomEvent('wss-manual-pdf-upload', { detail: { certificate: cert, file: cert.file } }))
+    })
+    if (aFirmar.length) {
+      window.dispatchEvent(new CustomEvent('wss-qr-start', {
+        detail: { certificates: aFirmar, fechaFirma: fecha }
+      }))
+    }
+    Toast.fire({ timer: 4000,
+      icon: 'info', title: `Procesando ${aptos.length} firmas/subidas en segundo plano...`
+    })
+  }
+
+  else if (action.value === 'excel') {
+    // El PDF ya hecho no se convierte: se guarda directo y no pasa por la cola.
+    const yaHechos  = aptos.filter(c => c.validation_status === 'manual_pdf_base')
+    const aConvertir = aptos.filter(c => c.validation_status !== 'manual_pdf_base')
+
+    // Sin plantilla, cada uno es una descarga con su propia tarea: no toca el certificado.
+    const tareaDe = (cert) => (sinPlantilla.value
+      ? { id: uuid(), tipo: 'suelto', conversion: 'sin_plantilla', certificado: cert.id,
+          code: `${cert.numero} sin plantilla` }
+      : { id: cert.id, code: cert.numero })
+    aConvertir.forEach(cert => {
+      window.dispatchEvent(new CustomEvent('wss-sheet-start', {
+        detail: { ...tareaDe(cert), native_filename: cert.native_filename, file: cert.file, password: cert.password }
+      }))
+    })
+
+    if (aConvertir.length) {
+      Toast.fire({ timer: 3000,
+        icon: 'success', title: `Enviando ${aConvertir.length} archivos a procesar...`
+      })
+    }
+
+    if (yaHechos.length && !sinPlantilla.value) await guardarPdfsBase(yaHechos)
+  }
+
+  else if (action.value === 'entrega') {
+    const { data } = await CertificateDataService.registrarEntrega(aptos.map(i => i.id), fecha)
+    const marcados = data?.certificados ?? aptos.length
+    Toast.fire({
+      ...appStore.toastGuardadoExito,
+      title: marcados === 1 ? 'Entrega registrada' : `Entrega registrada en ${marcados} certificados`
+    })
+    if (data?.omitidos) {
+      $swal.fire({
+        icon: 'info', title: 'Algunos quedaron sin marcar',
+        text: `${data.omitidos} todavía no están firmados.`, confirmButtonText: 'Entendido'
+      })
+    }
+  }
+
+  else if (action.value === 'tipo') {
+    if (!await confirmarCorreccion(aptos, opcion)) return false
+    const { data } = await CertificateDataService.corregirTipo(aptos.map(i => i.id), opcionPorClave(opcion))
+    const codigos = data.codigos
+    Toast.fire({
+      ...appStore.toastGuardadoExito,
+      title: codigos.length === 1
+        ? `Corregido: ahora es ${codigos[0]}`
+        : `${codigos.length} corregidos: del ${codigos[0]} al ${codigos[codigos.length - 1]}`
+    })
+    emit('corregido')
+  }
 }
 
 defineExpose({ open })
 </script>
-
-<style scoped>
-/* La ultima celda queda entera: ahi vive el boton de adjuntar, que es lo que
-   desbloquea la fila. Apagarlo con el resto lo hacia parecer deshabilitado. */
-.fila-bloqueada td:not(:last-child) {
-  opacity: 0.55;
-}
-
-.campo-de-la-accion {
-  max-width: 260px;
-}
-</style>

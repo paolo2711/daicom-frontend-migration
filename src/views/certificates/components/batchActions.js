@@ -3,22 +3,10 @@ import { esEntregable, estaEntregado } from '@/utils/certificates/entrega'
 import { ANULADO, estaPublicado } from '@/utils/certificates/estado'
 import { SE_RENUMERA, nombreDelTipo } from '@/utils/certificates/tipos'
 import { opcionDe, opcionPorClave, opcionesConCertificado } from '@/composables/useOrderServices'
+import { AVISO, BLOQUEA, HECHO, NEUTRO } from '@/utils/batchLevels'
 import { fechaCorta } from '@/utils/dates'
 
-// Cada accion del modal de lote se describe entera en su entrada de ACCIONES.
-// La fila devuelve un nivel y no un color, para que la regla de los colores
-// este en un solo lugar.
-const HECHO = 'hecho'      // ya esta hecho, o listo para esta accion
-const BLOQUEA = 'bloquea'  // no se puede
-const NEUTRO = 'neutro'    // ni una cosa ni la otra
-const AVISO = 'aviso'      // se puede, pero se pierde algo
-
 export const esAviso = (estado) => estado.nivel === AVISO
-
-// Color solo para lo que hay que mirar: lo que no se puede y lo que cambia algo.
-const COLOR_POR_NIVEL = { [BLOQUEA]: 'error', [AVISO]: 'warning' }
-
-export const colorDe = (nivel) => COLOR_POR_NIVEL[nivel] || 'grey'
 
 // En la accion Excel se puede adjuntar el Excel a convertir o el PDF ya hecho.
 const ADJUNTADO = {
@@ -40,7 +28,7 @@ const impideCorregir = (cert, clave) => {
   return null
 }
 
-// `contexto` trae lo elegido arriba del modal: `opcion` (el servicio) y `sinPlantilla`.
+// Cada accion de BatchActionDialog. `contexto` trae lo elegido arriba: `opcion` (el servicio) y `sinPlantilla`.
 export const ACCIONES = {
   excel: {
     titulo: 'Subir Excel',

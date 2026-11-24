@@ -6,8 +6,8 @@ class OrderDataService {
 
     // ─── ÓRDENES ────────────────────────────────────────────────────────────────
 
-    // Agregamos `invoice_number` como último parámetro con valor por defecto
-    getFiltered(page, itemsPerPage, client, order_number, correlative, date_gt, date_lt, status, order_type, missing_payment = false, missing_invoice = false, a_credito = false, invoice_number = '') {
+    // `pildora`: missing_payment, missing_invoice o a_credito.
+    getFiltered(page, itemsPerPage, client, order_number, correlative, date_gt, date_lt, status, order_type, pildora = null, invoice_number = '') {
         let headers = authHeader();
         let params = { page: page, page_size: itemsPerPage };
 
@@ -19,9 +19,7 @@ class OrderDataService {
         if (date_lt)           params.date_lt           = date_lt;
         if (status)            params.status_custom     = status;
         if (order_type)        params.order_type        = order_type;
-        if (missing_payment)   params.missing_payment   = missing_payment;
-        if (missing_invoice)   params.missing_invoice   = missing_invoice;
-        if (a_credito)         params.a_credito         = a_credito;
+        if (pildora)           params[pildora]          = true;
 
         return axios.get("orders", { params, headers });
     }

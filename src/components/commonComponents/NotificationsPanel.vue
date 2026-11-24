@@ -160,7 +160,7 @@ const RUTAS = {
 // Rutas por CATEGORIA (no dependen de un objeto): ej. "firma solicitada" -> la
 // pestana de certificados con el filtro de pendientes de firma ya aplicado.
 const RUTAS_CATEGORIA = {
-  firma_solicitada: () => ({ path: '/certificates', query: { firma_pendiente: 1, desde: '', hasta: '' } }),
+  firma_solicitada: () => ({ path: '/certificates', query: { pildora: 'signature_requested', desde: '', hasta: '' } }),
 }
 const abrir = (n) => {
   store.markRead(n)

@@ -34,22 +34,22 @@
 
         <filter-pill
           v-if="ver_bandeja_firmas"
-          :active="filtro_firma_pendiente"
+          :active="pildora === POR_FIRMAR"
           :count="appStore.pendingSignaturesCount"
           color="primary"
           badge-color="error"
           icon="mdi-draw"
           tooltip="Filtrar certificados que requieren atención"
-          @click="toggleFiltroFirma"
+          @click="alternarPildora(POR_FIRMAR)"
         >Pendientes de Firma</filter-pill>
 
         <filter-pill
-          :active="filtro_excel_pendiente"
-          :variant="filtro_excel_pendiente ? 'elevated' : 'tonal'"
+          :active="pildora === SIN_EXCEL"
+          :variant="pildora === SIN_EXCEL ? 'elevated' : 'tonal'"
           color="orange-darken-2"
           icon="mdi-file-excel-outline"
           tooltip="Filtrar certificados que aún no tienen archivo base"
-          @click="toggleFiltroExcel"
+          @click="alternarPildora(SIN_EXCEL)"
         >Pendientes de Excel</filter-pill>
 
         <v-spacer></v-spacer>
@@ -486,8 +486,10 @@ const total_certificates       = ref(0)
 const loading_list             = ref(false)
 const options                  = ref({ page: 1, itemsPerPage: 30 })
 
-const filtro_firma_pendiente   = ref(false) // Estado del Smart Chip
-const filtro_excel_pendiente   = ref(false) // Estado del Smart Chip Excel
+// Una pildora prendida a la vez; cada una es un filtro del back.
+const POR_FIRMAR = 'signature_requested'
+const SIN_EXCEL = 'pending_excel'
+const pildora = ref(null)
 const mostrar_filtros_avanzados = ref(false) // Toggle de la UI
 
 // ─── Filtros de fecha ─────────────────────────────────────────────────────────
@@ -584,10 +586,9 @@ const { begin: beginCertLoad, isLatest: isLatestCertLoad } = useLatestRequest()
 watch(options, () => retrieveAllCertificates(), { deep: true })
 
 // Desde Inicio o una notificacion. Sin `desde` ni `hasta`, los ultimos ocho meses; vacios, sin limite de fecha.
-useRouteFilters(({ certificado, firma_pendiente, excel_pendiente, desde, hasta }) => {
+useRouteFilters(({ certificado, pildora: pedida, desde, hasta }) => {
   numero.value = certificado || ''
-  filtro_firma_pendiente.value = Boolean(firma_pendiente)
-  filtro_excel_pendiente.value = Boolean(excel_pendiente)
+  pildora.value = pedida || null
   emission_date__gt.value = desde ?? haceOchoMeses()
   emission_date__lt.value = hasta ?? hoyISO()
 }, () => { options.value.page = 1; retrieveAllCertificates() })
@@ -645,16 +646,10 @@ onBeforeUnmount(() => {
 
 
 
-function toggleFiltroFirma () {
-  filtro_firma_pendiente.value = !filtro_firma_pendiente.value
+function alternarPildora (valor) {
+  pildora.value = pildora.value === valor ? null : valor
   options.value.page = 1
-  retrieveAllCertificates() // Ejecuta la búsqueda
-}
-
-function toggleFiltroExcel () {
-  filtro_excel_pendiente.value = !filtro_excel_pendiente.value
-  options.value.page = 1
-  retrieveAllCertificates() // Ejecuta la búsqueda
+  retrieveAllCertificates()
 }
 
 function aplicarFiltroFechas () {
@@ -758,8 +753,7 @@ function retrieveAllCertificates (opciones) {
     emission_date__gt: emission_date__gt.value,
     emission_date__lt: emission_date__lt.value,
     certificate_type: certificate_type.value || '',
-    signature_requested: filtro_firma_pendiente.value,
-    pending_excel: filtro_excel_pendiente.value,
+    ...(pildora.value && { [pildora.value]: true }),
   }).then((response) => {
     if (!isLatestCertLoad(token)) return   // llegó una carga más nueva → no pisar
     certificates.value = response.data.results.map(cert => CertificateMappers.getMap(cert))

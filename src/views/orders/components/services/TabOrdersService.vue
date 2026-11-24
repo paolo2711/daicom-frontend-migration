@@ -42,32 +42,7 @@
 
         <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
 
-        <filter-pill
-          :active="filtro_falta_pago"
-          :count="appStore.pendingPaymentsServiceCount"
-          color="error"
-          icon="mdi-cash-remove"
-          tooltip="Filtrar órdenes con algo por cobrar"
-          @click="toggleFiltroPago"
-        >Falta Pago</filter-pill>
-
-        <filter-pill
-          :active="filtro_a_credito"
-          :count="appStore.pendingCreditServiceCount"
-          color="teal"
-          icon="mdi-calendar-clock"
-          tooltip="Filtrar órdenes a crédito que aún no vencen"
-          @click="toggleFiltroCredito"
-        >A Crédito</filter-pill>
-
-        <filter-pill
-          :active="filtro_sin_factura"
-          :count="appStore.pendingInvoicesServiceCount"
-          color="warning"
-          icon="mdi-file-document-remove-outline"
-          tooltip="Filtrar órdenes abiertas pendientes de facturar"
-          @click="toggleFiltroFactura"
-        >Sin Emitir Factura</filter-pill>
+        <order-pills v-model="pildora" :cuentas="cuentas" @update:model-value="applyFilters" />
 
         <v-spacer></v-spacer>
 
@@ -271,7 +246,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useTheme } from 'vuetify'
 import { useAppStore } from '@/stores/appStore'
 import { Toast } from '@/plugins/alerts'
@@ -280,7 +255,7 @@ import { monto } from '@/utils/money'
 import { abrirIngreso } from '@/utils/orders/ingreso'
 import OrderDataService from '@/services/orders/orderDataService'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
-import FilterPill from '@/components/shared/FilterPill.vue'
+import OrderPills from '../OrderPills.vue'
 import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
@@ -322,9 +297,10 @@ watch(equipos_seleccionados, (v) => { if (v.length) ordenes_seleccionadas.value 
 
 // Nuevos estados UI de Filtros Avanzados y Chips
 const mostrar_filtros_avanzados = ref(false)
-const filtro_falta_pago = ref(false)
-const filtro_a_credito = ref(false)
-const filtro_sin_factura = ref(false)
+const pildora = ref(null)
+const cuentas = computed(() => ({ missing_payment: appStore.pendingPaymentsServiceCount,
+                                  a_credito: appStore.pendingCreditServiceCount,
+                                  missing_invoice: appStore.pendingInvoicesServiceCount }))
 
 // Texto computado para el calendario elegante
 
@@ -390,24 +366,6 @@ const applyFilters = () => {
   cargarResumenes() // Sincroniza las píldoras cada vez que filtras
 }
 
-// Falta pago y A credito no comparten ordenes: prender una apaga la otra.
-const toggleFiltroPago = () => {
-  filtro_falta_pago.value = !filtro_falta_pago.value
-  if (filtro_falta_pago.value) filtro_a_credito.value = false
-  applyFilters()
-}
-
-const toggleFiltroCredito = () => {
-  filtro_a_credito.value = !filtro_a_credito.value
-  if (filtro_a_credito.value) filtro_falta_pago.value = false
-  applyFilters()
-}
-
-const toggleFiltroFactura = () => {
-  filtro_sin_factura.value = !filtro_sin_factura.value
-  applyFilters()
-}
-
 // Las pildoras de cobro, con los filtros de la pantalla.
 const cargarResumenes = () => Promise.all([
   OrderDataService.getPendingPaymentsSummary(1, filter_client_id.value, filter_order.value, filter_correlative.value, filter_date_gt.value, filter_date_lt.value, filter_invoice.value)
@@ -445,9 +403,7 @@ const retrieveOrders = () => {
     filter_date_lt.value,
     filter_status.value,
     1,
-    filtro_falta_pago.value,
-    filtro_sin_factura.value,
-    filtro_a_credito.value,
+    pildora.value,
     filter_invoice.value
   )
       .then((res) => {
@@ -538,7 +494,7 @@ const handleWssReload = () => {
 }
 
 // Watchers (igual que en ListCertificates)
-useOrderRouteFilters({ filter_order, filtro_sin_factura, filtro_falta_pago, filtro_a_credito }, applyFilters)
+useOrderRouteFilters(filter_order, pildora, applyFilters)
 watch(options, () => { retrieveOrders() }, { deep: true })
 
 // Quitamos filter_date_gt y filter_date_lt para que solo se apliquen con el botón "Aplicar"

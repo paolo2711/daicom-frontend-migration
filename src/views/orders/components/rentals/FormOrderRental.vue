@@ -106,6 +106,12 @@ const pestanas = computed(() => [
   ...(props.opcionesDelPanel.length ? [{ valor: 'opciones', texto: 'Opciones', icono: 'mdi-format-list-bulleted' }] : []),
 ])
 const { opcionAbierta, abrirOpcion, tituloDeOpcion } = useDetailOptions(elegida, () => props.opcionesDelPanel)
+
+function mostrarOpcion(clave) {
+  pestana.value = 'opciones'
+  abrirOpcion(clave)
+}
+
 // Al ver uno guardado, cada fila dice en que va: reservado, en obra o devuelto.
 const conEstado = computed(() => equipments.value.some(e => e.estado))
 
@@ -185,5 +191,5 @@ function paraGuardar() {
 // Un alquiler no toma numeros de certificado.
 const estimados = () => equipments.value.map(() => null)
 
-defineExpose({ cargarFilas, cargarLineas, paraGuardar, marcarErrores, estimados })
+defineExpose({ cargarFilas, cargarLineas, paraGuardar, marcarErrores, estimados, mostrarOpcion })
 </script>

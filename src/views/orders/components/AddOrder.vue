@@ -187,8 +187,8 @@ async function open(tipo, cotizacion = null) {
   formRef.value?.cargarFilas(recuperado)
 }
 
-// Una orden guardada, de servicio o de alquiler, como la manda su fila, con sus equipos.
-async function editar(orden) {
+// Una orden guardada, como la manda su fila, con sus equipos. `opcion`: la que se abre de entrada.
+async function editar(orden, opcion = null) {
   const { data: lineas } = await OrderDataService.getEquipos(orden.id)
   editando.value = orden
   clienteOrden.value = clienteAceptado.value = { id: orden.client_data.id, name: orden.client_data.name }
@@ -198,6 +198,7 @@ async function editar(orden) {
   dialog.value = true
   await nextTick()
   formRef.value?.cargarLineas(lineas)
+  if (opcion) formRef.value?.mostrarOpcion(opcion)
 }
 
 async function calculateNextNumber() {

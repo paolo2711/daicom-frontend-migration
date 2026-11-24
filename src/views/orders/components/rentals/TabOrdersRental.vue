@@ -164,61 +164,11 @@
         </template>
 
         <template v-slot:item.documentos="{ item }">
-          <div class="d-flex justify-center">
-            <v-tooltip location="top" v-if="item.quote_pdf">
-              <template v-slot:activator="{ props }">
-                <v-btn icon variant="text" density="comfortable" size="x-small" color="error" :href="item.quote_pdf" target="_blank" v-bind="props" class="mx-1">
-                  <v-icon>mdi-file-pdf-box</v-icon>
-                </v-btn>
-              </template>
-              <span>Cotización DAICOM</span>
-            </v-tooltip>
-
-            <v-tooltip location="top" v-if="item.documentos && item.documentos.oc_count > 0">
-              <template v-slot:activator="{ props }">
-                <v-chip v-bind="props" size="x-small" color="primary" variant="tonal" class="mx-1 px-2 font-weight-bold"
-                        :href="item.documentos.oc_last_pdf" target="_blank">
-                  <v-icon size="x-small" class="mr-1">mdi-file-document</v-icon>{{ item.documentos.oc_count }}
-                </v-chip>
-              </template>
-              <span>Abrir última OC ({{ item.documentos.oc_count }} en total · todas en Ver y editar)</span>
-            </v-tooltip>
-
-            <v-tooltip location="top" v-if="item.documentos && item.documentos.val_count > 0">
-              <template v-slot:activator="{ props }">
-                <v-chip v-bind="props" size="x-small" color="teal" variant="tonal" class="mx-1 px-2 font-weight-bold"
-                        :href="item.documentos.val_last_pdf" target="_blank">
-                  <v-icon size="x-small" class="mr-1">mdi-cash-multiple</v-icon>{{ item.documentos.val_count }}
-                </v-chip>
-              </template>
-              <span>
-                Abrir última valorización ({{ item.documentos.val_count }} en total · todas en Ver y editar)
-              </span>
-            </v-tooltip>
-
-            <v-tooltip location="top" v-if="item.dispatch_guide_pdf">
-              <template v-slot:activator="{ props }">
-                <v-btn icon variant="text" density="comfortable" size="x-small" color="success" :href="item.dispatch_guide_pdf" target="_blank" v-bind="props" class="mx-1">
-                  <v-icon>mdi-truck-fast</v-icon>
-                </v-btn>
-              </template>
-              <span>Guía Salida</span>
-            </v-tooltip>
-
-            <v-tooltip location="top" v-if="item.return_guide_pdf">
-              <template v-slot:activator="{ props }">
-                <v-btn icon variant="text" density="comfortable" size="x-small" color="blue-grey" :href="item.return_guide_pdf" target="_blank" v-bind="props" class="mx-1">
-                  <v-icon>mdi-truck-check</v-icon>
-                </v-btn>
-              </template>
-              <span>Guía Retorno</span>
-            </v-tooltip>
-
-            <span v-if="!item.quote_pdf && !item.dispatch_guide_pdf && !item.return_guide_pdf && (!item.documentos || (item.documentos.oc_count === 0 && item.documentos.val_count === 0))" class="text-grey text-caption">Sin Docs</span>
-          </div>
+          <v-btn variant="text" size="small" density="comfortable" prepend-icon="mdi-paperclip" :disabled="!viva(item)"
+                 :title="viva(item) ? 'Ver sus documentos' : 'La orden está anulada'" @click.stop="abrirDocumentos(item)">
+            {{ item.documentos.total }}
+          </v-btn>
         </template>
-
-
 
         <template v-slot:item.actions="{ item }">
           <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" color="grey-darken-1"
@@ -399,6 +349,7 @@ const manejarClicFila = (event, { item }) => {
 // ── Acciones ──
 const editarOrdenRef = ref(null)
 const abrirEditarOrden = (o) => editarOrdenRef.value?.editar(o)
+const abrirDocumentos = (o) => editarOrdenRef.value?.editar(o, 'documentos')
 
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, accionesDeCobro, ejecutarAccion } =
   useOrderActions(orders, ordenes_seleccionadas, {

@@ -31,12 +31,7 @@ export default {
       
       // ─── DATOS EXCLUSIVOS DE ALQUILER (Order Type 2) ───
       client_order_reference: element.client_order_reference || '',
-      quote_pdf: element.quote_pdf || null,
-      dispatch_guide_pdf: element.dispatch_guide_pdf || null,
-      return_guide_pdf: element.return_guide_pdf || null,
-
-      // Resumen de documentos múltiples (OC / valorizaciones) para la columna.
-      documentos: element.documentos || { oc_count: 0, val_count: 0, oc_ref: '', oc_last_pdf: null, val_last_pdf: null },
+      documentos: element.documentos || { total: 0, oc_ref: '' },
     };
   },
 };

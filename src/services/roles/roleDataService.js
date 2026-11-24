@@ -9,12 +9,6 @@ class RoleDataService {
         });
     }
 
-    get(id) {
-        return axios.get(`roles/${id}`,  {
-            headers: authHeader()
-        });
-    }
-
     create(data) {
         return axios.post('roles', data, {
             headers: authHeader()

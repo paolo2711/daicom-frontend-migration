@@ -171,26 +171,6 @@
           </div>
         </template>
 
-        <template v-slot:item.detraccion="{ item }">
-          <div class="d-flex justify-center">
-            <template v-if="item.detraccion && item.detraccion.afecto">
-              <v-chip 
-                size="small" 
-                color="deep-orange" 
-                variant="tonal" 
-                class="font-weight-bold px-3 text-caption"
-              >
-                {{ monto(item.detraccion.monto, item.detraccion.moneda) }}
-                <v-tooltip activator="parent" location="top">
-                  Detracción {{ item.detraccion.tasa }}% · SUNAT
-                </v-tooltip>
-              </v-chip>
-            </template>
-            <span v-else class="text-caption text-grey">—</span>
-          </div>
-        </template>
-
-
         <template v-slot:item.actions="{ item }">
           <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" color="grey-darken-1"
                  :disabled="!accionesDe([item]).length" @click.stop="alBotonDeFila($event, item)" />
@@ -247,7 +227,6 @@ import { useTheme } from 'vuetify'
 import { useAppStore } from '@/stores/appStore'
 import { Toast } from '@/plugins/alerts'
 import { mensajeDeError } from '@/utils/errors'
-import { monto } from '@/utils/money'
 import { abrirIngreso } from '@/utils/orders/ingreso'
 import OrderDataService from '@/services/orders/orderDataService'
 import ClientSelect from '@/components/shared/ClientSelect.vue'

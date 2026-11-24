@@ -84,7 +84,7 @@ import RowOrderRental from './RowOrderRental.vue'
 import PanelOrderRental from './PanelOrderRental.vue'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { datosDelEquipo } from '@/utils/equipments/datos'
-import { FECHAS_ALQUILER } from '@/utils/orders/alquiler'
+import { FECHAS_ALQUILER, FECHAS_EDITABLES } from '@/utils/orders/alquiler'
 
 const AddEquipment = defineAsyncComponent(() => import('@/views/inventory/components/AddEquipment.vue'))
 
@@ -180,12 +180,14 @@ function cargarLineas(lineas) {
   }))
 }
 
-// Lo que manda el alquiler editado: de las lineas guardadas solo lo que se corrige.
+// Lo que manda el alquiler editado: de las lineas guardadas solo lo que se corrige en su estado.
 function paraGuardar() {
-  const items = equipments.value.map(({ modo, id, equipment_id, departure_date, expected_return_date,
-    delivery_notes }) => (modo === 'linea'
-    ? { id, expected_return_date, delivery_notes }
-    : { equipment_id, departure_date, expected_return_date, delivery_notes }))
+  const items = equipments.value.map((fila) => {
+    const { modo, id, equipment_id, departure_date, expected_return_date, delivery_notes } = fila
+    if (modo !== 'linea') return { equipment_id, departure_date, expected_return_date, delivery_notes }
+    const fechas = Object.fromEntries(FECHAS_EDITABLES[fila.estado].map(campo => [campo, fila[campo] || null]))
+    return { id, delivery_notes, ...fechas }
+  })
   return { items, quitar: quitadas.value }
 }
 

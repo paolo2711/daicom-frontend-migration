@@ -189,7 +189,7 @@ export const ACCIONES = {
       'Uno que está en la nube no se corrige: primero se elimina de la nube.',
     ],
 
-    preparar: (cert, clave) => ({ disabled: Boolean(impideCorregir(cert, clave)) }),
+    impide: (cert, { opcion }) => Boolean(impideCorregir(cert, opcion)),
 
     ahora: (item) => {
       if (item.status === ANULADO) return 'Anulado'

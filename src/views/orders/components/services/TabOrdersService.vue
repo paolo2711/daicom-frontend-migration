@@ -236,7 +236,7 @@ import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import { useOrderActions } from '@/composables/useOrderActions'
 import { useOrderCobro } from '@/composables/useOrderCobro'
-import { seguirLaLista, soltar } from '@/composables/useCurrentRows'
+import { seguirLaLista, soltar, unaSolaSeleccion } from '@/composables/useCurrentRows'
 import { useOrderDateColumn } from '@/composables/useOrderDateColumn'
 import { fechaCorta } from '@/utils/dates'
 import { FILTRO_DE_ESTADO, SERVICIO, esDeServicio, viva } from '@/utils/orders/estado'
@@ -269,8 +269,7 @@ const ordenes_seleccionadas = ref([])
 // Los de la orden abierta. Una sola seleccion a la vez: marcar equipos
 // desmarca las ordenes (y el panel sale de vincular), y al reves.
 const equipos_seleccionados = ref([])
-watch(ordenes_seleccionadas, (v) => { if (v.length) equipos_seleccionados.value = [] })
-watch(equipos_seleccionados, (v) => { if (v.length) ordenes_seleccionadas.value = [] })
+unaSolaSeleccion(ordenes_seleccionadas, equipos_seleccionados)
 
 // Nuevos estados UI de Filtros Avanzados y Chips
 const mostrar_filtros_avanzados = ref(false)

@@ -25,7 +25,12 @@
     <v-table v-else density="compact" :hover="false" class="bg-transparent">
       <thead>
         <tr class="bg-transparent">
-          <th class="columna-foto"></th>
+          <th class="columna-corta pr-0">
+            <v-checkbox-btn density="compact" :disabled="!marcables.length"
+                            :model-value="todasMarcadas" :indeterminate="algunasMarcadas"
+                            @update:model-value="marcarTodas" />
+          </th>
+          <th class="columna-corta"></th>
           <th class="text-overline">CÓDIGO</th>
           <th class="text-overline">EQUIPO</th>
           <th class="text-overline">CERTIFICADO</th>
@@ -37,11 +42,17 @@
       </thead>
       <tbody>
         <tr v-for="linea in filas" :key="linea.id"
-            :class="{ 'fila-anulada': linea.estado === 'anulado', 'fila-en-menu': estaEnElMenu(linea) }"
+            :class="{ 'fila-anulada': linea.estado === 'anulado', 'fila-en-menu': estaEnElMenu(linea),
+                      'cursor-pointer': esMarcable(linea) }"
+            @click="alClicFila($event, linea)"
             @contextmenu="alClickDerecho($event, { item: linea })">
+          <td class="columna-corta pr-0">
+            <v-checkbox-btn density="compact" :disabled="!esMarcable(linea)"
+                            :model-value="estaMarcada(linea)" @update:model-value="alternar(linea)" />
+          </td>
           <td>
             <equipment-photo :foto="linea.equipment_data.foto" class="cursor-pointer" title="Ver fotos"
-                             @click="verEquipo(linea, 0, true)" />
+                             @click.stop="verEquipo(linea, 0, true)" />
           </td>
           <td><equipment-code :codigo="linea.equipment_data.internal_id" :estado="ESTADOS_ALQUILER[linea.estado]" /></td>
           <td>
@@ -65,7 +76,7 @@
           </td>
         </tr>
         <tr v-if="filas.length === 0">
-          <td colspan="8" class="text-center text-medium-emphasis py-6 font-weight-medium">
+          <td colspan="9" class="text-center text-medium-emphasis py-6 font-weight-medium">
             No se encontraron equipos en este alquiler.
           </td>
         </tr>
@@ -75,7 +86,19 @@
     <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
                  @accion="clave => ejecutarAccion(clave, menu.filas)" />
 
-    <dialog-gestionar-alquiler ref="gestionarRef" />
+    <selection-bar :count="seleccion.length" label="equipo(s)" :acciones="accionesDe(seleccion)"
+                   @accion="clave => ejecutarAccion(clave, seleccion)" @clear="seleccion = []" />
+
+    <batch-action-dialog ref="pasoRef" :acciones="PASOS" :columnas="['Código', 'Equipo']" :al-confirmar="darPaso"
+                         @hecha="soltarEquipos">
+      <template #celdas="{ fila }">
+        <td class="font-weight-medium text-no-wrap">{{ fila.equipment_data.internal_id }}</td>
+        <td class="text-caption">
+          <div>{{ fila.equipment_data.name }}</div>
+          <div class="text-medium-emphasis">{{ detalleDe(fila) }}</div>
+        </td>
+      </template>
+    </batch-action-dialog>
 
     <add-equipment ref="addEquipmentRef" @saved="emit('reload')" />
   </v-card>
@@ -83,22 +106,25 @@
 
 <script setup>
 import { Toast } from '@/plugins/alerts'
-import { computed, getCurrentInstance, ref } from 'vue'
-import DialogGestionarAlquiler from './DialogGestionarAlquiler.vue'
+import { computed, ref } from 'vue'
+import { PASOS } from './batchActions'
+import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
+import BatchActionDialog from '@/components/shared/BatchActionDialog.vue'
 import EquipmentCertificate from '@/components/shared/EquipmentCertificate.vue'
 import EquipmentCode from '@/components/shared/EquipmentCode.vue'
 import EquipmentPhoto from '@/components/shared/EquipmentPhoto.vue'
 import { useContextMenu } from '@/composables/useContextMenu'
+import { soltar } from '@/composables/useCurrentRows'
+import { useRowSelection } from '@/composables/useRowSelection'
 import { accionesPara } from '@/utils/actions'
 import AddEquipment from '@/views/inventory/components/AddEquipment.vue'
 import { useTheme } from 'vuetify'
 import OrderDataService from '@/services/orders/orderDataService'
-import { ESTADOS_ALQUILER, FECHAS_ALQUILER, resumenPorEstado } from '@/utils/orders/alquiler'
+import { ACCIONES_ALQUILER, ESTADOS_ALQUILER, FECHAS_ALQUILER, resumenPorEstado } from '@/utils/orders/alquiler'
 import { viva } from '@/utils/orders/estado'
 import { fechaCorta } from '@/utils/dates'
 import { datosDelEquipo } from '@/utils/equipments/datos'
-import { mensajeDeError } from '@/utils/errors'
 
 const props = defineProps({
   order: { type: Object, required: true },
@@ -108,12 +134,13 @@ const props = defineProps({
 
 const emit = defineEmits(['editar', 'reload'])
 
-const { appContext } = getCurrentInstance()
-const $swal = appContext.config.globalProperties.$swal
+// La guarda la pantalla de ordenes: marcar equipos y marcar ordenes se excluyen.
+const seleccion = defineModel('seleccion', { type: Array, required: true })
+
 const theme = useTheme()
 const isDark = computed(() => theme.global.current.value.dark)
 
-const gestionarRef = ref(null)
+const pasoRef = ref(null)
 const addEquipmentRef = ref(null)
 
 const anulada = computed(() => !viva(props.order))
@@ -121,55 +148,33 @@ const anulada = computed(() => !viva(props.order))
 const filas = computed(() => props.order.rentals || [])
 const detalleDe = ({ equipment_data: equipo }) => datosDelEquipo(equipo.brand, equipo.model, equipo.series && `SN ${equipo.series}`)
 
-// Lo que se puede hacer con un equipo del alquiler. Las lineas no se marcan:
-// el menu es de la que se toco.
-const ACCIONES_LINEA = [
-  {
-    clave: 'ver', grupo: 'ver', varios: false,
-    icono: 'mdi-eye', texto: 'Ver equipo',
-  },
-  {
-    clave: 'gestionar', grupo: 'trabajo', varios: false,
-    icono: 'mdi-calendar-edit', texto: 'Inicio, devolución y fechas',
-    visible: ([linea]) => linea.estado !== 'anulado',
-  },
-  // Lo que esta en obra no se quita: se devuelve.
-  {
-    clave: 'quitar', grupo: 'peligro', varios: false,
-    icono: 'mdi-minus-circle-outline', texto: 'Quitar de la orden',
-    visible: ([linea]) => linea.estado === 'reservado' && !anulada.value,
-  },
-]
-const accionesDe = (lineas) => accionesPara(ACCIONES_LINEA, lineas, () => true)
+// En una orden anulada los equipos solo se ven.
+const marcables = computed(() => (anulada.value ? [] : filas.value.filter(l => l.estado !== 'anulado')))
+const { esMarcable, estaMarcada, todasMarcadas, algunasMarcadas, marcarTodas, alternar, alClicFila } =
+  useRowSelection(marcables, seleccion)
 
-const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(filas)
+const acciones = computed(() => (anulada.value ? ACCIONES_ALQUILER.filter(a => a.grupo === 'ver') : ACCIONES_ALQUILER))
+const accionesDe = (lineas) => accionesPara(acciones.value, lineas, () => true)
 
-function ejecutarAccion (clave, [linea]) {
-  if (clave === 'ver') return verEquipo(linea)
-  if (clave === 'gestionar') return gestionarRef.value?.open(linea)
-  if (clave === 'quitar') return quitar(linea)
+// El menu de una marcada es de todas las marcadas; el de otra, solo de esa y sin marcarla.
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(filas, seleccion, { marca: false })
+
+function ejecutarAccion (clave, lineas) {
+  if (clave === 'ver') return verEquipo(lineas[0])
+  pasoRef.value?.open(clave, lineas)
+}
+
+const soltarEquipos = (lineas) => soltar(seleccion, lineas)
+
+async function darPaso (lineas, { clave, fecha }) {
+  await OrderDataService.darPasoDeAlquiler(lineas.map(l => l.id), clave, fecha)
+  const cuantos = lineas.length > 1 ? `: ${lineas.length} equipos` : ''
+  Toast.fire({ timer: 2400, icon: 'success', title: `${PASOS[clave].hecho}${cuantos}` })
 }
 
 // `pestana` y `fotos`, como en Inventario.
 const verEquipo = (linea, pestana = 0, fotos = false) => addEquipmentRef.value?.open(linea.equipment, pestana, fotos)
 
-async function quitar(linea) {
-  const { isConfirmed } = await $swal.fire({
-    title: `¿Quitar ${linea.equipment_data.internal_id} de la orden?`,
-    text: 'Vuelve a estar disponible en el inventario.',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, quitar',
-    cancelButtonText: 'Cancelar',
-  })
-  if (!isConfirmed) return
-  try {
-    await OrderDataService.deleteRental(linea.id)
-    Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo quitado' })
-  } catch (error) {
-    $swal.fire('No se quitó el equipo', mensajeDeError(error, 'No se pudo quitar el equipo.'), 'error')
-  }
-}
 </script>
 
 <style scoped>
@@ -182,8 +187,8 @@ async function quitar(linea) {
 .fila-anulada td {
   opacity: 0.6;
 }
-/* Lo justo para la foto: el resto del ancho es para los datos. */
-.columna-foto {
+/* Lo justo para la casilla y la foto: el resto del ancho es para los datos. */
+.columna-corta {
   width: 1%;
 }
 </style>

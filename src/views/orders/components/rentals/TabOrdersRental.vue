@@ -178,8 +178,8 @@
         <template v-slot:expanded-row="{ columns, item }">
           <tr class="fila-activa">
             <td :colspan="columns.length" class="pa-0">
-              <table-rental-details :order="item" :muestra-fecha="!fechaEnColumna" @editar="abrirEditarOrden(item)"
-                                    @reload="cargarItems(item.id)" />
+              <table-rental-details v-model:seleccion="equipos_seleccionados" :order="item" :muestra-fecha="!fechaEnColumna"
+                                    @editar="abrirEditarOrden(item)" @reload="cargarItems(item.id)" />
             </td>
           </tr>
         </template>
@@ -224,7 +224,7 @@ import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import { useOrderActions } from '@/composables/useOrderActions'
 import { useOrderCobro } from '@/composables/useOrderCobro'
-import { seguirLaLista } from '@/composables/useCurrentRows'
+import { seguirLaLista, unaSolaSeleccion } from '@/composables/useCurrentRows'
 import { useOrderDateColumn } from '@/composables/useOrderDateColumn'
 import { fechaCorta } from '@/utils/dates'
 import { ALQUILER, FILTRO_DE_ESTADO, esAlquiler, viva } from '@/utils/orders/estado'
@@ -251,6 +251,9 @@ const appStore = useAppStore()
 const filter_client_id = ref(null)
 
 const ordenes_seleccionadas = ref([])
+// Los de la orden abierta.
+const equipos_seleccionados = ref([])
+unaSolaSeleccion(ordenes_seleccionadas, equipos_seleccionados)
 
 const columnas = [
   { title: 'Nro Alquiler',      key: 'order_number' },
@@ -268,6 +271,7 @@ const orders = ref([])
 seguirLaLista(orders, ordenes_seleccionadas)
 const { foco, abierto: enCobro, abrirCobro, cerrarCobro, alSemaforo } = useOrderCobro(orders, ordenes_seleccionadas)
 const { expanded, idOrdenExpandida, isOrderExpanded, cargarItems, reemplazarOrdenes } = useOrderItems(orders, 'rentals')
+watch(idOrdenExpandida, () => { equipos_seleccionados.value = [] })
 const filter_order = ref('')
 const filter_client_ref = ref('')
 const filter_invoice = ref('')

@@ -130,22 +130,11 @@ class OrderDataService {
 
     // ─── ALQUILERES ──────────────────────────────────────────────────────────
 
-    // inicio | devolucion | deshacer-devolucion
-    darPasoDeAlquiler(rental_id, paso, fecha = null) {
+    // inicio | devolucion | deshacer-devolucion | quitar, de uno o varios equipos: todos o ninguno.
+    darPasoDeAlquiler(ids, paso, fecha) {
         let headers = authHeader();
         headers['Content-Type'] = "application/json";
-        return axios.post(`orders/rentals/${rental_id}/${paso}`, { fecha }, { headers });
-    }
-
-    // Solo lo reservado: el equipo vuelve a disponible.
-    deleteRental(rental_id) {
-        return axios.delete(`orders/rentals/${rental_id}`, { headers: authHeader() });
-    }
-
-    updateRentalDates(rental_id, data) {
-        let headers = authHeader();
-        headers['Content-Type'] = "application/json";
-        return axios.patch(`orders/rentals/${rental_id}`, data, { headers });
+        return axios.post(`orders/rentals/${paso}`, { ids, fecha }, { headers });
     }
 
     // ─── RESÚMENES (Smart Chips) ─────────────────────────────────────────────

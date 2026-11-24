@@ -17,7 +17,8 @@
             :max="fechaMaxima"
             density="compact"
             variant="outlined"
-            hide-details
+            hide-details="auto"
+            :error-messages="intento ? errorDeFecha : ''"
             class="campo-de-la-accion"
           />
           <v-select
@@ -59,21 +60,21 @@
                 <div class="text-caption text-medium-emphasis">{{ cargando }}</div>
               </td>
             </tr>
-            <tr v-else v-for="fila in filas" :key="fila.id" :class="{ 'fila-bloqueada': fila.disabled }">
+            <tr v-else v-for="fila in filas" :key="fila.id" :class="{ 'fila-bloqueada': bloqueada(fila) }">
               <td class="text-center">
                 <v-checkbox
-                  v-model="marcadas"
-                  :value="fila.id"
-                  :disabled="fila.disabled"
+                  :model-value="elegidas.includes(fila)"
+                  @update:model-value="alternar(fila)"
+                  :disabled="bloqueada(fila)"
                   density="compact"
                   hide-details
                   color="primary"
                 />
               </td>
               <slot name="celdas" :fila="fila" />
-              <td class="text-caption text-medium-emphasis">{{ accion.ahora(fila) }}</td>
+              <td class="text-caption text-medium-emphasis text-no-wrap">{{ accion.ahora(fila) }}</td>
               <td>
-                <div class="d-flex align-center ga-2">
+                <div class="d-flex align-center ga-2 que-va-a-pasar">
                   <v-icon :color="colorDe(resultado(fila).nivel)" size="small">{{ resultado(fila).icono }}</v-icon>
                   <span class="text-caption">{{ resultado(fila).titulo }}</span>
                   <slot name="fila" :fila="fila" />
@@ -86,8 +87,8 @@
 
       <v-card-actions class="px-6 pb-4 pt-2">
         <span class="text-body-2 text-medium-emphasis">
-          <span class="font-weight-bold text-high-emphasis">{{ marcadas.length }}</span>
-          {{ marcadas.length === 1 ? 'se procesa' : 'se procesan' }}<template v-if="noSePueden">
+          <span class="font-weight-bold text-high-emphasis">{{ elegidas.length }}</span>
+          {{ elegidas.length === 1 ? 'se procesa' : 'se procesan' }}<template v-if="noSePueden">
           · {{ noSePueden }} {{ noSePueden === 1 ? 'no se puede' : 'no se pueden' }}</template>
         </span>
         <v-spacer/>
@@ -112,20 +113,21 @@
 </template>
 
 <script setup>
-import { computed, getCurrentInstance, ref, watch } from 'vue'
+import { computed, getCurrentInstance, ref } from 'vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 import { colorDe } from '@/utils/batchLevels'
 import { hoyISO } from '@/utils/dates'
 import { alPresionarEnter } from '@/utils/keyboard'
 
 const props = defineProps({
-  // Por clave: titulo, icono, color, descripcion, verbo, preparar, ahora, validacion; `fecha` y `opcion` si las pide.
+  // Por clave: titulo, icono, color, descripcion, verbo, ahora, validacion; `fecha` y `opcion` si las pide.
+  // `preparar` da los datos de la fila al abrir; `impide`, si lo elegido arriba no la deja procesar.
   acciones: { type: Object, required: true },
   // Lo que dice que fila es; sus celdas van en el slot `celdas`.
   columnas: { type: Array, required: true },
-  // (filas marcadas, { fecha, opcion }) => guarda; si devuelve false, el modal sigue abierto.
+  // (filas marcadas, { clave, fecha, opcion }) => guarda; si devuelve false, el modal sigue abierto.
   alConfirmar: { type: Function, required: true },
-  // Se suma a lo que recibe `validacion`.
+  // Se suma a lo que reciben `impide` y `validacion`.
   contexto: { type: Object, default: () => ({}) },
   // El texto mientras se buscan las filas; vacio, no carga nada.
   cargando: { type: String, default: '' },
@@ -140,15 +142,30 @@ const marcadas = ref([])
 const fecha = ref('')
 const opcion = ref(null)
 const procesando = ref(false)
+const intento = ref(false)
 
 const accion = computed(() => props.acciones[clave.value] ?? Object.values(props.acciones)[0])
-const resultado = (fila) => accion.value.validacion(fila, { opcion: opcion.value, ...props.contexto })
-const fechaMaxima = computed(() => (accion.value.fecha?.permiteFutura === false ? hoyISO() : undefined))
+const elegido = computed(() => ({ fecha: fecha.value, opcion: opcion.value, ...props.contexto }))
+const resultado = (fila) => accion.value.validacion(fila, elegido.value)
+const bloqueada = (fila) => Boolean(fila.disabled || accion.value.impide?.(fila, elegido.value))
 
-const habilitadas = computed(() => filas.value.filter(f => !f.disabled))
+const fechaMaxima = computed(() => (accion.value.fecha?.permiteFutura === false ? hoyISO() : undefined))
+const errorDeFecha = computed(() => {
+  if (!accion.value.fecha) return ''
+  if (!fecha.value) return 'Falta la fecha'
+  return fechaMaxima.value && fecha.value > fechaMaxima.value ? 'No puede ser a futuro' : ''
+})
+
+const habilitadas = computed(() => filas.value.filter(f => !bloqueada(f)))
+// Las marcadas que se pueden: una que lo elegido arriba bloquea vuelve marcada si deja de estarlo.
+const elegidas = computed(() => habilitadas.value.filter(f => marcadas.value.includes(f.id)))
 const noSePueden = computed(() => filas.value.length - habilitadas.value.length)
-const todasMarcadas = computed(() => habilitadas.value.length > 0 && marcadas.value.length === habilitadas.value.length)
-const algunasMarcadas = computed(() => marcadas.value.length > 0 && marcadas.value.length < habilitadas.value.length)
+const todasMarcadas = computed(() => habilitadas.value.length > 0 && elegidas.value.length === habilitadas.value.length)
+const algunasMarcadas = computed(() => elegidas.value.length > 0 && !todasMarcadas.value)
+
+function alternar({ id }) {
+  marcadas.value = marcadas.value.includes(id) ? marcadas.value.filter(m => m !== id) : [...marcadas.value, id]
+}
 
 // Marca todo lo que no esta bloqueado, tambien lo que ya estaba hecho.
 function marcarTodas() {
@@ -157,27 +174,19 @@ function marcarTodas() {
 
 // Una sola condición para el botón y para el Enter, así no se separan.
 const puedeConfirmar = computed(() =>
-  !props.cargando && !procesando.value && marcadas.value.length > 0 &&
-  (!accion.value.fecha || fecha.value) && (!accion.value.opcion || opcion.value)
+  !props.cargando && !procesando.value && elegidas.value.length > 0 && (!accion.value.opcion || opcion.value)
 )
 const confirmarConEnter = alPresionarEnter(() => {
   if (puedeConfirmar.value) confirmar()
 })
 
-// Cambiar la opcion cambia que filas se pueden: la que queda bloqueada sale de la seleccion.
-watch(opcion, (valor) => {
-  if (!accion.value.opcion) return
-  filas.value.forEach(fila => Object.assign(fila, accion.value.preparar(fila, valor)))
-  const ids = new Set(habilitadas.value.map(f => f.id))
-  marcadas.value = marcadas.value.filter(id => ids.has(id))
-})
-
 // `forzar` marca tambien las que ya lo tienen: se pidio para esa fila puntual.
 function open(cual, lista, forzar = false) {
   clave.value = cual
-  fecha.value = accion.value.fecha ? hoyISO() : ''
+  fecha.value = accion.value.fecha && !accion.value.fecha.vacia ? hoyISO() : ''
   opcion.value = null
-  filas.value = lista.map(fila => ({ ...fila, ...accion.value.preparar(fila, null) }))
+  intento.value = false
+  filas.value = lista.map(fila => ({ ...fila, ...accion.value.preparar?.(fila) }))
   marcadas.value = habilitadas.value.filter(f => forzar || !f.already_has_it).map(f => f.id)
   abierto.value = true
 }
@@ -189,10 +198,12 @@ function cerrar() {
 
 async function confirmar() {
   if (procesando.value) return
+  intento.value = true
+  if (errorDeFecha.value) return
   procesando.value = true
   try {
-    const elegidas = filas.value.filter(f => marcadas.value.includes(f.id))
-    if (await props.alConfirmar(elegidas, { fecha: fecha.value, opcion: opcion.value }) === false) return
+    const lote = { clave: clave.value, fecha: fecha.value, opcion: opcion.value }
+    if (await props.alConfirmar(elegidas.value, lote) === false) return
     emit('hecha', filas.value)
     cerrar()
   } catch (error) {
@@ -217,6 +228,10 @@ defineExpose({ open, filas, marcadas })
 
 .campo-de-la-accion {
   max-width: 16.25rem;
+}
+
+.que-va-a-pasar {
+  min-width: 13rem;
 }
 
 .columna-de-marcar {

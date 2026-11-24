@@ -2,7 +2,7 @@
   <pdf-drop-zone label="Suelta el PDF para subir la factura" @file="subir" @invalid="avisarSoloPdf">
     <filter-bar>
       <v-text-field v-model="filtros.q" hide-details density="compact" prepend-inner-icon="mdi-magnify"
-                    variant="outlined" label="Buscar N.° o cliente" clearable />
+                    variant="outlined" label="Buscar N.° de factura" clearable />
       <template #pildoras>
         <filter-pill v-for="p in PILDORAS_DE_FACTURAS" :key="p.valor" :active="filtros.pildora === p.valor"
                      :color="p.color" :icon="p.icono" :tooltip="p.detalle" @click="alternarPildora(p.valor)">

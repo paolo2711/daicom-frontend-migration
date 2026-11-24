@@ -2,7 +2,7 @@
   <div>
     <filter-bar>
       <v-text-field v-model="filtros.q" hide-details density="compact" prepend-inner-icon="mdi-magnify"
-                    variant="outlined" label="Buscar N.° o cliente" clearable />
+                    variant="outlined" label="Buscar N.° de guía" clearable />
       <template #pildoras>
         <filter-pill :active="filtros.sunat" color="warning" icon="mdi-alert-outline"
                      tooltip="No enviadas, sin respuesta de SUNAT, por revisar o con la baja en SOL pendiente"

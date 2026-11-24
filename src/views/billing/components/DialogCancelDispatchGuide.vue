@@ -55,7 +55,7 @@ async function anular (motivo, yaEnSol) {
   try {
     const { data } = await BillingDataService.cancelDispatchGuide(guia.value.id, { motivo, ya_en_sol: yaEnSol })
     avisarHecho(`${data.numero} anulada`, { warning: data.baja_en_sol
-      ? data.warning : 'Queda en Tus pendientes hasta que la des de baja en SOL.' })
+      ? data.warning : 'Queda en Inicio hasta que la des de baja en SOL.' })
     emit('anulada', data)
     guia.value = null
   } catch (error) {

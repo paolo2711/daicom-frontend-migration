@@ -4,8 +4,7 @@ import { ANULADA, avisoDelEstado, rechazoDeLaBaja } from '@/utils/billing/sunat'
 import { avisarHecho } from '@/utils/documents/avisos'
 import { mensajeDeError } from '@/utils/errors'
 
-// Lo que resuelve un comprobante pendiente, desde su tabla o desde Tus pendientes: el mismo aviso en las dos.
-// Devuelven el comprobante o null.
+// Lo que resuelve un comprobante pendiente. Devuelven el comprobante o null.
 
 const fallo = (titulo, porDefecto) => (error) => {
   Swal.fire({ icon: 'error', title: titulo, text: mensajeDeError(error, porDefecto) })

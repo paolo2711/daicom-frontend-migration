@@ -291,7 +291,6 @@
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import OrderDataService from '@/services/orders/orderDataService'
@@ -308,6 +307,7 @@ import { fechaCorta } from '@/utils/dates'
 import { ALQUILER, FILTRO_DE_ESTADO, esAlquiler, viva } from '@/utils/orders/estado'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
+import { useOrderRouteFilters } from '@/composables/useOrderRouteFilters'
 import { throttle } from '@/utils/throttle'
 import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemaforoFinanciero } from '@/utils/orders/cobro'
 import { useAppStore } from '@/stores/appStore'
@@ -317,7 +317,6 @@ import PanelFacturas from '../PanelFacturas.vue'
 import ResizableSplit from '@/components/shared/ResizableSplit.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
 
-const route = useRoute()
 const appStore = useAppStore()
 
 // ── Búsqueda paginada de clientes (autocomplete del filtro) ──
@@ -447,19 +446,15 @@ const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, accionesD
   })
 
 // ── Watchers ──
+useOrderRouteFilters({ filter_order, filtro_sin_factura, filtro_falta_pago, filtro_a_credito }, applyFilters)
 watch(options, () => { retrieveOrders() }, { deep: true })
 watch(filter_order, () => { applyFilters() })
 watch(filter_invoice, () => { applyFilters() })
 watch(filter_client_ref, () => { applyFilters() })
 watch(filter_client_id, () => { applyFilters() })
 watch(filter_status, () => { applyFilters() })
-watch(() => route.query.buscar_orden, (val) => { if (val) filter_order.value = val })
-watch(() => route.query.buscar_factura, (val) => { if (val) filter_invoice.value = val })
-
 
 onMounted(() => {
-  if (route.query.buscar_orden) filter_order.value = route.query.buscar_orden
-  if (route.query.buscar_factura) filter_invoice.value = route.query.buscar_factura
   retrieveOrders()
   cargarResumenes()
   window.addEventListener('wss-reload-orders-rental', handleWssReload)

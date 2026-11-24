@@ -145,6 +145,7 @@ import { useDateRangeFilter } from '@/composables/useDateRangeFilter'
 import { useDownload } from '@/composables/useDownload'
 import { useEmissionPanel } from '@/composables/useEmissionPanel'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { useRouteFilters } from '@/composables/useRouteFilters'
 import { useSwal } from '@/composables/useSwal'
 import InvoiceMappers from '@/mappers/invoiceMappers'
 import BillingDataService from '@/services/billing/billingDataService'
@@ -192,6 +193,10 @@ const cargando = ref(false)
 const opciones = ref({ page: 1, itemsPerPage: 30 })
 const filtros = ref({ q: '', pildora: null, cliente: null, desde: '', hasta: '', estado: null, currency: null,
                       detraccion: null, order_type: null })
+useRouteFilters(({ q, pildora }) => {
+  filtros.value.q = q || ''
+  filtros.value.pildora = pildora || null
+})
 const alternarPildora = (valor) => { filtros.value.pildora = filtros.value.pildora === valor ? null : valor }
 const { rango, aplicarRango, limpiarRango } = useDateRangeFilter(filtros)
 const vista = ref(null)

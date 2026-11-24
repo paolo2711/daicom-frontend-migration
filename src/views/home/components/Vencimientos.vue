@@ -1,7 +1,5 @@
 <template>
-  <!-- Estado del laboratorio, no pendientes de nadie. Va como franja de numeros y
-       no como tarjetas para que no compita con "Tus pendientes". El encabezado y
-       la tarjeta los pone HomeSection. -->
+  <!-- Estado del laboratorio, no pendientes de nadie. El encabezado y la tarjeta los pone HomeSection. -->
   <div>
     <div class="venc-barra">
       <!-- El tooltip cuelga de un elemento propio y el icono va por prop: si se
@@ -35,9 +33,7 @@
         </div>
 
         <div v-if="g.items.length" class="venc-lista">
-          <!-- button y no div, igual que en pendientes: se llega con Tab y se
-               activa con Enter. Los patrones no tienen a donde ir, asi que van
-               deshabilitados en vez de fingir que son clicables. -->
+          <!-- Los patrones no tienen a donde ir: van deshabilitados en vez de fingir que son clicables. -->
           <button v-for="it in g.items.slice(0, VISIBLES)" :key="it.codigo"
                   type="button" class="venc-fila" :disabled="!it.ruta"
                   @click="$emit('ir', it.ruta)">
@@ -227,8 +223,7 @@ onMounted(cargar)
 .venc-cifra b { font-size: .82rem; }
 .venc-cifra--cero { background: transparent; color: rgba(128, 128, 128, .7); }
 
-/* Los tamanos van en los hijos y no aca: font es un shorthand y le pisaria el
-   font-size a la fila. Mismo criterio que .pend-row en MisPendientes. */
+/* Los tamanos van en los hijos: font es un shorthand y le pisaria el font-size a la fila. */
 .venc-lista { display: flex; flex-direction: column; }
 .venc-fila {
   display: flex; align-items: center; gap: .6rem; width: 100%;

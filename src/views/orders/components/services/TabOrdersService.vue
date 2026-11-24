@@ -272,7 +272,6 @@
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
 import { useTheme } from 'vuetify'
 import { useAppStore } from '@/stores/appStore'
 import { Toast } from '@/plugins/alerts'
@@ -294,6 +293,7 @@ import { FILTRO_DE_ESTADO, SERVICIO, esDeServicio, viva } from '@/utils/orders/e
 import { lineaAnulada } from '@/utils/orders/lineas'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
+import { useOrderRouteFilters } from '@/composables/useOrderRouteFilters'
 import { debounce } from '@/utils/debounce'
 import { throttle } from '@/utils/throttle'
 import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemaforoFinanciero } from '@/utils/orders/cobro'
@@ -310,7 +310,6 @@ import { defineAsyncComponent } from 'vue'
 const BatchActionModal = defineAsyncComponent(() => import('@/views/certificates/components/BatchActionModal.vue'))
 
 const theme = useTheme()
-const route = useRoute()
 const appStore = useAppStore()
 
 // Estado UI Split-Screen
@@ -539,6 +538,7 @@ const handleWssReload = () => {
 }
 
 // Watchers (igual que en ListCertificates)
+useOrderRouteFilters({ filter_order, filtro_sin_factura, filtro_falta_pago, filtro_a_credito }, applyFilters)
 watch(options, () => { retrieveOrders() }, { deep: true })
 
 // Quitamos filter_date_gt y filter_date_lt para que solo se apliquen con el botón "Aplicar"
@@ -546,32 +546,7 @@ watch(options, () => { retrieveOrders() }, { deep: true })
 watch([filter_order, filter_correlative, filter_invoice, filter_client_id, filter_status], debounce(applyFilters))
 
 // Ciclo de vida
-watch(() => route.query.buscar_orden, (val) => {
-  if (val) filter_order.value = val
-})
-
-watch(() => route.query.buscar_factura, (val) => {
-  if (val) filter_invoice.value = val
-})
-
-// Desde Inicio ("Ver los N") llegan las pildoras ya activadas.
-const aplicarPildorasDeRuta = () => {
-  let cambio = false
-  if (route.query.sin_factura) { filtro_sin_factura.value = true; cambio = true }
-  if (route.query.falta_pago)  { filtro_falta_pago.value = true; filtro_a_credito.value = false; cambio = true }
-  if (cambio) applyFilters()
-}
-watch(() => [route.query.sin_factura, route.query.falta_pago], aplicarPildorasDeRuta)
-
 onMounted(() => {
-  if (route.query.buscar_orden) {
-    filter_order.value = route.query.buscar_orden
-  }
-  if (route.query.buscar_factura) {
-    filter_invoice.value = route.query.buscar_factura
-  }
-  aplicarPildorasDeRuta()
-
   cargarResumenes() // Cargamos el número para el badge rojo
   retrieveOrders()
   window.addEventListener('wss-reload-orders-service', handleWssReload)

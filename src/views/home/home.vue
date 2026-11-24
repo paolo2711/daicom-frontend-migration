@@ -25,21 +25,17 @@
 
         <!-- Primero los numeros, despues los graficos y al final el detalle. Cada bloque llega solo si el
              rol del usuario lo ve: el back los filtra y aca se dibuja lo que hay. -->
-        <resumen-pendientes :bloques="bloques" :vencidos="vencidos" @ir="irA" @vencidos="aVencimientos" />
+        <resumen-pendientes :vencidos="vencidos" @ir="irA" @vencidos="aVencimientos" />
 
-        <home-section titulo="Pulso del mes" icono="mdi-chart-line" tarjeta :class="{ 'd-none': !hayPulso }">
+        <home-section titulo="Pulso del mes" icono="mdi-chart-line" :class="{ 'd-none': !hayPulso }">
           <pulso-mes @disponible="hayPulso = $event" />
         </home-section>
 
-        <home-section titulo="Te toca" icono="mdi-clipboard-check-outline">
-          <mis-pendientes @bloques="bloques = $event" />
-        </home-section>
-
-        <home-section id="vencimientos" titulo="Vencimientos" icono="mdi-calendar-alert" tarjeta>
+        <home-section id="vencimientos" titulo="Vencimientos" icono="mdi-calendar-alert">
           <vencimientos @ir="irA" @resumen="vencidos = $event" />
         </home-section>
 
-        <home-section titulo="Últimas acciones" icono="mdi-history" tarjeta>
+        <home-section titulo="Últimas acciones" icono="mdi-history">
           <list-logs />
         </home-section>
 
@@ -54,7 +50,6 @@ import { useRouter } from 'vue-router'
 import { usePermissions } from '@/composables/usePermissions'
 import HomeSection from '@/views/home/components/HomeSection.vue'
 import ListLogs from '@/views/home/components/ListLogs.vue'
-import MisPendientes from '@/views/home/components/MisPendientes.vue'
 import NovedadesBanner from '@/views/home/components/NovedadesBanner.vue'
 import PulsoMes from '@/views/home/components/PulsoMes.vue'
 import ResumenPendientes from '@/views/home/components/ResumenPendientes.vue'
@@ -67,7 +62,6 @@ const fecha = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'nu
 const hoy = fecha[0].toUpperCase() + fecha.slice(1)
 
 const hayPulso = ref(false)
-const bloques = ref([])
 const vencidos = ref(null)
 
 const irA = (ruta) => { if (ruta) router.push(ruta).catch(() => {}) }

@@ -84,6 +84,7 @@ import { useDateRangeFilter } from '@/composables/useDateRangeFilter'
 import { useDownload } from '@/composables/useDownload'
 import { useEmissionPanel } from '@/composables/useEmissionPanel'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { useRouteFilters } from '@/composables/useRouteFilters'
 import { useSwal } from '@/composables/useSwal'
 import BillingDataService from '@/services/billing/billingDataService'
 import { accionesPara } from '@/utils/actions'
@@ -115,6 +116,7 @@ const total = ref(0)
 const cargando = ref(false)
 const opciones = ref({ page: 1, itemsPerPage: 30 })
 const filtros = ref({ q: '', sunat: false, cliente: null, desde: '', hasta: '', estado: null })
+useRouteFilters(({ sunat }) => { filtros.value.sunat = Boolean(sunat) })
 const { rango, aplicarRango, limpiarRango } = useDateRangeFilter(filtros)
 const vista = ref(null)
 const formulario = ref(null)

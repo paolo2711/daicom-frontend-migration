@@ -19,7 +19,7 @@ class BillingDataService {
     const opciones = { headers: authHeader(), responseType: "blob" };
     return archivoDe(axios.post("billing/dispatch-guides/vista-previa/", data, opciones));
   }
-  // `ya_en_sol`: si la baja ya se dio en SOL; si no, queda pendiente en Tus pendientes.
+  // `ya_en_sol`: si la baja ya se dio en SOL; si no, queda pendiente en Inicio.
   cancelDispatchGuide(id, { motivo, ya_en_sol }) {
     return axios.patch(`billing/dispatch-guides/${id}/anular/`, { motivo, ya_en_sol }, { headers: authHeader() });
   }

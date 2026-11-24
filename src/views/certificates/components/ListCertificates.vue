@@ -420,7 +420,6 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, defineAsyncComponent, mergeProps } from 'vue'
-import { useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/appStore'
 
 import FluentPagination    from '@/components/commonComponents/FluentPagination.vue'
@@ -429,6 +428,7 @@ import CertificateDataService from '@/services/certificates/certificateDataServi
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { LISTAS } from '@/utils/comboLists'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { useRouteFilters } from '@/composables/useRouteFilters'
 import { useUploadState }   from '@/composables/useUploadState'
 import { debounce }         from '@/utils/debounce'
 import OrderDataService    from '@/services/orders/orderDataService.js'
@@ -463,7 +463,6 @@ import { seguirLaLista, soltar } from '@/composables/useCurrentRows'
 const BatchActionModal = defineAsyncComponent(() => import('./BatchActionModal.vue'))
 
 // ─── Composables ──────────────────────────────────────────────────────────────
-const route  = useRoute()
 
 const appStore = useAppStore()
 const { estadoSubida, confirmarFila } = useUploadState()
@@ -492,12 +491,13 @@ const filtro_excel_pendiente   = ref(false) // Estado del Smart Chip Excel
 const mostrar_filtros_avanzados = ref(false) // Toggle de la UI
 
 // ─── Filtros de fecha ─────────────────────────────────────────────────────────
-const emission_date__gt = ref((() => {
+const haceOchoMeses = () => {
   const d = new Date()
-  d.setMonth(d.getMonth() - 8) // ventana por defecto: últimos 8 meses
+  d.setMonth(d.getMonth() - 8)
   return fechaISO(d)
-})())
-const emission_date__lt = ref(hoyISO())
+}
+const emission_date__gt = ref('')
+const emission_date__lt = ref('')
 
 
 // ─── Laboratorios ─────────────────────────────────────────────────────────────
@@ -583,18 +583,14 @@ const { begin: beginCertLoad, isLatest: isLatestCertLoad } = useLatestRequest()
 // ─── Watchers ─────────────────────────────────────────────────────────────────
 watch(options, () => retrieveAllCertificates(), { deep: true })
 
-// Busqueda enlazada: si llega o cambia ?certificado (tambien ya estando en la pestana), el watch de `numero` busca.
-watch(() => route.query.certificado, (v) => { numero.value = v || '' })
-
-// Igual para ?firma_pendiente (notificacion de firma solicitada): activa el filtro.
-watch(() => route.query.firma_pendiente, (v) => {
-  if (v) { filtro_firma_pendiente.value = true; options.value.page = 1; retrieveAllCertificates() }
-})
-
-// Desde Inicio ("Ver los N" de por elaborar) llega ?excel_pendiente=1.
-watch(() => route.query.excel_pendiente, (v) => {
-  if (v) { filtro_excel_pendiente.value = true; options.value.page = 1; retrieveAllCertificates() }
-})
+// Desde Inicio o una notificacion. Sin `desde` ni `hasta`, los ultimos ocho meses; vacios, sin limite de fecha.
+useRouteFilters(({ certificado, firma_pendiente, excel_pendiente, desde, hasta }) => {
+  numero.value = certificado || ''
+  filtro_firma_pendiente.value = Boolean(firma_pendiente)
+  filtro_excel_pendiente.value = Boolean(excel_pendiente)
+  emission_date__gt.value = desde ?? haceOchoMeses()
+  emission_date__lt.value = hasta ?? hoyISO()
+}, () => { options.value.page = 1; retrieveAllCertificates() })
 
 watch(numero,            () => { options.value.page = 1; retrieveAllCertificates() })
 // Texto libre: espera a que termine de escribir en vez de consultar por letra.
@@ -629,25 +625,6 @@ onMounted(() => {
   is_admin.value         = user.kind !== undefined && user.kind < 1
   user_permissions.value = user.action_permissions || []
   permiso_resumen.value         = is_admin.value || user_permissions.value.includes(1002)
-
-  if (route.query.certificado) {
-    numero.value = route.query.certificado
-  }
-
-  // Desde la notificacion de "firma solicitada": llega ?firma_pendiente=1 -> activa
-  // el filtro de la pildora de pendientes de firma (el guard de secuencia evita
-  // que la carga sin filtro pise este resultado).
-  if (route.query.firma_pendiente) {
-    filtro_firma_pendiente.value = true
-    options.value.page = 1
-    retrieveAllCertificates()
-  }
-
-  if (route.query.excel_pendiente) {
-    filtro_excel_pendiente.value = true
-    options.value.page = 1
-    retrieveAllCertificates()
-  }
 
   window.addEventListener('wss-reload-certificates', recargarPorWebSocket)
   window.addEventListener('wss-update-row',       fetchAndInjectSingleCert)

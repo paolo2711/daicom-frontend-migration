@@ -585,17 +585,21 @@ function getRowProps ({ item }) {
 const { begin: beginCertLoad, isLatest: isLatestCertLoad } = useLatestRequest()
 
 // ─── Watchers ─────────────────────────────────────────────────────────────────
-// Desde Inicio o una notificacion. Sin `desde` ni `hasta`, los ultimos ocho meses; vacios, sin limite de fecha.
+const buscar = debounce(alInicio)
+
+// Desde otra pantalla o una notificacion. Sin `desde` ni `hasta`, los ultimos ocho meses; vacios, sin limite de fecha.
 useRouteFilters(({ certificado, pildora: pedida, desde, hasta }) => {
   numero.value = certificado || ''
+  equipment.value = ''
+  client_id.value = null
+  lab_id.value = null
+  certificate_type.value = null
   pildora.value = pedida || null
   emission_date__gt.value = desde ?? haceOchoMeses()
   emission_date__lt.value = hasta ?? hoyISO()
-}, alInicio)
+}, buscar)
 
-watch([numero, certificate_type, client_id, lab_id], alInicio)
-// Texto libre: espera a que termine de escribir en vez de consultar por letra.
-watch(equipment, debounce(alInicio))
+watch([numero, equipment, certificate_type, client_id, lab_id], buscar)
 
 // El modal de lote muestra fila por fila que va a pasar. Con uno solo la fila
 // va marcada aunque ya tenga lo suyo: elegirlo es pedir reemplazarlo.

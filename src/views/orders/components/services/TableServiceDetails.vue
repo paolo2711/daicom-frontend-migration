@@ -147,6 +147,7 @@ import { ACCIONES_CERTIFICADO, algunoVivo } from '@/utils/certificates/acciones'
 import { estaEntregado } from '@/utils/certificates/entrega'
 import { vivo } from '@/utils/certificates/estado'
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
+import { rutaDelCertificado } from '@/utils/certificates/ruta'
 import { ACCIONES_LINEA, avanceDeLinea, certificadosDe, lineaAnulada, servicioDe } from '@/utils/orders/lineas'
 import { viva } from '@/utils/orders/estado'
 import { fechaCorta } from '@/utils/dates'
@@ -263,7 +264,7 @@ function onNubeClick (event, cert) {
 }
 
 function irACertificado (cert) {
-  router.push({ path: '/certificates', query: { correlativo: cert.correlative } }).catch(() => {})
+  router.push(rutaDelCertificado(cert.numero)).catch(() => {})
 }
 </script>
 

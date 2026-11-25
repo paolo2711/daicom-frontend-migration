@@ -23,7 +23,7 @@
           icon="mdi-certificate-outline"
           tooltip="Equipos sin certificado vinculado"
           @click="toggleSinExpediente"
-        >Sin expediente</filter-pill>
+        >Sin certificado</filter-pill>
 
         <filter-pill
           :active="vencidoFilter"
@@ -31,7 +31,7 @@
           icon="mdi-calendar-alert"
           tooltip="Certificado con más de 1 año (necesita recalibración)"
           @click="toggleVencido"
-        >Expediente vencido</filter-pill>
+        >Certificado vencido</filter-pill>
 
         <v-spacer></v-spacer>
 

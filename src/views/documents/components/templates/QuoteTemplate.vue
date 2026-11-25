@@ -131,8 +131,8 @@ import { fechaCorta } from '@/utils/dates'
 import { debounce } from '@/utils/debounce'
 import { avisarHecho } from '@/utils/documents/avisos'
 import {
-  DOCUMENTOS, LIMITES, TIPOS_DE_COTIZACION, TIPO_POR_DEFECTO, UNIDADES, cotizacionDe, esGrupo, grupoVacio, itemVacio,
-  quoteDefaultJSON,
+  CURRENT_QUOTE_SCHEMA, DOCUMENTOS, LIMITES, TIPOS_DE_COTIZACION, TIPO_POR_DEFECTO, UNIDADES, cotizacionDe, esGrupo,
+  grupoVacio, itemVacio, quoteDefaultJSON,
 } from '@/utils/documents/quoteDefaults'
 import { COTIZACION } from '@/utils/documents/tipos'
 import { mensajeDeError } from '@/utils/errors'
@@ -237,23 +237,25 @@ const titulo = computed(() => (numero.value
   ? `Editar ${numero.value}`
   : `Nueva ${definicion.value.nombre} de ${tipo.value.texto.toLowerCase()}`))
 
-// Lo que se va escribiendo queda en el navegador hasta guardar o cancelar: si
-// se cierra la pestaña, se ofrece al volver a abrir el mismo documento.
-const borrador = useLocalDraft(
-  () => `daicom_borrador_${props.tipoDeDocumento}_${documentoId.value || `nueva_${cotizacion.value.meta.kind}`}`,
-  {
-    resumen: (guardado) => {
-      const items = (guardado.cotizacion?.items || []).filter(fila => !esGrupo(fila) && fila.description?.trim()).length
-      const nombre = definicion.value.nombre
-      return items ? `Hay una ${nombre} sin guardar con ${items} ítem(s) de una sesión anterior.` : ''
-    },
+// El documento sin guardar: el que se edita, la nueva de cada tipo o la que sale de unas ordenes.
+const origen = ref('')
+const borrador = useLocalDraft({
+  clave: () => `${props.tipoDeDocumento}_${documentoId.value || `${cotizacion.value.meta.kind}_${origen.value}`}`,
+  version: CURRENT_QUOTE_SCHEMA,
+  datos: () => ({ cotizacion: cotizacion.value, clienteId: clienteId.value }),
+  llenar: (guardado) => {
+    cotizacion.value = cotizacionDe(guardado.cotizacion, props.tipoDeDocumento)
+    clienteId.value = guardado.clienteId
+    abrirElPrimero()
   },
-)
-watch([cotizacion, clienteId], () => borrador.guardar({ cotizacion: cotizacion.value, clienteId: clienteId.value }),
-  { deep: true })
+  resumen: (guardado) => {
+    const items = guardado.cotizacion.items.filter(fila => !esGrupo(fila) && fila.description?.trim()).length
+    return items && `Hay una ${definicion.value.nombre} sin guardar con ${items} ${items === 1 ? 'ítem' : 'ítems'}`
+  },
+})
 
 // Una existente o una nueva del tipo elegido: el tipo no se cambia despues. `desdeOrdenes`, lo que
-// sale de las ordenes elegidas (cliente e items), para una nueva ya llena.
+// sale de las ordenes elegidas (sus ids, cliente e items), para una nueva ya llena.
 async function open (documento = null, kind = TIPO_POR_DEFECTO, desdeOrdenes = null) {
   documentoId.value = documento?.id || null
   numero.value = documento?.document_number || ''
@@ -275,20 +277,14 @@ async function open (documento = null, kind = TIPO_POR_DEFECTO, desdeOrdenes = n
   pestana.value = 'info'
   cuenta.value = SIN_CUENTA
   datosAbiertos.value = !documento
+  origen.value = desdeOrdenes ? `ordenes_${desdeOrdenes.ordenes.join('_')}` : 'nueva'
   abrirElPrimero()
   dialog.value = true
-
-  if (desdeOrdenes) return
-  const recuperado = await borrador.ofrecer()
-  if (recuperado) {
-    cotizacion.value = cotizacionDe(recuperado.cotizacion, props.tipoDeDocumento)
-    clienteId.value = recuperado.clienteId
-    abrirElPrimero()
-  }
+  await borrador.abrir()
 }
 
 const close = () => {
-  borrador.descartar()
+  borrador.cerrar()
   dialog.value = false
 }
 

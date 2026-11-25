@@ -85,6 +85,7 @@ import PanelOrderRental from './PanelOrderRental.vue'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { datosDelEquipo } from '@/utils/equipments/datos'
 import { FECHAS_ALQUILER, FECHAS_EDITABLES } from '@/utils/orders/alquiler'
+import { equipoDeAlquiler } from '@/utils/orders/orderDefaults'
 
 const AddEquipment = defineAsyncComponent(() => import('@/views/inventory/components/AddEquipment.vue'))
 
@@ -126,7 +127,7 @@ function agregar(equipo) {
   if (!equipo) return
   const anterior = equipments.value.findLast(e => e.modo === 'nuevo')
   const fila = {
-    modo: 'nuevo',
+    ...equipoDeAlquiler(),
     equipment_id: equipo.id,
     internal_id: equipo.internal_id,
     name: equipo.name,
@@ -134,7 +135,6 @@ function agregar(equipo) {
     foto: equipo.foto,
     departure_date: anterior?.departure_date ?? null,
     expected_return_date: anterior?.expected_return_date ?? null,
-    delivery_notes: '',
   }
   equipments.value.push(fila)
   elegida.value = fila

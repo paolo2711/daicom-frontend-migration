@@ -95,6 +95,7 @@ import { copiarDebajo } from '@/utils/lists'
 import { usePermissions } from '@/composables/usePermissions'
 import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
 import { leerPagina, porPagina } from '@/utils/pagination'
+import { equipoDeServicio } from '@/utils/orders/orderDefaults'
 
 const props = defineProps({
   // El cliente de la orden, {id, name}: el titular de los certificados que no dicen otro.
@@ -168,7 +169,7 @@ function agregar(equipo) {
   const anterior = equipments.value.findLast(e => e.modo === 'nuevo')
   const igual = anterior?.name === equipo.name ? anterior : null
   abrir({
-    modo: 'nuevo',
+    ...equipoDeServicio(),
     name: equipo.name,
     lab: equipo.laboratorio?.id ?? igual?.lab ?? null,
     lab_data: equipo.laboratorio ?? igual?.lab_data ?? null,

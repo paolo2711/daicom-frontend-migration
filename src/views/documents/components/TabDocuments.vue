@@ -68,7 +68,7 @@ async function desdeOrdenes(ids) {
       })
       if (!isConfirmed) return
     }
-    formulario.value?.open(null, data.kind, data)
+    formulario.value?.open(null, data.kind, { ...data, ordenes: [...ids].sort() })
   } catch (err) {
     swal.fire({ icon: 'error', title: `No se armó la ${nombre}`,
                 text: mensajeDeError(err, `No se pudieron leer las órdenes para las ${plural}.`) })

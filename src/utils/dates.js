@@ -46,3 +46,7 @@ export function fechaISO(fecha) {
 }
 
 export const hoyISO = () => fechaISO(new Date())
+
+// Un Date como 'YYYY-MM-DD HH:mm', en hora local.
+export const fechaHoraISO = (fecha) =>
+  `${fechaISO(fecha)} ${dosCifras(fecha.getHours())}:${dosCifras(fecha.getMinutes())}`

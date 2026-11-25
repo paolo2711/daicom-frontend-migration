@@ -73,6 +73,7 @@ import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
 import DocumentsOrder from './DocumentsOrder.vue'
 import { sinPendientes, subirPendientes, vinculosAlCrear } from '@/utils/orders/documentos'
+import { CURRENT_ORDER_SCHEMA, ordenDe } from '@/utils/orders/orderDefaults'
 import ResumenEquipos from './ResumenEquipos.vue'
 import DialogCertificateOwners from './services/DialogCertificateOwners.vue'
 import VersionsOrderService from './services/VersionsOrderService.vue'
@@ -138,21 +139,35 @@ function aceptarCliente() {
   cambioDeCliente.value = null
 }
 
-// Solo servicio: los equipos de un alquiler se eligen del inventario. La que
-// sale de una cotizacion no usa borrador, para no pisar el que quedo en Ordenes:
-// se vuelve a armar desde la cotizacion.
-const borrador = useLocalDraft(() => 'daicom_borrador_orden_servicio')
-const desdeCotizacion = ref(false)
-const conBorrador = () => esDeServicio(order.value) && !desdeCotizacion.value && !editando.value
-
 watch(() => order.value.order_type, () => { calculateNextNumber() })
-
-watch([items_to_save, () => order.value.client, observaciones], ([items, client]) => {
-  if (conBorrador()) borrador.guardar({ client, items, observaciones: observaciones.value })
-}, { deep: true })
 
 // Al crear: lo que se vincula y se sube con la orden. Guardada, cada documento se guarda al momento.
 const documentosNuevos = ref(sinPendientes())
+
+// La orden sin guardar: la nueva de cada tipo o la que sale de una cotizacion. Los PDF por subir no se pueden guardar.
+const origen = ref('')
+const borrador = useLocalDraft({
+  clave: () => `orden_${order.value.order_type}_${origen.value}`,
+  version: CURRENT_ORDER_SCHEMA,
+  datos: () => {
+    const { client, client_order_reference } = order.value
+    const { cotizaciones, valorizaciones, guias } = documentosNuevos.value
+    return { client, client_order_reference, observaciones: observaciones.value, items: items_to_save.value,
+             vinculos: { cotizaciones, valorizaciones, guias } }
+  },
+  llenar,
+  resumen: ({ items }) => items.length && `Hay una orden de ${esDeServicio(order.value) ? 'servicio' : 'alquiler'} sin `
+    + `guardar con ${items.length} ${items.length === 1 ? 'equipo' : 'equipos'}`,
+})
+
+async function llenar(guardada) {
+  const { vinculos, items, observaciones: texto, ...datos } = ordenDe(guardada, order.value.order_type)
+  order.value = { ...order.value, ...datos }
+  observaciones.value = texto
+  documentosNuevos.value = { ...sinPendientes(), ...vinculos }
+  await nextTick()
+  formRef.value?.cargarFilas({ items })
+}
 // La pestaña Opciones: los documentos de la orden y, al editar una de servicio, las versiones de su ingreso.
 const opcionesDelPanel = computed(() => [
   { clave: 'documentos', titulo: 'Documentos', icono: 'mdi-paperclip' },
@@ -164,27 +179,14 @@ const opcionesDelPanel = computed(() => [
 async function open(tipo, cotizacion = null) {
   editando.value = null
   clienteOrden.value = null
-  documentosNuevos.value = { ...sinPendientes(), cotizaciones: cotizacion ? [cotizacion.documento] : [] }
-  items_to_save.value = []
-  observaciones.value = ''
-  order.value = { client: cotizacion?.client ?? null, order_type: tipo }
+  order.value = { order_type: tipo }
   sinPasar.value = cotizacion?.sin_pasar ?? []
-  desdeCotizacion.value = Boolean(cotizacion)
+  origen.value = cotizacion ? `cotizacion_${cotizacion.documento.id}` : 'nueva'
   dialog.value = true
   calculateNextNumber()
-
-  if (cotizacion) {
-    await nextTick()
-    formRef.value?.cargarFilas({ items: cotizacion.filas })
-    return
-  }
-  if (tipo !== 1) return
-  const recuperado = await borrador.ofrecer()
-  if (!recuperado) return
-  order.value.client = recuperado.client
-  observaciones.value = recuperado.observaciones || ''
-  await nextTick()
-  formRef.value?.cargarFilas(recuperado)
+  await llenar(cotizacion ? { client: cotizacion.client, items: cotizacion.filas,
+                              vinculos: { cotizaciones: [cotizacion.documento] } } : {})
+  await borrador.abrir()
 }
 
 // Una orden guardada, como la manda su fila, con sus equipos. `opcion`: la que se abre de entrada.
@@ -274,7 +276,7 @@ const vista = reactive(usePdfPreview(
 
 function close() {
   vista.cerrar()
-  if (conBorrador()) borrador.descartar()
+  borrador.cerrar()
   order.value.client = null
   items_to_save.value = []
   addOrderForm.value?.resetValidation()

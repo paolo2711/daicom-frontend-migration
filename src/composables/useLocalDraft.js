@@ -1,4 +1,5 @@
 import { getCurrentInstance, nextTick, onBeforeUnmount, watch } from 'vue'
+import { useFormChanges } from '@/composables/useFormChanges'
 import { Toast } from '@/plugins/alerts'
 import { useAuthStore } from '@/stores/authStore'
 import { fechaHora, fechaHoraISO } from '@/utils/dates'
@@ -22,24 +23,23 @@ function quitarVencidos () {
     .forEach(llave => localStorage.removeItem(llave)))
 }
 
-// Lo que se carga en un formulario queda en el navegador hasta guardarlo o cancelarlo, por usuario y por `clave` (que
-// formulario y desde donde). `llenar` devuelve los `datos` a la pantalla; sin `resumen`, no vale la pena ofrecerlos.
-export function useLocalDraft ({ clave, version, datos, llenar, resumen }) {
+// Lo que se carga en un formulario queda en el navegador hasta guardarlo o cancelarlo, por usuario y por `clave`; sin
+// clave no se guarda. Sin `resumen`, no vale la pena ofrecerlo. `fuera`: lo que es un cambio y no se puede guardar.
+export function useLocalDraft ({ clave, version, datos, llenar, resumen, fuera = () => null }) {
   const $swal = getCurrentInstance().appContext.config.globalProperties.$swal
   const usuario = useAuthStore().user?.username
 
   // Solo entre abrir y cerrar: lo que el formulario trae lleno no es un cambio.
   let activo = false
   let llave = null
-  let inicial = ''
 
-  const enTexto = () => JSON.stringify(datos())
+  const cambios = useFormChanges(() => ({ datos: datos(), fuera: fuera() }))
   const borrar = () => intentar(() => localStorage.removeItem(llave))
 
   // Se escribe al dejar de editar: serializar todo en cada tecla traba las listas largas.
   const escribir = debounce(() => {
-    if (!activo) return
-    if (enTexto() === inicial) return borrar()
+    if (!activo || !llave) return
+    if (!cambios.hayCambios()) return borrar()
     const borrador = { version, guardado: fechaHoraISO(new Date()), datos: datos() }
     intentar(() => localStorage.setItem(llave, JSON.stringify(borrador)))
   }, ESPERA)
@@ -77,17 +77,17 @@ export function useLocalDraft ({ clave, version, datos, llenar, resumen }) {
     escribir.cancelar()
     activo = false
     quitarVencidos()
-    llave = `${PREFIJO}${usuario}_${clave()}`
+    llave = clave() && `${PREFIJO}${usuario}_${clave()}`
     await nextTick()
-    inicial = enTexto()
-    const borrador = leer(llave)
+    cambios.empezar()
+    const borrador = llave && leer(llave)
     if (borrador) {
       try {
         await recuperar(borrador)
       } catch (error) {
         console.error(error)
         borrar()
-        await llenar(JSON.parse(inicial))
+        await llenar(cambios.comoSeAbrio().datos)
         Toast.fire({ icon: 'info', timer: 6000, title: 'No se recuperó el borrador',
                      text: `El del ${fechaHora(borrador.guardado)} ya no es compatible y se descartó.` })
       }
@@ -102,5 +102,5 @@ export function useLocalDraft ({ clave, version, datos, llenar, resumen }) {
     llave = null
   }
 
-  return { abrir, cerrar }
+  return { abrir, cerrar, puedeSalir: cambios.puedeSalir }
 }

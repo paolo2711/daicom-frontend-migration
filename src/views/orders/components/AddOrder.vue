@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="dialog" class="dialog-premium" fullscreen persistent>
     <v-card class="d-flex flex-column" style="height: 100%;">
-      <base-modal-header :title="titulo" icon="mdi-file-document-plus" @close="close">
+      <base-modal-header :title="titulo" icon="mdi-file-document-plus" @close="salir">
         <span v-if="!editando && next_order_number">
           Sig. Orden: <span class="font-weight-bold ml-1">{{ next_order_number }}</span>
         </span>
@@ -43,7 +43,7 @@
       <form-footer accion="Guardar orden" :listo="sePuedeGuardar" :ocupado="is_on_sending_process"
                    :vista="esDeServicio(order) ? vista : null" :titulo="titulo"
                    accion-en-vista="Guardar e imprimir" icono-en-vista="mdi-printer"
-                   @cancelar="close" @confirmar="save()" @confirmar-en-vista="save(true)">
+                   @cancelar="salir" @confirmar="save()" @confirmar-en-vista="save(true)">
         <template #inicio>
           <resumen-equipos :filas="items_to_save" :por-tipo="esDeServicio(order)" />
         </template>
@@ -144,10 +144,10 @@ watch(() => order.value.order_type, () => { calculateNextNumber() })
 // Al crear: lo que se vincula y se sube con la orden. Guardada, cada documento se guarda al momento.
 const documentosNuevos = ref(sinPendientes())
 
-// La orden sin guardar: la nueva de cada tipo o la que sale de una cotizacion. Los PDF por subir no se pueden guardar.
+// La orden sin guardar: la nueva de cada tipo o la que sale de una cotizacion. La ya guardada se abre como esta.
 const origen = ref('')
 const borrador = useLocalDraft({
-  clave: () => `orden_${order.value.order_type}_${origen.value}`,
+  clave: () => !editando.value && `orden_${order.value.order_type}_${origen.value}`,
   version: CURRENT_ORDER_SCHEMA,
   datos: () => {
     const { client, client_order_reference } = order.value
@@ -155,6 +155,7 @@ const borrador = useLocalDraft({
     return { client, client_order_reference, observaciones: observaciones.value, items: items_to_save.value,
              vinculos: { cotizaciones, valorizaciones, guias } }
   },
+  fuera: () => documentosNuevos.value.archivos.map(a => a.archivo.name),
   llenar,
   resumen: ({ items }) => items.length && `Hay una orden de ${esDeServicio(order.value) ? 'servicio' : 'alquiler'} sin `
     + `guardar con ${items.length} ${items.length === 1 ? 'equipo' : 'equipos'}`,
@@ -201,6 +202,7 @@ async function editar(orden, opcion = null) {
   await nextTick()
   formRef.value?.cargarLineas(lineas)
   if (opcion) formRef.value?.mostrarOpcion(opcion)
+  await borrador.abrir()
 }
 
 async function calculateNextNumber() {
@@ -273,6 +275,10 @@ const imprimirIngreso = (id) => abrirIngreso(id).catch(error => $swal.fire('La o
 const vista = reactive(usePdfPreview(
   () => OrderDataService.vistaPreviaIngreso({ client: order.value.client, items: items_to_save.value }),
   error => $swal.fire('No se pudo armar la vista previa', mensajeDeError(error, 'No se pudo armar la vista previa.'), 'error')))
+
+async function salir() {
+  if (await borrador.puedeSalir()) close()
+}
 
 function close() {
   vista.cerrar()

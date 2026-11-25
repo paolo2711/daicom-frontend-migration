@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="dialog" class="dialog-premium" fullscreen persistent>
     <v-card v-if="datos" class="d-flex flex-column" style="height: 100%;">
-      <base-modal-header title="Nueva guía de remisión" icon="mdi-truck-delivery-outline" @close="dialog = false">
+      <base-modal-header title="Nueva guía de remisión" icon="mdi-truck-delivery-outline" @close="salir">
         <span>Remitente · Transporte privado en vehículo M1 o L</span>
       </base-modal-header>
 
@@ -115,13 +115,13 @@
       </v-card-text>
 
       <form-footer accion="Emitir guía" icono="mdi-send" :listo="sePuedeEmitir" :ocupado="emitiendo"
-                   :vista="vista" titulo="Guía de remisión" @cancelar="dialog = false" @confirmar="emitir" />
+                   :vista="vista" titulo="Guía de remisión" @cancelar="salir" @confirmar="emitir" />
     </v-card>
   </v-dialog>
 </template>
 
 <script setup>
-import { computed, ref, reactive } from 'vue'
+import { computed, nextTick, ref, reactive } from 'vue'
 import { useRowDrag } from '@/composables/useRowDrag'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import DetailEmpty from '@/components/shared/DetailEmpty.vue'
@@ -130,6 +130,7 @@ import FormFooter from '@/components/shared/FormFooter.vue'
 import UbigeoField from '@/components/shared/UbigeoField.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
+import { useFormChanges } from '@/composables/useFormChanges'
 import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useSwal } from '@/composables/useSwal'
@@ -176,6 +177,7 @@ const { errores, marcarErrores } = useRowErrors(items)
 const indiceElegido = computed(() => items.value.indexOf(elegido.value))
 const sePuedeEmitir = computed(() => Boolean(clienteId.value && items.value.length))
 const paraElBack = () => ({ cliente: clienteId.value, ordenes: ordenes.value.map(o => o.id), datos: datos.value })
+const cambios = useFormChanges(paraElBack)
 
 function noSePudo (titulo, porDefecto, error) {
   marcarErrores(error.response?.data?.filas)
@@ -209,7 +211,7 @@ function borrar(indice) {
 }
 
 // `nueva` es lo que devuelve el back (cliente, ordenes, datos y motivos); `plantilla`, otra guia emitida.
-function open(nueva, plantilla = null) {
+async function open(nueva, plantilla = null) {
   emitidaDe.value = null
   clienteId.value = plantilla?.cliente ?? nueva.cliente
   clienteInicial.value = plantilla?.cliente_data ?? nueva.cliente_data
@@ -223,6 +225,12 @@ function open(nueva, plantilla = null) {
   pestana.value = 'info'
   datosAbiertos.value = true
   dialog.value = true
+  await nextTick()
+  cambios.empezar()
+}
+
+async function salir () {
+  if (await cambios.puedeSalir()) dialog.value = false
 }
 
 // El back responde enseguida y la manda a SUNAT en segundo plano: el formulario se cierra con lo escrito guardado.

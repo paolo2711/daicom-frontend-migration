@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="dialog" class="dialog-premium" fullscreen persistent>
     <v-card v-if="datos" class="d-flex flex-column" style="height: 100%;">
-      <base-modal-header title="Nota de crédito" icon="mdi-file-undo-outline" @close="dialog = false">
+      <base-modal-header title="Nota de crédito" icon="mdi-file-undo-outline" @close="salir">
         <span>{{ serie ? `${serie} · se numera al emitir` : 'Se numera al emitir' }}</span>
       </base-modal-header>
 
@@ -152,13 +152,13 @@
       </v-card-text>
 
       <form-footer accion="Emitir nota" icono="mdi-send" :listo="Boolean(grupo)" :ocupado="emitiendo"
-                   :vista="vista" titulo="Nota de crédito" @cancelar="dialog = false" @confirmar="emitir" />
+                   :vista="vista" titulo="Nota de crédito" @cancelar="salir" @confirmar="emitir" />
     </v-card>
   </v-dialog>
 </template>
 
 <script setup>
-import { computed, ref, watch, reactive } from 'vue'
+import { computed, nextTick, ref, watch, reactive } from 'vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import DetailEmpty from '@/components/shared/DetailEmpty.vue'
@@ -166,6 +166,7 @@ import OptionRows from '@/components/shared/OptionRows.vue'
 import FormFooter from '@/components/shared/FormFooter.vue'
 import SegmentedField from '@/components/shared/SegmentedField.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
+import { useFormChanges } from '@/composables/useFormChanges'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useSwal } from '@/composables/useSwal'
@@ -271,6 +272,9 @@ const recalcular = debounce(async () => {
 })
 watch([datos, filas, porMonto], recalcular, { deep: true })
 
+const cambios = useFormChanges(() => ({ accion: accion.value, datos: datos.value, filas: filas.value,
+                                       porMonto: porMonto.value }))
+
 function noSePudo (titulo, porDefecto, error) {
   swal.fire({ icon: 'error', title: titulo, text: mensajeDeError(error, porDefecto) })
 }
@@ -280,7 +284,7 @@ const vista = reactive(usePdfPreview(
   error => noSePudo('No se armó la vista previa', 'No se pudo armar la vista previa.', error)))
 
 // `nueva`: lo que devuelve el back para la factura (sus datos, motivos, items, cuotas y la sugerencia del deposito).
-function open (nueva) {
+async function open (nueva) {
   emitidaDe.value = null
   factura.value = nueva.factura
   serie.value = nueva.serie
@@ -292,6 +296,12 @@ function open (nueva) {
   accion.value = null
   cuenta.value = SIN_CUENTA
   dialog.value = true
+  await nextTick()
+  cambios.empezar()
+}
+
+async function salir () {
+  if (await cambios.puedeSalir()) dialog.value = false
 }
 
 async function emitir () {

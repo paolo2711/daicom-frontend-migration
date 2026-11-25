@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="dialog" class="dialog-premium" fullscreen persistent>
     <v-card v-if="datos" class="d-flex flex-column" style="height: 100%;">
-      <base-modal-header title="Nueva factura" icon="mdi-file-document-plus-outline" @close="dialog = false">
+      <base-modal-header title="Nueva factura" icon="mdi-file-document-plus-outline" @close="salir">
         <span>{{ serie ? `${serie} · se numera al emitir` : 'Se numera al emitir' }}</span>
       </base-modal-header>
 
@@ -110,13 +110,13 @@
       </v-card-text>
 
       <form-footer accion="Emitir factura" icono="mdi-send" :listo="sePuedeEmitir" :ocupado="emitiendo"
-                   :vista="vista" titulo="Factura" @cancelar="dialog = false" @confirmar="emitir" />
+                   :vista="vista" titulo="Factura" @cancelar="salir" @confirmar="emitir" />
     </v-card>
   </v-dialog>
 </template>
 
 <script setup>
-import { computed, ref, watch, reactive } from 'vue'
+import { computed, nextTick, ref, watch, reactive } from 'vue'
 import { useRowDrag } from '@/composables/useRowDrag'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
@@ -125,6 +125,7 @@ import SegmentedField from '@/components/shared/SegmentedField.vue'
 import OptionRows from '@/components/shared/OptionRows.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
+import { useFormChanges } from '@/composables/useFormChanges'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useRowErrors } from '@/composables/useRowErrors'
@@ -208,6 +209,8 @@ const opciones = computed(() => {
 const paraElBack = () => ({ cliente: clienteId.value, ordenes: ordenes.value.map(o => o.id),
                             order_type: tipoDeOrden.value, datos: datos.value })
 
+const cambios = useFormChanges(paraElBack)
+
 const { begin, isLatest } = useLatestRequest()
 const recalcular = debounce(async () => {
   if (!datos.value) return
@@ -263,7 +266,7 @@ const vista = reactive(usePdfPreview(
 
 // `nueva` es lo que devuelve el back: cliente, ordenes, tipo, serie, catalogo de detraccion y datos. Con `plantilla`
 // (otra factura emitida) van su cliente, items y condiciones; la fecha es hoy y guias, OC y cuotas quedan vacias.
-function open (nueva, plantilla = null) {
+async function open (nueva, plantilla = null) {
   emitidaDe.value = null
   clienteId.value = plantilla?.cliente_id ?? nueva.cliente
   clienteInicial.value = plantilla?.cliente_data ?? nueva.cliente_data
@@ -284,6 +287,12 @@ function open (nueva, plantilla = null) {
   pestana.value = 'info'
   datosAbiertos.value = true
   dialog.value = true
+  await nextTick()
+  cambios.empezar()
+}
+
+async function salir () {
+  if (await cambios.puedeSalir()) dialog.value = false
 }
 
 // El back responde enseguida y la manda a SUNAT en segundo plano: el formulario se cierra con lo escrito guardado.

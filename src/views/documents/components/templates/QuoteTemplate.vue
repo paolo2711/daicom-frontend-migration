@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="dialog" class="dialog-premium" fullscreen persistent>
     <v-card class="d-flex flex-column" style="height: 100%;">
-      <base-modal-header :title="titulo" :icon="tipo.icono" @close="close">
+      <base-modal-header :title="titulo" :icon="tipo.icono" @close="salir">
         <span>
           <template v-if="!numero && numeroNuevo">
             Correlativo: <span class="font-weight-bold ml-1">{{ numeroNuevo }}</span> ·
@@ -105,7 +105,7 @@
       </v-card-text>
 
       <form-footer :accion="`Guardar ${definicion.nombre}`" :listo="Boolean(clienteId && cantidadDeItems)"
-                   :ocupado="guardando" :vista="vista" :titulo="titulo" @cancelar="close" @confirmar="guardar" />
+                   :ocupado="guardando" :vista="vista" :titulo="titulo" @cancelar="salir" @confirmar="guardar" />
     </v-card>
   </v-dialog>
 </template>
@@ -281,6 +281,10 @@ async function open (documento = null, kind = TIPO_POR_DEFECTO, desdeOrdenes = n
   abrirElPrimero()
   dialog.value = true
   await borrador.abrir()
+}
+
+async function salir () {
+  if (await borrador.puedeSalir()) close()
 }
 
 const close = () => {

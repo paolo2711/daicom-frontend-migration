@@ -1,4 +1,3 @@
-import VueSweetalert2 from "vue-sweetalert2"
 import Swal from "sweetalert2"
 import "sweetalert2/dist/sweetalert2.min.css" // CSS Nativo de SWAL
 
@@ -7,9 +6,6 @@ const options = {
     confirmButtonColor: '#1E8449', // variables.success
     cancelButtonColor: '#fc4b6c',  // variables.accent
     reverseButtons: true,
-    // La copia de SweetAlert2 que trae vue-sweetalert2 exige que este escrito,
-    // aunque ya sea el valor por defecto; sin esto avisa en cada fire.
-    backdrop: true,
     allowOutsideClick: () => {
         const popup = Swal.getPopup()
         if (popup) {
@@ -27,7 +23,7 @@ const options = {
 }
 
 export default function registerAlerts(app) {
-    app.use(VueSweetalert2, options)
+    app.config.globalProperties.$swal = Swal.mixin(options)
 }
 
 // Toast canónico de la app. Se basa en el Swal BASE (no en el mixin global de

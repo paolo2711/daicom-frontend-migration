@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, getCurrentInstance } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import wsNotificationService from '@/services/websockets/wsNotificationService'
 import { useAppStore } from '@/stores/appStore'
@@ -59,8 +59,6 @@ const cerrarSocket = () => {
 
 const appStore = useAppStore()
 const statusStore = useStatusStore()
-const { appContext } = getCurrentInstance()
-const $swal = appContext.config.globalProperties.$swal
 
 // Lo que el servidor siguio haciendo sin conexion llega como el ultimo aviso
 // de cada tarea (websockets/panel.py): asi ninguna queda colgada en el panel.
@@ -98,7 +96,7 @@ const conectarWebSocket = () => {
 
   socket.onmessage = (event) => {
     const data = JSON.parse(event.data)
-    wsNotificationService.handle(data, appStore, $swal)
+    wsNotificationService.handle(data, appStore)
   }
 
   window.enviarProgresoWebSocket = (certId, progress, status, code, attempts, task_type = 'qr', step = '', error_msg = '', is_cloud_error = false, offline_url = null) => {

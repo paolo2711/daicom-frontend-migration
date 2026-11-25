@@ -4,7 +4,7 @@
                   texto="Elige «Cobro…» en el menú de una orden o haz clic en su semáforo." />
 
     <template v-else>
-      <div class="pa-3 border-b-thin flex-shrink-0">
+      <div class="pa-3 border-b-thin flex-shrink-0 position-relative">
         <div class="d-flex align-center ga-2">
           <v-icon color="primary">mdi-cash-multiple</v-icon>
           <span class="text-subtitle-2 font-weight-bold">{{ titulo }}</span>
@@ -14,17 +14,18 @@
                  @click="emit(vinculando ? 'limpiar-seleccion' : 'limpiar-foco')" />
         </div>
         <div v-if="subtitulo" class="text-caption text-medium-emphasis">{{ subtitulo }}</div>
+        <v-progress-linear :active="cargando" indeterminate absolute location="bottom" height="2" color="primary" />
       </div>
 
-      <div class="cuerpo d-flex flex-column ga-3 pa-3 flex-grow-1">
+      <div class="cuerpo d-flex flex-column ga-3 pa-3 flex-grow-1" :class="{ cargando }">
         <amount-breakdown v-for="t in totales" :key="t.currency" class="total-de-la-orden"
                           v-bind="desgloseDeOrden(t, varias ? 'Total de las órdenes' : 'Total de la orden')" />
 
-        <table-loading-overlay :loading="cargando" :isEmpty="facturas.length === 0">
+        <div>
           <div v-if="facturas.length" class="text-caption text-medium-emphasis mb-2">
             {{ facturas.length === 1 ? '1 comprobante' : `${facturas.length} comprobantes` }}
           </div>
-          <div v-if="!facturas.length" class="py-6 text-center text-caption text-medium-emphasis">
+          <div v-if="!facturas.length && !cargando" class="py-6 text-center text-caption text-medium-emphasis">
             {{ varias ? 'Estas órdenes todavía no tienen comprobante.' : 'Esta orden todavía no tiene comprobante.' }}
           </div>
 
@@ -63,7 +64,7 @@
               </div>
             </v-expand-transition>
           </div>
-        </table-loading-overlay>
+        </div>
 
         <div v-if="motivoDeNoVincular" class="text-caption text-medium-emphasis">{{ motivoDeNoVincular }}</div>
         <paginated-autocomplete v-else :key="buscador" :model-value="null" v-bind="CAMPO"
@@ -98,7 +99,6 @@ import AmountBreakdown from '@/components/shared/AmountBreakdown.vue'
 import { desgloseDeFactura, desgloseDeOrden } from '@/utils/billing/desglose'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
-import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import DetailEmpty from '@/components/shared/DetailEmpty.vue'
 import { useOpenRow } from '@/composables/useCurrentRows'
 import { useLatestRequest } from '@/composables/useLatestRequest'
@@ -244,8 +244,6 @@ async function cobrarYa () {
 
 watch(() => aCobrar.value.map(o => o.id).join(','), () => {
   abierta.value = null
-  facturas.value = []
-  totales.value = []
   recargar()
 })
 
@@ -263,6 +261,8 @@ onUnmounted(() => {
 <style scoped>
 .panel-cobro { max-height: 85vh; }
 .cuerpo { overflow-y: auto; min-height: 0; }
+/* Lo de la orden anterior se queda, apagado, hasta que llega lo nuevo: el panel no cambia de alto al cargar. */
+.cargando { opacity: 0.5; pointer-events: none; }
 .comprobante { border-radius: 0.625rem; background: rgba(var(--v-theme-on-surface), 0.05); overflow: hidden; }
 .comprobante + .comprobante { margin-top: 0.5rem; }
 .comprobante.abierta { background: rgba(var(--v-theme-primary), 0.1); }

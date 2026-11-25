@@ -3,7 +3,7 @@
     <div ref="lista" class="flex-shrink-0" :style="{ width: `${ancho}%` }">
       <slot />
     </div>
-    <split-divider @pointerdown="empezarArrastre" />
+    <split-divider ref="divisor" @pointerdown="empezarArrastre" />
     <div class="lado flex-grow-1">
       <slot name="lado" />
     </div>
@@ -38,7 +38,7 @@ const anchoDeLaLista = defineModel('anchoDeLaLista', { type: Number, default: 0 
 const abierto = defineModel('abierto', { type: Boolean, default: false })
 
 const { mdAndUp } = useDisplay()
-const { contenedor, lista, ancho, arrastrando, empezarArrastre, enRem } =
+const { contenedor, lista, divisor, ancho, arrastrando, empezarArrastre, enRem } =
   useSplitWidth(props.clave, { inicial: props.inicial, minimoDelPanel: props.minimoDelPanel })
 const minimo = `${props.minimoDelPanel}rem`
 

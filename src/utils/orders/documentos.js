@@ -16,8 +16,9 @@ export const COTIZACION = 4
 export const GUIA_REMISION = 5
 
 // Un documento de Documentos (cotizacion o valorizacion) que se vincula; el hecho fuera se sube en Documentos.
-function deDocumentos (tipo, documento, campo) {
+function deDocumentos (tipo, documento, campo, anterior = null) {
   return {
+    anterior,
     tipo, documento, campo, llave: 'documento', nombre: DOCUMENTOS[documento].nombre, plural: DOCUMENTOS[documento].plural,
     sinResultados: (kind) => `El cliente no tiene ${DOCUMENTOS[documento].plural.toLowerCase()} de ${kind} emitidas`,
     buscar: ({ cliente, kind, query, page, size }) => DocumentsDataService.getAll({
@@ -31,13 +32,14 @@ function deDocumentos (tipo, documento, campo) {
   }
 }
 
-// Las secciones que vinculan algo del sistema. `campo`: el del pedido al crear la orden y el de los pendientes;
-// `llave`: el campo de OrderDocument. La guia hecha fuera se sube en PDF a la misma seccion.
+// Las secciones que vinculan algo del sistema. `campo`: el del pedido al crear la orden y el de los pendientes; `llave`:
+// el de OrderDocument; `anterior`: un PDF de Order que ya no se sube. La guia hecha fuera se sube en PDF (`enPdf`).
 export const VINCULABLES = [
-  deDocumentos(COTIZACION, DE_COTIZACION, 'cotizaciones'),
+  deDocumentos(COTIZACION, DE_COTIZACION, 'cotizaciones', { campo: 'quote_pdf', texto: 'Cotización (anterior)' }),
   deDocumentos(VALORIZACION, DE_VALORIZACION, 'valorizaciones'),
   {
     tipo: GUIA_REMISION, campo: 'guias', llave: 'guia', nombre: 'guía', plural: 'Guías de remisión', enPdf: true,
+    anterior: { campo: 'dispatch_guide_pdf', texto: 'Guía de salida (anterior)' },
     sinResultados: () => 'El cliente no tiene guías de remisión vigentes',
     buscar: ({ cliente, query, page, size }) => BillingDataService.listDispatchGuides({
       cliente, q: query || undefined, vigentes: true, ...porPagina(page, size),
@@ -53,14 +55,10 @@ export const sinPendientes = () => ({ cotizaciones: [], valorizaciones: [], guia
 export const vinculosAlCrear = (pendientes) =>
   Object.fromEntries(VINCULABLES.map(v => [v.campo, pendientes[v.campo].map(d => d.id)]))
 
-// Los PDF de un alquiler que van uno solo por orden (campos de Order). La de salida es de antes: las de ahora
-// son guías de remisión.
-export const GUIAS = [
-  { campo: 'dispatch_guide_pdf', texto: 'Guía de salida (anterior)', anterior: true },
-  { campo: 'return_guide_pdf', texto: 'Guía de retorno' },
-]
+// El PDF de un alquiler que va uno solo por orden: un campo de Order.
+export const GUIA_DE_RETORNO = 'return_guide_pdf'
 
-// Un PDF para la orden: `destino` es un tipo de OrderDocument o un campo de GUIAS.
+// Un PDF para la orden: `destino` es un tipo de OrderDocument o GUIA_DE_RETORNO.
 export function subirArchivo(ordenId, { destino, numero, archivo }) {
   const datos = new FormData()
   if (typeof destino === 'number') {

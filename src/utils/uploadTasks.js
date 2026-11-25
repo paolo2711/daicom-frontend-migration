@@ -27,6 +27,8 @@ export const cancelable = (tarea) => enCurso(tarea) && !SIN_VUELTA.includes(tare
 export const fallida   = (tarea) => FALLIDA.includes(tarea.status)
 export const terminada = (tarea) => TERMINADA.includes(tarea.status)
 export const detenida  = (tarea) => DETENIDA.includes(tarea.status)
+// Termino, con algo que decir.
+export const conAviso  = (tarea) => tarea.status === 'warning'
 
 export const esConversion = (tarea) => TIPOS_CONVERSION.includes(tarea.type)
 

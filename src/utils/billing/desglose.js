@@ -37,13 +37,15 @@ export function desgloseDeFactura (factura, abonos = null) {
   return { filas, final: loQueQueda(Number(factura.saldo_pendiente), moneda) }
 }
 
-// El total de una orden en una moneda, como lo manda su resumen.
-export function desgloseDeOrden (total) {
+// El total de las ordenes en una moneda, como lo manda su resumen. De que se compone, solo si son dos cosas.
+export function desgloseDeOrden (total, titulo) {
   const moneda = total.currency
-  const suma = (titulo, valor) => (Number(valor) ? [{ titulo, valor: monto(valor, moneda) }] : [])
-  const resta = (titulo, valor) => suma(titulo, valor).map(fila => ({ ...fila, resta: true }))
+  const suma = (nombre, valor) => (Number(valor) ? [{ titulo: nombre, valor: monto(valor, moneda) }] : [])
+  const resta = (nombre, valor) => suma(nombre, valor).map(fila => ({ ...fila, resta: true }))
+  const partes = [...suma('Facturado', total.facturado), ...suma('Sin comprobante', total.sin_comprobante)]
   return {
-    filas: [...suma('Facturado', total.facturado), ...suma('Sin comprobante', total.sin_comprobante),
+    total: { titulo, valor: monto(total.total, moneda) },
+    filas: [...(partes.length > 1 ? partes : []),
             ...resta('Notas de crédito', total.notas), ...resta('Detracción', total.detraccion),
             { titulo: 'Cobrado', valor: monto(total.cobrado, moneda), resta: true }],
     final: loQueQueda(Number(total.falta), moneda),

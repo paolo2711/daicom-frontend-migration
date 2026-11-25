@@ -17,13 +17,12 @@
       </div>
 
       <div class="cuerpo d-flex flex-column ga-3 pa-3 flex-grow-1">
-        <div v-if="totales.length" class="titulo-de-seccion">{{ varias ? 'Total de las órdenes' : 'Total de la orden' }}</div>
-        <amount-breakdown v-for="t in totales" :key="t.currency" v-bind="desgloseDeOrden(t)"
-                          class="total-de-la-orden px-3 py-2 rounded-lg" />
+        <amount-breakdown v-for="t in totales" :key="t.currency" class="total-de-la-orden"
+                          v-bind="desgloseDeOrden(t, varias ? 'Total de las órdenes' : 'Total de la orden')" />
 
         <table-loading-overlay :loading="cargando" :isEmpty="facturas.length === 0">
-          <div v-if="facturas.length" class="titulo-de-seccion mb-2">
-            {{ facturas.length === 1 ? 'Su comprobante' : `Sus ${facturas.length} comprobantes` }}
+          <div v-if="facturas.length" class="text-caption text-medium-emphasis mb-2">
+            {{ facturas.length === 1 ? '1 comprobante' : `${facturas.length} comprobantes` }}
           </div>
           <div v-if="!facturas.length" class="py-6 text-center text-caption text-medium-emphasis">
             {{ varias ? 'Estas órdenes todavía no tienen comprobante.' : 'Esta orden todavía no tiene comprobante.' }}
@@ -37,7 +36,7 @@
                   {{ tipoDe(factura).icono }}</v-icon>
                 <span class="font-weight-bold">{{ nombreDe(factura) }}</span>
                 <v-spacer />
-                <span class="font-weight-bold text-no-wrap">
+                <span class="text-no-wrap">
                   {{ montoDe(factura) ? monto(factura.amount, factura.currency) : '—' }}</span>
               </div>
               <div class="d-flex justify-space-between ga-2 text-caption text-medium-emphasis">
@@ -162,7 +161,7 @@ const subtitulo = computed(() => {
 
 // Con varias ordenes, cada comprobante dice a cuales va.
 const detalleDe = (factura) => [varias.value ? factura.ordenes_vinculadas.map(o => o.order_number).join(', ') : '',
-  factura.cliente, fechaCorta(factura.invoice_date)].filter(Boolean).join(' · ')
+  fechaCorta(factura.invoice_date)].filter(Boolean).join(' · ')
 
 const facturas = ref([])
 const totales = ref([])
@@ -270,8 +269,10 @@ onUnmounted(() => {
 .cabeza { cursor: pointer; }
 .cabeza:hover { background: rgba(var(--v-theme-on-surface), 0.04); }
 .detalle { border-top: thin solid rgba(var(--v-border-color), var(--v-border-opacity)); padding-top: 0.5rem; }
-.dato { display: flex; justify-content: space-between; gap: 0.5rem; padding-top: 0.25rem; font-size: 0.75rem; }
 .botones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .botones > * { flex: 1 1 auto; }
-.total-de-la-orden { background: rgba(var(--v-theme-on-surface), 0.05); }
+.total-de-la-orden {
+  padding-bottom: 0.75rem;
+  border-bottom: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
 </style>

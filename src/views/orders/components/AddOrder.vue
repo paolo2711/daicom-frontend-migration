@@ -260,7 +260,7 @@ async function guardarEdicion() {
   const orden = editando.value
   close()
   avisarNumeros(`${data.order_number} guardada`, nuevas.map(([fila]) => fila), data.codigos,
-                nuevas.map(([, estimado]) => estimado), data.warning)
+                nuevas.map(([, estimado]) => estimado))
   emit('guardada', orden)
 }
 

@@ -2,8 +2,7 @@
   <div class="d-flex flex-column ga-3">
     <section v-for="v in VINCULABLES" :key="v.campo" class="seccion">
       <div class="titulo-de-seccion">{{ v.plural }}</div>
-      <div v-if="vinculados[v.campo].length || anteriorDe(v)">
-        <attachment-row v-if="anteriorDe(v)" :titulo="v.anterior.texto" :pdf="anteriorDe(v)" />
+      <div v-if="vinculados[v.campo].length">
         <attachment-row v-for="d in vinculados[v.campo]" :key="d.clave" :titulo="d.numero || 'S/N'" :detalle="d.detalle"
                         :pdf="d.pdf" :accion="d.id ? 'desvincular' : 'eliminar'" @quitar="quitar(d, v)" />
       </div>
@@ -31,24 +30,16 @@
                          @subida="d => vincular(subiendoDe, subiendoDe.aOpcion(d))" />
 
     <template v-if="alquiler">
-      <section class="seccion">
-        <div class="titulo-de-seccion">Guía de retorno</div>
-        <attachment-row v-bind="retorno">
-          <add-new-button icono="mdi-upload" :texto="retorno.pdf ? 'Reemplazar la guía de retorno' : 'Subir la guía de retorno'"
-                          :loading="subiendo === GUIA_DE_RETORNO" @click="elegir(GUIA_DE_RETORNO)" />
-        </attachment-row>
-      </section>
-
-      <section class="seccion">
-        <div class="titulo-de-seccion">Órdenes de compra</div>
-        <div v-if="ordenesDeCompra.length">
-          <attachment-row v-for="d in ordenesDeCompra" :key="d.clave" :titulo="d.numero || 'S/N'" :detalle="d.detalle"
+      <section v-for="t in SUBIBLES" :key="t.tipo" class="seccion">
+        <div class="titulo-de-seccion">{{ t.plural }}</div>
+        <div v-if="subidos[t.tipo].length">
+          <attachment-row v-for="d in subidos[t.tipo]" :key="d.clave" :titulo="d.numero || 'S/N'" :detalle="d.detalle"
                           :pdf="d.pdf" accion="eliminar" @quitar="quitar(d)" />
         </div>
-        <v-text-field v-model="numeroDeOc" label="N.° (opcional)" v-bind="CAMPO">
+        <v-text-field v-model="numeros[t.tipo]" label="N.° (opcional)" v-bind="CAMPO">
           <template #append>
-            <add-new-button icono="mdi-upload" texto="Subir orden de compra" :loading="subiendo === ORDEN_DE_COMPRA"
-                            @click="elegir(ORDEN_DE_COMPRA)" />
+            <add-new-button icono="mdi-upload" :texto="`Subir ${t.nombre}`" :loading="subiendo === t.tipo"
+                            @click="elegir(t.tipo)" />
           </template>
         </v-text-field>
       </section>
@@ -70,7 +61,7 @@ import { fechaCorta } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 import { CAMPO } from '@/utils/fields'
 import {
-  GUIA_DE_RETORNO, ORDEN_DE_COMPRA, VINCULABLES, sinPendientes, subirArchivo, vincularDocumento,
+  SUBIBLES, VINCULABLES, sinPendientes, subirArchivo, vincularDocumento,
 } from '@/utils/orders/documentos'
 import QuoteUploadDialog from '@/views/documents/components/templates/QuoteUploadDialog.vue'
 
@@ -86,11 +77,9 @@ const pendientes = defineModel('pendientes', { type: Object, default: sinPendien
 const { appContext } = getCurrentInstance()
 const $swal = appContext.config.globalProperties.$swal
 
-// Los PDF que van en la orden misma, de uno solo cada uno.
-const deLaFila = ref({})
-const anteriorDe = ({ anterior }) => anterior && deLaFila.value[anterior.campo]
 const guardados = ref([])
-const numeroDeOc = ref('')
+// Por tipo, el numero del que se va a subir.
+const numeros = reactive({})
 const selector = ref(null)
 const destino = ref(null)
 const subiendo = ref(null)
@@ -123,23 +112,12 @@ const vinculados = computed(() => Object.fromEntries(VINCULABLES.map(v => [v.cam
   : [...pendientes.value[v.campo].map(d => ({ ...d, clave: `p-${d.id}`, detalle: 'se vincula al guardar' })),
      ...subidasPendientes(v.tipo)]])))
 
-const ordenesDeCompra = computed(() => (props.orden
-  ? guardados.value.filter(d => d.tipo === ORDEN_DE_COMPRA).map(deLaOrden)
-  : subidasPendientes(ORDEN_DE_COMPRA).map(d => ({ ...d, numero: d.pendiente.numero }))))
-
-const retorno = computed(() => {
-  const [pendiente] = subidasPendientes(GUIA_DE_RETORNO)
-  if (pendiente) return { titulo: pendiente.numero, detalle: pendiente.detalle, pdf: pendiente.pdf }
-  const pdf = deLaFila.value[GUIA_DE_RETORNO]
-  return { titulo: pdf ? 'Guía de retorno' : '', detalle: pdf ? '' : 'Sin PDF', pdf }
-})
+const subidos = computed(() => Object.fromEntries(SUBIBLES.map(({ tipo }) => [tipo, props.orden
+  ? guardados.value.filter(d => d.tipo === tipo).map(deLaOrden)
+  : subidasPendientes(tipo).map(d => ({ ...d, numero: d.pendiente.numero }))])))
 
 async function cargar() {
-  const [{ data: fila }, { data: lista }] = await Promise.all([
-    OrderDataService.getFila(props.orden.id), OrderDataService.listDocuments(props.orden.id),
-  ])
-  deLaFila.value = fila
-  guardados.value = lista
+  guardados.value = (await OrderDataService.listDocuments(props.orden.id)).data
 }
 
 watch(() => props.orden?.id, (id) => {
@@ -194,8 +172,8 @@ async function quitarGuardado(d, vinculable) {
   }
 }
 
-function elegir(campoOTipo) {
-  destino.value = campoOTipo
+function elegir(tipo) {
+  destino.value = tipo
   selector.value.value = ''
   selector.value.click()
 }
@@ -203,14 +181,10 @@ function elegir(campoOTipo) {
 async function alElegirArchivo(evento) {
   const archivo = evento.target.files?.[0]
   if (!archivo) return
-  const esOc = destino.value === ORDEN_DE_COMPRA
-  // Los de OrderDocument van varios; la guia de retorno, una sola.
-  const varios = typeof destino.value === 'number'
-  const pendiente = { destino: destino.value, numero: esOc ? numeroDeOc.value : '', archivo }
-  if (esOc) numeroDeOc.value = ''
+  const pendiente = { destino: destino.value, numero: numeros[destino.value] || '', archivo }
+  numeros[destino.value] = ''
   if (!props.orden) {
-    pendientes.value.archivos = [...pendientes.value.archivos.filter(a => a.destino !== pendiente.destino || varios),
-      pendiente]
+    pendientes.value.archivos = [...pendientes.value.archivos, pendiente]
     return
   }
   subiendo.value = destino.value

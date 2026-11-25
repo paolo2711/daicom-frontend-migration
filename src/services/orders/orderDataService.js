@@ -102,22 +102,16 @@ class OrderDataService {
         return axios.patch(`orders/${id}`, data, { headers });
     }
 
-    subirGuia(id, data) {
-        let headers = authHeader();
-        headers['Content-Type'] = "multipart/form-data";
-        return axios.patch(`orders/${id}`, data, { headers });
-    }
+    // ─── DOCUMENTOS ──────────────────────────────────────────────────────────
 
-    // ─── DOCUMENTOS (OC / Valorizaciones — solo alquiler) ─────────────────────
-
-    /** Lista los documentos de una orden. tipo opcional: 1=OC, 2=Valorización. */
+    /** Los documentos de una orden, de un tipo o todos. */
     listDocuments(order_id, tipo) {
         let params = {};
         if (tipo) params.tipo = tipo;
         return axios.get(`orders/${order_id}/documents`, { params, headers: authHeader() });
     }
 
-    /** Sube un documento (FormData: tipo, numero, fecha, pdf). */
+    /** Sube un PDF (FormData: tipo, numero, pdf) o vincula un documento del sistema. */
     addDocument(order_id, data) {
         let headers = authHeader();
         headers['Content-Type'] = "multipart/form-data";

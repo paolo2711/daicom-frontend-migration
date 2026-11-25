@@ -239,10 +239,7 @@ const onPdfDropped = (file) => {
   onPdfSelected(file)
 }
 
-// Al abrir: cargar datos si es edición, o leer el PDF si llegó soltado sobre el
-// panel. immediate + observar invoiceToEdit resuelve el caso en que el
-// componente se monta con v-if cuando el modal ya está abierto (el watch de
-// modelValue solo no alcanzaba a dispararse).
+// Al abrir: los datos de la que se edita, o los del PDF si llegó soltado sobre el panel.
 const cargarDatosIniciales = () => {
   if (!props.modelValue) return
   if (props.invoiceToEdit) {
@@ -292,8 +289,8 @@ const pedirDetraccion = debounce(async () => {
 watch(() => [facturaData.value.amount, facturaData.value.invoice_date, facturaData.value.exchange_rate,
   monedaActual.value, tipoOrden.value], pedirDetraccion)
 
-watch(() => props.modelValue, cargarDatosIniciales, { immediate: true })
-watch(() => props.invoiceToEdit, cargarDatosIniciales)
+// Por su id: si la lista se recarga, lo escrito sigue.
+watch([() => props.modelValue, () => props.invoiceToEdit?.id], cargarDatosIniciales, { immediate: true })
 
 const buildFormData = () => {
   const data = new FormData()

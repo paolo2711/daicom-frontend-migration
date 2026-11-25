@@ -23,5 +23,5 @@ const ESQUEMA_VIGENTE = {
 }
 
 export const vivo = (documento) => documento?.status !== ANULADO
-export const editable = (documento) =>
+export const delFormatoVigente = (documento) =>
   mismoFormato(documento?.schema_version, ESQUEMA_VIGENTE[documento?.document_type])

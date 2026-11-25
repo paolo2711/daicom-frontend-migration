@@ -116,7 +116,7 @@ const props = defineProps({
   variantes: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['editar', 'crear-orden'])
+const emit = defineEmits(['editar', 'usar-de-plantilla', 'crear-orden'])
 
 // Con un PDF a la vista, la tabla se angosta: quedan numero, fecha, cliente y total.
 const EN_LA_LISTA_ANGOSTA = ['document_number', 'issue_date', 'client_name', 'total_amount']
@@ -190,7 +190,9 @@ async function refrescarFila (event) {
 
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, ejecutarAccion } =
   useDocumentActions(documentos, {
-    editar: documento => emit('editar', documento), crearOrden: documento => emit('crear-orden', documento),
+    editar: documento => emit('editar', documento),
+    usarDePlantilla: documento => emit('usar-de-plantilla', documento),
+    crearOrden: documento => emit('crear-orden', documento),
   })
 
 // El documento cuyo PDF se ve al lado de la lista (PdfSplitView).

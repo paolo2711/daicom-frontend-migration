@@ -237,7 +237,7 @@ const titulo = computed(() => (numero.value
   ? `Editar ${numero.value}`
   : `Nueva ${definicion.value.nombre} de ${tipo.value.texto.toLowerCase()}`))
 
-// El documento sin guardar: el que se edita, la nueva de cada tipo o la que sale de unas ordenes.
+// El documento sin guardar: el que se edita, la nueva de cada tipo, la que sale de unas ordenes o la copia de otra.
 const origen = ref('')
 const borrador = useLocalDraft({
   clave: () => `${props.tipoDeDocumento}_${documentoId.value || `${cotizacion.value.meta.kind}_${origen.value}`}`,
@@ -254,9 +254,10 @@ const borrador = useLocalDraft({
   },
 })
 
-// Una existente o una nueva del tipo elegido: el tipo no se cambia despues. `desdeOrdenes`, lo que
-// sale de las ordenes elegidas (sus ids, cliente e items), para una nueva ya llena.
-async function open (documento = null, kind = TIPO_POR_DEFECTO, desdeOrdenes = null) {
+// Una existente o una nueva de ese tipo, que no se cambia despues: vacia, con lo que sale de unas ordenes (sus ids,
+// cliente e items) o copiada de otra, con la fecha de hoy.
+async function open ({ documento = null, plantilla = null, desdeOrdenes = null,
+                       kind = plantilla?.kind ?? TIPO_POR_DEFECTO } = {}) {
   documentoId.value = documento?.id || null
   numero.value = documento?.document_number || ''
   numeroNuevo.value = ''
@@ -265,7 +266,7 @@ async function open (documento = null, kind = TIPO_POR_DEFECTO, desdeOrdenes = n
       .then(({ data }) => { numeroNuevo.value = data.numero })
       .catch(() => {})
   }
-  clienteId.value = documento?.client || desdeOrdenes?.client || null
+  clienteId.value = documento?.client || desdeOrdenes?.client || plantilla?.client || null
   const nueva = quoteDefaultJSON(kind, props.tipoDeDocumento)
   if (desdeOrdenes) {
     Object.assign(nueva, {
@@ -273,11 +274,15 @@ async function open (documento = null, kind = TIPO_POR_DEFECTO, desdeOrdenes = n
       items: desdeOrdenes.items.map(item => ({ ...itemVacio(TIPOS_DE_COTIZACION[kind].unidad), ...item })),
     })
   }
+  if (plantilla) {
+    const { meta, ...datos } = plantilla.document_data
+    Object.assign(nueva, datos, { meta: { ...meta, date: nueva.meta.date } })
+  }
   cotizacion.value = cotizacionDe(documento ? documento.document_data : nueva, props.tipoDeDocumento)
   pestana.value = 'info'
   cuenta.value = SIN_CUENTA
   datosAbiertos.value = !documento
-  origen.value = origenDe(desdeOrdenes?.ordenes ?? [])
+  origen.value = plantilla ? `plantilla_${plantilla.id}` : origenDe(desdeOrdenes?.ordenes ?? [])
   abrirElPrimero()
   dialog.value = true
   await borrador.abrir()

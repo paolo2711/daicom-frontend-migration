@@ -1,9 +1,10 @@
-import { editable, vivo } from '@/utils/documents/estado'
+import { usarComoPlantilla } from '@/utils/actions'
+import { delFormatoVigente, vivo } from '@/utils/documents/estado'
 import { OTRA_PESTANA } from '@/utils/pdf'
 
 // Lo que se puede hacer con un documento, para el menu de la tabla (click
 // derecho y boton de la fila). Los campos de cada una, en utils/actions.js.
-// Uno anulado solo se ve.
+// Uno anulado solo se ve o se usa de plantilla.
 
 export const ACCIONES_DOCUMENTO = [
   {
@@ -19,10 +20,11 @@ export const ACCIONES_DOCUMENTO = [
   {
     clave: 'editar', grupo: 'documento', varios: false,
     icono: 'mdi-pencil', texto: 'Editar',
-    detalle: ([documento]) => (editable(documento) ? '' : 'Solo lectura'),
+    detalle: ([documento]) => (delFormatoVigente(documento) ? '' : 'Solo lectura'),
     visible: ([documento]) => vivo(documento),
-    disponible: ([documento]) => editable(documento),
+    disponible: ([documento]) => delFormatoVigente(documento),
   },
+  { ...usarComoPlantilla(delFormatoVigente), grupo: 'documento' },
   {
     clave: 'crear-orden', grupo: 'documento', varios: false,
     icono: 'mdi-file-document-plus', texto: 'Crear orden',

@@ -47,8 +47,7 @@
                             :model-value="estaMarcada(linea)" @update:model-value="alternar(linea)" />
           </td>
           <td>
-            <equipment-photo :foto="linea.equipment_data.foto" class="cursor-pointer" title="Ver fotos"
-                             @click.stop="verEquipo(linea, 0, true)" />
+            <equipment-photo :foto="linea.equipment_data.foto" abre @abrir="verFotos(linea.equipment)" />
           </td>
           <td><equipment-code :codigo="linea.equipment_data.internal_id" :estado="ESTADOS_ALQUILER[linea.estado]" /></td>
           <td>
@@ -97,6 +96,7 @@
     </batch-action-dialog>
 
     <add-equipment ref="addEquipmentRef" @saved="emit('reload')" />
+    <photo-viewer ref="visor" />
   </v-card>
 </template>
 
@@ -110,8 +110,10 @@ import BatchActionDialog from '@/components/shared/BatchActionDialog.vue'
 import EquipmentCertificate from '@/components/shared/EquipmentCertificate.vue'
 import EquipmentCode from '@/components/shared/EquipmentCode.vue'
 import EquipmentPhoto from '@/components/shared/EquipmentPhoto.vue'
+import PhotoViewer from '@/components/shared/PhotoViewer.vue'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { soltar } from '@/composables/useCurrentRows'
+import { useEquipmentPhotos } from '@/composables/useEquipmentPhotos'
 import { useRowSelection } from '@/composables/useRowSelection'
 import { accionesPara } from '@/utils/actions'
 import AddEquipment from '@/views/inventory/components/AddEquipment.vue'
@@ -164,8 +166,9 @@ async function darPaso (lineas, { clave, fecha }) {
   Toast.fire({ timer: 2400, icon: 'success', title: `${PASOS[clave].hecho}${cuantos}` })
 }
 
-// `pestana` y `fotos`, como en Inventario.
-const verEquipo = (linea, pestana = 0, fotos = false) => addEquipmentRef.value?.open(linea.equipment, pestana, fotos)
+// `pestana`, como en Inventario.
+const verEquipo = (linea, pestana = 0) => addEquipmentRef.value?.open(linea.equipment, pestana)
+const { visor, verFotos } = useEquipmentPhotos()
 
 </script>
 

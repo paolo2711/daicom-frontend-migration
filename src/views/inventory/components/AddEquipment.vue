@@ -55,7 +55,7 @@
                       variant="outlined" class="rounded"
                       style="position: relative; width: 70px; height: 70px; cursor: zoom-in;"
                       :style="i === 0 ? 'border: 2px solid rgb(var(--v-theme-primary)) !important;' : ''"
-                      @click="openViewer(i)"
+                      @click="visor?.open(existingImages, i)"
                     >
                       <v-img :src="img.image" height="100%" width="100%" cover></v-img>
 
@@ -231,27 +231,13 @@
 
     </v-card>
 
-    <v-dialog v-model="viewerDialog" fullscreen hide-overlay transition="dialog-bottom-transition">
-      <v-card tile color="black" class="d-flex flex-column" style="height: 100vh;">
-        <v-toolbar color="transparent" class="text-white" flat>
-          <v-spacer></v-spacer>
-          <v-btn icon variant="text" size="large" @click="viewerDialog = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-toolbar>
-        <v-carousel v-model="viewerIndex" hide-delimiters height="100%" :show-arrows="existingImages.length > 1 ? 'hover' : false">
-          <v-carousel-item v-for="(img, i) in existingImages" :key="i">
-            <v-img :src="img.image" height="100%"></v-img>
-          </v-carousel-item>
-        </v-carousel>
-      </v-card>
-    </v-dialog>
+    <photo-viewer ref="visor" />
   </v-dialog>
 </template>
 
 <script setup>
 import { avisarHecho } from '@/utils/documents/avisos'
-import { ref, reactive, computed, watch, nextTick } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useTheme } from 'vuetify'
 import Swal from 'sweetalert2'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
@@ -264,6 +250,7 @@ import { debounce } from '@/utils/debounce'
 import { VIGENCIAS } from '@/utils/equipments/expediente'
 import { leerPagina, porPagina } from '@/utils/pagination'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
+import PhotoViewer from '@/components/shared/PhotoViewer.vue'
 
 const emit = defineEmits(['saved'])
 
@@ -284,8 +271,7 @@ const existingImages = ref([])
 const deletedImagesIds = ref([])
 const imageFiles = ref([])
 const previewUrls = ref([])
-const viewerDialog = ref(false)
-const viewerIndex = ref(0)
+const visor = ref(null)
 
 // Variables para Certificado
 const correlative_search = ref('')
@@ -344,7 +330,7 @@ const onFilesDropped = (files) => {
 }
 
 // `id`: el equipo que se edita; sin el, uno nuevo.
-async function open(id = null, targetTab = 0, openViewerImage = false) {
+async function open(id = null, targetTab = 0) {
   let item = null
   try {
     if (id) item = (await InventoryDataService.get(id)).data
@@ -370,15 +356,6 @@ async function open(id = null, targetTab = 0, openViewerImage = false) {
   // Pestana con la que abre: 0 = Datos y Fotos, 1 = Certificado.
   tab.value = targetTab
   dialog.value = true
-  // Clic en la foto de la tabla: abrimos el visor en la principal (indice 0).
-  if (openViewerImage && existingImages.value.length) {
-    nextTick(() => openViewer(0))
-  }
-}
-
-const openViewer = (index) => {
-  viewerIndex.value = index
-  viewerDialog.value = true
 }
 
 const close = () => {

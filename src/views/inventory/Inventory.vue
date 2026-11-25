@@ -36,7 +36,7 @@ const openHistory = (item) => {
   historyModal.value?.open(item.id)
 }
 
-const openEdit = (item, tab = 0, viewer = false) => {
-  addModal.value?.open(item.id, tab, viewer)
+const openEdit = (item, tab = 0) => {
+  addModal.value?.open(item.id, tab)
 }
 </script>

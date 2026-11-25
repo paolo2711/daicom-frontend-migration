@@ -87,8 +87,7 @@
         </template>
 
         <template v-slot:item.photo="{ item }">
-          <equipment-photo :foto="item.foto" class="cursor-pointer" title="Ver fotos"
-                           @click="editItem(item, 0, true)" />
+          <equipment-photo :foto="item.foto" abre @abrir="verFotos(item.id)" />
         </template>
 
         <template v-slot:item.internal_id="{ item }">
@@ -131,6 +130,8 @@
     </table-loading-overlay>
 
     <state-legend titulo="Estados del equipo:" :estados="ESTADOS_DE_EQUIPO" />
+
+    <photo-viewer ref="visor" />
   </v-container>
 </template>
 
@@ -144,6 +145,7 @@ import { mensajeDeError } from '@/utils/errors'
 import { debounce } from '@/utils/debounce'
 import { ESTADOS_DE_EQUIPO, estadoDe } from '@/utils/equipments/estado'
 import { leerPagina, porPagina } from '@/utils/pagination'
+import { useEquipmentPhotos } from '@/composables/useEquipmentPhotos'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { usePage } from '@/composables/usePage'
 import { useRouteFilters } from '@/composables/useRouteFilters'
@@ -153,6 +155,7 @@ import EquipmentCertificate from '@/components/shared/EquipmentCertificate.vue'
 import EquipmentCode from '@/components/shared/EquipmentCode.vue'
 import EquipmentPhoto from '@/components/shared/EquipmentPhoto.vue'
 import FilterPill from '@/components/shared/FilterPill.vue'
+import PhotoViewer from '@/components/shared/PhotoViewer.vue'
 import StateLegend from '@/components/shared/StateLegend.vue'
 
 const emit = defineEmits(['edit-item', 'view-history'])
@@ -220,9 +223,11 @@ watch([search, estadoFilter, expedienteFilter, vencidoFilter], debounce(alInicio
 const detalleDe = (item) => [estadoDe(item).texto, item.current_rental?.client_name, item.current_rental?.order_number]
   .filter(Boolean).join(' · ')
 
-// tab: 0 = Datos y Fotos, 1 = Certificado. viewer: abrir el visor de imagenes.
-const editItem = (item, tab = 0, viewer = false) => {
-  emit('edit-item', item, tab, viewer)
+const { visor, verFotos } = useEquipmentPhotos()
+
+// tab: 0 = Datos y Fotos, 1 = Certificado.
+const editItem = (item, tab = 0) => {
+  emit('edit-item', item, tab)
 }
 
 const deleteItem = (item) => {

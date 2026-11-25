@@ -23,6 +23,9 @@ function quitarVencidos () {
     .forEach(llave => localStorage.removeItem(llave)))
 }
 
+// Desde donde se abrio un formulario que puede salir de unas ordenes.
+export const origenDe = (ids) => (ids.length ? `ordenes_${[...ids].sort().join('_')}` : 'nueva')
+
 // Lo que se carga en un formulario queda en el navegador hasta guardarlo o cancelarlo, por usuario y por `clave`; sin
 // clave no se guarda. Sin `resumen`, no vale la pena ofrecerlo. `fuera`: lo que es un cambio y no se puede guardar.
 export function useLocalDraft ({ clave, version, datos, llenar, resumen, fuera = () => null }) {
@@ -88,6 +91,8 @@ export function useLocalDraft ({ clave, version, datos, llenar, resumen, fuera =
         console.error(error)
         borrar()
         await llenar(cambios.comoSeAbrio().datos)
+        await nextTick()
+        cambios.empezar()
         Toast.fire({ icon: 'info', timer: 6000, title: 'No se recuperó el borrador',
                      text: `El del ${fechaHora(borrador.guardado)} ya no es compatible y se descartó.` })
       }
@@ -99,8 +104,23 @@ export function useLocalDraft ({ clave, version, datos, llenar, resumen, fuera =
     activo = false
     escribir.cancelar()
     if (llave) borrar()
-    llave = null
   }
 
-  return { abrir, cerrar, puedeSalir: cambios.puedeSalir }
+  function reanudar () {
+    activo = true
+    escribir()
+  }
+
+  // Lo que no se puede enviar dos veces: se va antes y vuelve solo si el back contesto que lo rechaza.
+  async function enviar (pedido) {
+    cerrar()
+    try {
+      return await pedido()
+    } catch (error) {
+      if (error.response?.status === 400) reanudar()
+      throw error
+    }
+  }
+
+  return { abrir, cerrar, reanudar, enviar, puedeSalir: cambios.puedeSalir }
 }

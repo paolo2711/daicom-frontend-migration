@@ -158,7 +158,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref, watch, reactive } from 'vue'
+import { computed, ref, watch, reactive } from 'vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import DetailEmpty from '@/components/shared/DetailEmpty.vue'
@@ -166,11 +166,12 @@ import OptionRows from '@/components/shared/OptionRows.vue'
 import FormFooter from '@/components/shared/FormFooter.vue'
 import SegmentedField from '@/components/shared/SegmentedField.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
-import { useFormChanges } from '@/composables/useFormChanges'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { useLocalDraft } from '@/composables/useLocalDraft'
 import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useSwal } from '@/composables/useSwal'
 import BillingDataService from '@/services/billing/billingDataService'
+import { CURRENT_CREDIT_NOTE_SCHEMA, itemDeNota } from '@/utils/billing/facturas'
 import { fechaCorta } from '@/utils/dates'
 import { debounce } from '@/utils/debounce'
 import { mensajeDeError } from '@/utils/errors'
@@ -272,8 +273,19 @@ const recalcular = debounce(async () => {
 })
 watch([datos, filas, porMonto], recalcular, { deep: true })
 
-const cambios = useFormChanges(() => ({ accion: accion.value, datos: datos.value, filas: filas.value,
-                                       porMonto: porMonto.value }))
+// La nota sin emitir de esa factura.
+const borrador = useLocalDraft({
+  clave: () => `nota_${factura.value.id}`,
+  version: CURRENT_CREDIT_NOTE_SCHEMA,
+  datos: () => ({ accion: accion.value, datos: datos.value, filas: filas.value, porMonto: porMonto.value }),
+  llenar: (guardada) => {
+    accion.value = guardada.accion
+    datos.value = { ...datos.value, ...guardada.datos }
+    filas.value = guardada.filas.map(fila => ({ ...itemDeNota(fila), ...fila }))
+    porMonto.value = { ...porMonto.value, ...guardada.porMonto }
+  },
+  resumen: (guardada) => guardada.accion && 'Hay una nota de crédito sin emitir',
+})
 
 function noSePudo (titulo, porDefecto, error) {
   swal.fire({ icon: 'error', title: titulo, text: mensajeDeError(error, porDefecto) })
@@ -291,23 +303,24 @@ async function open (nueva) {
   fechas.value = nueva.fechas
   motivos.value = nueva.motivos
   datos.value = { ...nueva.datos, cuotas: JSON.parse(JSON.stringify(nueva.datos.cuotas)) }
-  filas.value = nueva.datos.items.map(i => ({ ...i, incluir: false, original: i.quantity }))
+  filas.value = nueva.datos.items.map(itemDeNota)
   porMonto.value = { description: '', unit_price: '' }
   accion.value = null
   cuenta.value = SIN_CUENTA
   dialog.value = true
-  await nextTick()
-  cambios.empezar()
+  await borrador.abrir()
 }
 
 async function salir () {
-  if (await cambios.puedeSalir()) dialog.value = false
+  if (!await borrador.puedeSalir()) return
+  borrador.cerrar()
+  dialog.value = false
 }
 
 async function emitir () {
   emitiendo.value = true
   try {
-    const { data } = await BillingDataService.emitCreditNote(factura.value.id, paraElBack())
+    const { data } = await borrador.enviar(() => BillingDataService.emitCreditNote(factura.value.id, paraElBack()))
     vista.cerrar()
     dialog.value = false
     emitidaDe.value = data.id
@@ -322,6 +335,7 @@ const corregible = (id) => emitidaDe.value === id
 function corregir () {
   emitidaDe.value = null
   dialog.value = true
+  borrador.reanudar()
 }
 
 defineExpose({ open, corregir, corregible })

@@ -125,14 +125,13 @@ import SegmentedField from '@/components/shared/SegmentedField.vue'
 import OptionRows from '@/components/shared/OptionRows.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
-import { useFormChanges } from '@/composables/useFormChanges'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { origenDe, useLocalDraft } from '@/composables/useLocalDraft'
 import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useSwal } from '@/composables/useSwal'
 import BillingDataService from '@/services/billing/billingDataService'
-import { UNIDAD_DE_FACTURA } from '@/utils/billing/facturas'
-import { itemVacio } from '@/utils/documents/quoteDefaults'
+import { CURRENT_INVOICE_SCHEMA, itemDeFactura } from '@/utils/billing/facturas'
 import { debounce } from '@/utils/debounce'
 import { mensajeDeError } from '@/utils/errors'
 import { copiarDebajo } from '@/utils/lists'
@@ -209,7 +208,29 @@ const opciones = computed(() => {
 const paraElBack = () => ({ cliente: clienteId.value, ordenes: ordenes.value.map(o => o.id),
                             order_type: tipoDeOrden.value, datos: datos.value })
 
-const cambios = useFormChanges(paraElBack)
+// La factura sin emitir: la nueva, la que sale de unas ordenes o la que usa otra de plantilla.
+const origen = ref('')
+const borrador = useLocalDraft({
+  clave: () => `factura_${origen.value}`,
+  version: CURRENT_INVOICE_SCHEMA,
+  datos: () => ({ clienteId: clienteId.value, clienteInicial: clienteInicial.value, ordenes: ordenes.value,
+                  tipoDeOrden: tipoDeOrden.value, datos: datos.value }),
+  // Primero el tipo: al cambiar propone su codigo de detraccion, y el que vale es el guardado.
+  llenar: async (guardada) => {
+    tipoDeOrden.value = guardada.tipoDeOrden
+    await nextTick()
+    clienteId.value = guardada.clienteId
+    clienteInicial.value = guardada.clienteInicial
+    ordenes.value = guardada.ordenes
+    datos.value = { ...datos.value, ...guardada.datos,
+                    items: guardada.datos.items.map(item => ({ ...itemDeFactura(), ...item })) }
+    abierto.value = null
+  },
+  resumen: (guardada) => {
+    const n = guardada.datos.items.filter(item => item.description?.trim()).length
+    return n && `Hay una factura sin emitir con ${n} ${n === 1 ? 'ítem' : 'ítems'}`
+  },
+})
 
 const { begin, isLatest } = useLatestRequest()
 const recalcular = debounce(async () => {
@@ -243,7 +264,7 @@ function abrir (clave, item = null) {
 }
 
 function agregar () {
-  const item = { ...itemVacio(UNIDAD_DE_FACTURA), incluye_igv: false }
+  const item = itemDeFactura()
   datos.value.items.push(item)
   abrir(null, item)
 }
@@ -281,25 +302,27 @@ async function open (nueva, plantilla = null) {
   datos.value = JSON.parse(JSON.stringify(plantilla
     ? { ...plantilla.datos, fecha: nueva.datos.fecha, tipo_de_cambio: '', cuotas: [], guias: [], orden_de_compra: '' }
     : nueva.datos))
+  origen.value = plantilla ? `plantilla_${plantilla.id}` : origenDe(nueva.ordenes.map(o => o.id))
   abierto.value = null
   if (!datos.value.items.length) agregar()
   cuenta.value = SIN_CUENTA
   pestana.value = 'info'
   datosAbiertos.value = true
   dialog.value = true
-  await nextTick()
-  cambios.empezar()
+  await borrador.abrir()
 }
 
 async function salir () {
-  if (await cambios.puedeSalir()) dialog.value = false
+  if (!await borrador.puedeSalir()) return
+  borrador.cerrar()
+  dialog.value = false
 }
 
 // El back responde enseguida y la manda a SUNAT en segundo plano: el formulario se cierra con lo escrito guardado.
 async function emitir () {
   emitiendo.value = true
   try {
-    const { data } = await BillingDataService.emitInvoice(paraElBack())
+    const { data } = await borrador.enviar(() => BillingDataService.emitInvoice(paraElBack()))
     vista.cerrar()
     dialog.value = false
     emitidaDe.value = data.id
@@ -314,6 +337,7 @@ const corregible = (id) => emitidaDe.value === id
 function corregir () {
   emitidaDe.value = null
   dialog.value = true
+  borrador.reanudar()
 }
 
 defineExpose({ open, corregir, corregible })

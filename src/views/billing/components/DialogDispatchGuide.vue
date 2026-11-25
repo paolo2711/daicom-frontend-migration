@@ -121,7 +121,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref, reactive } from 'vue'
+import { computed, ref, reactive } from 'vue'
 import { useRowDrag } from '@/composables/useRowDrag'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import DetailEmpty from '@/components/shared/DetailEmpty.vue'
@@ -130,12 +130,12 @@ import FormFooter from '@/components/shared/FormFooter.vue'
 import UbigeoField from '@/components/shared/UbigeoField.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
-import { useFormChanges } from '@/composables/useFormChanges'
+import { origenDe, useLocalDraft } from '@/composables/useLocalDraft'
 import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useSwal } from '@/composables/useSwal'
 import BillingDataService from '@/services/billing/billingDataService'
-import { OTROS, itemVacio } from '@/utils/billing/guias'
+import { CURRENT_DISPATCH_GUIDE_SCHEMA, OTROS, itemVacio } from '@/utils/billing/guias'
 import { hoyISO } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 import { copiarDebajo } from '@/utils/lists'
@@ -177,7 +177,27 @@ const { errores, marcarErrores } = useRowErrors(items)
 const indiceElegido = computed(() => items.value.indexOf(elegido.value))
 const sePuedeEmitir = computed(() => Boolean(clienteId.value && items.value.length))
 const paraElBack = () => ({ cliente: clienteId.value, ordenes: ordenes.value.map(o => o.id), datos: datos.value })
-const cambios = useFormChanges(paraElBack)
+
+// La guia sin emitir: la nueva, la que sale de unas ordenes o la que usa otra de plantilla.
+const origen = ref('')
+const borrador = useLocalDraft({
+  clave: () => `guia_${origen.value}`,
+  version: CURRENT_DISPATCH_GUIDE_SCHEMA,
+  datos: () => ({ clienteId: clienteId.value, clienteInicial: clienteInicial.value, ordenes: ordenes.value,
+                  datos: datos.value }),
+  llenar: (guardada) => {
+    clienteId.value = guardada.clienteId
+    clienteInicial.value = guardada.clienteInicial
+    ordenes.value = guardada.ordenes
+    datos.value = { ...datos.value, ...guardada.datos,
+                    items: guardada.datos.items.map(item => ({ ...itemVacio(), ...item })) }
+    elegido.value = null
+  },
+  resumen: (guardada) => {
+    const n = guardada.datos.items.filter(item => item.descripcion?.trim()).length
+    return n && `Hay una guía sin emitir con ${n} ${n === 1 ? 'ítem' : 'ítems'}`
+  },
+})
 
 function noSePudo (titulo, porDefecto, error) {
   marcarErrores(error.response?.data?.filas)
@@ -220,24 +240,26 @@ async function open(nueva, plantilla = null) {
   datos.value = JSON.parse(JSON.stringify(plantilla
     ? { ...plantilla.datos, fecha_traslado: nueva.datos.fecha_traslado }
     : nueva.datos))
+  origen.value = plantilla ? `plantilla_${plantilla.id}` : origenDe(nueva.ordenes.map(o => o.id))
   elegido.value = null
   if (!datos.value.items.length) agregar()
   pestana.value = 'info'
   datosAbiertos.value = true
   dialog.value = true
-  await nextTick()
-  cambios.empezar()
+  await borrador.abrir()
 }
 
 async function salir () {
-  if (await cambios.puedeSalir()) dialog.value = false
+  if (!await borrador.puedeSalir()) return
+  borrador.cerrar()
+  dialog.value = false
 }
 
 // El back responde enseguida y la manda a SUNAT en segundo plano: el formulario se cierra con lo escrito guardado.
 async function emitir() {
   emitiendo.value = true
   try {
-    const { data } = await BillingDataService.createDispatchGuide(paraElBack())
+    const { data } = await borrador.enviar(() => BillingDataService.createDispatchGuide(paraElBack()))
     vista.cerrar()
     dialog.value = false
     emitidaDe.value = data.id
@@ -252,6 +274,7 @@ const corregible = (id) => emitidaDe.value === id
 function corregir () {
   emitidaDe.value = null
   dialog.value = true
+  borrador.reanudar()
 }
 
 defineExpose({ open, corregir, corregible })

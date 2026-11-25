@@ -122,7 +122,7 @@ import OptionRows from '@/components/shared/OptionRows.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
 import { useLatestRequest } from '@/composables/useLatestRequest'
-import { useLocalDraft } from '@/composables/useLocalDraft'
+import { origenDe, useLocalDraft } from '@/composables/useLocalDraft'
 import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useRowDrag } from '@/composables/useRowDrag'
 import { useRowErrors } from '@/composables/useRowErrors'
@@ -277,7 +277,7 @@ async function open (documento = null, kind = TIPO_POR_DEFECTO, desdeOrdenes = n
   pestana.value = 'info'
   cuenta.value = SIN_CUENTA
   datosAbiertos.value = !documento
-  origen.value = desdeOrdenes ? `ordenes_${desdeOrdenes.ordenes.join('_')}` : 'nueva'
+  origen.value = origenDe(desdeOrdenes?.ordenes ?? [])
   abrirElPrimero()
   dialog.value = true
   await borrador.abrir()

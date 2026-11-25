@@ -19,6 +19,45 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.11.3.0',
+    fecha: '2026-11-25',
+    nuevo: [
+      'Alquileres: acciones en lote; se marcan varios equipos y desde la barra o el menú se registra el inicio o la devolución, se deshace una devolución o se quita de la orden, en la misma ventana de lote de Certificados.',
+      'Alquileres: un alquiler puede tener varias guías de retorno, cada una con su PDF.',
+      'Alquileres e Inventario: cada equipo muestra su foto, marca, modelo, serie y certificado, y el alquiler cuenta sus días.',
+      'Cotizaciones y valorizaciones: «Usar como plantilla» en el menú.',
+      'Certificados: se pueden descargar varios a la vez.',
+      'Formularios: al cerrar sin guardar se pregunta, y lo escrito hoy se puede recuperar, también en facturas, guías y notas.',
+    ],
+    cambio: [
+      'Cobro: el panel de la orden muestra arriba el total y al final lo que falta cobrar.',
+      'Cobro: la detracción se registra como un abono, y «Sin comprobante» se marca con su monto en el formulario de la factura.',
+      'Alquileres: «Salió el» pasa a «Inicio», lo pone quien registra y puede ser a futuro; las fechas se corrigen en «Ver y editar».',
+      'Alquileres: la lista se ve como la de Servicios, con los equipos devueltos y la cuenta de documentos.',
+      'Facturas: el número es obligatorio al subir y el PDF se guarda con ese número.',
+      'Guías y Facturas: el buscador busca por número, también por la serie sola.',
+      'Inicio: cada tarjeta lleva a su lista con el mismo número, y sale «Te toca».',
+      'Órdenes y Certificados: las píldoras se prenden de a una.',
+      'Todas las listas empiezan con 30 filas.',
+      'Inventario: la foto de la lista abre solo las fotos, y dice «Certificado» en vez de «Expediente».',
+      'Las fotos de las listas cargan en chico, mucho más livianas.',
+      'Al volver la conexión solo se recarga la lista que cambió.',
+    ],
+    arreglo: [
+      'Desvincular una factura de una orden la borraba con su PDF y sus abonos; ahora solo la desvincula.',
+      'Órdenes: «Falta Pago» no contaba las órdenes con una factura pagada y otra pendiente.',
+      'Facturas: el estado se actualiza al editar el monto o al vincularla a una orden.',
+      'Anular una orden suelta sus facturas, que se conservan con sus abonos.',
+      'Reemplazar un PDF o una foto en Facturas, Órdenes e Inventario ya no pierde el anterior si algo falla.',
+      'Guías mostraba solo 10 y sin el total.',
+      'Ir al certificado desde Órdenes ahora lo busca.',
+      'Un enlace a Inventario ya no se suma a los filtros que estaban puestos.',
+      'El panel al lado de una lista ya no se sale de la pantalla ni corta la tabla.',
+      'Editar una factura desde Cobro ya no pierde lo escrito.',
+      'Una pregunta ya no se cierra sola si hay un aviso en pantalla.',
+    ],
+  },
+  {
     version: '3.11.2.1',
     fecha: '2026-11-20',
     cambio: [

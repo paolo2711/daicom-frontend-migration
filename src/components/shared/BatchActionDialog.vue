@@ -17,10 +17,11 @@
             :max="fechaMaxima"
             density="compact"
             variant="outlined"
-            hide-details="auto"
-            :error-messages="intento ? errorDeFecha : ''"
+            hide-details
+            :error="Boolean(aviso)"
             class="campo-de-la-accion"
           />
+          <span v-if="aviso" class="text-caption text-error">{{ aviso }}</span>
           <v-select
             v-if="accion.opcion"
             v-model="opcion"
@@ -155,6 +156,7 @@ const errorDeFecha = computed(() => {
   if (!fecha.value) return 'Falta la fecha'
   return fechaMaxima.value && fecha.value > fechaMaxima.value ? 'No puede ser a futuro' : ''
 })
+const aviso = computed(() => (intento.value ? errorDeFecha.value : ''))
 
 const habilitadas = computed(() => filas.value.filter(f => !bloqueada(f)))
 // Las marcadas que se pueden: una que lo elegido arriba bloquea vuelve marcada si deja de estarlo.

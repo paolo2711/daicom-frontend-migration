@@ -3,7 +3,7 @@ import { throttle } from '@/utils/throttle'
 
 // Refresca la pildora de "pendientes de firma" con el numero real del server,
 // con los avisos que pueden cambiarla y ningun otro.
-export const AVISOS_QUE_LA_CAMBIAN = new Set(['RELOAD_TABLES', 'RELOAD_CERTIFICATES', 'cert_id'])
+export const AVISOS_QUE_LA_CAMBIAN = new Set(['RELOAD_CERTIFICATES', 'cert_id'])
 export const NOTIFICACIONES_QUE_LA_CAMBIAN = new Set(['firma_solicitada', 'qr_subido'])
 
 let destino = null

@@ -67,6 +67,10 @@ const recuperarTareas = () => {
   if (tareas.length) socket.send(JSON.stringify({ action: 'recuperar_tareas', tareas }))
 }
 
+// La ultima bolsa de avisos que llego (websockets/batching.py): al volver se piden las tablas que cambiaron despues.
+let ultimaBolsa = null
+const recuperarAvisos = () => socket.send(JSON.stringify({ action: 'recuperar_avisos', bolsa: ultimaBolsa }))
+
 const conectarWebSocket = () => {
   cerrarSocket()
 
@@ -84,18 +88,16 @@ const conectarWebSocket = () => {
   const wsUrl = `${wsProtocol}//${urlObj.host}/ws/notificaciones/${tokenParam}`
   socket = new WebSocket(wsUrl)
 
-  // Conexion recuperada -> quitamos el banner y refrescamos: mientras estuvo
-  // caida se perdieron eventos, asi que la pantalla quedo desactualizada.
+  // Conexion recuperada -> quitamos el banner y pedimos lo que se perdio.
   socket.onopen = () => {
+    statusStore.clear('ws_down')
     recuperarTareas()
-    if (statusStore.active.includes('ws_down')) {
-      statusStore.clear('ws_down')
-      window.dispatchEvent(new CustomEvent('wss-reload-tables'))
-    }
+    recuperarAvisos()
   }
 
   socket.onmessage = (event) => {
     const data = JSON.parse(event.data)
+    ultimaBolsa = data.bolsa ?? ultimaBolsa
     wsNotificationService.handle(data, appStore)
   }
 

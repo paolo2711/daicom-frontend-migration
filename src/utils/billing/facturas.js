@@ -1,7 +1,6 @@
 import Swal from 'sweetalert2'
 import BillingDataService from '@/services/billing/billingDataService'
 import { avisarHecho } from '@/utils/documents/avisos'
-import { itemVacio } from '@/utils/documents/quoteDefaults'
 import { mensajeDeError } from '@/utils/errors'
 import { importe, monto } from '@/utils/money'
 import { vencimiento } from '@/utils/orders/cobro'
@@ -45,18 +44,6 @@ export const OPCIONES_NUEVA_FACTURA = [
   { valor: EMITIR, texto: 'Emitir factura', detalle: 'Con la serie de la app, ante SUNAT', icono: 'mdi-send-outline' },
   { valor: SUBIR, texto: 'Subir de KeyFacil', detalle: 'Su PDF, para cobrarla', icono: 'mdi-file-upload-outline' },
 ]
-
-// La unidad de los items de la factura; a SUNAT va como servicio (ZZ).
-const UNIDAD_DE_FACTURA = 'und'
-
-// La version de lo que guarda cada formulario. Un campo nuevo sube el segundo numero; si cambia la forma de uno que ya
-// estaba, en el o en sus items, sube el primero.
-export const CURRENT_INVOICE_SCHEMA = '1.0'
-export const CURRENT_CREDIT_NOTE_SCHEMA = '1.0'
-
-export const itemDeFactura = () => ({ ...itemVacio(UNIDAD_DE_FACTURA), incluye_igv: false })
-// Un item de la factura en su nota: si entra y cuanto tenia.
-export const itemDeNota = (item) => ({ ...item, incluir: false, original: item.quantity })
 
 export const DETRACCION = 'DETRACCION'
 export const FORMAS_DE_PAGO = {

@@ -1,8 +1,7 @@
 import { sinPendientes } from '@/utils/orders/documentos'
 import { SERVICIO } from '@/utils/orders/estado'
 
-// La version del JSON de una orden sin guardar. Un campo nuevo sube el segundo numero; si cambia la forma de uno que
-// ya estaba, en la orden o en sus filas, sube el primero.
+// La de una orden sin guardar; la regla, en utils/version.js.
 export const CURRENT_ORDER_SCHEMA = '1.0'
 
 // Un equipo nuevo de una orden de servicio, y de una de alquiler.

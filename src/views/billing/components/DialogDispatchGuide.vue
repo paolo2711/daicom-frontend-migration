@@ -135,7 +135,8 @@ import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useSwal } from '@/composables/useSwal'
 import BillingDataService from '@/services/billing/billingDataService'
-import { CURRENT_DISPATCH_GUIDE_SCHEMA, OTROS, itemVacio } from '@/utils/billing/guias'
+import { CURRENT_DISPATCH_GUIDE_SCHEMA, itemDeGuia } from '@/utils/billing/billingDefaults'
+import { OTROS } from '@/utils/billing/guias'
 import { hoyISO } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 import { copiarDebajo } from '@/utils/lists'
@@ -178,6 +179,16 @@ const indiceElegido = computed(() => items.value.indexOf(elegido.value))
 const sePuedeEmitir = computed(() => Boolean(clienteId.value && items.value.length))
 const paraElBack = () => ({ cliente: clienteId.value, ordenes: ordenes.value.map(o => o.id), datos: datos.value })
 
+// Lo guardado, sobre lo que el formulario trae lleno: lo que no tenga queda como en una nueva.
+function llenar (guardada) {
+  clienteId.value = guardada.clienteId
+  clienteInicial.value = guardada.clienteInicial
+  ordenes.value = guardada.ordenes
+  datos.value = { ...datos.value, ...guardada.datos,
+                  items: guardada.datos.items.map(item => ({ ...itemDeGuia(), ...item })) }
+  elegido.value = null
+}
+
 // La guia sin emitir: la nueva, la que sale de unas ordenes o la que usa otra de plantilla.
 const origen = ref('')
 const borrador = useLocalDraft({
@@ -185,14 +196,7 @@ const borrador = useLocalDraft({
   version: CURRENT_DISPATCH_GUIDE_SCHEMA,
   datos: () => ({ clienteId: clienteId.value, clienteInicial: clienteInicial.value, ordenes: ordenes.value,
                   datos: datos.value }),
-  llenar: (guardada) => {
-    clienteId.value = guardada.clienteId
-    clienteInicial.value = guardada.clienteInicial
-    ordenes.value = guardada.ordenes
-    datos.value = { ...datos.value, ...guardada.datos,
-                    items: guardada.datos.items.map(item => ({ ...itemVacio(), ...item })) }
-    elegido.value = null
-  },
+  llenar,
   resumen: (guardada) => {
     const n = guardada.datos.items.filter(item => item.descripcion?.trim()).length
     return n && `Hay una guía sin emitir con ${n} ${n === 1 ? 'ítem' : 'ítems'}`
@@ -218,7 +222,7 @@ const pesoDeLosItems = computed(() => Math.round(items.value
   .reduce((suma, i) => suma + (Number(i.peso) || 0) * (Number(i.cantidad) || 0), 0) * 1000) / 1000)
 
 function agregar() {
-  const item = itemVacio()
+  const item = itemDeGuia()
   datos.value.items.push(item)
   elegido.value = item
 }
@@ -233,13 +237,15 @@ function borrar(indice) {
 // `nueva` es lo que devuelve el back (cliente, ordenes, datos y motivos); `plantilla`, otra guia emitida.
 async function open(nueva, plantilla = null) {
   emitidaDe.value = null
-  clienteId.value = plantilla?.cliente ?? nueva.cliente
-  clienteInicial.value = plantilla?.cliente_data ?? nueva.cliente_data
-  ordenes.value = plantilla ? [] : nueva.ordenes
+  clienteId.value = nueva.cliente
+  clienteInicial.value = nueva.cliente_data
+  ordenes.value = nueva.ordenes
   motivos.value = nueva.motivos
-  datos.value = JSON.parse(JSON.stringify(plantilla
-    ? { ...plantilla.datos, fecha_traslado: nueva.datos.fecha_traslado }
-    : nueva.datos))
+  datos.value = JSON.parse(JSON.stringify(nueva.datos))
+  if (plantilla) {
+    llenar({ clienteId: plantilla.cliente, clienteInicial: plantilla.cliente_data, ordenes: [],
+             datos: { ...plantilla.datos, fecha_traslado: nueva.datos.fecha_traslado } })
+  }
   origen.value = plantilla ? `plantilla_${plantilla.id}` : origenDe(nueva.ordenes.map(o => o.id))
   elegido.value = null
   if (!datos.value.items.length) agregar()
@@ -258,8 +264,9 @@ async function salir () {
 // El back responde enseguida y la manda a SUNAT en segundo plano: el formulario se cierra con lo escrito guardado.
 async function emitir() {
   emitiendo.value = true
+  borrador.cerrar()
   try {
-    const { data } = await borrador.enviar(() => BillingDataService.createDispatchGuide(paraElBack()))
+    const { data } = await BillingDataService.createDispatchGuide(paraElBack())
     vista.cerrar()
     dialog.value = false
     emitidaDe.value = data.id
@@ -274,7 +281,6 @@ const corregible = (id) => emitidaDe.value === id
 function corregir () {
   emitidaDe.value = null
   dialog.value = true
-  borrador.reanudar()
 }
 
 defineExpose({ open, corregir, corregible })

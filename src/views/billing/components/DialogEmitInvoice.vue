@@ -131,7 +131,7 @@ import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useSwal } from '@/composables/useSwal'
 import BillingDataService from '@/services/billing/billingDataService'
-import { CURRENT_INVOICE_SCHEMA, itemDeFactura } from '@/utils/billing/facturas'
+import { CURRENT_INVOICE_SCHEMA, itemDeFactura } from '@/utils/billing/billingDefaults'
 import { debounce } from '@/utils/debounce'
 import { mensajeDeError } from '@/utils/errors'
 import { copiarDebajo } from '@/utils/lists'
@@ -208,6 +208,19 @@ const opciones = computed(() => {
 const paraElBack = () => ({ cliente: clienteId.value, ordenes: ordenes.value.map(o => o.id),
                             order_type: tipoDeOrden.value, datos: datos.value })
 
+// Lo guardado, sobre lo que el formulario trae lleno: lo que no tenga queda como en una nueva.
+// Primero el tipo: al cambiar propone su codigo de detraccion, y el que vale es el guardado.
+async function llenar (guardada) {
+  tipoDeOrden.value = guardada.tipoDeOrden
+  await nextTick()
+  clienteId.value = guardada.clienteId
+  clienteInicial.value = guardada.clienteInicial
+  ordenes.value = guardada.ordenes
+  datos.value = { ...datos.value, ...guardada.datos,
+                  items: guardada.datos.items.map(item => ({ ...itemDeFactura(), ...item })) }
+  abierto.value = null
+}
+
 // La factura sin emitir: la nueva, la que sale de unas ordenes o la que usa otra de plantilla.
 const origen = ref('')
 const borrador = useLocalDraft({
@@ -215,17 +228,7 @@ const borrador = useLocalDraft({
   version: CURRENT_INVOICE_SCHEMA,
   datos: () => ({ clienteId: clienteId.value, clienteInicial: clienteInicial.value, ordenes: ordenes.value,
                   tipoDeOrden: tipoDeOrden.value, datos: datos.value }),
-  // Primero el tipo: al cambiar propone su codigo de detraccion, y el que vale es el guardado.
-  llenar: async (guardada) => {
-    tipoDeOrden.value = guardada.tipoDeOrden
-    await nextTick()
-    clienteId.value = guardada.clienteId
-    clienteInicial.value = guardada.clienteInicial
-    ordenes.value = guardada.ordenes
-    datos.value = { ...datos.value, ...guardada.datos,
-                    items: guardada.datos.items.map(item => ({ ...itemDeFactura(), ...item })) }
-    abierto.value = null
-  },
+  llenar,
   resumen: (guardada) => {
     const n = guardada.datos.items.filter(item => item.description?.trim()).length
     return n && `Hay una factura sin emitir con ${n} ${n === 1 ? 'ítem' : 'ítems'}`
@@ -289,19 +292,23 @@ const vista = reactive(usePdfPreview(
 // (otra factura emitida) van su cliente, items y condiciones; la fecha es hoy y guias, OC y cuotas quedan vacias.
 async function open (nueva, plantilla = null) {
   emitidaDe.value = null
-  clienteId.value = plantilla?.cliente_id ?? nueva.cliente
-  clienteInicial.value = plantilla?.cliente_data ?? nueva.cliente_data
-  ordenes.value = plantilla ? [] : nueva.ordenes
+  clienteId.value = nueva.cliente
+  clienteInicial.value = nueva.cliente_data
+  ordenes.value = nueva.ordenes
   serie.value = nueva.serie
   fechas.value = nueva.fechas
   codigos.value = nueva.codigos_de_detraccion
   detraccionPorTipo.value = nueva.detraccion_por_tipo
   cuentaDeDetracciones.value = nueva.cuenta_de_detracciones
   ordenesDeCompra.value = nueva.ordenes_de_compra
-  tipoDeOrden.value = plantilla?.order_type ?? nueva.order_type
-  datos.value = JSON.parse(JSON.stringify(plantilla
-    ? { ...plantilla.datos, fecha: nueva.datos.fecha, tipo_de_cambio: '', cuotas: [], guias: [], orden_de_compra: '' }
-    : nueva.datos))
+  tipoDeOrden.value = nueva.order_type
+  datos.value = JSON.parse(JSON.stringify(nueva.datos))
+  if (plantilla) {
+    await llenar({ clienteId: plantilla.cliente_id, clienteInicial: plantilla.cliente_data, ordenes: [],
+                   tipoDeOrden: plantilla.order_type,
+                   datos: { ...plantilla.datos, fecha: nueva.datos.fecha, tipo_de_cambio: '', cuotas: [], guias: [],
+                            orden_de_compra: '' } })
+  }
   origen.value = plantilla ? `plantilla_${plantilla.id}` : origenDe(nueva.ordenes.map(o => o.id))
   abierto.value = null
   if (!datos.value.items.length) agregar()
@@ -321,8 +328,9 @@ async function salir () {
 // El back responde enseguida y la manda a SUNAT en segundo plano: el formulario se cierra con lo escrito guardado.
 async function emitir () {
   emitiendo.value = true
+  borrador.cerrar()
   try {
-    const { data } = await borrador.enviar(() => BillingDataService.emitInvoice(paraElBack()))
+    const { data } = await BillingDataService.emitInvoice(paraElBack())
     vista.cerrar()
     dialog.value = false
     emitidaDe.value = data.id
@@ -337,7 +345,6 @@ const corregible = (id) => emitidaDe.value === id
 function corregir () {
   emitidaDe.value = null
   dialog.value = true
-  borrador.reanudar()
 }
 
 defineExpose({ open, corregir, corregible })

@@ -1,25 +1,24 @@
 import { getCurrentInstance, nextTick, onBeforeUnmount, watch } from 'vue'
-import { useFormChanges } from '@/composables/useFormChanges'
+import { salirSinGuardar } from '@/composables/useUnsavedChanges'
 import { Toast } from '@/plugins/alerts'
 import { useAuthStore } from '@/stores/authStore'
-import { fechaHora, fechaHoraISO } from '@/utils/dates'
+import { fechaHoraISO, horaCorta, hoyISO } from '@/utils/dates'
 import { debounce } from '@/utils/debounce'
 import { mismoFormato } from '@/utils/version'
 
 const ESPERA = 1000
 const PREFIJO = 'daicom_borrador_'
-const VIGENCIA = 7 * 24 * 60 * 60 * 1000
 
 // Sin almacenamiento (modo privado, bloqueado) simplemente no hay borrador.
 const intentar = (accion) => {
   try { return accion() } catch { return null }
 }
 const leer = (llave) => intentar(() => JSON.parse(localStorage.getItem(llave)))
-const vigente = (borrador) => Date.now() - new Date(borrador?.guardado) < VIGENCIA
+const esDeHoy = (borrador) => borrador?.guardado?.startsWith(hoyISO())
 
-function quitarVencidos () {
+function quitarLosDeAntes () {
   intentar(() => Object.keys(localStorage)
-    .filter(llave => llave.startsWith(PREFIJO) && !vigente(leer(llave)))
+    .filter(llave => llave.startsWith(PREFIJO) && !esDeHoy(leer(llave)))
     .forEach(llave => localStorage.removeItem(llave)))
 }
 
@@ -36,13 +35,16 @@ export function useLocalDraft ({ clave, version, datos, llenar, resumen, fuera =
   let activo = false
   let llave = null
 
-  const cambios = useFormChanges(() => ({ datos: datos(), fuera: fuera() }))
+  let inicial = ''
+  const enTexto = () => JSON.stringify({ datos: datos(), fuera: fuera() })
+  const empezar = () => { inicial = enTexto() }
+  const hayCambios = () => enTexto() !== inicial
   const borrar = () => intentar(() => localStorage.removeItem(llave))
 
   // Se escribe al dejar de editar: serializar todo en cada tecla traba las listas largas.
   const escribir = debounce(() => {
     if (!activo || !llave) return
-    if (!cambios.hayCambios()) return borrar()
+    if (!hayCambios()) return borrar()
     const borrador = { version, guardado: fechaHoraISO(new Date()), datos: datos() }
     intentar(() => localStorage.setItem(llave, JSON.stringify(borrador)))
   }, ESPERA)
@@ -59,7 +61,7 @@ export function useLocalDraft ({ clave, version, datos, llenar, resumen, fuera =
   async function quiereRecuperar (borrador, texto) {
     const { isConfirmed } = await $swal.fire({
       title: '¿Recuperar borrador?',
-      text: `${texto}, del ${fechaHora(borrador.guardado)}.`,
+      text: `${texto}, de las ${horaCorta(borrador.guardado)}.`,
       icon: 'info',
       showCancelButton: true,
       confirmButtonText: 'Sí, recuperar',
@@ -79,10 +81,10 @@ export function useLocalDraft ({ clave, version, datos, llenar, resumen, fuera =
   async function abrir () {
     escribir.cancelar()
     activo = false
-    quitarVencidos()
+    quitarLosDeAntes()
     llave = clave() && `${PREFIJO}${usuario}_${clave()}`
     await nextTick()
-    cambios.empezar()
+    empezar()
     const borrador = llave && leer(llave)
     if (borrador) {
       try {
@@ -90,11 +92,11 @@ export function useLocalDraft ({ clave, version, datos, llenar, resumen, fuera =
       } catch (error) {
         console.error(error)
         borrar()
-        await llenar(cambios.comoSeAbrio().datos)
+        await llenar(JSON.parse(inicial).datos)
         await nextTick()
-        cambios.empezar()
+        empezar()
         Toast.fire({ icon: 'info', timer: 6000, title: 'No se recuperó el borrador',
-                     text: `El del ${fechaHora(borrador.guardado)} ya no es compatible y se descartó.` })
+                     text: `El de las ${horaCorta(borrador.guardado)} ya no es compatible y se descartó.` })
       }
     }
     activo = true
@@ -106,21 +108,7 @@ export function useLocalDraft ({ clave, version, datos, llenar, resumen, fuera =
     if (llave) borrar()
   }
 
-  function reanudar () {
-    activo = true
-    escribir()
-  }
+  const puedeSalir = async () => !hayCambios() || salirSinGuardar()
 
-  // Lo que no se puede enviar dos veces: se va antes y vuelve solo si el back contesto que lo rechaza.
-  async function enviar (pedido) {
-    cerrar()
-    try {
-      return await pedido()
-    } catch (error) {
-      if (error.response?.status === 400) reanudar()
-      throw error
-    }
-  }
-
-  return { abrir, cerrar, reanudar, enviar, puedeSalir: cambios.puedeSalir }
+  return { abrir, cerrar, puedeSalir }
 }

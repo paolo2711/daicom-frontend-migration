@@ -11,6 +11,14 @@
 //   icono, texto, detalle   fijos o (filas) => ..., para que con una sola
 //                  fila digan lo que va a pasar ("Reemplazar Excel")
 
+// Copia lo emitido a un formulario nuevo. `sirve`: si el formulario de hoy puede leerlo.
+export const usarComoPlantilla = (sirve) => ({
+  clave: 'plantilla', grupo: 'trabajo', varios: false,
+  icono: 'mdi-content-copy', texto: 'Usar como plantilla',
+  detalle: ([fila]) => (sirve(fila) ? '' : 'Solo lectura'),
+  disponible: ([fila]) => sirve(fila),
+})
+
 const valor = (campo, filas) => (typeof campo === 'function' ? campo(filas) : campo)
 
 export function accionesPara(lista, filas, tienePermiso) {

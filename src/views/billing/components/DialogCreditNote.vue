@@ -171,7 +171,7 @@ import { useLocalDraft } from '@/composables/useLocalDraft'
 import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useSwal } from '@/composables/useSwal'
 import BillingDataService from '@/services/billing/billingDataService'
-import { CURRENT_CREDIT_NOTE_SCHEMA, itemDeNota } from '@/utils/billing/facturas'
+import { CURRENT_CREDIT_NOTE_SCHEMA, itemDeNota } from '@/utils/billing/billingDefaults'
 import { fechaCorta } from '@/utils/dates'
 import { debounce } from '@/utils/debounce'
 import { mensajeDeError } from '@/utils/errors'
@@ -319,8 +319,9 @@ async function salir () {
 
 async function emitir () {
   emitiendo.value = true
+  borrador.cerrar()
   try {
-    const { data } = await borrador.enviar(() => BillingDataService.emitCreditNote(factura.value.id, paraElBack()))
+    const { data } = await BillingDataService.emitCreditNote(factura.value.id, paraElBack())
     vista.cerrar()
     dialog.value = false
     emitidaDe.value = data.id
@@ -335,7 +336,6 @@ const corregible = (id) => emitidaDe.value === id
 function corregir () {
   emitidaDe.value = null
   dialog.value = true
-  borrador.reanudar()
 }
 
 defineExpose({ open, corregir, corregible })

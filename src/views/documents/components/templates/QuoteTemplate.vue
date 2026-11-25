@@ -243,13 +243,13 @@ const borrador = useLocalDraft({
   clave: () => `${props.tipoDeDocumento}_${documentoId.value || `${cotizacion.value.meta.kind}_${origen.value}`}`,
   version: CURRENT_QUOTE_SCHEMA,
   datos: () => ({ cotizacion: cotizacion.value, clienteId: clienteId.value }),
-  llenar: (guardado) => {
-    cotizacion.value = cotizacionDe(guardado.cotizacion, props.tipoDeDocumento)
-    clienteId.value = guardado.clienteId
+  llenar: (guardada) => {
+    cotizacion.value = cotizacionDe(guardada.cotizacion, props.tipoDeDocumento)
+    clienteId.value = guardada.clienteId
     abrirElPrimero()
   },
-  resumen: (guardado) => {
-    const items = guardado.cotizacion.items.filter(fila => !esGrupo(fila) && fila.description?.trim()).length
+  resumen: (guardada) => {
+    const items = guardada.cotizacion.items.filter(fila => !esGrupo(fila) && fila.description?.trim()).length
     return items && `Hay una ${definicion.value.nombre} sin guardar con ${items} ${items === 1 ? 'ítem' : 'ítems'}`
   },
 })

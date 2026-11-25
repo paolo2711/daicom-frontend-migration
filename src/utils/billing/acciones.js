@@ -1,6 +1,11 @@
+import { usarComoPlantilla } from '@/utils/actions'
+import { CURRENT_DISPATCH_GUIDE_SCHEMA, CURRENT_INVOICE_SCHEMA } from '@/utils/billing/billingDefaults'
 import { bajaPendienteEnSol } from '@/utils/billing/guias'
 import { ACEPTADA, ENVIADA, POR_ENVIAR, REVISAR, fueraDePlazo } from '@/utils/billing/sunat'
 import { OTRA_PESTANA } from '@/utils/pdf'
+import { mismoFormato } from '@/utils/version'
+
+const delFormato = (vigente) => (comprobante) => mismoFormato(comprobante.schema_version, vigente)
 
 // Lo que se puede hacer con una guia emitida, para el menu de la tabla. Los campos, en utils/actions.js.
 // Las que SUNAT tiene o pudo tener se anulan dando la baja en SOL; la que no llego, solo en la app.
@@ -41,10 +46,7 @@ export const ACCIONES_GUIA = [
     icono: 'mdi-send', texto: 'Reintentar envío',
     visible: ([guia]) => guia.estado === POR_ENVIAR && !fueraDePlazo(guia.reintentar_hasta),
   },
-  {
-    clave: 'plantilla', grupo: 'trabajo', varios: false,
-    icono: 'mdi-content-copy', texto: 'Usar como plantilla',
-  },
+  usarComoPlantilla(delFormato(CURRENT_DISPATCH_GUIDE_SCHEMA)),
   {
     clave: 'baja-en-sol', grupo: 'trabajo', varios: false,
     icono: 'mdi-check-circle-outline', texto: 'Ya la di de baja en SOL',
@@ -96,11 +98,7 @@ export const ACCIONES_FACTURA = [
     icono: 'mdi-send', texto: 'Reintentar envío',
     visible: ([factura]) => factura.estado_sunat === POR_ENVIAR && !fueraDePlazo(factura.reintentar_hasta),
   },
-  {
-    clave: 'plantilla', grupo: 'trabajo', varios: false,
-    icono: 'mdi-content-copy', texto: 'Usar como plantilla',
-    visible: emitida,
-  },
+  { ...usarComoPlantilla(delFormato(CURRENT_INVOICE_SCHEMA)), visible: emitida },
   {
     clave: 'abonos', grupo: 'trabajo', varios: false,
     icono: 'mdi-cash-plus', texto: 'Abonos',

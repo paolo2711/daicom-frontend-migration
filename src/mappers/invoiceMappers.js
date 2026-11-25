@@ -55,6 +55,7 @@ export default {
       notas: element.notas || [],
       rebajado: element.rebajado != null ? Number(element.rebajado) : 0,
       lleva_nota: element.lleva_nota || false,
+      schema_version: element.schema_version,
 
       // ─── HISTORIAL DE ABONOS (para DialogInvoicePayments cuando se abre desde el panel) ───
       payments: element.payments || [],

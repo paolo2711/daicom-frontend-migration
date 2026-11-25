@@ -1,20 +1,9 @@
 // RentalDetail.estado en el back. El color de la pildora del codigo y su leyenda.
 export const ESTADOS_ALQUILER = {
-  reservado: { texto: 'Reservado', varios: 'reservados', color: 'grey' },
-  en_obra: { texto: 'En obra', varios: 'en obra', color: 'blue' },
-  devuelto: { texto: 'Devuelto', varios: 'devueltos', color: 'green' },
-  anulado: { texto: 'Anulado', varios: 'anulados', color: 'red' },
-}
-
-// "1 reservado · 2 en obra · 3 devueltos", en el orden del recorrido.
-export function resumenPorEstado(lineas) {
-  return Object.entries(ESTADOS_ALQUILER)
-    .map(([estado, { texto, varios }]) => {
-      const cuantos = lineas.filter(l => l.estado === estado).length
-      return cuantos && `${cuantos} ${cuantos === 1 ? texto.toLowerCase() : varios}`
-    })
-    .filter(Boolean)
-    .join(' · ')
+  reservado: { texto: 'Reservado', color: 'grey' },
+  en_obra: { texto: 'En obra', color: 'blue' },
+  devuelto: { texto: 'Devuelto', color: 'green' },
+  anulado: { texto: 'Anulado', color: 'red' },
 }
 
 // Los nombres de las tres fechas, iguales en todas las pantallas.

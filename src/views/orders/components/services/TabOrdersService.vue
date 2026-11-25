@@ -107,7 +107,7 @@
             single-expand
             item-value="id"
         :hover="false"
-        class="elevation-0 rounded-lg tabla-mejorada tabla-ordenes-servicio bg-surface"
+        class="elevation-0 rounded-lg tabla-mejorada tabla-ordenes bg-surface"
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
@@ -130,20 +130,7 @@
         </template>
 
         <template v-slot:item.progress="{ item }">
-          <div v-if="viva(item) && getProgreso(item).total > 0" class="mx-auto w-75">
-            <div class="text-caption mb-1 font-weight-medium text-center" :class="theme.global.current.value.dark ? 'text-grey-lighten-1' : 'text-grey-darken-2'">
-              {{ getProgreso(item).listos }} / {{ getProgreso(item).total }} Equipos
-            </div>
-            <v-progress-linear
-              :model-value="(getProgreso(item).listos / getProgreso(item).total) * 100"
-              height="5"
-              rounded
-              color="primary"
-              bg-color="grey"
-              bg-opacity="0.15"
-            />
-          </div>
-          <span v-else class="text-grey">---</span>
+          <order-progress :orden="item" listos="Equipos" />
         </template>
 
         <template v-slot:item.created_at="{ item }">
@@ -182,7 +169,7 @@
               <table-service-details
                 v-model:seleccion="equipos_seleccionados"
                 :order="item"
-                :muestra-fecha="!fechaEnColumna"
+                :muestra-fecha="!hayEspacio"
                 @reload="retrieveOrders"
                 @editar="abrirEditarOrden(item)"
                 @edit-certificate="openCertificateModal"
@@ -223,7 +210,6 @@
 
 <script setup>
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
-import { useTheme } from 'vuetify'
 import { useAppStore } from '@/stores/appStore'
 import { Toast } from '@/plugins/alerts'
 import { mensajeDeError } from '@/utils/errors'
@@ -231,13 +217,14 @@ import { abrirIngreso } from '@/utils/orders/ingreso'
 import OrderDataService from '@/services/orders/orderDataService'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
 import OrderPills from '../OrderPills.vue'
+import OrderProgress from '../OrderProgress.vue'
 import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import { useOrderActions } from '@/composables/useOrderActions'
 import { useOrderCobro } from '@/composables/useOrderCobro'
 import { seguirLaLista, soltar, unaSolaSeleccion } from '@/composables/useCurrentRows'
-import { useOrderDateColumn } from '@/composables/useOrderDateColumn'
+import { useOrderColumns } from '@/composables/useOrderColumns'
 import { fechaCorta } from '@/utils/dates'
 import { FILTRO_DE_ESTADO, SERVICIO, esDeServicio, viva } from '@/utils/orders/estado'
 import { lineaAnulada } from '@/utils/orders/lineas'
@@ -261,7 +248,6 @@ import { defineAsyncComponent } from 'vue'
 
 const BatchActionModal = defineAsyncComponent(() => import('@/views/certificates/components/BatchActionModal.vue'))
 
-const theme = useTheme()
 const appStore = useAppStore()
 
 // Estado UI Split-Screen
@@ -303,7 +289,7 @@ const columnas = [
   { title: 'Opciones', key: 'actions', align: 'center', sortable: false },
   { title: '', key: 'data-table-expand' },
 ]
-const { anchoDeLaLista, fechaEnColumna, headers } = useOrderDateColumn(columnas)
+const { anchoDeLaLista, hayEspacio, headers } = useOrderColumns(columnas)
 
 // Datos de tabla
 const orders = ref([])
@@ -407,10 +393,6 @@ const manejarClicFila = (event, { item }) => {
 }
 
 
-const getProgreso = (o) => {
-  return o.progreso || { total: 0, listos: 0 }
-}
-
 const editarOrdenRef = ref(null)
 const abrirEditarOrden = (o) => editarOrdenRef.value?.editar(o)
 
@@ -491,68 +473,3 @@ onUnmounted(() => {
   window.removeEventListener('wss-reload-certificates', recargarEquiposPorWebSocket)
 })
 </script>
-
-<style lang="scss">
-/* La píldora flotante de selección vive ahora en el componente común
-   @/components/commonComponents/SelectionBar.vue (estilos incluidos). */
-
-/*
- * POR QUÉ FALLABAN LOS INTENTOS ANTERIORES
- * ──────────────────────────────────────────
- * Vuetify NO pinta el hover con background-color en el <tr>.
- * Lo hace con un pseudo-elemento ::after en cada <td>:
- *
- *   .v-table--hover tbody tr:hover > td::after {
- *     content: "";
- *     position: absolute;
- *     background: rgba(var(--v-border-color), var(--v-hover-opacity));
- *   }
- *
- * Todos los !important en background-color del tr eran invisibles porque
- * la capa de hover se pinta ENCIMA como overlay en el td.
- *
- * SOLUCIÓN: anular el td::after en las filas donde no queremos hover.
- *
- * ESTRUCTURA DOM al expandir:
- *   tr.fila-padre-activa   ← fila con datos de la orden
- *   tr.fila-activa         ← fila con TableServiceDetails (expanded-row)
- *     └─ v-table (sub-tabla interna con sus propios tr)
- */
-
-/* ── Hover de filas normales (las no expandidas) ── */
-/* Replicamos lo que haría Vuetify pero solo donde queremos */
-.v-theme--light .tabla-ordenes-servicio tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
-  background-color: rgba(0, 0, 0, 0.04) !important;
-}
-.v-theme--dark .tabla-ordenes-servicio tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-/* ── Anular el td::after de Vuetify en filas activas ── */
-/* Esto elimina la capa de hover que Vuetify pinta encima */
-.tabla-ordenes-servicio tbody tr.fila-padre-activa > td::after,
-.tabla-ordenes-servicio tbody tr.fila-activa > td::after {
-  display: none !important;
-}
-
-/* ── Anular el td::after en la sub-tabla interna (TableServiceDetails) ── */
-.tabla-ordenes-servicio tr.fila-activa .v-table tbody tr > td::after {
-  display: none !important;
-}
-
-/* ── Color de fondo del estado activo ── */
-.v-theme--light .tabla-ordenes-servicio tbody tr.fila-padre-activa > td,
-.v-theme--light .tabla-ordenes-servicio tbody tr.fila-activa > td {
-  background-color: #e8e8e8 !important;
-}
-.v-theme--dark .tabla-ordenes-servicio tbody tr.fila-padre-activa > td,
-.v-theme--dark .tabla-ordenes-servicio tbody tr.fila-activa > td {
-  background-color: #292929 !important;
-}
-
-/* ── Sub-tabla transparente para heredar el fondo del padre ── */
-.tabla-ordenes-servicio tr.fila-activa .v-table,
-.tabla-ordenes-servicio tr.fila-activa .v-table__wrapper {
-  background-color: transparent !important;
-}
-</style>

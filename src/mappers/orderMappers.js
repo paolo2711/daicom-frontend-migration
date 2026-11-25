@@ -31,7 +31,7 @@ export default {
       
       // ─── DATOS EXCLUSIVOS DE ALQUILER (Order Type 2) ───
       client_order_reference: element.client_order_reference || '',
-      documentos: element.documentos || { total: 0, oc_ref: '' },
+      documentos: element.documentos || 0,
     };
   },
 };

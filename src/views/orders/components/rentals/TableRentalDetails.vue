@@ -1,24 +1,20 @@
 <template>
   <v-card flat class="recuadro-equipos border rounded-lg bg-surface mx-3 mt-1 mb-3">
     <v-toolbar density="compact" flat color="transparent" class="pl-3">
-      <v-icon start :color="isDark ? 'amber-darken-2' : 'amber-darken-3'" class="mr-2">mdi-truck-delivery</v-icon>
-      <span class="text-subtitle-2 font-weight-bold" :class="isDark ? 'text-amber-lighten-2' : 'text-amber-darken-4'">
-        Equipos<template v-if="order.rentals"> ({{ filas.length }})</template>
-      </span>
-      <span class="text-caption text-medium-emphasis ml-3">{{ resumenPorEstado(filas) }}</span>
+      <v-icon start color="primary">mdi-truck-delivery</v-icon>
+      <span class="text-subtitle-2 font-weight-bold">Equipos</span>
       <span v-if="muestraFecha && order.created_at" class="text-caption text-medium-emphasis ml-3 mt-1 font-weight-medium d-flex align-center">
         <v-icon size="x-small" class="mr-1">mdi-calendar-blank</v-icon>
         {{ fechaCorta(order.created_at) }}
       </span>
       <v-spacer />
-      <v-btn size="x-small" color="amber-darken-3" variant="flat" class="text-white" :disabled="anulada"
-             @click="emit('editar')">
+      <v-btn size="x-small" color="primary" variant="flat" class="text-white" :disabled="anulada" @click="emit('editar')">
         <v-icon start size="x-small">mdi-pencil</v-icon> Ver y editar
       </v-btn>
     </v-toolbar>
 
     <div v-if="order.rentals === null" class="pa-6 text-center">
-      <v-progress-circular indeterminate color="amber-darken-3" size="32" />
+      <v-progress-circular indeterminate color="primary" size="32" />
       <div class="text-caption mt-2 text-medium-emphasis">Cargando equipos...</div>
     </div>
 
@@ -119,9 +115,8 @@ import { soltar } from '@/composables/useCurrentRows'
 import { useRowSelection } from '@/composables/useRowSelection'
 import { accionesPara } from '@/utils/actions'
 import AddEquipment from '@/views/inventory/components/AddEquipment.vue'
-import { useTheme } from 'vuetify'
 import OrderDataService from '@/services/orders/orderDataService'
-import { ACCIONES_ALQUILER, ESTADOS_ALQUILER, FECHAS_ALQUILER, resumenPorEstado } from '@/utils/orders/alquiler'
+import { ACCIONES_ALQUILER, ESTADOS_ALQUILER, FECHAS_ALQUILER } from '@/utils/orders/alquiler'
 import { viva } from '@/utils/orders/estado'
 import { fechaCorta } from '@/utils/dates'
 import { datosDelEquipo } from '@/utils/equipments/datos'
@@ -136,9 +131,6 @@ const emit = defineEmits(['editar', 'reload'])
 
 // La guarda la pantalla de ordenes: marcar equipos y marcar ordenes se excluyen.
 const seleccion = defineModel('seleccion', { type: Array, required: true })
-
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
 
 const pasoRef = ref(null)
 const addEquipmentRef = ref(null)

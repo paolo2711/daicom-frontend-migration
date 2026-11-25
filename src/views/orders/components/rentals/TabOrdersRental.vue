@@ -105,10 +105,9 @@
         :loading="loading_list"
         show-expand
         single-expand
-        
         item-value="id"
         :hover="false"
-        class="elevation-0 rounded-lg tabla-mejorada tabla-ordenes-alquiler bg-surface"
+        class="elevation-0 rounded-lg tabla-mejorada tabla-ordenes bg-surface"
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
@@ -126,16 +125,12 @@
           />
         </template>
 
-        <template v-slot:item.client_order_reference="{ item }">
-          <v-chip v-if="item.documentos && item.documentos.oc_ref" size="x-small" variant="outlined" color="blue-grey-darken-2" class="font-weight-bold px-2" style="background-color: #f1f3f4 !important;">
-            <v-icon start size="x-small" color="blue-grey-darken-2">mdi-pound</v-icon>
-            {{ item.documentos.oc_ref }}
-          </v-chip>
-          <span v-else class="text-grey text-caption">---</span>
-        </template>
-
         <template v-slot:item.client_data.name="{ item }">
           <span :class="viva(item) ? '' : 'anulado-atenuado'">{{ item.client_data.name }}</span>
+        </template>
+
+        <template v-slot:item.progress="{ item }">
+          <order-progress :orden="item" listos="devueltos" />
         </template>
 
         <template v-slot:item.created_at="{ item }">
@@ -166,7 +161,7 @@
         <template v-slot:item.documentos="{ item }">
           <v-btn variant="text" size="small" density="comfortable" prepend-icon="mdi-paperclip" :disabled="!viva(item)"
                  :title="viva(item) ? 'Ver sus documentos' : 'La orden está anulada'" @click.stop="abrirDocumentos(item)">
-            {{ item.documentos.total }}
+            {{ item.documentos }}
           </v-btn>
         </template>
 
@@ -178,7 +173,7 @@
         <template v-slot:expanded-row="{ columns, item }">
           <tr class="fila-activa">
             <td :colspan="columns.length" class="pa-0">
-              <table-rental-details v-model:seleccion="equipos_seleccionados" :order="item" :muestra-fecha="!fechaEnColumna"
+              <table-rental-details v-model:seleccion="equipos_seleccionados" :order="item" :muestra-fecha="!hayEspacio"
                                     @editar="abrirEditarOrden(item)" @reload="cargarItems(item.id)" />
             </td>
           </tr>
@@ -219,13 +214,14 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 import OrderDataService from '@/services/orders/orderDataService'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
 import OrderPills from '../OrderPills.vue'
+import OrderProgress from '../OrderProgress.vue'
 import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import { useOrderActions } from '@/composables/useOrderActions'
 import { useOrderCobro } from '@/composables/useOrderCobro'
 import { seguirLaLista, unaSolaSeleccion } from '@/composables/useCurrentRows'
-import { useOrderDateColumn } from '@/composables/useOrderDateColumn'
+import { useOrderColumns } from '@/composables/useOrderColumns'
 import { fechaCorta } from '@/utils/dates'
 import { ALQUILER, FILTRO_DE_ESTADO, esAlquiler, viva } from '@/utils/orders/estado'
 import { useLatestRequest } from '@/composables/useLatestRequest'
@@ -257,14 +253,14 @@ unaSolaSeleccion(ordenes_seleccionadas, equipos_seleccionados)
 
 const columnas = [
   { title: 'Nro Alquiler',      key: 'order_number' },
-  { title: 'Ref. Cliente',      key: 'client_order_reference' },
-  { title: 'Empresa',           key: 'client_data.name' },
-  { title: 'Documentos',        key: 'documentos',  align: 'center', sortable: false },
+  { title: 'Cliente',           key: 'client_data.name' },
+  { title: 'Equipos',           key: 'progress',    align: 'center', sortable: false },
+  { title: 'Documentos',        key: 'documentos',  align: 'center', sortable: false, conEspacio: true },
   { title: 'Estado Financiero', key: 'vinculo_financiero', align: 'center', sortable: false },
   { title: 'Opciones',          key: 'actions',     align: 'center', sortable: false },
   { title: '',                  key: 'data-table-expand' },
 ]
-const { anchoDeLaLista, fechaEnColumna, headers } = useOrderDateColumn(columnas)
+const { anchoDeLaLista, hayEspacio, headers } = useOrderColumns(columnas)
 
 // ── Tabla + filtros ──
 const orders = ref([])
@@ -381,46 +377,3 @@ onUnmounted(() => {
   window.removeEventListener('wss-update-order-row', fetchAndInjectSingleOrder)
 })
 </script>
-
-<style lang="scss">
-/* El ambar distingue Alquileres de Servicios de un vistazo. Pisa el marco
-   comun de _table.scss a proposito. */
-.v-application .tabla-ordenes-alquiler {
-  border-color: #FFCA28;
-}
-
-/* ── Hover de filas normales ── */
-.v-theme--light .tabla-ordenes-alquiler tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
-  background-color: rgba(0, 0, 0, 0.04) !important;
-}
-.v-theme--dark .tabla-ordenes-alquiler tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-/* ── Anular el td::after de Vuetify en filas activas ── */
-.tabla-ordenes-alquiler tbody tr.fila-padre-activa > td::after,
-.tabla-ordenes-alquiler tbody tr.fila-activa > td::after {
-  display: none !important;
-}
-
-/* ── Anular el td::after en la sub-tabla interna (TableRentalDetails) ── */
-.tabla-ordenes-alquiler tr.fila-activa .v-table tbody tr > td::after {
-  display: none !important;
-}
-
-/* ── Color de fondo del estado activo ── */
-.v-theme--light .tabla-ordenes-alquiler tbody tr.fila-padre-activa > td,
-.v-theme--light .tabla-ordenes-alquiler tbody tr.fila-activa > td {
-  background-color: #e8e8e8 !important;
-}
-.v-theme--dark .tabla-ordenes-alquiler tbody tr.fila-padre-activa > td,
-.v-theme--dark .tabla-ordenes-alquiler tbody tr.fila-activa > td {
-  background-color: #292929 !important;
-}
-
-/* ── Sub-tabla transparente para heredar el fondo del padre ── */
-.tabla-ordenes-alquiler tr.fila-activa .v-table,
-.tabla-ordenes-alquiler tr.fila-activa .v-table__wrapper {
-  background-color: transparent !important;
-}
-</style>

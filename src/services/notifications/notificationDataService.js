@@ -1,9 +1,10 @@
 import axios from "axios";
 import authHeader from "@/services/auth-header";
+import { porPagina } from "@/utils/pagination";
 
 class NotificationDataService {
     list(page = 1, { noLeidas = false, tipos = [] } = {}) {
-        const params = { page, page_size: 30 };   // el default del back es 10
+        const params = porPagina(page, 30);
         if (noLeidas) params.no_leidas = true;
         if (tipos.length) params.tipos = tipos.join(',');
         return axios.get("notifications", { headers: authHeader(), params });

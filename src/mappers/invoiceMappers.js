@@ -1,9 +1,6 @@
 import { DEUDA } from '@/utils/orders/estado'
 
-// Mapper de Facturas (OrderInvoice) — para el Panel de Finanzas.
-// Mismo patrón que orderMappers.js: protege contra "undefined.length" /
-// "undefined.toFixed" cuando el backend todavía no manda un campo, y le da
-// un contrato estable al componente sin importar cambios menores del API.
+// La factura como la usan las pantallas, con un valor por defecto en cada campo.
 export default {
   getMap(element) {
     if (!element) return null;
@@ -30,16 +27,15 @@ export default {
       es_credito: element.es_credito || false,
       due_date: element.due_date || null,
 
-      // ─── ESTADO FINANCIERO (vive en la factura, ver OrderInvoice.status) ───
-      status: element.status ?? DEUDA,
-      // El que se muestra: igual a status, salvo Crédito mientras no vence.
-      estado: element.estado ?? element.status ?? DEUDA,
+      // ─── ESTADO DEL COBRO ───
+      estado: element.estado ?? DEUDA,
 
       // ─── CEREBRO FINANCIERO DE LA FACTURA ───
       total_pagado: element.total_pagado != null ? Number(element.total_pagado) : 0,
       saldo_pendiente: element.saldo_pendiente != null ? Number(element.saldo_pendiente) : 0,
-      // El total sin la detraccion: lo que el cliente le paga a DAICOM.
-      por_cobrar: element.por_cobrar != null ? Number(element.por_cobrar) : 0,
+      // Con cuanto queda pagada: el total sin la detraccion que no tiene constancia.
+      a_recibir: element.a_recibir != null ? Number(element.a_recibir) : 0,
+      detraccion_sin_constancia: Number(element.detraccion_sin_constancia) || 0,
       dias_de_atraso: element.dias_de_atraso ?? null,
 
       // ─── ÓRDENES VINCULADAS ───
@@ -59,6 +55,7 @@ export default {
       notas: element.notas || [],
       rebajado: element.rebajado != null ? Number(element.rebajado) : 0,
       lleva_nota: element.lleva_nota || false,
+      schema_version: element.schema_version,
 
       // ─── HISTORIAL DE ABONOS (para DialogInvoicePayments cuando se abre desde el panel) ───
       payments: element.payments || [],

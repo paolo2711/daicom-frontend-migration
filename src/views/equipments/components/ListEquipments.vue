@@ -175,16 +175,18 @@ import EquipmentDataService from '@/services/equipments/equipmentDataService'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import ServicioCatalogoDataService from '@/services/equipments/servicioCatalogoDataService'
 import { usePermissions } from '@/composables/usePermissions'
+import { usePage } from '@/composables/usePage'
 import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
 import { monto } from '@/utils/money'
+import { debounce } from '@/utils/debounce'
+import { leerPagina } from '@/utils/pagination'
 
 const search = ref('')
 const loading = ref(false)
 const equipos = ref([])
 const total_equipos = ref(0)
 const expanded = ref([])
-const options = ref({ page: 1, itemsPerPage: 30 })
-let debounceSearch = null
+const { opciones: options, alInicio } = usePage(() => retrieveAll())
 
 const equipoModalRef = ref(null)
 const servicioModalRef = ref(null)
@@ -203,8 +205,6 @@ const headers = [
   { title: '', key: 'data-table-expand' }
 ]
 
-// Server-side: pide solo la pagina actual, filtrando por 'search' en el backend
-// (mismo endpoint/parametros que EquipmentDataService.getFiltered ya usa en los autocompletes)
 const { begin: beginLoad, isLatest: isLatestLoad } = useLatestRequest()
 
 const retrieveAll = () => {
@@ -212,8 +212,9 @@ const retrieveAll = () => {
   const token = beginLoad()   // guard de secuencia: gana la carga más reciente
   EquipmentDataService.getFiltered(options.value.page, options.value.itemsPerPage, search.value).then(res => {
     if (!isLatestLoad(token)) return
-    equipos.value = res.data.results
-    total_equipos.value = res.data.count
+    const pagina = leerPagina(res.data)
+    equipos.value = pagina.filas
+    total_equipos.value = pagina.total
   }).catch(() => {
     Swal.fire('Error', 'Fallo al conectar con la base de datos.', 'error')
   }).finally(() => {
@@ -221,18 +222,7 @@ const retrieveAll = () => {
   })
 }
 
-// Debounce igual de espiritu que applyFilters en TabOrdersService, pero sin
-// esperar a que el usuario dispare un evento aparte: cada tecleo reinicia
-// la pagina a 1 y vuelve a pedir al backend tras una pausa corta.
-watch(search, () => {
-  clearTimeout(debounceSearch)
-  debounceSearch = setTimeout(() => {
-    options.value.page = 1
-    retrieveAll()
-  }, 400)
-})
-
-watch(options, () => { retrieveAll() }, { deep: true })
+watch(search, debounce(alInicio))
 
 const manejarClicFila = (event, { item }) => {
   if (event.target.closest('button') || event.target.closest('.v-btn') || event.target.closest('.v-data-table__expand-icon')) return

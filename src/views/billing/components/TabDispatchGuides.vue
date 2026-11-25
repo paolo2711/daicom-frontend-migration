@@ -2,7 +2,7 @@
   <div>
     <filter-bar>
       <v-text-field v-model="filtros.q" hide-details density="compact" prepend-inner-icon="mdi-magnify"
-                    variant="outlined" label="Buscar N.° o cliente" clearable />
+                    variant="outlined" label="Buscar N.° de guía" clearable />
       <template #pildoras>
         <filter-pill :active="filtros.sunat" color="warning" icon="mdi-alert-outline"
                      tooltip="No enviadas, sin respuesta de SUNAT, por revisar o con la baja en SOL pendiente"
@@ -84,6 +84,8 @@ import { useDateRangeFilter } from '@/composables/useDateRangeFilter'
 import { useDownload } from '@/composables/useDownload'
 import { useEmissionPanel } from '@/composables/useEmissionPanel'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { usePage } from '@/composables/usePage'
+import { useRouteFilters } from '@/composables/useRouteFilters'
 import { useSwal } from '@/composables/useSwal'
 import BillingDataService from '@/services/billing/billingDataService'
 import { accionesPara } from '@/utils/actions'
@@ -93,6 +95,7 @@ import { mensajeDeError } from '@/utils/errors'
 import { ACCIONES_GUIA } from '@/utils/billing/acciones'
 import { preguntarGuia, registrarBajaEnSol, reintentarEnvio } from '@/utils/billing/pendientes'
 import { ESTADOS, FILTRO_DE_ESTADO, bajaPendienteEnSol } from '@/utils/billing/guias'
+import { leerPagina, porPagina } from '@/utils/pagination'
 import { abrirEnOtraPestana } from '@/utils/pdf'
 import DialogCancelDispatchGuide from './DialogCancelDispatchGuide.vue'
 import DialogDispatchGuide from './DialogDispatchGuide.vue'
@@ -113,8 +116,9 @@ const columnas = computed(() => [
 const guias = ref([])
 const total = ref(0)
 const cargando = ref(false)
-const opciones = ref({ page: 1, itemsPerPage: 30 })
+const { opciones, alInicio } = usePage(() => recargar())
 const filtros = ref({ q: '', sunat: false, cliente: null, desde: '', hasta: '', estado: null })
+useRouteFilters(({ sunat }) => { filtros.value.sunat = Boolean(sunat) })
 const { rango, aplicarRango, limpiarRango } = useDateRangeFilter(filtros)
 const vista = ref(null)
 const formulario = ref(null)
@@ -127,10 +131,12 @@ async function recargar () {
   const turno = begin()
   const conValor = Object.fromEntries(Object.entries(filtros.value).filter(([, v]) => v))
   try {
-    const { data } = await BillingDataService.listDispatchGuides({ ...conValor, ...opciones.value })
+    const { page, itemsPerPage } = opciones.value
+    const { data } = await BillingDataService.listDispatchGuides({ ...conValor, ...porPagina(page, itemsPerPage) })
     if (!isLatest(turno)) return
-    guias.value = data.results
-    total.value = data.totalItems
+    const pagina = leerPagina(data)
+    guias.value = pagina.filas
+    total.value = pagina.total
   } catch {
     if (!isLatest(turno)) return
     guias.value = []
@@ -198,11 +204,7 @@ function ejecutarAccion (clave, [guia]) {
   }
 }
 
-watch(opciones, recargar, { deep: true })
-watch(filtros, debounce(() => {
-  if (opciones.value.page === 1) recargar()
-  else opciones.value.page = 1
-}), { deep: true })
+watch(filtros, debounce(alInicio), { deep: true })
 
 // Desde Órdenes llega con ?ordenes=1,2: el formulario se abre lleno con sus equipos.
 onMounted(() => {

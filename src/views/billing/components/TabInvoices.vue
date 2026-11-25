@@ -2,7 +2,7 @@
   <pdf-drop-zone label="Suelta el PDF para subir la factura" @file="subir" @invalid="avisarSoloPdf">
     <filter-bar>
       <v-text-field v-model="filtros.q" hide-details density="compact" prepend-inner-icon="mdi-magnify"
-                    variant="outlined" label="Buscar N.° o cliente" clearable />
+                    variant="outlined" label="Buscar N.° de factura" clearable />
       <template #pildoras>
         <filter-pill v-for="p in PILDORAS_DE_FACTURAS" :key="p.valor" :active="filtros.pildora === p.valor"
                      :color="p.color" :icon="p.icono" :tooltip="p.detalle" @click="alternarPildora(p.valor)">
@@ -29,10 +29,6 @@
         <v-col cols="12" sm="6" md="3">
           <v-select v-model="filtros.detraccion" :items="DETRACCION" prepend-inner-icon="mdi-percent-outline"
                     label="Detracción" clearable density="compact" variant="outlined" hide-details />
-        </v-col>
-        <v-col cols="12" sm="6" md="3">
-          <v-select v-model="filtros.tipo" :items="TIPO" prepend-inner-icon="mdi-file-document-outline" label="Tipo"
-                    clearable density="compact" variant="outlined" hide-details />
         </v-col>
         <v-col cols="12" sm="6" md="3">
           <v-select v-model="filtros.order_type" :items="TIPO_DE_ORDEN" prepend-inner-icon="mdi-briefcase-outline"
@@ -81,7 +77,7 @@
           </template>
           <template #item.total="{ item }">
             <div class="font-weight-medium text-no-wrap">{{ montoDe(item) ? monto(item.amount, item.currency) : '—' }}</div>
-            <div v-if="item.es_fiscal" class="text-caption text-no-wrap text-medium-emphasis">
+            <div class="text-caption text-no-wrap text-medium-emphasis">
               {{ item.detraccion_applies ? `Detracción ${importe(item.detraccion_amount)}` : 'Sin detracción' }}
             </div>
             <div v-for="nota in item.notas" :key="nota.id" class="text-caption text-no-wrap"
@@ -109,7 +105,7 @@
       </table-loading-overlay>
     </pdf-split-view>
 
-    <state-legend titulo="Cobro:" :estados="TONOS" />
+    <state-legend titulo="Cobro:" :estados="TONOS_DE_FACTURA" />
     <state-legend titulo="Tipos:" :estados="TIPOS" />
 
     <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
@@ -149,22 +145,24 @@ import { useDateRangeFilter } from '@/composables/useDateRangeFilter'
 import { useDownload } from '@/composables/useDownload'
 import { useEmissionPanel } from '@/composables/useEmissionPanel'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { usePage } from '@/composables/usePage'
+import { useRouteFilters } from '@/composables/useRouteFilters'
 import { useSwal } from '@/composables/useSwal'
 import InvoiceMappers from '@/mappers/invoiceMappers'
 import BillingDataService from '@/services/billing/billingDataService'
 import { accionesPara } from '@/utils/actions'
 import { ACCIONES_FACTURA } from '@/utils/billing/acciones'
 import {
-  EMITIR, FILTRO_DE_ESTADO, PILDORAS_DE_FACTURAS, TIPOS, cobroDe, condicionDe, desvincular, estadoDe, montoDe, tipoDe,
+  EMITIR, FILTRO_DE_ESTADO, PILDORAS_DE_FACTURAS, TIPOS, TONOS_DE_FACTURA, cobroDe, condicionDe, desvincular, eliminar, estadoDe, montoDe, tipoDe,
 } from '@/utils/billing/facturas'
 import { preguntarFactura, reintentarFactura } from '@/utils/billing/pendientes'
 import { ACEPTADA, ESTADOS as ESTADOS_SUNAT } from '@/utils/billing/sunat'
 import { fechaCorta } from '@/utils/dates'
 import { debounce } from '@/utils/debounce'
-import { avisarHecho } from '@/utils/documents/avisos'
 import { mensajeDeError } from '@/utils/errors'
 import { MONEDAS, importe, monto } from '@/utils/money'
-import { ALQUILER, SERVICIO, TONOS } from '@/utils/orders/estado'
+import { ALQUILER, SERVICIO } from '@/utils/orders/estado'
+import { leerPagina, porPagina } from '@/utils/pagination'
 import { OTRA_PESTANA, abrirEnOtraPestana, avisarSoloPdf } from '@/utils/pdf'
 import DialogCancelInvoice from './DialogCancelInvoice.vue'
 import DialogCreditNote from './DialogCreditNote.vue'
@@ -179,7 +177,6 @@ const route = useRoute()
 const router = useRouter()
 
 const DETRACCION = [{ title: 'Con detracción', value: 'si' }, { title: 'Sin detracción', value: 'no' }]
-const TIPO = [{ title: 'Facturas', value: 'fiscal' }, { title: 'Sin comprobante', value: 'interna' }]
 const TIPO_DE_ORDEN = [{ title: 'Servicio', value: SERVICIO }, { title: 'Alquiler', value: ALQUILER }]
 
 const EN_LA_LISTA_ANGOSTA = ['numero', 'cliente', 'cobro']
@@ -195,9 +192,13 @@ const columnas = computed(() => [
 const facturas = ref([])
 const total = ref(0)
 const cargando = ref(false)
-const opciones = ref({ page: 1, itemsPerPage: 30 })
+const { opciones, alInicio } = usePage(() => recargar())
 const filtros = ref({ q: '', pildora: null, cliente: null, desde: '', hasta: '', estado: null, currency: null,
-                      detraccion: null, tipo: null, order_type: null })
+                      detraccion: null, order_type: null })
+useRouteFilters(({ q, pildora }) => {
+  filtros.value.q = q || ''
+  filtros.value.pildora = pildora || null
+})
 const alternarPildora = (valor) => { filtros.value.pildora = filtros.value.pildora === valor ? null : valor }
 const { rango, aplicarRango, limpiarRango } = useDateRangeFilter(filtros)
 const vista = ref(null)
@@ -211,10 +212,11 @@ async function recargar () {
   const conValor = Object.fromEntries(Object.entries(filtros.value).filter(([, v]) => v))
   try {
     const { page, itemsPerPage } = opciones.value
-    const { data } = await BillingDataService.listInvoices({ ...conValor, page, page_size: itemsPerPage })
+    const { data } = await BillingDataService.listInvoices({ ...conValor, tipo: 'fiscal', ...porPagina(page, itemsPerPage) })
     if (!isLatest(turno)) return
-    facturas.value = data.results.map(InvoiceMappers.getMap)
-    total.value = data.count
+    const pagina = leerPagina(data)
+    facturas.value = pagina.filas.map(InvoiceMappers.getMap)
+    total.value = pagina.total
   } catch {
     if (!isLatest(turno)) return
     facturas.value = []
@@ -229,7 +231,7 @@ async function refrescarFila (event) {
   const posicion = facturas.value.findIndex(f => f.id === event.detail)
   if (posicion === -1) return recargar()
   try {
-    const fresca = (await BillingDataService.listInvoices({ invoice_id: event.detail })).data.results[0]
+    const fresca = leerPagina((await BillingDataService.listInvoices({ invoice_id: event.detail })).data).filas[0]
     if (!fresca) return recargar()
     facturas.value[posicion] = InvoiceMappers.getMap(fresca)
   } catch {
@@ -306,35 +308,20 @@ function abrir (factura) {
 }
 
 async function desvincularUna (factura) {
-  const ordenes = factura.ordenes_vinculadas
+  const ordenes = factura.ordenes_vinculadas.map(o => ({ id: o.order_id, order_number: o.order_number }))
   let orden = ordenes[0]
   if (ordenes.length > 1) {
     const { value } = await swal.fire({
       title: '¿De qué orden?', input: 'select', showCancelButton: true, cancelButtonText: 'Cancelar',
-      inputOptions: Object.fromEntries(ordenes.map(o => [o.order_id, o.order_number])),
+      inputOptions: Object.fromEntries(ordenes.map(o => [o.id, o.order_number])),
     })
-    orden = ordenes.find(o => String(o.order_id) === value)
+    orden = ordenes.find(o => String(o.id) === value)
   }
   if (orden && await desvincular(factura, orden)) recargar()
 }
 
-async function eliminar (factura) {
-  const vinculadas = factura.ordenes_vinculadas.length
-  const { isConfirmed } = await swal.fire({
-    title: '¿Eliminar esta factura?', icon: 'warning', showCancelButton: true,
-    html: `<b>${factura.invoice_number || 'Sin número'}</b><br>`
-      + (vinculadas ? `Está vinculada a ${vinculadas} ${vinculadas === 1 ? 'orden' : 'órdenes'}. ` : '')
-      + 'Se eliminará la factura y todos sus abonos.',
-    confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar',
-  })
-  if (!isConfirmed) return
-  try {
-    await BillingDataService.deleteInvoice(factura.id)
-    avisarHecho('Factura eliminada')
-    recargar()
-  } catch (error) {
-    swal.fire({ icon: 'error', title: 'No se eliminó', text: mensajeDeError(error, 'No se pudo eliminar.') })
-  }
+async function eliminarUna (factura) {
+  if (await eliminar(factura)) recargar()
 }
 
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(facturas)
@@ -363,15 +350,11 @@ function ejecutarAccion (clave, [factura]) {
     case 'anular':
       enBaja.value = factura
       return
-    case 'eliminar': return eliminar(factura)
+    case 'eliminar': return eliminarUna(factura)
   }
 }
 
-watch(opciones, recargar, { deep: true })
-watch(filtros, debounce(() => {
-  if (opciones.value.page === 1) recargar()
-  else opciones.value.page = 1
-}), { deep: true })
+watch(filtros, debounce(alInicio), { deep: true })
 
 // Desde Órdenes llega con ?ordenes=1,2: la factura se abre llena con sus equipos.
 onMounted(() => {

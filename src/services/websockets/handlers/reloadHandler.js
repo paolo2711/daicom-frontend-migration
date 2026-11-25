@@ -7,7 +7,6 @@ const emit = (name, detail) =>
 
 // Mensaje-string simple -> evento de recarga de tabla que escucha cada lista.
 const RELOADS = {
-  RELOAD_TABLES: 'wss-reload-tables',            // salvavidas heredado
   RELOAD_CERTIFICATES: 'wss-reload-certificates',
   RELOAD_ORDERS_service: 'wss-reload-orders-service',
   RELOAD_ORDERS_rental: 'wss-reload-orders-rental',

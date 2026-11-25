@@ -1,18 +1,11 @@
 import axios from "axios";
 import authHeader from "@/services/auth-header";
+import { TODOS, porPagina } from "@/utils/pagination";
 
 
 class UserDataService {
     getAll() {
-        return axios.get( 'users?page_size=1000000000', {
-            headers: authHeader()
-        });
-    }
-
-    get(id) {
-        return axios.get(`users/${id}`,  {
-            headers: authHeader()
-        });
+        return axios.get("users", { params: porPagina(1, TODOS), headers: authHeader() });
     }
 
     create(data) {

@@ -34,22 +34,22 @@
 
         <filter-pill
           v-if="ver_bandeja_firmas"
-          :active="filtro_firma_pendiente"
+          :active="pildora === POR_FIRMAR"
           :count="appStore.pendingSignaturesCount"
           color="primary"
           badge-color="error"
           icon="mdi-draw"
           tooltip="Filtrar certificados que requieren atención"
-          @click="toggleFiltroFirma"
+          @click="alternarPildora(POR_FIRMAR)"
         >Pendientes de Firma</filter-pill>
 
         <filter-pill
-          :active="filtro_excel_pendiente"
-          :variant="filtro_excel_pendiente ? 'elevated' : 'tonal'"
+          :active="pildora === SIN_EXCEL"
+          :variant="pildora === SIN_EXCEL ? 'elevated' : 'tonal'"
           color="orange-darken-2"
           icon="mdi-file-excel-outline"
           tooltip="Filtrar certificados que aún no tienen archivo base"
-          @click="toggleFiltroExcel"
+          @click="alternarPildora(SIN_EXCEL)"
         >Pendientes de Excel</filter-pill>
 
         <v-spacer></v-spacer>
@@ -75,7 +75,7 @@
                 v-model:desde="emission_date__gt"
                 v-model:hasta="emission_date__lt"
                 label="Rango de Emisión"
-                @apply="aplicarFiltroFechas"
+                @apply="alInicio"
               />
             </v-col>
 
@@ -420,7 +420,6 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, defineAsyncComponent, mergeProps } from 'vue'
-import { useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/appStore'
 
 import FluentPagination    from '@/components/commonComponents/FluentPagination.vue'
@@ -429,6 +428,7 @@ import CertificateDataService from '@/services/certificates/certificateDataServi
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { LISTAS } from '@/utils/comboLists'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { useRouteFilters } from '@/composables/useRouteFilters'
 import { useUploadState }   from '@/composables/useUploadState'
 import { debounce }         from '@/utils/debounce'
 import OrderDataService    from '@/services/orders/orderDataService.js'
@@ -442,7 +442,7 @@ import StateLegend         from '@/components/shared/StateLegend.vue'
 import { tieneExcelBase }  from '@/utils/certificates/excelBase'
 import { estaEntregado } from '@/utils/certificates/entrega'
 import { NUBE_DESACTUALIZADA, ESTADOS, estadoDe, vivo } from '@/utils/certificates/estado'
-import { ANULADA } from '@/utils/orders/estado'
+import { ABONADO, ANULADA, CREDITO, DEUDA, EXCEDIDO, PAGADO } from '@/utils/orders/estado'
 import { TIPOS_CERTIFICADO } from '@/utils/certificates/tipos'
 import { datosDelEquipo } from '@/utils/equipments/datos'
 import { ACCIONES_CERTIFICADO } from '@/utils/certificates/acciones'
@@ -455,15 +455,16 @@ import { fechaCorta, fechaISO, hoyISO } from '@/utils/dates'
 import FilterPill          from '@/components/shared/FilterPill.vue'
 import DateRangeFilter     from '@/components/shared/DateRangeFilter.vue'
 import { decidirRefresco } from '@/utils/changedRows'
+import { leerPagina, porPagina } from '@/utils/pagination'
 import { useCertificateActions } from '@/composables/useCertificateActions'
 import { seguirLaLista, soltar } from '@/composables/useCurrentRows'
+import { usePage } from '@/composables/usePage'
 
 // Componentes async (lazy-loading igual que en Vue 2)
 // carga diferida de LoadSheet movida a BatchActionModal
 const BatchActionModal = defineAsyncComponent(() => import('./BatchActionModal.vue'))
 
 // ─── Composables ──────────────────────────────────────────────────────────────
-const route  = useRoute()
 
 const appStore = useAppStore()
 const { estadoSubida, confirmarFila } = useUploadState()
@@ -485,19 +486,22 @@ const ordenes                  = ref({})
 const ordenDe                  = (item) => ordenes.value[item.order] || {}
 const total_certificates       = ref(0)
 const loading_list             = ref(false)
-const options                  = ref({ page: 1, itemsPerPage: 30 })
+const { opciones: options, alInicio } = usePage(() => retrieveAllCertificates())
 
-const filtro_firma_pendiente   = ref(false) // Estado del Smart Chip
-const filtro_excel_pendiente   = ref(false) // Estado del Smart Chip Excel
+// Una pildora prendida a la vez; cada una es un filtro del back.
+const POR_FIRMAR = 'signature_requested'
+const SIN_EXCEL = 'pending_excel'
+const pildora = ref(null)
 const mostrar_filtros_avanzados = ref(false) // Toggle de la UI
 
 // ─── Filtros de fecha ─────────────────────────────────────────────────────────
-const emission_date__gt = ref((() => {
+const haceOchoMeses = () => {
   const d = new Date()
-  d.setMonth(d.getMonth() - 8) // ventana por defecto: últimos 8 meses
+  d.setMonth(d.getMonth() - 8)
   return fechaISO(d)
-})())
-const emission_date__lt = ref(hoyISO())
+}
+const emission_date__gt = ref('')
+const emission_date__lt = ref('')
 
 
 // ─── Laboratorios ─────────────────────────────────────────────────────────────
@@ -581,27 +585,21 @@ function getRowProps ({ item }) {
 const { begin: beginCertLoad, isLatest: isLatestCertLoad } = useLatestRequest()
 
 // ─── Watchers ─────────────────────────────────────────────────────────────────
-watch(options, () => retrieveAllCertificates(), { deep: true })
+const buscar = debounce(alInicio)
 
-// Busqueda enlazada: si llega o cambia ?certificado (tambien ya estando en la pestana), el watch de `numero` busca.
-watch(() => route.query.certificado, (v) => { numero.value = v || '' })
+// Desde otra pantalla o una notificacion. Sin `desde` ni `hasta`, los ultimos ocho meses; vacios, sin limite de fecha.
+useRouteFilters(({ certificado, pildora: pedida, desde, hasta }) => {
+  numero.value = certificado || ''
+  equipment.value = ''
+  client_id.value = null
+  lab_id.value = null
+  certificate_type.value = null
+  pildora.value = pedida || null
+  emission_date__gt.value = desde ?? haceOchoMeses()
+  emission_date__lt.value = hasta ?? hoyISO()
+}, buscar)
 
-// Igual para ?firma_pendiente (notificacion de firma solicitada): activa el filtro.
-watch(() => route.query.firma_pendiente, (v) => {
-  if (v) { filtro_firma_pendiente.value = true; options.value.page = 1; retrieveAllCertificates() }
-})
-
-// Desde Inicio ("Ver los N" de por elaborar) llega ?excel_pendiente=1.
-watch(() => route.query.excel_pendiente, (v) => {
-  if (v) { filtro_excel_pendiente.value = true; options.value.page = 1; retrieveAllCertificates() }
-})
-
-watch(numero,            () => { options.value.page = 1; retrieveAllCertificates() })
-// Texto libre: espera a que termine de escribir en vez de consultar por letra.
-watch(equipment, debounce(() => { options.value.page = 1; retrieveAllCertificates() }))
-watch(certificate_type,  () => { options.value.page = 1; retrieveAllCertificates() })
-watch(client_id,         () => { options.value.page = 1; retrieveAllCertificates() })
-watch(lab_id,            () => { options.value.page = 1; retrieveAllCertificates() })
+watch([numero, equipment, certificate_type, client_id, lab_id], buscar)
 
 // El modal de lote muestra fila por fila que va a pasar. Con uno solo la fila
 // va marcada aunque ya tenga lo suyo: elegirlo es pedir reemplazarlo.
@@ -630,25 +628,6 @@ onMounted(() => {
   user_permissions.value = user.action_permissions || []
   permiso_resumen.value         = is_admin.value || user_permissions.value.includes(1002)
 
-  if (route.query.certificado) {
-    numero.value = route.query.certificado
-  }
-
-  // Desde la notificacion de "firma solicitada": llega ?firma_pendiente=1 -> activa
-  // el filtro de la pildora de pendientes de firma (el guard de secuencia evita
-  // que la carga sin filtro pise este resultado).
-  if (route.query.firma_pendiente) {
-    filtro_firma_pendiente.value = true
-    options.value.page = 1
-    retrieveAllCertificates()
-  }
-
-  if (route.query.excel_pendiente) {
-    filtro_excel_pendiente.value = true
-    options.value.page = 1
-    retrieveAllCertificates()
-  }
-
   window.addEventListener('wss-reload-certificates', recargarPorWebSocket)
   window.addEventListener('wss-update-row',       fetchAndInjectSingleCert)
   window.addEventListener('wss-update-rows',      aplicarFilasCambiadas)
@@ -668,21 +647,9 @@ onBeforeUnmount(() => {
 
 
 
-function toggleFiltroFirma () {
-  filtro_firma_pendiente.value = !filtro_firma_pendiente.value
-  options.value.page = 1
-  retrieveAllCertificates() // Ejecuta la búsqueda
-}
-
-function toggleFiltroExcel () {
-  filtro_excel_pendiente.value = !filtro_excel_pendiente.value
-  options.value.page = 1
-  retrieveAllCertificates() // Ejecuta la búsqueda
-}
-
-function aplicarFiltroFechas () {
-  options.value.page = 1    // Reinicia la paginación a la página 1
-  retrieveAllCertificates() // Dispara 1 sola búsqueda limpia al backend
+function alternarPildora (valor) {
+  pildora.value = pildora.value === valor ? null : valor
+  alInicio()
 }
 
 function seleccionarTodaLaOrden (orderId) {
@@ -708,14 +675,11 @@ const getSemaforoColor = (item) => {
   // lado del dinero esta cerrado igual que una pagada.
   if (orden.order_requiere_pago === false) return 'success'
 
-  const hasInv = orden.order_has_invoices
-  const hasPay = orden.order_has_payments
+  if (orden.order_estado === CREDITO) return 'teal'  // No se cobra hasta que vence
+  if ([PAGADO, EXCEDIDO].includes(orden.order_estado)) return 'success'
+  if ([DEUDA, ABONADO].includes(orden.order_estado)) return 'warning'
 
-  if (orden.order_vence) return 'teal'    // A credito: no se cobra hasta que vence
-  if (hasInv && hasPay) return 'success'  // Verde: Facturado y pagado
-  if (hasInv || hasPay) return 'warning'  // Amarillo: Hay plata moviéndose (falta factura o falta pago)
-  
-  // Si llegamos aquí, es porque NO hay factura y NO hay pago
+  // Sin factura ni cobro.
   if (tieneExcelBase(item)) return 'red'  // Rojo Alerta: Trabajo técnico hecho, pero no han cobrado
   return 'primary'                        // Azul: Borrador recién creado, nadie ha trabajado ni cobrado
 }
@@ -725,15 +689,11 @@ const getSemaforoText = (item) => {
   if (orden.order_status === ANULADA) return 'Orden Anulada'
   if (orden.order_requiere_pago === false) return 'Sin cargo, no se cobra'
 
-  const hasInv = orden.order_has_invoices
-  const hasPay = orden.order_has_payments
+  if (orden.order_estado === CREDITO) return `A crédito · vence ${fechaCorta(orden.order_vence)}`
+  if ([PAGADO, EXCEDIDO].includes(orden.order_estado)) return 'Cobrada'
+  if (orden.order_estado === ABONADO) return 'Abono parcial, falta cobrar'
+  if (orden.order_estado === DEUDA) return 'Falta cobrar'
 
-  if (orden.order_vence) return `A crédito · vence ${fechaCorta(orden.order_vence)}`
-  if (hasInv && hasPay) return 'Facturación y Liquidación Completadas'
-  if (hasInv && !hasPay) return 'Facturada (Pendiente de Liquidación)'
-  if (!hasInv && hasPay) return 'Liquidación en Proceso (Pendiente de Facturación)'
-  
-  // Si llegamos aquí, es porque NO hay factura y NO hay pago
   if (tieneExcelBase(item)) return 'Trabajo técnico listo, falta Facturar y Cobrar'
   return 'Pendiente de Trabajo Técnico y Cobro'
 }
@@ -775,12 +735,10 @@ function retrieveAllCertificates (opciones) {
   if (!silencioso) loading_list.value = true
   const token = beginCertLoad()   // guard de secuencia: solo aplica la carga más reciente
   const pedidoEn = Date.now()     // lo que termine despues de esto, esta carga no lo vio
-  const itemsPerPage       = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
 
   // Pasamos los parámetros al final
   CertificateDataService.getFiltered({
-    page: options.value.page,
-    page_size: itemsPerPage,
+    ...porPagina(options.value.page, options.value.itemsPerPage),
     numero: (numero.value || '').trim(),
     equipment: equipment.value || '',
     client: client_id.value || '',
@@ -788,13 +746,13 @@ function retrieveAllCertificates (opciones) {
     emission_date__gt: emission_date__gt.value,
     emission_date__lt: emission_date__lt.value,
     certificate_type: certificate_type.value || '',
-    signature_requested: filtro_firma_pendiente.value,
-    pending_excel: filtro_excel_pendiente.value,
+    ...(pildora.value && { [pildora.value]: true }),
   }).then((response) => {
     if (!isLatestCertLoad(token)) return   // llegó una carga más nueva → no pisar
-    certificates.value = response.data.results.map(cert => CertificateMappers.getMap(cert))
+    const pagina = leerPagina(response.data)
+    certificates.value = pagina.filas.map(cert => CertificateMappers.getMap(cert))
     ordenes.value = response.data.ordenes || {}
-    total_certificates.value = response.data.count
+    total_certificates.value = pagina.total
     // La lista viene del server, asi que manda ella sobre cualquier tarea terminada.
     certificates.value.forEach(c => confirmarFila(c.id, pedidoEn))
   }).catch(() => {}).finally(() => {

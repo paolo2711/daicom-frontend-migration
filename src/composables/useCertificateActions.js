@@ -29,7 +29,11 @@ export function useCertificateActions({ abrirLote, abrirFicha, seleccion = null 
 
   const ids = (certs) => certs.map(c => c.id)
 
-  const { descargar } = useDownload()
+  const { descargarVarios } = useDownload()
+
+  const descargarFirmados = (certs) => descargarVarios(
+    certs.filter(c => c.nombre_firmado).map(c => ({ url: c.attached_pdf, nombre: c.nombre_firmado })),
+    n => (n === 1 ? 'Certificado descargado' : `${n} certificados descargados`))
 
   async function ejecutarAccion (clave, certs) {
     const hecho = await hacer(clave, certs)
@@ -43,7 +47,7 @@ export function useCertificateActions({ abrirLote, abrirFicha, seleccion = null 
     switch (clave) {
       case 'ver': return abrirFicha(cert)
       case 'link': return copiarLinks(certs)
-      case 'descargar': return descargar(cert.attached_pdf, cert.nombre_firmado, 'el certificado')
+      case 'descargar': return descargarFirmados(certs)
       case 'excel': return abrirLote('excel', certs)
       // Con varios, el modal dice cuales ya estaban pedidos.
       case 'firma':

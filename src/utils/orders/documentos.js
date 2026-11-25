@@ -5,13 +5,16 @@ import { ESTADOS } from '@/utils/billing/guias'
 import { fechaCorta } from '@/utils/dates'
 import { DOCUMENTOS, TIPOS_DE_COTIZACION } from '@/utils/documents/quoteDefaults'
 import { COTIZACION as DE_COTIZACION, VALORIZACION as DE_VALORIZACION } from '@/utils/documents/tipos'
+import { mensajeDeError } from '@/utils/errors'
 import { monto } from '@/utils/money'
+import { porPagina } from '@/utils/pagination'
 
 // OrderDocument.Tipo en el back.
-export const ORDEN_DE_COMPRA = 1
-export const VALORIZACION = 2
-export const COTIZACION = 4
-export const GUIA_REMISION = 5
+const ORDEN_DE_COMPRA = 1
+const VALORIZACION = 2
+const COTIZACION = 4
+const GUIA_REMISION = 5
+const GUIA_DE_RETORNO = 6
 
 // Un documento de Documentos (cotizacion o valorizacion) que se vincula; el hecho fuera se sube en Documentos.
 function deDocumentos (tipo, documento, campo) {
@@ -20,7 +23,7 @@ function deDocumentos (tipo, documento, campo) {
     sinResultados: (kind) => `El cliente no tiene ${DOCUMENTOS[documento].plural.toLowerCase()} de ${kind} emitidas`,
     buscar: ({ cliente, kind, query, page, size }) => DocumentsDataService.getAll({
       document_type: documento, kind, status: 'EMITIDO', client: cliente,
-      document_number: query || undefined, page, itemsPerPage: size,
+      document_number: query || undefined, ...porPagina(page, size),
     }),
     aOpcion: (d) => ({
       id: d.id, name: d.document_number, pdf: d.pdf_file, tipo: TIPOS_DE_COTIZACION[d.kind]?.texto,
@@ -29,8 +32,8 @@ function deDocumentos (tipo, documento, campo) {
   }
 }
 
-// Las secciones que vinculan algo del sistema. `campo`: el del pedido al crear la orden y el de los pendientes;
-// `llave`: el campo de OrderDocument. La guia hecha fuera se sube en PDF a la misma seccion.
+// Las secciones que vinculan algo del sistema. `campo`: el del pedido al crear la orden y el de los pendientes; `llave`:
+// el de OrderDocument. La guia hecha fuera se sube en PDF (`enPdf`).
 export const VINCULABLES = [
   deDocumentos(COTIZACION, DE_COTIZACION, 'cotizaciones'),
   deDocumentos(VALORIZACION, DE_VALORIZACION, 'valorizaciones'),
@@ -38,11 +41,17 @@ export const VINCULABLES = [
     tipo: GUIA_REMISION, campo: 'guias', llave: 'guia', nombre: 'guía', plural: 'Guías de remisión', enPdf: true,
     sinResultados: () => 'El cliente no tiene guías de remisión vigentes',
     buscar: ({ cliente, query, page, size }) => BillingDataService.listDispatchGuides({
-      cliente, q: query || undefined, vigentes: true, page, itemsPerPage: size,
+      cliente, q: query || undefined, vigentes: true, ...porPagina(page, size),
     }),
     aOpcion: (g) => ({ id: g.id, name: g.numero, pdf: g.pdf, tipo: ESTADOS[g.estado].texto,
                        detalle: fechaCorta(g.fecha_emision) }),
   },
+]
+
+// Las de un alquiler que se suben en PDF, con su numero.
+export const SUBIBLES = [
+  { tipo: GUIA_DE_RETORNO, nombre: 'guía de retorno', plural: 'Guías de retorno' },
+  { tipo: ORDEN_DE_COMPRA, nombre: 'orden de compra', plural: 'Órdenes de compra' },
 ]
 
 export const sinPendientes = () => ({ cotizaciones: [], valorizaciones: [], guias: [], archivos: [] })
@@ -51,24 +60,13 @@ export const sinPendientes = () => ({ cotizaciones: [], valorizaciones: [], guia
 export const vinculosAlCrear = (pendientes) =>
   Object.fromEntries(VINCULABLES.map(v => [v.campo, pendientes[v.campo].map(d => d.id)]))
 
-// Los PDF de un alquiler que van uno solo por orden (campos de Order). La de salida es de antes: las de ahora
-// son guías de remisión.
-export const GUIAS = [
-  { campo: 'dispatch_guide_pdf', texto: 'Guía de salida (anterior)', anterior: true },
-  { campo: 'return_guide_pdf', texto: 'Guía de retorno' },
-]
-
-// Un PDF para la orden: `destino` es un tipo de OrderDocument o un campo de GUIAS.
+// Un PDF para la orden: `destino` es su tipo.
 export function subirArchivo(ordenId, { destino, numero, archivo }) {
   const datos = new FormData()
-  if (typeof destino === 'number') {
-    datos.append('tipo', destino)
-    datos.append('numero', numero || '')
-    datos.append('pdf', archivo)
-    return OrderDataService.addDocument(ordenId, datos)
-  }
-  datos.append(destino, archivo)
-  return OrderDataService.uploadInvoice(ordenId, datos)
+  datos.append('tipo', destino)
+  datos.append('numero', numero || '')
+  datos.append('pdf', archivo)
+  return OrderDataService.addDocument(ordenId, datos)
 }
 
 export function vincularDocumento(ordenId, { tipo, llave }, id) {
@@ -78,15 +76,17 @@ export function vincularDocumento(ordenId, { tipo, llave }, id) {
   return OrderDataService.addDocument(ordenId, datos)
 }
 
-// Los PDF elegidos al crear la orden, ya creada. Devuelve el nombre de los que no subieron.
+// Los PDF elegidos al crear la orden, ya creada: los que no subieron, con su motivo, y el aviso de su copia en la red.
 export async function subirPendientes(ordenId, archivos) {
   const fallaron = []
+  let warning = ''
   for (const pendiente of archivos) {
     try {
-      await subirArchivo(ordenId, pendiente)
-    } catch {
-      fallaron.push(pendiente.archivo.name)
+      const { data } = await subirArchivo(ordenId, pendiente)
+      warning = warning || data.warning
+    } catch (error) {
+      fallaron.push(`${pendiente.archivo.name}: ${mensajeDeError(error, 'no se pudo subir.')}`)
     }
   }
-  return fallaron
+  return { fallaron, warning }
 }

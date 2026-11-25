@@ -21,6 +21,12 @@ export function useOpenRow (lista) {
   })
 }
 
+// Dos selecciones que no conviven: marcar en una vacia la otra.
+export function unaSolaSeleccion (una, otra) {
+  watch(una, (v) => { if (v.length) otra.value = [] })
+  watch(otra, (v) => { if (v.length) una.value = [] })
+}
+
 // Las filas de una accion ya hecha salen de las marcadas; las demas siguen.
 export function soltar (marcadas, filas) {
   const ids = new Set(filas.map(f => f.id))

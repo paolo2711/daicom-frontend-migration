@@ -46,6 +46,7 @@ import { ACEPTADA } from '@/utils/billing/sunat'
 import { fechaCorta } from '@/utils/dates'
 import { CAMPO } from '@/utils/fields'
 import { MONEDAS } from '@/utils/money'
+import { leerPagina, porPagina } from '@/utils/pagination'
 import CardInvoiceSummary from './CardInvoiceSummary.vue'
 
 const props = defineProps({
@@ -69,8 +70,8 @@ onMounted(async () => {
   if (props.clave !== 'guias' || !props.clienteId) return
   cargando.value = true
   try {
-    const { data } = await BillingDataService.listDispatchGuides({ cliente: props.clienteId, estado: ACEPTADA, page_size: 50 })
-    guias.value = data.results
+    const { data } = await BillingDataService.listDispatchGuides({ cliente: props.clienteId, estado: ACEPTADA, ...porPagina(1, 50) })
+    guias.value = leerPagina(data).filas
   } catch {
     guias.value = []
   } finally {

@@ -13,7 +13,6 @@
           label="Buscar Nro Orden"
           clearable
           style="max-width: 220px;"
-          @update:model-value="applyFilters"
         />
 
         <v-text-field
@@ -25,7 +24,6 @@
           label="Nro Certificado"
           clearable
           style="max-width: 220px;"
-          @update:model-value="applyFilters"
         />
 
         <v-text-field
@@ -37,37 +35,11 @@
           label="Nro Factura"
           clearable
           style="max-width: 220px;"
-          @update:model-value="applyFilters"
         />
 
         <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
 
-        <filter-pill
-          :active="filtro_falta_pago"
-          :count="appStore.pendingPaymentsServiceCount"
-          color="error"
-          icon="mdi-cash-remove"
-          tooltip="Filtrar órdenes facturadas pero sin abonos"
-          @click="toggleFiltroPago"
-        >Falta Pago</filter-pill>
-
-        <filter-pill
-          :active="filtro_a_credito"
-          :count="appStore.pendingCreditServiceCount"
-          color="teal"
-          icon="mdi-calendar-clock"
-          tooltip="Filtrar órdenes a crédito que aún no vencen"
-          @click="toggleFiltroCredito"
-        >A Crédito</filter-pill>
-
-        <filter-pill
-          :active="filtro_sin_factura"
-          :count="appStore.pendingInvoicesServiceCount"
-          color="warning"
-          icon="mdi-file-document-remove-outline"
-          tooltip="Filtrar órdenes abiertas pendientes de facturar"
-          @click="toggleFiltroFactura"
-        >Sin Emitir Factura</filter-pill>
+        <order-pills v-model="pildora" :cuentas="cuentas" @update:model-value="applyFilters" />
 
         <v-spacer></v-spacer>
 
@@ -98,7 +70,7 @@
             </v-col>
 
             <v-col cols="12" md="4">
-              <client-select v-model="filter_client_id" @update:model-value="applyFilters" />
+              <client-select v-model="filter_client_id" />
             </v-col>
 
             <v-col cols="12" md="4">
@@ -113,7 +85,6 @@
                 density="compact"
                 hide-details="auto"
                 label="Estado"
-                @update:model-value="applyFilters"
               />
             </v-col>
           </v-row>
@@ -136,7 +107,7 @@
             single-expand
             item-value="id"
         :hover="false"
-        class="elevation-0 rounded-lg tabla-mejorada tabla-ordenes-servicio bg-surface"
+        class="elevation-0 rounded-lg tabla-mejorada tabla-ordenes bg-surface"
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
@@ -159,20 +130,7 @@
         </template>
 
         <template v-slot:item.progress="{ item }">
-          <div v-if="viva(item) && getProgreso(item).total > 0" class="mx-auto w-75">
-            <div class="text-caption mb-1 font-weight-medium text-center" :class="theme.global.current.value.dark ? 'text-grey-lighten-1' : 'text-grey-darken-2'">
-              {{ getProgreso(item).listos }} / {{ getProgreso(item).total }} Equipos
-            </div>
-            <v-progress-linear
-              :model-value="(getProgreso(item).listos / getProgreso(item).total) * 100"
-              height="5"
-              rounded
-              color="primary"
-              bg-color="grey"
-              bg-opacity="0.15"
-            />
-          </div>
-          <span v-else class="text-grey">---</span>
+          <order-progress :orden="item" listos="Equipos" />
         </template>
 
         <template v-slot:item.created_at="{ item }">
@@ -200,26 +158,6 @@
           </div>
         </template>
 
-        <template v-slot:item.detraccion="{ item }">
-          <div class="d-flex justify-center">
-            <template v-if="item.detraccion && item.detraccion.afecto">
-              <v-chip 
-                size="small" 
-                color="deep-orange" 
-                variant="tonal" 
-                class="font-weight-bold px-3 text-caption"
-              >
-                {{ monto(item.detraccion.monto, item.detraccion.moneda) }}
-                <v-tooltip activator="parent" location="top">
-                  Detracción {{ item.detraccion.tasa }}% · SUNAT
-                </v-tooltip>
-              </v-chip>
-            </template>
-            <span v-else class="text-caption text-grey">—</span>
-          </div>
-        </template>
-
-
         <template v-slot:item.actions="{ item }">
           <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" color="grey-darken-1"
                  :disabled="!accionesDe([item]).length" @click.stop="alBotonDeFila($event, item)" />
@@ -231,7 +169,7 @@
               <table-service-details
                 v-model:seleccion="equipos_seleccionados"
                 :order="item"
-                :muestra-fecha="!fechaEnColumna"
+                :muestra-fecha="!hayEspacio"
                 @reload="retrieveOrders"
                 @editar="abrirEditarOrden(item)"
                 @edit-certificate="openCertificateModal"
@@ -271,32 +209,33 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { useTheme } from 'vuetify'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useAppStore } from '@/stores/appStore'
 import { Toast } from '@/plugins/alerts'
 import { mensajeDeError } from '@/utils/errors'
-import { monto } from '@/utils/money'
 import { abrirIngreso } from '@/utils/orders/ingreso'
 import OrderDataService from '@/services/orders/orderDataService'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
-import FilterPill from '@/components/shared/FilterPill.vue'
+import OrderPills from '../OrderPills.vue'
+import OrderProgress from '../OrderProgress.vue'
 import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import { useOrderActions } from '@/composables/useOrderActions'
 import { useOrderCobro } from '@/composables/useOrderCobro'
-import { seguirLaLista, soltar } from '@/composables/useCurrentRows'
-import { useOrderDateColumn } from '@/composables/useOrderDateColumn'
+import { seguirLaLista, soltar, unaSolaSeleccion } from '@/composables/useCurrentRows'
+import { useOrderColumns } from '@/composables/useOrderColumns'
 import { fechaCorta } from '@/utils/dates'
 import { FILTRO_DE_ESTADO, SERVICIO, esDeServicio, viva } from '@/utils/orders/estado'
 import { lineaAnulada } from '@/utils/orders/lineas'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
+import { useOrderRouteFilters } from '@/composables/useOrderRouteFilters'
+import { usePage } from '@/composables/usePage'
 import { debounce } from '@/utils/debounce'
 import { throttle } from '@/utils/throttle'
 import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemaforoFinanciero } from '@/utils/orders/cobro'
+import { leerPagina } from '@/utils/pagination'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
 import AddOrder from '../AddOrder.vue'
@@ -309,8 +248,6 @@ import { defineAsyncComponent } from 'vue'
 
 const BatchActionModal = defineAsyncComponent(() => import('@/views/certificates/components/BatchActionModal.vue'))
 
-const theme = useTheme()
-const route = useRoute()
 const appStore = useAppStore()
 
 // Estado UI Split-Screen
@@ -318,14 +255,14 @@ const ordenes_seleccionadas = ref([])
 // Los de la orden abierta. Una sola seleccion a la vez: marcar equipos
 // desmarca las ordenes (y el panel sale de vincular), y al reves.
 const equipos_seleccionados = ref([])
-watch(ordenes_seleccionadas, (v) => { if (v.length) equipos_seleccionados.value = [] })
-watch(equipos_seleccionados, (v) => { if (v.length) ordenes_seleccionadas.value = [] })
+unaSolaSeleccion(ordenes_seleccionadas, equipos_seleccionados)
 
 // Nuevos estados UI de Filtros Avanzados y Chips
 const mostrar_filtros_avanzados = ref(false)
-const filtro_falta_pago = ref(false)
-const filtro_a_credito = ref(false)
-const filtro_sin_factura = ref(false)
+const pildora = ref(null)
+const cuentas = computed(() => ({ missing_payment: appStore.pendingPaymentsServiceCount,
+                                  a_credito: appStore.pendingCreditServiceCount,
+                                  missing_invoice: appStore.pendingInvoicesServiceCount }))
 
 // Texto computado para el calendario elegante
 
@@ -352,7 +289,7 @@ const columnas = [
   { title: 'Opciones', key: 'actions', align: 'center', sortable: false },
   { title: '', key: 'data-table-expand' },
 ]
-const { anchoDeLaLista, fechaEnColumna, headers } = useOrderDateColumn(columnas)
+const { anchoDeLaLista, hayEspacio, headers } = useOrderColumns(columnas)
 
 // Datos de tabla
 const orders = ref([])
@@ -367,7 +304,7 @@ const {
 watch(idOrdenExpandida, () => { equipos_seleccionados.value = [] })
 const total_orders = ref(0)
 const loading_list = ref(false)
-const options = ref({ page: 1, itemsPerPage: 30 })
+const { opciones: options, alInicio } = usePage(() => retrieveOrders())
 
 // Filtros
 const filter_order = ref('')
@@ -386,27 +323,8 @@ const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestReques
 
 // Funciones de filtro
 const applyFilters = () => {
-  options.value.page = 1
-  retrieveOrders()
+  alInicio()
   cargarResumenes() // Sincroniza las píldoras cada vez que filtras
-}
-
-// Falta pago y A credito no comparten ordenes: prender una apaga la otra.
-const toggleFiltroPago = () => {
-  filtro_falta_pago.value = !filtro_falta_pago.value
-  if (filtro_falta_pago.value) filtro_a_credito.value = false
-  applyFilters()
-}
-
-const toggleFiltroCredito = () => {
-  filtro_a_credito.value = !filtro_a_credito.value
-  if (filtro_a_credito.value) filtro_falta_pago.value = false
-  applyFilters()
-}
-
-const toggleFiltroFactura = () => {
-  filtro_sin_factura.value = !filtro_sin_factura.value
-  applyFilters()
 }
 
 // Las pildoras de cobro, con los filtros de la pantalla.
@@ -435,10 +353,9 @@ const limpiarFechas = () => {
 const retrieveOrders = () => {
   loading_list.value = true
   const token = beginOrdersLoad()   // guard de secuencia: gana la carga más reciente
-  const limite = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
   OrderDataService.getFiltered(
     options.value.page,
-    limite,
+    options.value.itemsPerPage,
     filter_client_id.value,
     filter_order.value,
     filter_correlative.value,
@@ -446,15 +363,14 @@ const retrieveOrders = () => {
     filter_date_lt.value,
     filter_status.value,
     1,
-    filtro_falta_pago.value,
-    filtro_sin_factura.value,
-    filtro_a_credito.value,
+    pildora.value,
     filter_invoice.value
   )
       .then((res) => {
         if (!isLatestOrdersLoad(token)) return   // llegó una carga más nueva → no pisar
-        reemplazarOrdenes(res.data.results.map(orden => OrderMappers.getMap(orden)))
-        total_orders.value = res.data.count
+        const pagina = leerPagina(res.data)
+        reemplazarOrdenes(pagina.filas.map(orden => OrderMappers.getMap(orden)))
+        total_orders.value = pagina.total
       })
       .finally(() => {
         if (isLatestOrdersLoad(token)) loading_list.value = false
@@ -477,10 +393,6 @@ const manejarClicFila = (event, { item }) => {
 }
 
 
-const getProgreso = (o) => {
-  return o.progreso || { total: 0, listos: 0 }
-}
-
 const editarOrdenRef = ref(null)
 const abrirEditarOrden = (o) => editarOrdenRef.value?.editar(o)
 
@@ -495,10 +407,7 @@ const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, accionesD
     abrirCobro,
   })
 
-// WebSockets
-// La fila de la orden: barra, estado y cobro. Sus equipos tienen sus propios
-// avisos, los de cada certificado.
-// Devuelve la fila si la orden es de servicio, o null.
+// La fila de la orden (barra, estado y cobro), o null si no es de servicio. Los equipos avisan por su certificado.
 const refrescarFila = (orderId) => OrderDataService.getFila(orderId)
   .then(response => {
     const fila = response?.data
@@ -538,40 +447,13 @@ const handleWssReload = () => {
   refrescarResumenes()
 }
 
-// Watchers (igual que en ListCertificates)
-watch(options, () => { retrieveOrders() }, { deep: true })
+useOrderRouteFilters(filter_order, pildora, applyFilters)
 
-// Quitamos filter_date_gt y filter_date_lt para que solo se apliquen con el botón "Aplicar"
-// Debounce: espera a que el usuario deje de teclear antes de pegarle al backend.
+// Las fechas no: se aplican con su botón.
 watch([filter_order, filter_correlative, filter_invoice, filter_client_id, filter_status], debounce(applyFilters))
 
 // Ciclo de vida
-watch(() => route.query.buscar_orden, (val) => {
-  if (val) filter_order.value = val
-})
-
-watch(() => route.query.buscar_factura, (val) => {
-  if (val) filter_invoice.value = val
-})
-
-// Desde Inicio ("Ver los N") llegan las pildoras ya activadas.
-const aplicarPildorasDeRuta = () => {
-  let cambio = false
-  if (route.query.sin_factura) { filtro_sin_factura.value = true; cambio = true }
-  if (route.query.falta_pago)  { filtro_falta_pago.value = true; filtro_a_credito.value = false; cambio = true }
-  if (cambio) applyFilters()
-}
-watch(() => [route.query.sin_factura, route.query.falta_pago], aplicarPildorasDeRuta)
-
 onMounted(() => {
-  if (route.query.buscar_orden) {
-    filter_order.value = route.query.buscar_orden
-  }
-  if (route.query.buscar_factura) {
-    filter_invoice.value = route.query.buscar_factura
-  }
-  aplicarPildorasDeRuta()
-
   cargarResumenes() // Cargamos el número para el badge rojo
   retrieveOrders()
   window.addEventListener('wss-reload-orders-service', handleWssReload)
@@ -591,68 +473,3 @@ onUnmounted(() => {
   window.removeEventListener('wss-reload-certificates', recargarEquiposPorWebSocket)
 })
 </script>
-
-<style lang="scss">
-/* La píldora flotante de selección vive ahora en el componente común
-   @/components/commonComponents/SelectionBar.vue (estilos incluidos). */
-
-/*
- * POR QUÉ FALLABAN LOS INTENTOS ANTERIORES
- * ──────────────────────────────────────────
- * Vuetify NO pinta el hover con background-color en el <tr>.
- * Lo hace con un pseudo-elemento ::after en cada <td>:
- *
- *   .v-table--hover tbody tr:hover > td::after {
- *     content: "";
- *     position: absolute;
- *     background: rgba(var(--v-border-color), var(--v-hover-opacity));
- *   }
- *
- * Todos los !important en background-color del tr eran invisibles porque
- * la capa de hover se pinta ENCIMA como overlay en el td.
- *
- * SOLUCIÓN: anular el td::after en las filas donde no queremos hover.
- *
- * ESTRUCTURA DOM al expandir:
- *   tr.fila-padre-activa   ← fila con datos de la orden
- *   tr.fila-activa         ← fila con TableServiceDetails (expanded-row)
- *     └─ v-table (sub-tabla interna con sus propios tr)
- */
-
-/* ── Hover de filas normales (las no expandidas) ── */
-/* Replicamos lo que haría Vuetify pero solo donde queremos */
-.v-theme--light .tabla-ordenes-servicio tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
-  background-color: rgba(0, 0, 0, 0.04) !important;
-}
-.v-theme--dark .tabla-ordenes-servicio tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-/* ── Anular el td::after de Vuetify en filas activas ── */
-/* Esto elimina la capa de hover que Vuetify pinta encima */
-.tabla-ordenes-servicio tbody tr.fila-padre-activa > td::after,
-.tabla-ordenes-servicio tbody tr.fila-activa > td::after {
-  display: none !important;
-}
-
-/* ── Anular el td::after en la sub-tabla interna (TableServiceDetails) ── */
-.tabla-ordenes-servicio tr.fila-activa .v-table tbody tr > td::after {
-  display: none !important;
-}
-
-/* ── Color de fondo del estado activo ── */
-.v-theme--light .tabla-ordenes-servicio tbody tr.fila-padre-activa > td,
-.v-theme--light .tabla-ordenes-servicio tbody tr.fila-activa > td {
-  background-color: #e8e8e8 !important;
-}
-.v-theme--dark .tabla-ordenes-servicio tbody tr.fila-padre-activa > td,
-.v-theme--dark .tabla-ordenes-servicio tbody tr.fila-activa > td {
-  background-color: #292929 !important;
-}
-
-/* ── Sub-tabla transparente para heredar el fondo del padre ── */
-.tabla-ordenes-servicio tr.fila-activa .v-table,
-.tabla-ordenes-servicio tr.fila-activa .v-table__wrapper {
-  background-color: transparent !important;
-}
-</style>

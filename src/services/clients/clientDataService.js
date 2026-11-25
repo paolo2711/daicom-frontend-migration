@@ -1,22 +1,13 @@
 import axios from "axios";
 import authHeader from "@/services/auth-header";
+import { porPagina } from "@/utils/pagination";
 
 
 class ClientDataService {
     getFiltered(page, page_size, name, needs_review = ''){
-        let url = `clients?page=${page}&page_size=${page_size}&search=${encodeURIComponent(name || '')}`;
-        if (needs_review) {
-            url += `&needs_review=true`;
-        }
-        return axios.get(url,  {
-            headers: authHeader()
-        });
-    }
-
-    getAll() {
-        return axios.get( 'clients?page_size=1000000000', {
-            headers: authHeader()
-        });
+        const params = { ...porPagina(page, page_size), search: name || '' };
+        if (needs_review) params.needs_review = true;
+        return axios.get("clients", { params, headers: authHeader() });
     }
 
     get(id) {

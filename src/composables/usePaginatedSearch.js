@@ -1,6 +1,7 @@
 import { ref, watch } from 'vue'
 import { debounce } from '@/utils/debounce'
 import { leerCache, guardarCache, olvidarCache } from '@/utils/cache'
+import { leerPagina } from '@/utils/pagination'
 
 const ESPERA_TECLEO = 300
 
@@ -18,10 +19,8 @@ export function usePaginatedSearch(apiServiceCall, mapperFunction, getActiveId =
   const searchQuery = ref(null)
   const total = ref(0)   // total de coincidencias en el server (para avisar "hay más")
 
-  // Sin busqueda, el seleccionado se antepone si el server no lo devolvio, para
-  // que no desaparezca de la lista. Buscando no: ahi la lista son los
-  // resultados, y colar el elegido entre ellos confunde.
-  // Se hace sobre una copia: la lista guardada no se toca.
+  // Sin texto, el elegido va primero si el server no lo devolvio; buscando, solo los resultados.
+  // Sobre una copia: la lista guardada no se toca.
   const aplicar = (lista, cuenta, buscando) => {
     total.value = cuenta
     const visibles = [...lista]
@@ -73,8 +72,8 @@ export function usePaginatedSearch(apiServiceCall, mapperFunction, getActiveId =
     try {
       const response = await apiServiceCall(1, 10, query)
       if (mia !== vuelta) return
-      const cuenta = response.data.count ?? response.data.results.length
-      const lista = response.data.results.map(mapperFunction)
+      const { filas, total: cuenta } = leerPagina(response.data)
+      const lista = filas.map(mapperFunction)
       if (clave) guardarCache(clave, { lista, total: cuenta })
       ultimaConsulta = texto
       aplicar(lista, cuenta, Boolean(texto))

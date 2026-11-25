@@ -50,8 +50,7 @@ export default {
       order_number: element.order_number,
       order_status: element.order_status,
       order_requiere_pago: element.order_requiere_pago,
-      order_has_invoices: element.order_has_invoices,
-      order_has_payments: element.order_has_payments,
+      order_estado: element.order_estado,
       order_vence: element.order_vence,
     };
   },

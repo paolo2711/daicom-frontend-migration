@@ -94,6 +94,8 @@ import { useRowDrag } from '@/composables/useRowDrag'
 import { copiarDebajo } from '@/utils/lists'
 import { usePermissions } from '@/composables/usePermissions'
 import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
+import { leerPagina, porPagina } from '@/utils/pagination'
+import { equipoDeServicio } from '@/utils/orders/orderDefaults'
 
 const props = defineProps({
   // El cliente de la orden, {id, name}: el titular de los certificados que no dicen otro.
@@ -167,7 +169,7 @@ function agregar(equipo) {
   const anterior = equipments.value.findLast(e => e.modo === 'nuevo')
   const igual = anterior?.name === equipo.name ? anterior : null
   abrir({
-    modo: 'nuevo',
+    ...equipoDeServicio(),
     name: equipo.name,
     lab: equipo.laboratorio?.id ?? igual?.lab ?? null,
     lab_data: equipo.laboratorio ?? igual?.lab_data ?? null,
@@ -206,8 +208,8 @@ async function vincular() {
   if (!correlativo.value) return
   buscandoCertificado.value = true
   try {
-    const res = await CertificateDataService.getFiltered({ page_size: 50, correlative: Number(correlativo.value) })
-    const cert = res.data.results.find(c => !c.order && vivo(c))
+    const res = await CertificateDataService.getFiltered({ ...porPagina(1, 50), correlative: Number(correlativo.value) })
+    const cert = leerPagina(res.data).filas.find(c => !c.order && vivo(c))
     if (!cert) {
       $swal.fire('No encontrado', 'No se encontró un certificado suelto o válido con ese número.', 'warning')
       return

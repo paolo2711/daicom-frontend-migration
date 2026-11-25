@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="dialog" class="dialog-premium" fullscreen persistent>
     <v-card class="d-flex flex-column" style="height: 100%;">
-      <base-modal-header :title="titulo" :icon="tipo.icono" @close="close">
+      <base-modal-header :title="titulo" :icon="tipo.icono" @close="salir">
         <span>
           <template v-if="!numero && numeroNuevo">
             Correlativo: <span class="font-weight-bold ml-1">{{ numeroNuevo }}</span> ·
@@ -105,7 +105,7 @@
       </v-card-text>
 
       <form-footer :accion="`Guardar ${definicion.nombre}`" :listo="Boolean(clienteId && cantidadDeItems)"
-                   :ocupado="guardando" :vista="vista" :titulo="titulo" @cancelar="close" @confirmar="guardar" />
+                   :ocupado="guardando" :vista="vista" :titulo="titulo" @cancelar="salir" @confirmar="guardar" />
     </v-card>
   </v-dialog>
 </template>
@@ -122,7 +122,7 @@ import OptionRows from '@/components/shared/OptionRows.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
 import { useLatestRequest } from '@/composables/useLatestRequest'
-import { useLocalDraft } from '@/composables/useLocalDraft'
+import { origenDe, useLocalDraft } from '@/composables/useLocalDraft'
 import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useRowDrag } from '@/composables/useRowDrag'
 import { useRowErrors } from '@/composables/useRowErrors'
@@ -131,8 +131,8 @@ import { fechaCorta } from '@/utils/dates'
 import { debounce } from '@/utils/debounce'
 import { avisarHecho } from '@/utils/documents/avisos'
 import {
-  DOCUMENTOS, LIMITES, TIPOS_DE_COTIZACION, TIPO_POR_DEFECTO, UNIDADES, cotizacionDe, esGrupo, grupoVacio, itemVacio,
-  quoteDefaultJSON,
+  CURRENT_QUOTE_SCHEMA, DOCUMENTOS, LIMITES, TIPOS_DE_COTIZACION, TIPO_POR_DEFECTO, UNIDADES, cotizacionDe, esGrupo,
+  grupoVacio, itemVacio, quoteDefaultJSON,
 } from '@/utils/documents/quoteDefaults'
 import { COTIZACION } from '@/utils/documents/tipos'
 import { mensajeDeError } from '@/utils/errors'
@@ -237,24 +237,27 @@ const titulo = computed(() => (numero.value
   ? `Editar ${numero.value}`
   : `Nueva ${definicion.value.nombre} de ${tipo.value.texto.toLowerCase()}`))
 
-// Lo que se va escribiendo queda en el navegador hasta guardar o cancelar: si
-// se cierra la pestaña, se ofrece al volver a abrir el mismo documento.
-const borrador = useLocalDraft(
-  () => `daicom_borrador_${props.tipoDeDocumento}_${documentoId.value || `nueva_${cotizacion.value.meta.kind}`}`,
-  {
-    resumen: (guardado) => {
-      const items = (guardado.cotizacion?.items || []).filter(fila => !esGrupo(fila) && fila.description?.trim()).length
-      const nombre = definicion.value.nombre
-      return items ? `Hay una ${nombre} sin guardar con ${items} ítem(s) de una sesión anterior.` : ''
-    },
+// El documento sin guardar: el que se edita, la nueva de cada tipo, la que sale de unas ordenes o la copia de otra.
+const origen = ref('')
+const borrador = useLocalDraft({
+  clave: () => `${props.tipoDeDocumento}_${documentoId.value || `${cotizacion.value.meta.kind}_${origen.value}`}`,
+  version: CURRENT_QUOTE_SCHEMA,
+  datos: () => ({ cotizacion: cotizacion.value, clienteId: clienteId.value }),
+  llenar: (guardada) => {
+    cotizacion.value = cotizacionDe(guardada.cotizacion, props.tipoDeDocumento)
+    clienteId.value = guardada.clienteId
+    abrirElPrimero()
   },
-)
-watch([cotizacion, clienteId], () => borrador.guardar({ cotizacion: cotizacion.value, clienteId: clienteId.value }),
-  { deep: true })
+  resumen: (guardada) => {
+    const items = guardada.cotizacion.items.filter(fila => !esGrupo(fila) && fila.description?.trim()).length
+    return items && `Hay una ${definicion.value.nombre} sin guardar con ${items} ${items === 1 ? 'ítem' : 'ítems'}`
+  },
+})
 
-// Una existente o una nueva del tipo elegido: el tipo no se cambia despues. `desdeOrdenes`, lo que
-// sale de las ordenes elegidas (cliente e items), para una nueva ya llena.
-async function open (documento = null, kind = TIPO_POR_DEFECTO, desdeOrdenes = null) {
+// Una existente o una nueva de ese tipo, que no se cambia despues: vacia, con lo que sale de unas ordenes (sus ids,
+// cliente e items) o copiada de otra, con la fecha de hoy.
+async function open ({ documento = null, plantilla = null, desdeOrdenes = null,
+                       kind = plantilla?.kind ?? TIPO_POR_DEFECTO } = {}) {
   documentoId.value = documento?.id || null
   numero.value = documento?.document_number || ''
   numeroNuevo.value = ''
@@ -263,7 +266,7 @@ async function open (documento = null, kind = TIPO_POR_DEFECTO, desdeOrdenes = n
       .then(({ data }) => { numeroNuevo.value = data.numero })
       .catch(() => {})
   }
-  clienteId.value = documento?.client || desdeOrdenes?.client || null
+  clienteId.value = documento?.client || desdeOrdenes?.client || plantilla?.client || null
   const nueva = quoteDefaultJSON(kind, props.tipoDeDocumento)
   if (desdeOrdenes) {
     Object.assign(nueva, {
@@ -271,24 +274,26 @@ async function open (documento = null, kind = TIPO_POR_DEFECTO, desdeOrdenes = n
       items: desdeOrdenes.items.map(item => ({ ...itemVacio(TIPOS_DE_COTIZACION[kind].unidad), ...item })),
     })
   }
+  if (plantilla) {
+    const { meta, ...datos } = plantilla.document_data
+    Object.assign(nueva, datos, { meta: { ...meta, date: nueva.meta.date } })
+  }
   cotizacion.value = cotizacionDe(documento ? documento.document_data : nueva, props.tipoDeDocumento)
   pestana.value = 'info'
   cuenta.value = SIN_CUENTA
   datosAbiertos.value = !documento
+  origen.value = plantilla ? `plantilla_${plantilla.id}` : origenDe(desdeOrdenes?.ordenes ?? [])
   abrirElPrimero()
   dialog.value = true
+  await borrador.abrir()
+}
 
-  if (desdeOrdenes) return
-  const recuperado = await borrador.ofrecer()
-  if (recuperado) {
-    cotizacion.value = cotizacionDe(recuperado.cotizacion, props.tipoDeDocumento)
-    clienteId.value = recuperado.clienteId
-    abrirElPrimero()
-  }
+async function salir () {
+  if (await borrador.puedeSalir()) close()
 }
 
 const close = () => {
-  borrador.descartar()
+  borrador.cerrar()
   dialog.value = false
 }
 

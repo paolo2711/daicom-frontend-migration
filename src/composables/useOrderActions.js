@@ -24,9 +24,10 @@ export function useOrderActions(lista, seleccion, { editar, imprimirIngreso, abr
     const vivas = ordenes.filter(viva)
     const { isConfirmed } = await Swal.fire({
       title: vivas.length === 1 ? `¿Anular ${vivas[0].order_number}?` : `¿Anular ${vivas.length} órdenes?`,
-      text: esAlquiler(vivas[0])
+      html: (esAlquiler(vivas[0])
         ? 'Lo reservado vuelve a disponible. Con equipos en obra, primero se registra su devolución.'
-        : 'Se anulan también todos sus equipos.',
+        : 'Se anulan también todos sus equipos.')
+        + '<br>Sus facturas se desvinculan; se conservan con sus abonos en Facturación.',
       icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, anular', cancelButtonText: 'Cancelar',
     })
     if (isConfirmed && await anularOrdenes(vivas)) soltar(seleccion, vivas)

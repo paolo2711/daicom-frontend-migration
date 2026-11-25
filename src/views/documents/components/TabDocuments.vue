@@ -1,7 +1,7 @@
 <template>
   <div>
     <table-documents :tipo="tipo" con-total :variantes="OPCIONES_DE_TIPO" @editar="editar"
-                     @crear-orden="crearOrden" />
+                     @usar-de-plantilla="usarDePlantilla" @crear-orden="crearOrden" />
     <quote-template ref="formulario" :tipo-de-documento="tipo" />
     <quote-upload-dialog ref="subida" :tipo-de-documento="tipo" />
     <add-order ref="orden" />
@@ -31,16 +31,18 @@ const swal = useSwal()
 const route = useRoute()
 const router = useRouter()
 
-// La fila no trae el JSON: se pide el documento entero al editarlo.
-async function editar(documento) {
+// La fila no trae el JSON: se pide el documento entero. `como`: lo que es para el formulario.
+async function abrir(documento, como) {
   try {
     const { data } = await DocumentsDataService.get(documento.id)
-    formulario.value?.open(data)
+    formulario.value?.open({ [como]: data })
   } catch (err) {
     swal.fire({ icon: 'error', title: `No se abrió ${documento.document_number}`,
                 text: mensajeDeError(err, 'No se pudo leer el documento.') })
   }
 }
+const editar = (documento) => abrir(documento, 'documento')
+const usarDePlantilla = (documento) => abrir(documento, 'plantilla')
 
 async function crearOrden(documento) {
   try {
@@ -68,7 +70,7 @@ async function desdeOrdenes(ids) {
       })
       if (!isConfirmed) return
     }
-    formulario.value?.open(null, data.kind, data)
+    formulario.value?.open({ kind: data.kind, desdeOrdenes: { ...data, ordenes: ids } })
   } catch (err) {
     swal.fire({ icon: 'error', title: `No se armó la ${nombre}`,
                 text: mensajeDeError(err, `No se pudieron leer las órdenes para las ${plural}.`) })
@@ -83,5 +85,6 @@ onMounted(() => {
 })
 
 // El boton de la cabecera de Documentos, con lo elegido en su menu: un tipo, o subir un PDF.
-defineExpose({ nuevo: (opcion) => (opcion === SUBIR_PDF ? subida.value?.open() : formulario.value?.open(null, opcion)) })
+const nuevo = (opcion) => (opcion === SUBIR_PDF ? subida.value?.open() : formulario.value?.open({ kind: opcion }))
+defineExpose({ nuevo })
 </script>

@@ -19,7 +19,7 @@ class BillingDataService {
     const opciones = { headers: authHeader(), responseType: "blob" };
     return archivoDe(axios.post("billing/dispatch-guides/vista-previa/", data, opciones));
   }
-  // `ya_en_sol`: si la baja ya se dio en SOL; si no, queda pendiente en Tus pendientes.
+  // `ya_en_sol`: si la baja ya se dio en SOL; si no, queda pendiente en Inicio.
   cancelDispatchGuide(id, { motivo, ya_en_sol }) {
     return axios.patch(`billing/dispatch-guides/${id}/anular/`, { motivo, ya_en_sol }, { headers: authHeader() });
   }
@@ -92,23 +92,20 @@ class BillingDataService {
   listInvoices(filtros = {}) {
     return axios.get("billing/invoices/", { params: filtros, headers: authHeader() });
   }
-  // Una factura para una orden; la suelta (sin orden) nace con el tipo de la pestaña.
-  createInvoice(orderId, data) {
-    return axios.post(`billing/orders/${orderId}/invoices/`, data, { headers: authHeader() });
-  }
-  createInvoiceSuelta(data) {
+  createInvoice(data) {
     return axios.post("billing/invoices/create/", data, { headers: authHeader() });
   }
   updateInvoice(invoiceId, data) {
     return axios.patch(`billing/invoices/${invoiceId}/`, data, { headers: authHeader() });
   }
-  // Con `orderId` solo la desvincula de esa orden; se borra si era la última.
-  deleteInvoice(invoiceId, orderId) {
-    return axios.delete(`billing/invoices/${invoiceId}/`, { params: { order_id: orderId }, headers: authHeader() });
+  deleteInvoice(invoiceId) {
+    return axios.post(`billing/invoices/${invoiceId}/eliminar/`, {}, { headers: authHeader() });
   }
-  linkInvoice(invoiceId, orderIds) {
-    const order_ids = Array.isArray(orderIds) ? orderIds : [orderIds];
-    return axios.post(`billing/invoices/${invoiceId}/link/`, { order_ids }, { headers: authHeader() });
+  unlinkInvoice(invoiceId, orderId) {
+    return axios.post(`billing/invoices/${invoiceId}/unlink/`, { order_id: orderId }, { headers: authHeader() });
+  }
+  linkInvoice(invoiceId, ordenes) {
+    return axios.post(`billing/invoices/${invoiceId}/link/`, { ordenes }, { headers: authHeader() });
   }
   extractInvoiceData(data) {
     return axios.post("billing/invoices/extract/", data, { headers: authHeader() });

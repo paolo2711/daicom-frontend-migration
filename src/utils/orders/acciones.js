@@ -74,7 +74,7 @@ export const ACCIONES_COBRO = [
     disponible: (ordenes) => ordenes.every(viva) && deUnCliente(ordenes),
   },
   {
-    clave: SIN_COMPROBANTE, grupo: 'cobro', varios: true,
+    clave: SIN_COMPROBANTE, grupo: 'cobro', varios: false,
     icono: 'mdi-file-remove-outline', texto: quitaOPone(SIN_COMPROBANTE, 'Sin comprobante'),
     visible: algunaViva,
     disponible: (ordenes) => ordenes.some(o => viva(o) && puedeMarcarse(o)),

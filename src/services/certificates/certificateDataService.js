@@ -1,9 +1,8 @@
 import axios from "axios";
 import authHeader from "@/services/auth-header";
+import { porPagina } from "@/utils/pagination";
 
-// ⚠️ NO fijar Content-Type para FormData — axios lo genera con el boundary correcto:
-// "multipart/form-data; boundary=----WebKitFormBoundaryXYZ"
-// Si lo pisamos sin boundary, Django no parsea el body y request.data llega vacío.
+// Con FormData el Content-Type lo pone axios, con su boundary; sin él Django recibe el body vacío.
 const cabecerasDe = (data) => {
   const headers = authHeader();
   if (data instanceof FormData) delete headers['Content-Type'];
@@ -12,24 +11,14 @@ const cabecerasDe = (data) => {
 };
 
 export default {
-  // Filtros por nombre, no por posicion: eran once parametros y llamarlo con
-  // uno solo obligaba a pasar seis strings vacios hasta llegar al que importaba.
-  // URLSearchParams ademas escapa los valores, que hace falta desde que hay
-  // filtros de texto libre.
   getFiltered(filtros = {}) {
     const params = new URLSearchParams()
-    for (const [clave, valor] of Object.entries({ page: 1, page_size: 10, ...filtros })) {
+    for (const [clave, valor] of Object.entries({ ...porPagina(1, 10), ...filtros })) {
       if (valor === '' || valor === null || valor === undefined || valor === false) continue
       params.set(clave, valor === true ? 'true' : valor)
     }
 
     return axios.get(`certificates?${params}`, {
-      headers: authHeader()
-    });
-  },
-
-  getAll() {
-    return axios.get('certificates?page_size=1000000000', {
       headers: authHeader()
     });
   },
@@ -54,9 +43,7 @@ export default {
     return axios.delete('certificates/temporal', { headers: cabecerasDe(), data: { url } });
   },
 
-  // Solo encola: el avance y el resultado de cada uno llegan por el panel de
-  // subidas. fecha_firma mueve solo el día del sello dibujado, para los
-  // certificados viejos que se vuelven a generar.
+  // Solo encola: el avance llega por el panel de subidas. fecha_firma mueve solo el día del sello dibujado.
   firmar(certIds, fechaFirma = '') {
     return axios.post('certificates/firmar', { cert_ids: certIds, fecha_firma: fechaFirma }, { headers: authHeader() });
   },
@@ -87,12 +74,6 @@ export default {
     const headers = authHeader();
     delete headers['Content-Type'];
     return axios.post(`certificates/${id}/pdf-base`, formData, { headers });
-  },
-
-  delete(id) {
-    return axios.delete(`certificates/${id}`, {
-      headers: authHeader()
-    });
   },
 
   patch(id, data) {

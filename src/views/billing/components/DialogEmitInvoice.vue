@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="dialog" class="dialog-premium" fullscreen persistent>
     <v-card v-if="datos" class="d-flex flex-column" style="height: 100%;">
-      <base-modal-header title="Nueva factura" icon="mdi-file-document-plus-outline" @close="dialog = false">
+      <base-modal-header title="Nueva factura" icon="mdi-file-document-plus-outline" @close="salir">
         <span>{{ serie ? `${serie} · se numera al emitir` : 'Se numera al emitir' }}</span>
       </base-modal-header>
 
@@ -110,13 +110,13 @@
       </v-card-text>
 
       <form-footer accion="Emitir factura" icono="mdi-send" :listo="sePuedeEmitir" :ocupado="emitiendo"
-                   :vista="vista" titulo="Factura" @cancelar="dialog = false" @confirmar="emitir" />
+                   :vista="vista" titulo="Factura" @cancelar="salir" @confirmar="emitir" />
     </v-card>
   </v-dialog>
 </template>
 
 <script setup>
-import { computed, ref, watch, reactive } from 'vue'
+import { computed, nextTick, ref, watch, reactive } from 'vue'
 import { useRowDrag } from '@/composables/useRowDrag'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import ClientLookupBar from '@/components/shared/ClientLookupBar.vue'
@@ -126,12 +126,12 @@ import OptionRows from '@/components/shared/OptionRows.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { origenDe, useLocalDraft } from '@/composables/useLocalDraft'
 import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useSwal } from '@/composables/useSwal'
 import BillingDataService from '@/services/billing/billingDataService'
-import { UNIDAD_DE_FACTURA } from '@/utils/billing/facturas'
-import { itemVacio } from '@/utils/documents/quoteDefaults'
+import { CURRENT_INVOICE_SCHEMA, itemDeFactura } from '@/utils/billing/billingDefaults'
 import { debounce } from '@/utils/debounce'
 import { mensajeDeError } from '@/utils/errors'
 import { copiarDebajo } from '@/utils/lists'
@@ -208,6 +208,33 @@ const opciones = computed(() => {
 const paraElBack = () => ({ cliente: clienteId.value, ordenes: ordenes.value.map(o => o.id),
                             order_type: tipoDeOrden.value, datos: datos.value })
 
+// Lo guardado, sobre lo que el formulario trae lleno: lo que no tenga queda como en una nueva.
+// Primero el tipo: al cambiar propone su codigo de detraccion, y el que vale es el guardado.
+async function llenar (guardada) {
+  tipoDeOrden.value = guardada.tipoDeOrden
+  await nextTick()
+  clienteId.value = guardada.clienteId
+  clienteInicial.value = guardada.clienteInicial
+  ordenes.value = guardada.ordenes
+  datos.value = { ...datos.value, ...guardada.datos,
+                  items: guardada.datos.items.map(item => ({ ...itemDeFactura(), ...item })) }
+  abierto.value = null
+}
+
+// La factura sin emitir: la nueva, la que sale de unas ordenes o la que usa otra de plantilla.
+const origen = ref('')
+const borrador = useLocalDraft({
+  clave: () => `factura_${origen.value}`,
+  version: CURRENT_INVOICE_SCHEMA,
+  datos: () => ({ clienteId: clienteId.value, clienteInicial: clienteInicial.value, ordenes: ordenes.value,
+                  tipoDeOrden: tipoDeOrden.value, datos: datos.value }),
+  llenar,
+  resumen: (guardada) => {
+    const n = guardada.datos.items.filter(item => item.description?.trim()).length
+    return n && `Hay una factura sin emitir con ${n} ${n === 1 ? 'ítem' : 'ítems'}`
+  },
+})
+
 const { begin, isLatest } = useLatestRequest()
 const recalcular = debounce(async () => {
   if (!datos.value) return
@@ -240,7 +267,7 @@ function abrir (clave, item = null) {
 }
 
 function agregar () {
-  const item = { ...itemVacio(UNIDAD_DE_FACTURA), incluye_igv: false }
+  const item = itemDeFactura()
   datos.value.items.push(item)
   abrir(null, item)
 }
@@ -263,32 +290,45 @@ const vista = reactive(usePdfPreview(
 
 // `nueva` es lo que devuelve el back: cliente, ordenes, tipo, serie, catalogo de detraccion y datos. Con `plantilla`
 // (otra factura emitida) van su cliente, items y condiciones; la fecha es hoy y guias, OC y cuotas quedan vacias.
-function open (nueva, plantilla = null) {
+async function open (nueva, plantilla = null) {
   emitidaDe.value = null
-  clienteId.value = plantilla?.cliente_id ?? nueva.cliente
-  clienteInicial.value = plantilla?.cliente_data ?? nueva.cliente_data
-  ordenes.value = plantilla ? [] : nueva.ordenes
+  clienteId.value = nueva.cliente
+  clienteInicial.value = nueva.cliente_data
+  ordenes.value = nueva.ordenes
   serie.value = nueva.serie
   fechas.value = nueva.fechas
   codigos.value = nueva.codigos_de_detraccion
   detraccionPorTipo.value = nueva.detraccion_por_tipo
   cuentaDeDetracciones.value = nueva.cuenta_de_detracciones
   ordenesDeCompra.value = nueva.ordenes_de_compra
-  tipoDeOrden.value = plantilla?.order_type ?? nueva.order_type
-  datos.value = JSON.parse(JSON.stringify(plantilla
-    ? { ...plantilla.datos, fecha: nueva.datos.fecha, tipo_de_cambio: '', cuotas: [], guias: [], orden_de_compra: '' }
-    : nueva.datos))
+  tipoDeOrden.value = nueva.order_type
+  datos.value = JSON.parse(JSON.stringify(nueva.datos))
+  if (plantilla) {
+    await llenar({ clienteId: plantilla.cliente_id, clienteInicial: plantilla.cliente_data, ordenes: [],
+                   tipoDeOrden: plantilla.order_type,
+                   datos: { ...plantilla.datos, fecha: nueva.datos.fecha, tipo_de_cambio: '', cuotas: [], guias: [],
+                            orden_de_compra: '' } })
+  }
+  origen.value = plantilla ? `plantilla_${plantilla.id}` : origenDe(nueva.ordenes.map(o => o.id))
   abierto.value = null
   if (!datos.value.items.length) agregar()
   cuenta.value = SIN_CUENTA
   pestana.value = 'info'
   datosAbiertos.value = true
   dialog.value = true
+  await borrador.abrir()
+}
+
+async function salir () {
+  if (!await borrador.puedeSalir()) return
+  borrador.cerrar()
+  dialog.value = false
 }
 
 // El back responde enseguida y la manda a SUNAT en segundo plano: el formulario se cierra con lo escrito guardado.
 async function emitir () {
   emitiendo.value = true
+  borrador.cerrar()
   try {
     const { data } = await BillingDataService.emitInvoice(paraElBack())
     vista.cerrar()

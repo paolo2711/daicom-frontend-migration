@@ -29,8 +29,8 @@
         <tr class="bg-transparent">
           <th class="columna-casilla pr-0">
             <v-checkbox-btn density="compact" :disabled="!marcables.length"
-                            :model-value="todosMarcados" :indeterminate="algunosMarcados"
-                            @update:model-value="marcarTodos" />
+                            :model-value="todasMarcadas" :indeterminate="algunasMarcadas"
+                            @update:model-value="marcarTodas" />
           </th>
           <th class="text-overline">EXPEDIENTE</th>
           <th class="text-overline">EQUIPO</th>
@@ -44,11 +44,11 @@
         <tr v-for="linea in order.items" :key="linea.id"
             :class="{ 'fila-anulada': lineaAnulada(linea), 'fila-en-menu': enElMenu(linea),
                       'cursor-pointer': linea.certificate && vivo(linea.certificate) }"
-            @click="alClicFila($event, linea)"
+            @click="linea.certificate && alClicFila($event, linea.certificate)"
             @contextmenu="abrirMenu($event, linea, true)">
           <td class="columna-casilla pr-0">
             <v-checkbox-btn v-if="linea.certificate" density="compact" :disabled="!vivo(linea.certificate)"
-                            :model-value="estaMarcado(linea.certificate)" @update:model-value="alternar(linea.certificate)" />
+                            :model-value="estaMarcada(linea.certificate)" @update:model-value="alternar(linea.certificate)" />
           </td>
           <td>
             <template v-if="linea.certificate">
@@ -137,7 +137,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePermissions } from '@/composables/usePermissions'
 import { useContextMenu } from '@/composables/useContextMenu'
-import { seguirLaLista } from '@/composables/useCurrentRows'
+import { useRowSelection } from '@/composables/useRowSelection'
 import { useCertificateActions } from '@/composables/useCertificateActions'
 import { useActionCall } from '@/composables/useActionCall'
 import { tituloDe, useOrderServices } from '@/composables/useOrderServices'
@@ -147,6 +147,7 @@ import { ACCIONES_CERTIFICADO, algunoVivo } from '@/utils/certificates/acciones'
 import { estaEntregado } from '@/utils/certificates/entrega'
 import { vivo } from '@/utils/certificates/estado'
 import { tieneExcelBase } from '@/utils/certificates/excelBase'
+import { rutaDelCertificado } from '@/utils/certificates/ruta'
 import { ACCIONES_LINEA, avanceDeLinea, certificadosDe, lineaAnulada, servicioDe } from '@/utils/orders/lineas'
 import { viva } from '@/utils/orders/estado'
 import { fechaCorta } from '@/utils/dates'
@@ -175,26 +176,8 @@ const delEquipo = (linea) => datosDelEquipo(linea.marca, linea.modelo, linea.ser
 
 // Como en Certificados, un anulado no se marca.
 const marcables = computed(() => certificados.value.filter(vivo))
-const estaMarcado = (cert) => seleccion.value.some(c => c.id === cert.id)
-const todosMarcados = computed(() => marcables.value.length > 0 && seleccion.value.length === marcables.value.length)
-const algunosMarcados = computed(() => seleccion.value.length > 0 && !todosMarcados.value)
-
-const marcarTodos = (si) => { seleccion.value = si ? [...marcables.value] : [] }
-
-function alternar (cert) {
-  if (!vivo(cert)) return
-  seleccion.value = estaMarcado(cert)
-    ? seleccion.value.filter(c => c.id !== cert.id)
-    : [...seleccion.value, cert]
-}
-
-function alClicFila (event, linea) {
-  if (!linea.certificate || event.target.closest('button, a, .v-btn, .v-selection-control')) return
-  alternar(linea.certificate)
-}
-
-// Los que se anularon o salieron de la orden se desmarcan.
-seguirLaLista(marcables, seleccion)
+const { estaMarcada, todasMarcadas, algunasMarcadas, marcarTodas, alternar, alClicFila } =
+  useRowSelection(marcables, seleccion)
 
 // Las de certificados, mas las que solo tienen sentido dentro de una orden.
 const ACCIONES_EQUIPO = [
@@ -263,7 +246,7 @@ function onNubeClick (event, cert) {
 }
 
 function irACertificado (cert) {
-  router.push({ path: '/certificates', query: { correlativo: cert.correlative } }).catch(() => {})
+  router.push(rutaDelCertificado(cert.numero)).catch(() => {})
 }
 </script>
 

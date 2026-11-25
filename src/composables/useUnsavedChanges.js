@@ -20,18 +20,19 @@ export function useUnsavedChanges (inicial) {
   return { datos, cambiado, fijar, deshacer }
 }
 
+export async function salirSinGuardar () {
+  const { isConfirmed } = await Swal.fire({
+    icon: 'warning', title: '¿Salir sin guardar?', text: 'Lo que cambiaste se pierde.',
+    showCancelButton: true, confirmButtonText: 'Salir', cancelButtonText: 'Seguir editando',
+  })
+  return isConfirmed
+}
+
 // Salir de la pantalla o cerrar la pestaña con algo sin guardar pregunta antes.
 export function useLeaveGuard (hayCambios) {
   const alCerrar = (e) => { if (hayCambios()) e.preventDefault() }
   onMounted(() => window.addEventListener('beforeunload', alCerrar))
   onBeforeUnmount(() => window.removeEventListener('beforeunload', alCerrar))
 
-  onBeforeRouteLeave(async () => {
-    if (!hayCambios()) return true
-    const { isConfirmed } = await Swal.fire({
-      icon: 'warning', title: '¿Salir sin guardar?', text: 'Lo que cambiaste se pierde.',
-      showCancelButton: true, confirmButtonText: 'Salir', cancelButtonText: 'Seguir editando',
-    })
-    return isConfirmed
-  })
+  onBeforeRouteLeave(async () => !hayCambios() || salirSinGuardar())
 }

@@ -1,15 +1,16 @@
 import axios from "axios";
 import authHeader from "@/services/auth-header";
 import { archivoDe } from "@/utils/files";
+import { porPagina } from "@/utils/pagination";
 
 class OrderDataService {
 
     // ─── ÓRDENES ────────────────────────────────────────────────────────────────
 
-    // Agregamos `invoice_number` como último parámetro con valor por defecto
-    getFiltered(page, itemsPerPage, client, order_number, correlative, date_gt, date_lt, status, order_type, missing_payment = false, missing_invoice = false, a_credito = false, invoice_number = '') {
+    // `pildora`: missing_payment, missing_invoice o a_credito.
+    getFiltered(page, itemsPerPage, client, order_number, correlative, date_gt, date_lt, status, order_type, pildora = null, invoice_number = '') {
         let headers = authHeader();
-        let params = { page: page, page_size: itemsPerPage };
+        let params = porPagina(page, itemsPerPage);
 
         if (client)            params.client            = client;
         if (order_number)      params.order_number      = order_number;
@@ -19,9 +20,7 @@ class OrderDataService {
         if (date_lt)           params.date_lt           = date_lt;
         if (status)            params.status_custom     = status;
         if (order_type)        params.order_type        = order_type;
-        if (missing_payment)   params.missing_payment   = missing_payment;
-        if (missing_invoice)   params.missing_invoice   = missing_invoice;
-        if (a_credito)         params.a_credito         = a_credito;
+        if (pildora)           params[pildora]          = true;
 
         return axios.get("orders", { params, headers });
     }
@@ -87,8 +86,8 @@ class OrderDataService {
 
     // marca: sin_comprobante | sin_cargo | con_factura. La que no se puede no
     // frena a las demas: vuelve en `rechazos`.
-    marcarComprobante(ids, marca, currency) {
-        return axios.post('orders/marcar-comprobante', { order_ids: ids, marca, currency }, { headers: authHeader() });
+    marcarComprobante(ids, marca, cobro = {}) {
+        return axios.post('orders/marcar-comprobante', { order_ids: ids, marca, ...cobro }, { headers: authHeader() });
     }
 
     create(data) {
@@ -97,33 +96,22 @@ class OrderDataService {
         return axios.post("orders", data, { headers });
     }
 
-    delete(id) {
-        return axios.delete(`orders/${id}`, { headers: authHeader() });
-    }
-
     patch(id, data) {
         let headers = authHeader();
         headers['Content-Type'] = "application/json";
         return axios.patch(`orders/${id}`, data, { headers });
     }
 
-    /** @deprecated Usar createInvoice() / deleteInvoice(). Se mantiene para compatibilidad durante la transición. */
-    uploadInvoice(id, data) {
-        let headers = authHeader();
-        headers['Content-Type'] = "multipart/form-data";
-        return axios.patch(`orders/${id}`, data, { headers });
-    }
+    // ─── DOCUMENTOS ──────────────────────────────────────────────────────────
 
-    // ─── DOCUMENTOS (OC / Valorizaciones — solo alquiler) ─────────────────────
-
-    /** Lista los documentos de una orden. tipo opcional: 1=OC, 2=Valorización. */
+    /** Los documentos de una orden, de un tipo o todos. */
     listDocuments(order_id, tipo) {
         let params = {};
         if (tipo) params.tipo = tipo;
         return axios.get(`orders/${order_id}/documents`, { params, headers: authHeader() });
     }
 
-    /** Sube un documento (FormData: tipo, numero, fecha, pdf). */
+    /** Sube un PDF (FormData: tipo, numero, pdf) o vincula un documento del sistema. */
     addDocument(order_id, data) {
         let headers = authHeader();
         headers['Content-Type'] = "multipart/form-data";
@@ -136,22 +124,11 @@ class OrderDataService {
 
     // ─── ALQUILERES ──────────────────────────────────────────────────────────
 
-    // salida | devolucion | deshacer-devolucion
-    darPasoDeAlquiler(rental_id, paso, fecha = null) {
+    // inicio | devolucion | deshacer-devolucion | quitar, de uno o varios equipos: todos o ninguno.
+    darPasoDeAlquiler(ids, paso, fecha) {
         let headers = authHeader();
         headers['Content-Type'] = "application/json";
-        return axios.post(`orders/rentals/${rental_id}/${paso}`, { fecha }, { headers });
-    }
-
-    // Solo lo reservado: el equipo vuelve a disponible.
-    deleteRental(rental_id) {
-        return axios.delete(`orders/rentals/${rental_id}`, { headers: authHeader() });
-    }
-
-    updateRentalDates(rental_id, data) {
-        let headers = authHeader();
-        headers['Content-Type'] = "application/json";
-        return axios.patch(`orders/rentals/${rental_id}`, data, { headers });
+        return axios.post(`orders/rentals/${paso}`, { ids, fecha }, { headers });
     }
 
     // ─── RESÚMENES (Smart Chips) ─────────────────────────────────────────────

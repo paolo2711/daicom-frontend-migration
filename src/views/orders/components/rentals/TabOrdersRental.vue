@@ -13,7 +13,6 @@
           label="Buscar Nro Orden"
           clearable
           style="max-width: 220px;"
-          @update:model-value="applyFilters"
         />
 
         <v-text-field
@@ -25,7 +24,6 @@
           label="Ref. OC Cliente"
           clearable
           style="max-width: 220px;"
-          @update:model-value="applyFilters"
         />
 
         <v-text-field
@@ -37,37 +35,11 @@
           label="Nro Factura"
           clearable
           style="max-width: 220px;"
-          @update:model-value="applyFilters"
         />
 
         <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
 
-        <filter-pill
-          :active="filtro_falta_pago"
-          :count="appStore.pendingPaymentsRentalCount"
-          color="error"
-          icon="mdi-cash-remove"
-          tooltip="Filtrar alquileres facturados sin abonos"
-          @click="toggleFiltroPago"
-        >Falta Pago</filter-pill>
-
-        <filter-pill
-          :active="filtro_a_credito"
-          :count="appStore.pendingCreditRentalCount"
-          color="teal"
-          icon="mdi-calendar-clock"
-          tooltip="Filtrar alquileres a crédito que aún no vencen"
-          @click="toggleFiltroCredito"
-        >A Crédito</filter-pill>
-
-        <filter-pill
-          :active="filtro_sin_factura"
-          :count="appStore.pendingInvoicesRentalCount"
-          color="warning"
-          icon="mdi-file-document-remove-outline"
-          tooltip="Filtrar alquileres abiertos pendientes de facturar"
-          @click="toggleFiltroFactura"
-        >Sin Emitir Factura</filter-pill>
+        <order-pills v-model="pildora" :cuentas="cuentas" @update:model-value="applyFilters" />
 
         <v-spacer></v-spacer>
 
@@ -98,7 +70,7 @@
             </v-col>
 
             <v-col cols="12" md="4">
-              <client-select v-model="filter_client_id" @update:model-value="applyFilters" />
+              <client-select v-model="filter_client_id" />
             </v-col>
 
             <v-col cols="12" md="4">
@@ -113,7 +85,6 @@
                 density="compact"
                 hide-details="auto"
                 label="Estado"
-                @update:model-value="applyFilters"
               />
             </v-col>
           </v-row>
@@ -134,10 +105,9 @@
         :loading="loading_list"
         show-expand
         single-expand
-        
         item-value="id"
         :hover="false"
-        class="elevation-0 rounded-lg tabla-mejorada tabla-ordenes-alquiler bg-surface"
+        class="elevation-0 rounded-lg tabla-mejorada tabla-ordenes bg-surface"
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
@@ -155,16 +125,12 @@
           />
         </template>
 
-        <template v-slot:item.client_order_reference="{ item }">
-          <v-chip v-if="item.documentos && item.documentos.oc_ref" size="x-small" variant="outlined" color="blue-grey-darken-2" class="font-weight-bold px-2" style="background-color: #f1f3f4 !important;">
-            <v-icon start size="x-small" color="blue-grey-darken-2">mdi-pound</v-icon>
-            {{ item.documentos.oc_ref }}
-          </v-chip>
-          <span v-else class="text-grey text-caption">---</span>
-        </template>
-
         <template v-slot:item.client_data.name="{ item }">
           <span :class="viva(item) ? '' : 'anulado-atenuado'">{{ item.client_data.name }}</span>
+        </template>
+
+        <template v-slot:item.progress="{ item }">
+          <order-progress :orden="item" listos="devueltos" />
         </template>
 
         <template v-slot:item.created_at="{ item }">
@@ -193,61 +159,11 @@
         </template>
 
         <template v-slot:item.documentos="{ item }">
-          <div class="d-flex justify-center">
-            <v-tooltip location="top" v-if="item.quote_pdf">
-              <template v-slot:activator="{ props }">
-                <v-btn icon variant="text" density="comfortable" size="x-small" color="error" :href="item.quote_pdf" target="_blank" v-bind="props" class="mx-1">
-                  <v-icon>mdi-file-pdf-box</v-icon>
-                </v-btn>
-              </template>
-              <span>Cotización DAICOM</span>
-            </v-tooltip>
-
-            <v-tooltip location="top" v-if="item.documentos && item.documentos.oc_count > 0">
-              <template v-slot:activator="{ props }">
-                <v-chip v-bind="props" size="x-small" color="primary" variant="tonal" class="mx-1 px-2 font-weight-bold"
-                        :href="item.documentos.oc_last_pdf" target="_blank">
-                  <v-icon size="x-small" class="mr-1">mdi-file-document</v-icon>{{ item.documentos.oc_count }}
-                </v-chip>
-              </template>
-              <span>Abrir última OC ({{ item.documentos.oc_count }} en total · todas en Ver y editar)</span>
-            </v-tooltip>
-
-            <v-tooltip location="top" v-if="item.documentos && item.documentos.val_count > 0">
-              <template v-slot:activator="{ props }">
-                <v-chip v-bind="props" size="x-small" color="teal" variant="tonal" class="mx-1 px-2 font-weight-bold"
-                        :href="item.documentos.val_last_pdf" target="_blank">
-                  <v-icon size="x-small" class="mr-1">mdi-cash-multiple</v-icon>{{ item.documentos.val_count }}
-                </v-chip>
-              </template>
-              <span>
-                Abrir última valorización ({{ item.documentos.val_count }} en total · todas en Ver y editar)
-              </span>
-            </v-tooltip>
-
-            <v-tooltip location="top" v-if="item.dispatch_guide_pdf">
-              <template v-slot:activator="{ props }">
-                <v-btn icon variant="text" density="comfortable" size="x-small" color="success" :href="item.dispatch_guide_pdf" target="_blank" v-bind="props" class="mx-1">
-                  <v-icon>mdi-truck-fast</v-icon>
-                </v-btn>
-              </template>
-              <span>Guía Salida</span>
-            </v-tooltip>
-
-            <v-tooltip location="top" v-if="item.return_guide_pdf">
-              <template v-slot:activator="{ props }">
-                <v-btn icon variant="text" density="comfortable" size="x-small" color="blue-grey" :href="item.return_guide_pdf" target="_blank" v-bind="props" class="mx-1">
-                  <v-icon>mdi-truck-check</v-icon>
-                </v-btn>
-              </template>
-              <span>Guía Retorno</span>
-            </v-tooltip>
-
-            <span v-if="!item.quote_pdf && !item.dispatch_guide_pdf && !item.return_guide_pdf && (!item.documentos || (item.documentos.oc_count === 0 && item.documentos.val_count === 0))" class="text-grey text-caption">Sin Docs</span>
-          </div>
+          <v-btn variant="text" size="small" density="comfortable" prepend-icon="mdi-paperclip" :disabled="!viva(item)"
+                 :title="viva(item) ? 'Ver sus documentos' : 'La orden está anulada'" @click.stop="abrirDocumentos(item)">
+            {{ item.documentos }}
+          </v-btn>
         </template>
-
-
 
         <template v-slot:item.actions="{ item }">
           <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" color="grey-darken-1"
@@ -257,8 +173,8 @@
         <template v-slot:expanded-row="{ columns, item }">
           <tr class="fila-activa">
             <td :colspan="columns.length" class="pa-0">
-              <table-rental-details :order="item" :muestra-fecha="!fechaEnColumna" @editar="abrirEditarOrden(item)"
-                                    @reload="expanded = []; retrieveOrders()" />
+              <table-rental-details v-model:seleccion="equipos_seleccionados" :order="item" :muestra-fecha="!hayEspacio"
+                                    @editar="abrirEditarOrden(item)" @reload="cargarItems(item.id)" />
             </td>
           </tr>
         </template>
@@ -270,6 +186,8 @@
                         @limpiar-seleccion="ordenes_seleccionadas = []" @limpiar-foco="cerrarCobro" />
       </template>
     </resizable-split>
+
+    <state-legend titulo="Estados del equipo:" :estados="ESTADOS_ALQUILER" />
 
     <!-- Con órdenes marcadas, la factura que se elige en el buscador del panel las vincula. -->
     <selection-bar
@@ -290,57 +208,66 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
 import OrderDataService from '@/services/orders/orderDataService'
 import ClientSelect from '@/components/shared/ClientSelect.vue'
-import FilterPill from '@/components/shared/FilterPill.vue'
+import OrderPills from '../OrderPills.vue'
+import OrderProgress from '../OrderProgress.vue'
 import DateRangeFilter from '@/components/shared/DateRangeFilter.vue'
 import OrderMappers from '@/mappers/orderMappers'
 import ActionMenu from '@/components/shared/ActionMenu.vue'
 import { useOrderActions } from '@/composables/useOrderActions'
 import { useOrderCobro } from '@/composables/useOrderCobro'
-import { seguirLaLista } from '@/composables/useCurrentRows'
-import { useOrderDateColumn } from '@/composables/useOrderDateColumn'
+import { seguirLaLista, unaSolaSeleccion } from '@/composables/useCurrentRows'
+import { useOrderColumns } from '@/composables/useOrderColumns'
 import { fechaCorta } from '@/utils/dates'
 import { ALQUILER, FILTRO_DE_ESTADO, esAlquiler, viva } from '@/utils/orders/estado'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useOrderItems } from '@/composables/useOrderItems'
+import { useOrderRouteFilters } from '@/composables/useOrderRouteFilters'
+import { usePage } from '@/composables/usePage'
+import { debounce } from '@/utils/debounce'
 import { throttle } from '@/utils/throttle'
 import { getColorSemaforoFinanciero, getIconoSemaforoFinanciero, getTextoSemaforoFinanciero } from '@/utils/orders/cobro'
+import { leerPagina } from '@/utils/pagination'
 import { useAppStore } from '@/stores/appStore'
 import AddOrder from '../AddOrder.vue'
 import TableRentalDetails from './TableRentalDetails.vue'
 import PanelFacturas from '../PanelFacturas.vue'
 import ResizableSplit from '@/components/shared/ResizableSplit.vue'
 import SelectionBar from '@/components/commonComponents/SelectionBar.vue'
+import StateLegend from '@/components/shared/StateLegend.vue'
+import { ESTADOS_ALQUILER } from '@/utils/orders/alquiler'
 
-const route = useRoute()
 const appStore = useAppStore()
 
 // ── Búsqueda paginada de clientes (autocomplete del filtro) ──
 const filter_client_id = ref(null)
 
 const ordenes_seleccionadas = ref([])
+// Los de la orden abierta.
+const equipos_seleccionados = ref([])
+unaSolaSeleccion(ordenes_seleccionadas, equipos_seleccionados)
 
 const columnas = [
   { title: 'Nro Alquiler',      key: 'order_number' },
-  { title: 'Ref. Cliente',      key: 'client_order_reference' },
-  { title: 'Empresa',           key: 'client_data.name' },
-  { title: 'Documentos',        key: 'documentos',  align: 'center', sortable: false },
+  { title: 'Cliente',           key: 'client_data.name' },
+  { title: 'Equipos',           key: 'progress',    align: 'center', sortable: false },
+  { title: 'Documentos',        key: 'documentos',  align: 'center', sortable: false, conEspacio: true },
   { title: 'Estado Financiero', key: 'vinculo_financiero', align: 'center', sortable: false },
   { title: 'Opciones',          key: 'actions',     align: 'center', sortable: false },
   { title: '',                  key: 'data-table-expand' },
 ]
-const { anchoDeLaLista, fechaEnColumna, headers } = useOrderDateColumn(columnas)
+const { anchoDeLaLista, hayEspacio, headers } = useOrderColumns(columnas)
 
 // ── Tabla + filtros ──
 const orders = ref([])
 seguirLaLista(orders, ordenes_seleccionadas)
 const { foco, abierto: enCobro, abrirCobro, cerrarCobro, alSemaforo } = useOrderCobro(orders, ordenes_seleccionadas)
 const { expanded, idOrdenExpandida, isOrderExpanded, cargarItems, reemplazarOrdenes } = useOrderItems(orders, 'rentals')
+watch(idOrdenExpandida, () => { equipos_seleccionados.value = [] })
 const filter_order = ref('')
 const filter_client_ref = ref('')
 const filter_invoice = ref('')
@@ -348,14 +275,15 @@ const filter_date_gt = ref('')
 const filter_date_lt = ref('')
 const filter_status = ref('')
 const mostrar_filtros_avanzados = ref(false)
-const filtro_falta_pago = ref(false)
-const filtro_a_credito = ref(false)
-const filtro_sin_factura = ref(false)
+const pildora = ref(null)
+const cuentas = computed(() => ({ missing_payment: appStore.pendingPaymentsRentalCount,
+                                  a_credito: appStore.pendingCreditRentalCount,
+                                  missing_invoice: appStore.pendingInvoicesRentalCount }))
 
 
 const loading_list = ref(false)
 const total_orders = ref(0)
-const options = ref({ page: 1, itemsPerPage: 15 })
+const { opciones: options, alInicio } = usePage(() => retrieveOrders())
 
 // ── Data ──
 const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestRequest()
@@ -363,16 +291,16 @@ const { begin: beginOrdersLoad, isLatest: isLatestOrdersLoad } = useLatestReques
 const retrieveOrders = () => {
   loading_list.value = true
   const token = beginOrdersLoad()   // guard de secuencia: gana la carga más reciente
-  const limite = options.value.itemsPerPage > 0 ? options.value.itemsPerPage : 100000
   OrderDataService.getFiltered(
-    options.value.page, limite, filter_client_id.value, filter_order.value,
+    options.value.page, options.value.itemsPerPage, filter_client_id.value, filter_order.value,
     filter_client_ref.value, filter_date_gt.value, filter_date_lt.value,
-    filter_status.value, 2, filtro_falta_pago.value, filtro_sin_factura.value, filtro_a_credito.value,
+    filter_status.value, 2, pildora.value,
     filter_invoice.value
   ).then(res => {
     if (!isLatestOrdersLoad(token)) return   // llegó una carga más nueva → no pisar
-    reemplazarOrdenes(res.data.results.map(orden => OrderMappers.getMap(orden)))
-    total_orders.value = res.data.count
+    const pagina = leerPagina(res.data)
+    reemplazarOrdenes(pagina.filas.map(orden => OrderMappers.getMap(orden)))
+    total_orders.value = pagina.total
   }).finally(() => {
     if (isLatestOrdersLoad(token)) loading_list.value = false
   })
@@ -392,24 +320,10 @@ const cargarResumenes = () => Promise.all([
 const refrescarResumenes = throttle(cargarResumenes)
 
 const applyFilters = () => {
-  options.value.page = 1
-  retrieveOrders()
+  alInicio()
   cargarResumenes() // Sincroniza las píldoras al filtrar
 }
 
-// ── Filtros rápidos ──
-// Falta pago y A credito no comparten alquileres: prender una apaga la otra.
-const toggleFiltroPago = () => {
-  filtro_falta_pago.value = !filtro_falta_pago.value
-  if (filtro_falta_pago.value) filtro_a_credito.value = false
-  applyFilters()
-}
-const toggleFiltroCredito = () => {
-  filtro_a_credito.value = !filtro_a_credito.value
-  if (filtro_a_credito.value) filtro_falta_pago.value = false
-  applyFilters()
-}
-const toggleFiltroFactura = () => { filtro_sin_factura.value = !filtro_sin_factura.value; applyFilters() }
 const limpiarFechas = () => { filter_date_gt.value = ''; filter_date_lt.value = ''; applyFilters() }
 
 // ── WebSockets ──
@@ -439,6 +353,7 @@ const manejarClicFila = (event, { item }) => {
 // ── Acciones ──
 const editarOrdenRef = ref(null)
 const abrirEditarOrden = (o) => editarOrdenRef.value?.editar(o)
+const abrirDocumentos = (o) => editarOrdenRef.value?.editar(o, 'documentos')
 
 const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, accionesDeCobro, ejecutarAccion } =
   useOrderActions(orders, ordenes_seleccionadas, {
@@ -447,19 +362,10 @@ const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, accionesD
   })
 
 // ── Watchers ──
-watch(options, () => { retrieveOrders() }, { deep: true })
-watch(filter_order, () => { applyFilters() })
-watch(filter_invoice, () => { applyFilters() })
-watch(filter_client_ref, () => { applyFilters() })
-watch(filter_client_id, () => { applyFilters() })
-watch(filter_status, () => { applyFilters() })
-watch(() => route.query.buscar_orden, (val) => { if (val) filter_order.value = val })
-watch(() => route.query.buscar_factura, (val) => { if (val) filter_invoice.value = val })
-
+useOrderRouteFilters(filter_order, pildora, applyFilters)
+watch([filter_order, filter_client_ref, filter_invoice, filter_client_id, filter_status], debounce(applyFilters))
 
 onMounted(() => {
-  if (route.query.buscar_orden) filter_order.value = route.query.buscar_orden
-  if (route.query.buscar_factura) filter_invoice.value = route.query.buscar_factura
   retrieveOrders()
   cargarResumenes()
   window.addEventListener('wss-reload-orders-rental', handleWssReload)
@@ -471,46 +377,3 @@ onUnmounted(() => {
   window.removeEventListener('wss-update-order-row', fetchAndInjectSingleOrder)
 })
 </script>
-
-<style lang="scss">
-/* El ambar distingue Alquileres de Servicios de un vistazo. Pisa el marco
-   comun de _table.scss a proposito. */
-.v-application .tabla-ordenes-alquiler {
-  border-color: #FFCA28;
-}
-
-/* ── Hover de filas normales ── */
-.v-theme--light .tabla-ordenes-alquiler tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
-  background-color: rgba(0, 0, 0, 0.04) !important;
-}
-.v-theme--dark .tabla-ordenes-alquiler tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-/* ── Anular el td::after de Vuetify en filas activas ── */
-.tabla-ordenes-alquiler tbody tr.fila-padre-activa > td::after,
-.tabla-ordenes-alquiler tbody tr.fila-activa > td::after {
-  display: none !important;
-}
-
-/* ── Anular el td::after en la sub-tabla interna (TableRentalDetails) ── */
-.tabla-ordenes-alquiler tr.fila-activa .v-table tbody tr > td::after {
-  display: none !important;
-}
-
-/* ── Color de fondo del estado activo ── */
-.v-theme--light .tabla-ordenes-alquiler tbody tr.fila-padre-activa > td,
-.v-theme--light .tabla-ordenes-alquiler tbody tr.fila-activa > td {
-  background-color: #e8e8e8 !important;
-}
-.v-theme--dark .tabla-ordenes-alquiler tbody tr.fila-padre-activa > td,
-.v-theme--dark .tabla-ordenes-alquiler tbody tr.fila-activa > td {
-  background-color: #292929 !important;
-}
-
-/* ── Sub-tabla transparente para heredar el fondo del padre ── */
-.tabla-ordenes-alquiler tr.fila-activa .v-table,
-.tabla-ordenes-alquiler tr.fila-activa .v-table__wrapper {
-  background-color: transparent !important;
-}
-</style>

@@ -39,14 +39,6 @@ export function tiempoRelativo(valor) {
   return fechaCorta(valor)
 }
 
-// Dias de calendario de una fecha a otra; negativo si `hasta` es antes.
-export function diasEntre(desde, hasta) {
-  const inicio = aFechaLocal(desde)
-  const fin = aFechaLocal(hasta)
-  if (!inicio || !fin) return null
-  return Math.round((fin - inicio) / 86400000)
-}
-
 // Un Date como 'YYYY-MM-DD', en hora local. toISOString() da el dia de UTC, que
 // desde las 19:00 de Lima ya es el siguiente.
 export function fechaISO(fecha) {
@@ -54,3 +46,7 @@ export function fechaISO(fecha) {
 }
 
 export const hoyISO = () => fechaISO(new Date())
+
+// Un Date como 'YYYY-MM-DD HH:mm', en hora local.
+export const fechaHoraISO = (fecha) =>
+  `${fechaISO(fecha)} ${dosCifras(fecha.getHours())}:${dosCifras(fecha.getMinutes())}`

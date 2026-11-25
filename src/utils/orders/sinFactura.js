@@ -2,7 +2,6 @@ import Swal from 'sweetalert2'
 import { Toast } from '@/plugins/alerts'
 import OrderDataService from '@/services/orders/orderDataService'
 import { mensajeDeError } from '@/utils/errors'
-import { MONEDAS } from '@/utils/money'
 
 // Las dos formas de NO facturar una orden, y la de volver a facturarla. Son las
 // marcas de /orders/marcar-comprobante.
@@ -22,14 +21,14 @@ export function marcaDe(ordenes) {
   return null
 }
 
-// Una llamada para todas; la que no se puede no frena a las demas.
-async function aplicar (ordenes, marca, exito, currency) {
+// Una llamada para todas; la que no se puede no frena a las demas. True si alguna se marco.
+async function aplicar (ordenes, marca, exito, cobro) {
   let respuesta
   try {
-    respuesta = await OrderDataService.marcarComprobante(ordenes.map(o => o.id), marca, currency)
+    respuesta = await OrderDataService.marcarComprobante(ordenes.map(o => o.id), marca, cobro)
   } catch (err) {
     Swal.fire('No se pudo', mensajeDeError(err, 'No se pudo marcar.'), 'error')
-    return
+    return false
   }
 
   const { aplicadas, rechazos } = respuesta.data
@@ -40,38 +39,19 @@ async function aplicar (ordenes, marca, exito, currency) {
       html: rechazos.join('<br>'),
       confirmButtonText: 'Entendido',
     })
-    return
+    return aplicadas > 0
   }
   Toast.fire({ timer: 2400, icon: 'success', title: exito })
-}
-
-async function marcarSinComprobante (ordenes) {
-  const r = await Swal.fire({
-    title: '¿Sin comprobante?',
-    html: `Se cobra pero no lleva factura. Elige la moneda del registro interno de abonos:`,
-    icon: 'question',
-    input: 'select',
-    inputOptions: Object.fromEntries(MONEDAS.map(m => [m.value, m.title])),
-    inputValue: 'PEN',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, sin comprobante', cancelButtonText: 'Cancelar',
-  })
-  if (!r.isConfirmed) return false
-  await aplicar(ordenes, SIN_COMPROBANTE,
-                ordenes.length === 1 ? 'Marcada sin comprobante' : 'Marcadas sin comprobante', r.value || 'PEN')
   return true
 }
 
-// El contenedor interno lleva el numero de su orden, asi que se descarta con
-// ella. Siempre esta vacio: con abonos, el servidor no deja marcar sin cargo.
-function loQueSeDescarta (ordenes) {
-  const numeros = ordenes
-    .filter(o => puedeMarcarse(o) && o.facturas?.no_factura)
-    .map(o => o.facturas.no_factura)
-  return numeros.length
-    ? `<br><br>Se descarta su registro interno de abonos (${numeros.join(', ')}).`
-    : ''
-}
+// Se cobra pero no lleva factura: en que moneda y cuanto.
+export const marcarSinComprobante = (orden, currency, amount) =>
+  aplicar([orden], SIN_COMPROBANTE, 'Marcada sin comprobante', { currency, amount })
+
+// Lo que tenga marcado sin comprobante. Siempre sin abonos: con ellos, el servidor no deja marcar sin cargo.
+const loQueSeDescarta = (ordenes) => (ordenes.some(o => puedeMarcarse(o) && o.facturas?.no_factura)
+  ? '<br><br>Se descarta su monto a cobrar sin comprobante.' : '')
 
 // Sin cargo no pregunta moneda: no hay nada que cobrar, asi que no nace ninguna
 // factura donde guardarla.
@@ -93,7 +73,7 @@ async function marcarSinCargo (ordenes) {
 async function quitar (ordenes) {
   const r = await Swal.fire({
     title: '¿Quitar la marca?',
-    html: 'La orden vuelve a requerir factura. Si tenía un contenedor de abonos vacío, se descarta.',
+    html: 'La orden vuelve a requerir factura y se descarta su monto a cobrar.',
     icon: 'question', showCancelButton: true,
     confirmButtonText: 'Sí, quitar', cancelButtonText: 'Cancelar',
   })
@@ -106,6 +86,5 @@ async function quitar (ordenes) {
 // Devuelve si se confirmo: las que cambiaron hay que repintarlas aunque otra
 // haya fallado.
 export function alternarMarca (clave, ordenes) {
-  if (marcaDe(ordenes) === clave) return quitar(ordenes)
-  return clave === SIN_CARGO ? marcarSinCargo(ordenes) : marcarSinComprobante(ordenes)
+  return marcaDe(ordenes) === clave ? quitar(ordenes) : marcarSinCargo(ordenes)
 }

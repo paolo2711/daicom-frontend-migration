@@ -44,11 +44,11 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, onBeforeUnmount, watch } from 'vue'
 import FloatingSidePanel from '@/components/shared/FloatingSidePanel.vue'
 import { useAppStore } from '@/stores/appStore'
 import { ENVIADA, ESTADOS, POR_ENVIAR, RECHAZADA, REVISAR, avisoDelPlazo, fueraDePlazo, loQueDijo } from '@/utils/billing/sunat'
-import { enCurso, fallida, tareaDe, terminada } from '@/utils/uploadTasks'
+import { conAviso, enCurso, fallida, tareaDe, terminada } from '@/utils/uploadTasks'
 
 // Un comprobante en el panel lateral: Ver informacion y lo recien emitido. Si tiene una tarea de envio, su
 // estado manda; la rechazada al enviarla solo ofrece Corregir.
@@ -83,7 +83,7 @@ const estado = computed(() => {
              aviso: 'Puedes cerrar: el aviso sigue en el panel de subidas.' }
   }
   if (props.estadoSunat == null) return { sunat: ENVIADA, cargando: true, texto: 'Leyendo…' }
-  return { sunat: props.estadoSunat }
+  return { sunat: props.estadoSunat, aviso: t && conAviso(t) ? t.step : '' }
 })
 
 const puede = (clave) => props.acciones.some(a => a.clave === clave && !a.disabled)
@@ -129,6 +129,17 @@ const todasLasAcciones = computed(() => {
 })
 
 watch(() => tarea.value && terminada(tarea.value), (si) => { if (si) emit('tarea-terminada') })
+
+// Lo que termino a la vista no vuelve a salir en el panel de subidas, tampoco en las otras pestañas.
+function soltarTarea (id) {
+  const t = id != null && tareaDe(appStore.uploadTasks, props.tipo, id)
+  if (!t || enCurso(t)) return
+  appStore.removeUploadTask(t.id, t.type)
+  window.enviarProgresoWebSocket?.(t.id, 0, 'dismiss_task', t.code, 0, t.type)
+}
+const aLaVista = computed(() => (props.abierto ? props.id : null))
+watch(aLaVista, (_, anterior) => soltarTarea(anterior))
+onBeforeUnmount(() => soltarTarea(aLaVista.value))
 </script>
 
 <style scoped>

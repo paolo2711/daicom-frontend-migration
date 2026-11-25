@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, getCurrentInstance } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import wsNotificationService from '@/services/websockets/wsNotificationService'
 import { useAppStore } from '@/stores/appStore'
@@ -59,8 +59,6 @@ const cerrarSocket = () => {
 
 const appStore = useAppStore()
 const statusStore = useStatusStore()
-const { appContext } = getCurrentInstance()
-const $swal = appContext.config.globalProperties.$swal
 
 // Lo que el servidor siguio haciendo sin conexion llega como el ultimo aviso
 // de cada tarea (websockets/panel.py): asi ninguna queda colgada en el panel.
@@ -68,6 +66,10 @@ const recuperarTareas = () => {
   const tareas = appStore.uploadTasks.filter(enElServidor).map(t => ({ tipo: t.type, id: t.id }))
   if (tareas.length) socket.send(JSON.stringify({ action: 'recuperar_tareas', tareas }))
 }
+
+// La ultima bolsa de avisos que llego (websockets/batching.py): al volver se piden las tablas que cambiaron despues.
+let ultimaBolsa = null
+const recuperarAvisos = () => socket.send(JSON.stringify({ action: 'recuperar_avisos', bolsa: ultimaBolsa }))
 
 const conectarWebSocket = () => {
   cerrarSocket()
@@ -86,19 +88,17 @@ const conectarWebSocket = () => {
   const wsUrl = `${wsProtocol}//${urlObj.host}/ws/notificaciones/${tokenParam}`
   socket = new WebSocket(wsUrl)
 
-  // Conexion recuperada -> quitamos el banner y refrescamos: mientras estuvo
-  // caida se perdieron eventos, asi que la pantalla quedo desactualizada.
+  // Conexion recuperada -> quitamos el banner y pedimos lo que se perdio.
   socket.onopen = () => {
+    statusStore.clear('ws_down')
     recuperarTareas()
-    if (statusStore.active.includes('ws_down')) {
-      statusStore.clear('ws_down')
-      window.dispatchEvent(new CustomEvent('wss-reload-tables'))
-    }
+    recuperarAvisos()
   }
 
   socket.onmessage = (event) => {
     const data = JSON.parse(event.data)
-    wsNotificationService.handle(data, appStore, $swal)
+    ultimaBolsa = data.bolsa ?? ultimaBolsa
+    wsNotificationService.handle(data, appStore)
   }
 
   window.enviarProgresoWebSocket = (certId, progress, status, code, attempts, task_type = 'qr', step = '', error_msg = '', is_cloud_error = false, offline_url = null) => {

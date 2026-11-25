@@ -7,8 +7,7 @@
         @close="closeDialog"
       >
         <span v-if="invoice">
-          Factura:
-          <span class="font-weight-bold ml-1">{{ invoice.invoice_number || 'Sin número' }}</span>
+          <span class="font-weight-bold">{{ nombreDe(invoice) }}</span>
         </span>
       </base-modal-header>
 
@@ -44,13 +43,8 @@
               class="border-bottom"
             >
               <template #prepend>
-                <v-avatar
-                  :color="getColorPago(pago.payment_method) + '-lighten-5'"
-                  size="40"
-                >
-                  <v-icon :color="getColorPago(pago.payment_method)">
-                    {{ getIconoPago(pago.payment_method) }}
-                  </v-icon>
+                <v-avatar variant="tonal" size="40">
+                  <v-icon>{{ formaDePago(pago).icono }}</v-icon>
                 </v-avatar>
               </template>
 
@@ -58,7 +52,7 @@
                 {{ monto(pago.amount, monedaActual) }}
               </v-list-item-title>
               <v-list-item-subtitle>
-                {{ pago.payment_method }} - {{ fechaCorta(pago.payment_date) }}
+                {{ formaDePago(pago).texto }} · {{ fechaCorta(pago.payment_date) }}
               </v-list-item-subtitle>
               <v-list-item-subtitle v-if="pago.notes" class="font-italic text-caption">
                 "{{ pago.notes }}"
@@ -145,9 +139,16 @@
                   {{ monedaActual }}
                 </v-chip>
               </template>
-              <span>Se liquida en {{ nombreDe(monedaActual) }}</span>
+              <span>Se liquida en {{ nombreDeMoneda(monedaActual) }}</span>
             </v-tooltip>
           </div>
+          <segmented-field v-model="payment_data.payment_method" :opciones="formas" />
+          <button type="button" class="sugerido con-marca my-3" :disabled="!seSugiere"
+                  @click="payment_data.amount = sugerido.valor">
+            <span>{{ sugerido.texto }}</span>
+            <strong>{{ monto(sugerido.valor, monedaActual) }}</strong>
+            <span class="usar"><v-icon size="16" start>mdi-arrow-down-bold-circle-outline</v-icon>Usar este monto</span>
+          </button>
           <v-row density="compact">
             <v-col cols="12" md="6">
               <v-text-field
@@ -161,25 +162,12 @@
                 prepend-inner-icon="mdi-currency-usd"
                 :rules="[v => !!v || 'Monto requerido']"
               />
-              <v-btn v-if="saldo > 0 && !editando" variant="text" size="small" class="text-none px-1 mt-1"
-                     @click="payment_data.amount = saldo">Pagar lo que falta · {{ monto(saldo, monedaActual) }}</v-btn>
             </v-col>
             <v-col cols="12" md="6">
               <date-picker
                 label="Fecha de Pago"
                 :date="payment_data.payment_date"
                 @setPickedDate="(value) => (payment_data.payment_date = value)"
-              />
-            </v-col>
-            <v-col cols="12">
-              <v-select
-                v-model="payment_data.payment_method"
-                :items="metodos"
-                label="Método de Pago"
-                variant="outlined"
-                density="compact"
-                clearable
-                :rules="[v => !!v || 'Campo requerido']"
               />
             </v-col>
             <v-col cols="12">
@@ -193,10 +181,10 @@
                 placeholder="Ej: Pago adelantado, cancelado por transferencia..."
               />
             </v-col>
-            <v-col cols="12" v-if="payment_data.payment_method !== 'EFECTIVO'">
+            <v-col cols="12">
               <v-file-input
                 v-model="file"
-                label="Subir Comprobante (Opcional)"
+                :label="payment_data.payment_method === DETRACCION ? 'Constancia de detracción (opcional)' : 'Boleta o voucher (opcional)'"
                 prepend-inner-icon="mdi-camera"
                 variant="outlined"
                 density="compact"
@@ -230,12 +218,13 @@ import { ref, reactive, watch, computed } from 'vue'
 import { useTheme } from 'vuetify'
 import Swal from 'sweetalert2'
 import BillingDataService from '@/services/billing/billingDataService'
-import { useAppStore } from '@/stores/appStore'
 import DatePicker from '@/components/commonComponents/DatePicker.vue'
 import BaseModalHeader from '@/components/commonComponents/BaseModalHeader.vue'
 import { fechaCorta, hoyISO } from '@/utils/dates'
-import { anulada } from '@/utils/billing/facturas'
-import { monto, nombreDe, simboloDe } from '@/utils/money'
+import SegmentedField from '@/components/shared/SegmentedField.vue'
+import { DETRACCION, FORMAS_DE_PAGO, anulada, formaDePago, nombreDe } from '@/utils/billing/facturas'
+import { monto, nombreDe as nombreDeMoneda, simboloDe } from '@/utils/money'
+import { avisarHecho } from '@/utils/documents/avisos'
 import { mensajeDeError } from '@/utils/errors'
 
 const props = defineProps({
@@ -246,7 +235,6 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'close'])
 
 const theme = useTheme()
-const appStore = useAppStore()
 
 const dialogModel = computed({
   get: () => props.modelValue,
@@ -267,7 +255,7 @@ async function cargarAbonos () {
 
 // Lo que el cliente debe, restado de arriba abajo: el total, sus notas, la detraccion y lo abonado.
 const saldo = computed(() => Math.max(Number(props.invoice?.saldo_pendiente) || 0, 0))
-const desglose = computed(() => (props.invoice?.es_fiscal ? desgloseDeFactura(props.invoice) : null))
+const desglose = computed(() => (props.invoice ? desgloseDeFactura(props.invoice) : null))
 
 const is_on_sending_process = ref(false)
 const file = ref(null)
@@ -277,16 +265,23 @@ const liquidarFormRef = ref(null)
 
 const payment_data = reactive({
   amount: '',
-  payment_method: '',
+  payment_method: 'TRANSFERENCIA',
   notes: '',
   payment_date: hoyISO()
 })
 
-const metodos = ['EFECTIVO', 'BILLETERA', 'TRANSFERENCIA']
+const formas = computed(() => Object.entries(FORMAS_DE_PAGO).map(([valor, { texto }]) =>
+  ({ valor, texto, desactivada: valor === DETRACCION && !props.invoice?.es_fiscal })))
+const sugerido = computed(() => (payment_data.payment_method === DETRACCION
+  ? { texto: 'Detracción de la factura', valor: props.invoice?.detraccion_sin_constancia || 0 }
+  : { texto: 'Falta cobrar', valor: saldo.value }))
+// Al editar un abono, lo que falta ya lo descuenta: no es un monto que ponerle.
+const seSugiere = computed(() => !editando.value && sugerido.value.valor > 0
+  && Number(payment_data.amount) !== sugerido.value.valor)
 
 const resetLocalForm = () => {
   payment_data.amount = ''
-  payment_data.payment_method = ''
+  payment_data.payment_method = 'TRANSFERENCIA'
   payment_data.notes = ''
   payment_data.payment_date = hoyISO()
   file.value = null
@@ -320,10 +315,9 @@ const save = async () => {
 
     const data = new FormData()
     data.append('amount', payment_data.amount)
-    data.append('currency', monedaActual.value)
     data.append('payment_method', payment_data.payment_method)
     data.append('payment_date', payment_data.payment_date)
-    data.append('notes', payment_data.notes)
+    data.append('notes', payment_data.notes || '')
 
     if (file.value) {
       data.append('payment_proof', file.value)
@@ -333,10 +327,11 @@ const save = async () => {
       ? BillingDataService.updatePayment(pago_id_editar.value, data)
       : BillingDataService.createInvoicePayment(props.invoice.id, data)
 
+    const hecho = editando.value ? 'Abono actualizado' : 'Abono registrado'
     peticion
-      .then(() => {
+      .then(({ data: guardado }) => {
         closeDialog()
-        Swal.fire(appStore.successSavedOptions)
+        avisarHecho(hecho, guardado)
       })
       .catch((err) => {
         Swal.fire('Operación rechazada', mensajeDeError(err, 'No se pudo guardar el abono.'), 'error')
@@ -353,20 +348,6 @@ const closeDialog = () => {
   emit('close')
 }
 
-const getIconoPago = (metodo) => {
-  if (metodo === 'EFECTIVO') return 'mdi-cash'
-  if (metodo === 'BILLETERA') return 'mdi-cellphone-nfc'
-  if (metodo === 'TRANSFERENCIA') return 'mdi-bank-transfer'
-  return 'mdi-cash-register'
-}
-
-const getColorPago = (metodo) => {
-  if (metodo === 'EFECTIVO') return 'green'
-  if (metodo === 'BILLETERA') return 'purple'
-  if (metodo === 'TRANSFERENCIA') return 'blue'
-  return 'grey'
-}
-
 const eliminarPago = (id) => {
   Swal.fire({
     title: '¿Eliminar este abono?',
@@ -380,8 +361,8 @@ const eliminarPago = (id) => {
       BillingDataService.deletePayment(id).then(() => {
         Toast.fire({ timer: 2200, icon: 'success', title: 'Abono eliminado' })
         cargarAbonos()
-      }).catch(() => {
-        Swal.fire('Error', 'No se pudo eliminar el abono.', 'error')
+      }).catch((error) => {
+        Swal.fire('No se eliminó', mensajeDeError(error, 'No se pudo eliminar el abono.'), 'error')
       })
     }
   })
@@ -389,6 +370,23 @@ const eliminarPago = (id) => {
 </script>
 
 <style scoped>
+.sugerido {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.625rem 0.875rem 0.625rem 1rem;
+  border-radius: 0.625rem;
+  text-align: left;
+  font-size: 0.875rem;
+  background: rgb(var(--v-theme-panel));
+  transition: opacity 0.15s;
+}
+.sugerido strong { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.sugerido .usar { margin-left: auto; font-weight: 600; white-space: nowrap; }
+.sugerido:hover:not(:disabled) .usar { text-decoration: underline; }
+.sugerido:focus-visible { outline: 0.125rem solid rgb(var(--v-theme-seleccion)); outline-offset: 0.125rem; }
+.sugerido:disabled { opacity: 0.45; }
 .border-bottom {
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }

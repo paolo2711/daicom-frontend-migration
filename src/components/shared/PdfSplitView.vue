@@ -7,7 +7,7 @@
     </div>
 
     <template v-if="alLado">
-      <split-divider @pointerdown="empezarArrastre" />
+      <split-divider ref="divisor" @pointerdown="empezarArrastre" />
 
       <v-card ref="visor" class="visor d-flex flex-column flex-grow-1" rounded="lg" border elevation="0"
               :style="{ height: altoDelVisor }">
@@ -81,7 +81,7 @@ watch([enVista, alLado], ([fila, lado]) => {
 })
 
 // El ancho de la lista: lo elige cada uno arrastrando el divisor y se recuerda en ese navegador.
-const { contenedor, lista, ancho, arrastrando, empezarArrastre, enRem } =
+const { contenedor, lista, divisor, ancho, arrastrando, empezarArrastre, enRem } =
   useSplitWidth(`vistaPdf.${props.clave}`, { inicial: ANCHO_INICIAL, minimoDelPanel: MINIMO_DEL_PDF })
 
 // ── El alto: de su borde de arriba al pie de la pantalla, tanto donde empieza

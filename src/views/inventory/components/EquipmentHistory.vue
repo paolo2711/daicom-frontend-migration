@@ -29,15 +29,13 @@
               <td class="font-weight-medium">{{ h.order_number }}</td>
               <td>{{ h.client_name }}</td>
               <td class="text-center" :class="{ 'text-medium-emphasis': !h.departure_date }">
-                {{ salidaDe(h) }}
+                {{ fechaCorta(h.departure_date) || '—' }}
               </td>
-              <td class="text-center" :class="h.actual_return_date ? 'text-success font-weight-bold' : 'text-medium-emphasis'">
+              <td class="text-center" :class="{ 'text-medium-emphasis': !h.actual_return_date }">
                 {{ fechaCorta(h.actual_return_date) || '—' }}
               </td>
               <td class="text-center">
-                <v-chip size="x-small" :color="ESTADOS_ALQUILER[h.estado].color" variant="outlined" label>
-                  {{ ESTADOS_ALQUILER[h.estado].texto }}
-                </v-chip>
+                {{ ESTADOS_ALQUILER[h.estado].texto }}
               </td>
               <td v-if="puedeVerOrdenes" class="text-center">
                 <v-tooltip location="top" text="Ver en Alquileres">
@@ -66,7 +64,10 @@
 import { ref, computed } from 'vue'
 import { useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
-import { ESTADOS_ALQUILER, FECHAS_ALQUILER, salidaDe } from '@/utils/orders/alquiler'
+import Swal from 'sweetalert2'
+import InventoryDataService from '@/services/inventory/inventoryDataService'
+import { mensajeDeError } from '@/utils/errors'
+import { ESTADOS_ALQUILER, FECHAS_ALQUILER } from '@/utils/orders/alquiler'
 import { fechaCorta } from '@/utils/dates'
 
 const theme = useTheme()
@@ -84,9 +85,13 @@ const puedeVerOrdenes = computed(() => {
   return perms.some(p => p.id == 2)
 })
 
-const open = (item) => {
-  equipment.value = item
-  dialog.value = true
+async function open(id) {
+  try {
+    equipment.value = (await InventoryDataService.get(id)).data
+    dialog.value = true
+  } catch (error) {
+    Swal.fire('No se abrió el historial', mensajeDeError(error, 'Intenta de nuevo.'), 'error')
+  }
 }
 
 // Lleva a la pestana Alquileres con esa orden ya filtrada (mismo patron que

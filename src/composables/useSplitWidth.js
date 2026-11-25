@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { debounce } from '@/utils/debounce'
 
 export const enRem = (rem) => rem * parseFloat(getComputedStyle(document.documentElement).fontSize)
@@ -16,11 +16,12 @@ function minimoDeLaLista (caja) {
   return tabla + bordes
 }
 
-// El ancho de una lista con un panel al lado: se elige arrastrando el divisor, en % del espacio, y se recuerda
-// en ese navegador con `clave`. La lista no se angosta hasta desplazarse de costado y el panel no baja de `minimo`.
+// El ancho de una lista con un panel al lado, en % del espacio: se elige arrastrando el divisor y se recuerda en ese
+// navegador con `clave`. Siempre dentro de los limites: lo que pide la lista y, si no entran los dos, el del panel.
 export function useSplitWidth (clave, { inicial = 40, minimoDelPanel = 20 } = {}) {
   const contenedor = ref(null)
   const lista = ref(null)
+  const divisor = ref(null)
   const arrastrando = ref(false)
 
   function leer () {
@@ -31,33 +32,51 @@ export function useSplitWidth (clave, { inicial = 40, minimoDelPanel = 20 } = {}
       return inicial
     }
   }
-  const ancho = ref(leer())
-  watch(ancho, debounce((valor) => {
+  const elegido = ref(leer())
+  const limites = ref({ minimo: 0, maximo: 100 })
+  const dentro = (valor) => Math.min(limites.value.maximo, Math.max(limites.value.minimo, valor))
+  const ancho = computed(() => dentro(elegido.value))
+  watch(elegido, debounce((valor) => {
     try { localStorage.setItem(clave, String(valor)) } catch { /* sin almacenamiento: vale para esta visita */ }
   }))
 
+  // Sin divisor no hay panel al lado; sin ancho, la lista esta en una pestaña que no se ve.
+  function medirLimites () {
+    const total = contenedor.value?.offsetWidth
+    if (!divisor.value || !total) return
+    const enPorcentaje = (medida) => (medida / total) * 100
+    limites.value = {
+      minimo: Math.ceil(enPorcentaje(minimoDeLaLista(lista.value)) * 10) / 10,
+      maximo: Math.floor(enPorcentaje(total - divisor.value.$el.offsetWidth - enRem(minimoDelPanel)) * 10) / 10,
+    }
+  }
+  // La lista cambia de tamaño con la ventana, sus filas y lo que se abre en ellas.
+  const medidor = new ResizeObserver(() => { if (!arrastrando.value) medirLimites() })
+  watch(lista, (el, antes) => {
+    if (antes) medidor.unobserve(antes)
+    if (el) medidor.observe(el)
+  }, { flush: 'post' })
+  onUnmounted(() => medidor.disconnect())
+
   function empezarArrastre (e) {
-    const divisor = e.currentTarget
+    const agarrado = e.currentTarget
     const zona = contenedor.value.getBoundingClientRect()
-    const enPorcentaje = (medida) => (medida / zona.width) * 100
-    const minimo = Math.ceil(enPorcentaje(minimoDeLaLista(lista.value)) * 10) / 10
-    const maximo = Math.floor(enPorcentaje(zona.width - divisor.offsetWidth - enRem(minimoDelPanel)) * 10) / 10
     arrastrando.value = true
-    divisor.setPointerCapture(e.pointerId)
+    agarrado.setPointerCapture(e.pointerId)
     const mover = (ev) => {
-      const porcentaje = Math.round(enPorcentaje(ev.clientX - zona.left) * 10) / 10
-      ancho.value = Math.min(maximo, Math.max(minimo, porcentaje))
+      elegido.value = dentro(Math.round(((ev.clientX - zona.left) / zona.width) * 1000) / 10)
     }
     const soltar = () => {
       arrastrando.value = false
-      divisor.removeEventListener('pointermove', mover)
-      divisor.removeEventListener('pointerup', soltar)
-      divisor.removeEventListener('pointercancel', soltar)
+      medirLimites()
+      agarrado.removeEventListener('pointermove', mover)
+      agarrado.removeEventListener('pointerup', soltar)
+      agarrado.removeEventListener('pointercancel', soltar)
     }
-    divisor.addEventListener('pointermove', mover)
-    divisor.addEventListener('pointerup', soltar)
-    divisor.addEventListener('pointercancel', soltar)
+    agarrado.addEventListener('pointermove', mover)
+    agarrado.addEventListener('pointerup', soltar)
+    agarrado.addEventListener('pointercancel', soltar)
   }
 
-  return { contenedor, lista, ancho, arrastrando, empezarArrastre, enRem }
+  return { contenedor, lista, divisor, ancho, arrastrando, empezarArrastre, enRem }
 }

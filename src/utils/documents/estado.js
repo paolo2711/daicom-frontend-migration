@@ -1,4 +1,5 @@
 import { CURRENT_QUOTE_SCHEMA } from './quoteDefaults'
+import { mismoFormato } from '@/utils/version'
 import { COTIZACION, VALORIZACION } from './tipos'
 
 // Document.status en el back.
@@ -20,8 +21,7 @@ const ESQUEMA_VIGENTE = {
   [COTIZACION]: CURRENT_QUOTE_SCHEMA,
   [VALORIZACION]: CURRENT_QUOTE_SCHEMA,
 }
-const mayor = (version) => String(version ?? '').split('.')[0]
 
 export const vivo = (documento) => documento?.status !== ANULADO
-export const editable = (documento) =>
-  mayor(documento?.schema_version) === mayor(ESQUEMA_VIGENTE[documento?.document_type])
+export const delFormatoVigente = (documento) =>
+  mismoFormato(documento?.schema_version, ESQUEMA_VIGENTE[documento?.document_type])

@@ -20,11 +20,9 @@
     <v-divider v-if="logs.length" />
     <div v-if="logs.length" class="px-3 py-2">
       <fluent-pagination
-        :page="page"
-        :itemsPerPage="page_size"
+        v-model:page="options.page"
+        v-model:itemsPerPage="options.itemsPerPage"
         :totalItems="total"
-        @update:page="onPageChange"
-        @update:itemsPerPage="onItemsPerPageChange"
       />
     </div>
   </div>
@@ -37,19 +35,21 @@ import LogDataService from "@/services/logs/logDataService"
 import LogMappers from "@/mappers/logMappers"
 import { useAppStore } from '@/stores/appStore'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
+import { usePage } from '@/composables/usePage'
 import { fechaCorta } from '@/utils/dates'
+import { leerPagina } from '@/utils/pagination'
 
 const appStore = useAppStore()
 
 const logs = ref([])
-const page = ref(1)
-const page_size = ref(10)
+const { opciones: options } = usePage(() => retrieveLogs())
 const total = ref(0)
 
 const retrieveLogs = () => {
-  LogDataService.getFiltered(page.value, page_size.value).then((response) => {
-    logs.value = response.data.results.map(LogMappers.getMap)
-    total.value = response.data.count
+  LogDataService.getFiltered(options.value.page, options.value.itemsPerPage).then((response) => {
+    const pagina = leerPagina(response.data)
+    logs.value = pagina.filas.map(LogMappers.getMap)
+    total.value = pagina.total
   }).catch(() => {
     Swal.fire(appStore.networkErrorOptions)
   })
@@ -69,17 +69,6 @@ const tono = (action) => {
   if (action.includes('PUT') || action.includes('PATCH')) return 'teal'
   if (action.includes('DELETE')) return 'crit'
   return 'indigo'
-}
-
-const onPageChange = (nuevaPagina) => {
-  page.value = nuevaPagina
-  retrieveLogs()
-}
-
-const onItemsPerPageChange = (nuevoTamano) => {
-  page_size.value = nuevoTamano
-  page.value = 1
-  retrieveLogs()
 }
 
 onMounted(() => {

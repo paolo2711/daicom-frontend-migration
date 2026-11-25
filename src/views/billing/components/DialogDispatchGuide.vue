@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="dialog" class="dialog-premium" fullscreen persistent>
     <v-card v-if="datos" class="d-flex flex-column" style="height: 100%;">
-      <base-modal-header title="Nueva guía de remisión" icon="mdi-truck-delivery-outline" @close="dialog = false">
+      <base-modal-header title="Nueva guía de remisión" icon="mdi-truck-delivery-outline" @close="salir">
         <span>Remitente · Transporte privado en vehículo M1 o L</span>
       </base-modal-header>
 
@@ -115,7 +115,7 @@
       </v-card-text>
 
       <form-footer accion="Emitir guía" icono="mdi-send" :listo="sePuedeEmitir" :ocupado="emitiendo"
-                   :vista="vista" titulo="Guía de remisión" @cancelar="dialog = false" @confirmar="emitir" />
+                   :vista="vista" titulo="Guía de remisión" @cancelar="salir" @confirmar="emitir" />
     </v-card>
   </v-dialog>
 </template>
@@ -130,11 +130,13 @@ import FormFooter from '@/components/shared/FormFooter.vue'
 import UbigeoField from '@/components/shared/UbigeoField.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import WorkspaceTabs from '@/components/shared/WorkspaceTabs.vue'
+import { origenDe, useLocalDraft } from '@/composables/useLocalDraft'
 import { usePdfPreview } from '@/composables/usePdfPreview'
 import { useRowErrors } from '@/composables/useRowErrors'
 import { useSwal } from '@/composables/useSwal'
 import BillingDataService from '@/services/billing/billingDataService'
-import { OTROS, itemVacio } from '@/utils/billing/guias'
+import { CURRENT_DISPATCH_GUIDE_SCHEMA, itemDeGuia } from '@/utils/billing/billingDefaults'
+import { OTROS } from '@/utils/billing/guias'
 import { hoyISO } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 import { copiarDebajo } from '@/utils/lists'
@@ -177,6 +179,30 @@ const indiceElegido = computed(() => items.value.indexOf(elegido.value))
 const sePuedeEmitir = computed(() => Boolean(clienteId.value && items.value.length))
 const paraElBack = () => ({ cliente: clienteId.value, ordenes: ordenes.value.map(o => o.id), datos: datos.value })
 
+// Lo guardado, sobre lo que el formulario trae lleno: lo que no tenga queda como en una nueva.
+function llenar (guardada) {
+  clienteId.value = guardada.clienteId
+  clienteInicial.value = guardada.clienteInicial
+  ordenes.value = guardada.ordenes
+  datos.value = { ...datos.value, ...guardada.datos,
+                  items: guardada.datos.items.map(item => ({ ...itemDeGuia(), ...item })) }
+  elegido.value = null
+}
+
+// La guia sin emitir: la nueva, la que sale de unas ordenes o la que usa otra de plantilla.
+const origen = ref('')
+const borrador = useLocalDraft({
+  clave: () => `guia_${origen.value}`,
+  version: CURRENT_DISPATCH_GUIDE_SCHEMA,
+  datos: () => ({ clienteId: clienteId.value, clienteInicial: clienteInicial.value, ordenes: ordenes.value,
+                  datos: datos.value }),
+  llenar,
+  resumen: (guardada) => {
+    const n = guardada.datos.items.filter(item => item.descripcion?.trim()).length
+    return n && `Hay una guía sin emitir con ${n} ${n === 1 ? 'ítem' : 'ítems'}`
+  },
+})
+
 function noSePudo (titulo, porDefecto, error) {
   marcarErrores(error.response?.data?.filas)
   swal.fire({ icon: 'error', title: titulo, text: mensajeDeError(error, porDefecto) })
@@ -196,7 +222,7 @@ const pesoDeLosItems = computed(() => Math.round(items.value
   .reduce((suma, i) => suma + (Number(i.peso) || 0) * (Number(i.cantidad) || 0), 0) * 1000) / 1000)
 
 function agregar() {
-  const item = itemVacio()
+  const item = itemDeGuia()
   datos.value.items.push(item)
   elegido.value = item
 }
@@ -209,25 +235,36 @@ function borrar(indice) {
 }
 
 // `nueva` es lo que devuelve el back (cliente, ordenes, datos y motivos); `plantilla`, otra guia emitida.
-function open(nueva, plantilla = null) {
+async function open(nueva, plantilla = null) {
   emitidaDe.value = null
-  clienteId.value = plantilla?.cliente ?? nueva.cliente
-  clienteInicial.value = plantilla?.cliente_data ?? nueva.cliente_data
-  ordenes.value = plantilla ? [] : nueva.ordenes
+  clienteId.value = nueva.cliente
+  clienteInicial.value = nueva.cliente_data
+  ordenes.value = nueva.ordenes
   motivos.value = nueva.motivos
-  datos.value = JSON.parse(JSON.stringify(plantilla
-    ? { ...plantilla.datos, fecha_traslado: nueva.datos.fecha_traslado }
-    : nueva.datos))
+  datos.value = JSON.parse(JSON.stringify(nueva.datos))
+  if (plantilla) {
+    llenar({ clienteId: plantilla.cliente, clienteInicial: plantilla.cliente_data, ordenes: [],
+             datos: { ...plantilla.datos, fecha_traslado: nueva.datos.fecha_traslado } })
+  }
+  origen.value = plantilla ? `plantilla_${plantilla.id}` : origenDe(nueva.ordenes.map(o => o.id))
   elegido.value = null
   if (!datos.value.items.length) agregar()
   pestana.value = 'info'
   datosAbiertos.value = true
   dialog.value = true
+  await borrador.abrir()
+}
+
+async function salir () {
+  if (!await borrador.puedeSalir()) return
+  borrador.cerrar()
+  dialog.value = false
 }
 
 // El back responde enseguida y la manda a SUNAT en segundo plano: el formulario se cierra con lo escrito guardado.
 async function emitir() {
   emitiendo.value = true
+  borrador.cerrar()
   try {
     const { data } = await BillingDataService.createDispatchGuide(paraElBack())
     vista.cerrar()

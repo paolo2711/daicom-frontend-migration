@@ -11,7 +11,7 @@
             </div>
           </template>
           <v-list class="fluent-menu rounded-lg" density="compact">
-            <v-list-item v-for="n in [30, 60, 80, 100]" :key="n"
+            <v-list-item v-for="n in TAMANOS" :key="n"
                          @click="changeItemsPerPage(n)"
                          class="fluent-list-item">
               <v-list-item-title class="text-caption text-md-body-2">{{ n }} registros</v-list-item-title>
@@ -52,6 +52,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { TAMANOS } from '@/utils/pagination'
 
 const props = defineProps({
   page:         { type: Number, required: true },

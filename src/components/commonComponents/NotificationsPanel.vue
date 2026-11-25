@@ -100,6 +100,7 @@ import { useRouter } from 'vue-router'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { useAppStore } from '@/stores/appStore'
 import { iconForCategory as iconoCategoria, toneForCategory } from '@/services/notifications/categoryIcons'
+import { rutaDelCertificado } from '@/utils/certificates/ruta'
 import { tiempoRelativo } from '@/utils/dates'
 
 const store = useNotificationStore()
@@ -153,14 +154,14 @@ watch(() => store.items.length, async () => {
 
 // Rutas por OBJETO (target_type + target_id): llevan al item puntual.
 const RUTAS = {
-  certificate: (numero) => ({ path: '/certificates', query: { certificado: numero } }),
+  certificate: rutaDelCertificado,
   inventory_item: (id) => ({ path: '/inventario', query: { buscar: id } }),
   order: () => ({ path: '/orders/servicios' }),
 }
 // Rutas por CATEGORIA (no dependen de un objeto): ej. "firma solicitada" -> la
 // pestana de certificados con el filtro de pendientes de firma ya aplicado.
 const RUTAS_CATEGORIA = {
-  firma_solicitada: () => ({ path: '/certificates', query: { firma_pendiente: 1 } }),
+  firma_solicitada: () => ({ path: '/certificates', query: { pildora: 'signature_requested', desde: '', hasta: '' } }),
 }
 const abrir = (n) => {
   store.markRead(n)

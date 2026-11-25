@@ -19,6 +19,7 @@
                                 @selected="agregar">
           <template #item="{ item, props: opcion }">
             <v-list-item v-bind="opcion" :title="null">
+              <template #prepend><equipment-photo :foto="item.raw.foto" class="mr-3" /></template>
               <v-list-item-title><strong>{{ item.raw.internal_id }}</strong> · {{ item.raw.name }}</v-list-item-title>
               <v-list-item-subtitle>{{ detalleDe(item.raw) }}</v-list-item-subtitle>
             </v-list-item>
@@ -33,18 +34,17 @@
         <v-table v-if="equipments.length > 0" density="compact" class="lista-de-tarjetas" fixed-header>
           <thead>
             <tr>
-              <th style="width: 7rem;">ID</th>
+              <th style="width: 3.5rem;"></th>
+              <th style="width: 8rem;">Código</th>
               <th>Equipo</th>
               <th style="width: 8rem;">{{ FECHAS_ALQUILER.departure_date }}</th>
-              <th style="width: 9rem;">{{ FECHAS_ALQUILER.expected_return_date }}</th>
-              <th v-if="conEstado" style="width: 7rem;">Estado</th>
               <th style="width: 3rem;"></th>
             </tr>
           </thead>
           <tbody>
             <row-order-rental v-for="(eq, index) in equipments" :key="eq.id ?? `nuevo-${eq.equipment_id}`"
-                              :eq="eq" :indice="index" :error="errores[index]" :con-estado="conEstado"
-                              :elegida="eq === elegida" @elegir="elegida = eq" @borrar="borrarFila" />
+                              :eq="eq" :indice="index" :error="errores[index]" :elegida="eq === elegida"
+                              @elegir="elegida = eq" @borrar="borrarFila" />
           </tbody>
         </v-table>
         <div v-else class="d-flex flex-column align-center justify-center fill-height ga-2 pa-8 text-medium-emphasis">
@@ -74,6 +74,7 @@ import { ref, computed, watch, nextTick, defineAsyncComponent } from 'vue'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import AddNewButton from '@/components/commonComponents/AddNewButton.vue'
 import DetailEmpty from '@/components/shared/DetailEmpty.vue'
+import EquipmentPhoto from '@/components/shared/EquipmentPhoto.vue'
 import WorkspaceLayout from '@/components/shared/WorkspaceLayout.vue'
 import DetailPanel from '@/components/shared/DetailPanel.vue'
 import OptionRows from '@/components/shared/OptionRows.vue'
@@ -82,7 +83,9 @@ import { useDetailOptions } from '@/composables/useDetailOptions'
 import RowOrderRental from './RowOrderRental.vue'
 import PanelOrderRental from './PanelOrderRental.vue'
 import { useRowErrors } from '@/composables/useRowErrors'
-import { FECHAS_ALQUILER } from '@/utils/orders/alquiler'
+import { datosDelEquipo } from '@/utils/equipments/datos'
+import { FECHAS_ALQUILER, FECHAS_EDITABLES } from '@/utils/orders/alquiler'
+import { equipoDeAlquiler } from '@/utils/orders/orderDefaults'
 
 const AddEquipment = defineAsyncComponent(() => import('@/views/inventory/components/AddEquipment.vue'))
 
@@ -106,29 +109,32 @@ const pestanas = computed(() => [
   ...(props.opcionesDelPanel.length ? [{ valor: 'opciones', texto: 'Opciones', icono: 'mdi-format-list-bulleted' }] : []),
 ])
 const { opcionAbierta, abrirOpcion, tituloDeOpcion } = useDetailOptions(elegida, () => props.opcionesDelPanel)
-// Al ver uno guardado, cada fila dice en que va: reservado, en obra o devuelto.
-const conEstado = computed(() => equipments.value.some(e => e.estado))
+
+function mostrarOpcion(clave) {
+  pestana.value = 'opciones'
+  abrirOpcion(clave)
+}
 
 const buscador = ref(null)
 const buscado = ref(null)
 const nuevoEnInventario = ref(null)
-const detalleDe = (equipo) => [equipo.brand, equipo.series && `SN ${equipo.series}`].filter(Boolean).join(' · ')
+const detalleDe = (equipo) => datosDelEquipo(equipo.brand, equipo.model, equipo.series && `SN ${equipo.series}`)
 
 watch(equipments, (val) => { emit('update-list', val) }, { deep: true })
 
-// La salida y la devolucion pactada se repiten del ultimo agregado: un alquiler suele salir y volver junto.
+// El inicio y la devolucion pactada se repiten del ultimo agregado: un alquiler suele ir y volver junto.
 function agregar(equipo) {
   if (!equipo) return
   const anterior = equipments.value.findLast(e => e.modo === 'nuevo')
   const fila = {
-    modo: 'nuevo',
+    ...equipoDeAlquiler(),
     equipment_id: equipo.id,
     internal_id: equipo.internal_id,
     name: equipo.name,
-    series: equipo.series,
+    detalle: detalleDe(equipo),
+    foto: equipo.foto,
     departure_date: anterior?.departure_date ?? null,
     expected_return_date: anterior?.expected_return_date ?? null,
-    delivery_notes: '',
   }
   equipments.value.push(fila)
   elegida.value = fila
@@ -162,9 +168,10 @@ function cargarLineas(lineas) {
     modo: 'linea',
     id: linea.id,
     equipment_id: linea.equipment,
-    internal_id: linea.equipment_internal_id,
-    name: linea.equipment_name,
-    series: linea.equipment_series,
+    internal_id: linea.equipment_data.internal_id,
+    name: linea.equipment_data.name,
+    detalle: detalleDe(linea.equipment_data),
+    foto: linea.equipment_data.foto,
     departure_date: linea.departure_date,
     expected_return_date: linea.expected_return_date,
     actual_return_date: linea.actual_return_date,
@@ -173,17 +180,19 @@ function cargarLineas(lineas) {
   }))
 }
 
-// Lo que manda el alquiler editado: de las lineas guardadas solo lo que se corrige.
+// Lo que manda el alquiler editado: de las lineas guardadas solo lo que se corrige en su estado.
 function paraGuardar() {
-  const items = equipments.value.map(({ modo, id, equipment_id, departure_date, expected_return_date,
-    delivery_notes }) => (modo === 'linea'
-    ? { id, expected_return_date, delivery_notes }
-    : { equipment_id, departure_date, expected_return_date, delivery_notes }))
+  const items = equipments.value.map((fila) => {
+    const { modo, id, equipment_id, departure_date, expected_return_date, delivery_notes } = fila
+    if (modo !== 'linea') return { equipment_id, departure_date, expected_return_date, delivery_notes }
+    const fechas = Object.fromEntries(FECHAS_EDITABLES[fila.estado].map(campo => [campo, fila[campo] || null]))
+    return { id, delivery_notes, ...fechas }
+  })
   return { items, quitar: quitadas.value }
 }
 
 // Un alquiler no toma numeros de certificado.
 const estimados = () => equipments.value.map(() => null)
 
-defineExpose({ cargarFilas, cargarLineas, paraGuardar, marcarErrores, estimados })
+defineExpose({ cargarFilas, cargarLineas, paraGuardar, marcarErrores, estimados, mostrarOpcion })
 </script>

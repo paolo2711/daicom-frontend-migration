@@ -1,5 +1,5 @@
 import { fechaCorta, hoyISO } from '@/utils/dates'
-import { ABONADO, ANULADA, CREDITO, DEUDA, EXCEDIDO, PAGADO, esAlquiler, tonoDe } from '@/utils/orders/estado'
+import { ABONADO, ANULADA, CREDITO, DEUDA, ESTADOS, EXCEDIDO, PAGADO, esAlquiler, tonoDe } from '@/utils/orders/estado'
 
 // A credito y dentro del plazo, tenga abonos o no: lo que falta todavia no se
 // cobra.
@@ -16,8 +16,6 @@ export const getColorSemaforoFinanciero = (o) => {
   // Sin cargo va primero: esas ordenes tambien tienen wants_invoice en false y
   // caerian en la rama de abajo, que habla de abonos que nunca van a existir.
   if (o.requiere_pago === false) return undefined
-  // Sin comprobante: verde si ya tiene abono, sin color si aun no.
-  if (o.wants_invoice === false) return o.estado_financiero === PAGADO ? 'success' : undefined
   return tonoDe(o.estado_financiero).color
 }
 
@@ -40,7 +38,7 @@ export const getIconoSemaforoFinanciero = (o) => {
 export const getTextoSemaforoFinanciero = (o) => {
   if (o.requiere_pago === false) return 'Sin cargo, no se cobra'
   if (o.wants_invoice === false) {
-    return o.estado_financiero === PAGADO ? 'Sin comprobante · Pagado' : 'Sin comprobante · Sin abono aún'
+    return `Sin comprobante · ${ESTADOS[o.estado_financiero].texto}`
   }
   const { cantidad, numero, vence } = o.facturas || { cantidad: 0, numero: '' }
   const cuantas = cantidad > 1 ? `${cantidad} facturas` : numero

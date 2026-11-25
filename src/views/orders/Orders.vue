@@ -18,7 +18,7 @@
           <v-btn color="primary" class="mr-4" variant="flat" prepend-icon="mdi-folder-plus" v-if="route.name === 'orders-service'" @click="modalAddOrder?.open(SERVICIO)">
             NUEVO SERVICIO
           </v-btn>
-          <v-btn color="amber-darken-3" class="mr-4 text-white" variant="flat" prepend-icon="mdi-truck-plus" v-if="route.name === 'orders-rental'" @click="modalAddOrder?.open(ALQUILER)">
+          <v-btn color="primary" class="mr-4" variant="flat" prepend-icon="mdi-truck-plus" v-if="route.name === 'orders-rental'" @click="modalAddOrder?.open(ALQUILER)">
             NUEVO ALQUILER
           </v-btn>
         </div>
@@ -40,3 +40,36 @@ import { ALQUILER, SERVICIO } from '@/utils/orders/estado'
 const route = useRoute()
 const modalAddOrder = ref(null)
 </script>
+
+<style lang="scss">
+/* Vuetify pinta su hover con td::after, encima del fondo: en la orden abierta se apaga. */
+.tabla-ordenes {
+  tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
+    background-color: rgba(var(--v-theme-on-surface), 0.04) !important;
+  }
+
+  tbody tr.fila-padre-activa > td::after,
+  tbody tr.fila-activa > td::after,
+  tr.fila-activa .v-table tbody tr > td::after {
+    display: none !important;
+  }
+
+  tr.fila-activa .v-table,
+  tr.fila-activa .v-table__wrapper {
+    background-color: transparent !important;
+  }
+}
+
+.v-theme--light .tabla-ordenes tbody tr:is(.fila-padre-activa, .fila-activa) > td {
+  background-color: #e8e8e8 !important;
+}
+.v-theme--dark .tabla-ordenes {
+  tbody tr:not(.fila-padre-activa):not(.fila-activa):not(.fila-en-menu):hover > td {
+    background-color: rgba(var(--v-theme-on-surface), 0.05) !important;
+  }
+
+  tbody tr:is(.fila-padre-activa, .fila-activa) > td {
+    background-color: #292929 !important;
+  }
+}
+</style>

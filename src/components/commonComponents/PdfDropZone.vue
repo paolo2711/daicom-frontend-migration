@@ -29,6 +29,7 @@ const props = defineProps({
   // Permite soltar varios archivos.
   multiple: { type: Boolean, default: false },
   icon:     { type: String,  default: 'mdi-file-upload-outline' },
+  disabled: { type: Boolean, default: false },
 })
 // 'file' = primer archivo valido (compat); 'files' = todos los validos; 'invalid' = nada valido.
 const emit = defineEmits(['file', 'files', 'invalid'])
@@ -45,7 +46,7 @@ const acepta = (file) => {
 }
 
 const onDragOver = (e) => {
-  if (e.dataTransfer?.types?.includes('Files')) arrastrando.value = true
+  if (!props.disabled && e.dataTransfer?.types?.includes('Files')) arrastrando.value = true
 }
 
 // Solo apagamos el overlay cuando el cursor sale DE VERDAD de la zona (no al
@@ -58,6 +59,7 @@ const onDragLeave = (e) => {
 
 const onDrop = (e) => {
   arrastrando.value = false
+  if (props.disabled) return
   const soltados = Array.from(e.dataTransfer?.files || [])
   const validos = soltados.filter(acepta)
   if (validos.length === 0) {

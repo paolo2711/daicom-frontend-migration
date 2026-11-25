@@ -1,5 +1,5 @@
 import { getCurrentInstance } from 'vue'
-import { Toast } from '@/plugins/alerts'
+import { avisarHecho } from '@/utils/documents/avisos'
 import { TIPOS_CERTIFICADO } from '@/utils/certificates/tipos'
 
 // El correlativo del numero que da el servidor ('ACR-1294').
@@ -32,19 +32,19 @@ function numerosPorTipo(filas, codigos) {
 export function useSavedNumbers() {
   const $swal = getCurrentInstance().appContext.config.globalProperties.$swal
 
-  return function avisar(titulo, filas, codigos = [], estimados = []) {
+  return function avisar(titulo, filas, codigos = [], estimados = [], warning = '') {
     const cambiaron = filas.some((fila, i) =>
       fila.modo === 'nuevo' && estimados[i] != null && numeroDe(codigos[i]) !== estimados[i])
 
     if (!cambiaron) {
-      Toast.fire({ icon: 'success', title: titulo })
+      avisarHecho(titulo, { warning })
       return
     }
     $swal.fire({
       icon: 'info',
       title: 'Los números cambiaron',
       html: `${titulo}. Otro usuario tomó números mientras cargabas; quedaron:<br><br>`
-        + `<b>${numerosPorTipo(filas, codigos).join('<br>')}</b>`,
+        + `<b>${numerosPorTipo(filas, codigos).join('<br>')}</b>${warning ? `<br><br>${warning}` : ''}`,
     })
   }
 }

@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="dialog" class="dialog-premium" fullscreen persistent>
     <v-card class="d-flex flex-column" style="height: 100%;">
-      <base-modal-header :title="titulo" icon="mdi-file-document-plus" @close="close">
+      <base-modal-header :title="titulo" icon="mdi-file-document-plus" @close="salir">
         <span v-if="!editando && next_order_number">
           Sig. Orden: <span class="font-weight-bold ml-1">{{ next_order_number }}</span>
         </span>
@@ -43,7 +43,7 @@
       <form-footer accion="Guardar orden" :listo="sePuedeGuardar" :ocupado="is_on_sending_process"
                    :vista="esDeServicio(order) ? vista : null" :titulo="titulo"
                    accion-en-vista="Guardar e imprimir" icono-en-vista="mdi-printer"
-                   @cancelar="close" @confirmar="save()" @confirmar-en-vista="save(true)">
+                   @cancelar="salir" @confirmar="save()" @confirmar-en-vista="save(true)">
         <template #inicio>
           <resumen-equipos :filas="items_to_save" :por-tipo="esDeServicio(order)" />
         </template>
@@ -73,6 +73,7 @@ import FormOrderService from './services/FormOrderService.vue'
 import FormOrderRental from './rentals/FormOrderRental.vue'
 import DocumentsOrder from './DocumentsOrder.vue'
 import { sinPendientes, subirPendientes, vinculosAlCrear } from '@/utils/orders/documentos'
+import { CURRENT_ORDER_SCHEMA, ordenDe } from '@/utils/orders/orderDefaults'
 import ResumenEquipos from './ResumenEquipos.vue'
 import DialogCertificateOwners from './services/DialogCertificateOwners.vue'
 import VersionsOrderService from './services/VersionsOrderService.vue'
@@ -138,21 +139,36 @@ function aceptarCliente() {
   cambioDeCliente.value = null
 }
 
-// Solo servicio: los equipos de un alquiler se eligen del inventario. La que
-// sale de una cotizacion no usa borrador, para no pisar el que quedo en Ordenes:
-// se vuelve a armar desde la cotizacion.
-const borrador = useLocalDraft(() => 'daicom_borrador_orden_servicio')
-const desdeCotizacion = ref(false)
-const conBorrador = () => esDeServicio(order.value) && !desdeCotizacion.value && !editando.value
-
 watch(() => order.value.order_type, () => { calculateNextNumber() })
-
-watch([items_to_save, () => order.value.client, observaciones], ([items, client]) => {
-  if (conBorrador()) borrador.guardar({ client, items, observaciones: observaciones.value })
-}, { deep: true })
 
 // Al crear: lo que se vincula y se sube con la orden. Guardada, cada documento se guarda al momento.
 const documentosNuevos = ref(sinPendientes())
+
+// La orden sin guardar: la nueva de cada tipo o la que sale de una cotizacion. La ya guardada se abre como esta.
+const origen = ref('')
+const borrador = useLocalDraft({
+  clave: () => !editando.value && `orden_${order.value.order_type}_${origen.value}`,
+  version: CURRENT_ORDER_SCHEMA,
+  datos: () => {
+    const { client, client_order_reference } = order.value
+    const { cotizaciones, valorizaciones, guias } = documentosNuevos.value
+    return { client, client_order_reference, observaciones: observaciones.value, items: items_to_save.value,
+             vinculos: { cotizaciones, valorizaciones, guias } }
+  },
+  fuera: () => documentosNuevos.value.archivos.map(a => a.archivo.name),
+  llenar,
+  resumen: ({ items }) => items.length && `Hay una orden de ${esDeServicio(order.value) ? 'servicio' : 'alquiler'} sin `
+    + `guardar con ${items.length} ${items.length === 1 ? 'equipo' : 'equipos'}`,
+})
+
+async function llenar(guardada) {
+  const { vinculos, items, observaciones: texto, ...datos } = ordenDe(guardada, order.value.order_type)
+  order.value = { ...order.value, ...datos }
+  observaciones.value = texto
+  documentosNuevos.value = { ...sinPendientes(), ...vinculos }
+  await nextTick()
+  formRef.value?.cargarFilas({ items })
+}
 // La pestaña Opciones: los documentos de la orden y, al editar una de servicio, las versiones de su ingreso.
 const opcionesDelPanel = computed(() => [
   { clave: 'documentos', titulo: 'Documentos', icono: 'mdi-paperclip' },
@@ -164,31 +180,18 @@ const opcionesDelPanel = computed(() => [
 async function open(tipo, cotizacion = null) {
   editando.value = null
   clienteOrden.value = null
-  documentosNuevos.value = { ...sinPendientes(), cotizaciones: cotizacion ? [cotizacion.documento] : [] }
-  items_to_save.value = []
-  observaciones.value = ''
-  order.value = { client: cotizacion?.client ?? null, order_type: tipo }
+  order.value = { order_type: tipo }
   sinPasar.value = cotizacion?.sin_pasar ?? []
-  desdeCotizacion.value = Boolean(cotizacion)
+  origen.value = cotizacion ? `cotizacion_${cotizacion.documento.id}` : 'nueva'
   dialog.value = true
   calculateNextNumber()
-
-  if (cotizacion) {
-    await nextTick()
-    formRef.value?.cargarFilas({ items: cotizacion.filas })
-    return
-  }
-  if (tipo !== 1) return
-  const recuperado = await borrador.ofrecer()
-  if (!recuperado) return
-  order.value.client = recuperado.client
-  observaciones.value = recuperado.observaciones || ''
-  await nextTick()
-  formRef.value?.cargarFilas(recuperado)
+  await llenar(cotizacion ? { client: cotizacion.client, items: cotizacion.filas,
+                              vinculos: { cotizaciones: [cotizacion.documento] } } : {})
+  await borrador.abrir()
 }
 
-// Una orden guardada, de servicio o de alquiler, como la manda su fila, con sus equipos.
-async function editar(orden) {
+// Una orden guardada, como la manda su fila, con sus equipos. `opcion`: la que se abre de entrada.
+async function editar(orden, opcion = null) {
   const { data: lineas } = await OrderDataService.getEquipos(orden.id)
   editando.value = orden
   clienteOrden.value = clienteAceptado.value = { id: orden.client_data.id, name: orden.client_data.name }
@@ -198,6 +201,8 @@ async function editar(orden) {
   dialog.value = true
   await nextTick()
   formRef.value?.cargarLineas(lineas)
+  if (opcion) formRef.value?.mostrarOpcion(opcion)
+  await borrador.abrir()
 }
 
 async function calculateNextNumber() {
@@ -231,13 +236,13 @@ async function save(imprimir = false) {
     const filas = items_to_save.value
     const estimados = formRef.value?.estimados?.()
     const { data } = await OrderDataService.create({ ...payload_orden, ...vinculosAlCrear(documentosNuevos.value) })
-    const noSubieron = await subirPendientes(data.id, documentosNuevos.value.archivos)
+    const { fallaron, warning } = await subirPendientes(data.id, documentosNuevos.value.archivos)
 
     close()
-    avisarNumeros(`${data.order_number} creada`, filas, data.codigos, estimados)
-    if (noSubieron.length) {
-      $swal.fire('La orden se guardó', `No se subieron: ${noSubieron.join(', ')}. Súbelos desde "Ver y editar".`,
-                 'warning')
+    avisarNumeros(`${data.order_number} creada`, filas, data.codigos, estimados, warning)
+    if (fallaron.length) {
+      $swal.fire({ icon: 'warning', title: 'La orden se guardó, sin estos documentos',
+                   text: `${fallaron.join(' ')} Súbelos desde «Ver y editar».` })
     }
     if (imprimir) await imprimirIngreso(data.id)
   } catch (error) {
@@ -271,9 +276,13 @@ const vista = reactive(usePdfPreview(
   () => OrderDataService.vistaPreviaIngreso({ client: order.value.client, items: items_to_save.value }),
   error => $swal.fire('No se pudo armar la vista previa', mensajeDeError(error, 'No se pudo armar la vista previa.'), 'error')))
 
+async function salir() {
+  if (await borrador.puedeSalir()) close()
+}
+
 function close() {
   vista.cerrar()
-  if (conBorrador()) borrador.descartar()
+  borrador.cerrar()
   order.value.client = null
   items_to_save.value = []
   addOrderForm.value?.resetValidation()

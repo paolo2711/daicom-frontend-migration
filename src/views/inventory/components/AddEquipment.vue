@@ -95,8 +95,7 @@
                       ></v-text-field>
                     </v-col>
                     <v-col cols="12" sm="6">
-                      <!-- Combobox: sugiere nombres del catalogo de equipos, pero
-                           deja escribir libre (inventario más flexible que órdenes). -->
+                      <!-- El catalogo solo sugiere: un equipo que no se calibra no esta en el. -->
                       <v-combobox
                         v-model="form.name"
                         :items="nameSuggestions"
@@ -105,9 +104,11 @@
                         label="Nombre del Equipo (*)"
                         :rules="[v => !!v || 'Requerido']"
                         variant="outlined" density="compact"
-                        hide-no-data auto-select-first
+                        hide-no-data auto-select-first no-filter
                         prepend-inner-icon="mdi-toolbox-outline"
-                      ></v-combobox>
+                      >
+                        <template v-if="hayMasNombres" #append-item><more-results-hint /></template>
+                      </v-combobox>
                     </v-col>
                     <v-col cols="12" sm="6">
                       <v-text-field v-model="form.brand" label="Marca" variant="outlined" density="compact"></v-text-field>
@@ -237,19 +238,20 @@
 
 <script setup>
 import { avisarHecho } from '@/utils/documents/avisos'
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useTheme } from 'vuetify'
 import Swal from 'sweetalert2'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import CertificateDataService from '@/services/certificates/certificateDataService'
-import EquipmentDataService from '@/services/equipments/equipmentDataService'
+import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
 import { mensajeDeError } from '@/utils/errors'
 import { fechaCorta } from '@/utils/dates'
 import { vivo } from '@/utils/certificates/estado'
-import { debounce } from '@/utils/debounce'
+import { LISTAS } from '@/utils/comboLists'
 import { VIGENCIAS } from '@/utils/equipments/expediente'
 import { leerPagina, porPagina } from '@/utils/pagination'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
+import MoreResultsHint from '@/components/shared/MoreResultsHint.vue'
 import PhotoViewer from '@/components/shared/PhotoViewer.vue'
 
 const emit = defineEmits(['saved'])
@@ -280,17 +282,10 @@ const foundCert = ref(null)
 const opcionesDeCertificado = ref([])
 const linkingCert = ref(false)
 
-// Sugerencias de nombre (catalogo de equipos maestro), editable.
-const nameSuggestions = ref([])
-const nameSearch = ref('')
-const loadingNames = ref(false)
-watch(nameSearch, debounce((q) => {
-  loadingNames.value = true
-  EquipmentDataService.getFiltered(1, 20, q || '')
-    .then(r => { nameSuggestions.value = leerPagina(r.data).filas.map(e => e.nombre_tecnico).filter(Boolean) })
-    .catch(() => { nameSuggestions.value = [] })
-    .finally(() => { loadingNames.value = false })
-}))
+const { items: sugeridos, loading: loadingNames, searchQuery: nameSearch, olvidar: olvidarSugerencias, total } =
+  usePaginatedSearch(LISTAS.equipos.fetch, LISTAS.equipos.mapper, () => null, 'equipos')
+const nameSuggestions = computed(() => sugeridos.value.map(e => e.name))
+const hayMasNombres = computed(() => total.value > sugeridos.value.length)
 
 const form = reactive({
   id: null,
@@ -366,6 +361,7 @@ const close = () => {
 
 const resetForm = () => {
   if (formRef.value) formRef.value.resetValidation()
+  olvidarSugerencias()
   Object.assign(form, { id: null, internal_id: '', name: '', brand: '', model: '', series: '', status: 1, notes: '', latest_certificate: null })
   existingImages.value = []
   deletedImagesIds.value = []

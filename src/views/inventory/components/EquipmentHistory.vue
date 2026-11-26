@@ -1,106 +1,86 @@
 <template>
-  <v-dialog v-model="dialog" class="dialog-premium" max-width="850px" persistent>
-    <v-card v-if="equipment" class="rounded-lg">
-      
-      <base-modal-header
-        :title="`HISTORIAL DE VIAJES: ${equipment.internal_id}`"
-        icon="mdi-truck-fast"
-        @close="dialog = false"
-      >
-        <v-chip color="primary" variant="outlined" size="small" class="font-weight-bold">
-          {{ equipment.brand }} {{ equipment.model }}
-        </v-chip>
+  <v-dialog v-model="dialog" class="dialog-premium" max-width="53.125rem" persistent>
+    <v-card v-if="equipo" class="rounded-lg">
+      <base-modal-header title="Historial de viajes" icon="mdi-truck-fast" @close="dialog = false">
+        {{ subtitulo }}
       </base-modal-header>
 
-      <v-card-text class="pa-4" style="min-height: 350px;">
-        <v-table density="compact" class="elevation-1 rounded-lg border-thin">
+      <v-card-text class="cuerpo pa-4">
+        <v-table v-if="equipo.rental_history?.length" density="compact" fixed-header class="tabla-mejorada viajes">
           <thead>
-            <tr :class="isDark ? 'bg-grey-darken-3' : 'bg-grey-lighten-3'">
-              <th class="text-left font-weight-bold text-uppercase">Nro Orden</th>
-              <th class="text-left font-weight-bold text-uppercase">Cliente</th>
-              <th class="text-center font-weight-bold text-uppercase">{{ FECHAS_ALQUILER.departure_date }}</th>
-              <th class="text-center font-weight-bold text-uppercase">{{ FECHAS_ALQUILER.actual_return_date }}</th>
-              <th class="text-center font-weight-bold text-uppercase">Estado</th>
-              <th v-if="puedeVerOrdenes" class="text-center font-weight-bold text-uppercase">Orden</th>
+            <tr>
+              <th>Orden</th>
+              <th>Cliente</th>
+              <th class="text-center text-no-wrap">{{ FECHAS_ALQUILER.departure_date }}</th>
+              <th class="text-center text-no-wrap">{{ FECHAS_ALQUILER.actual_return_date }}</th>
+              <th class="text-center">Estado</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="h in equipment.rental_history" :key="h.id">
-              <td class="font-weight-medium">{{ h.order_number }}</td>
-              <td>{{ h.client_name }}</td>
-              <td class="text-center" :class="{ 'text-medium-emphasis': !h.departure_date }">
-                {{ fechaCorta(h.departure_date) || '—' }}
+            <tr v-for="viaje in equipo.rental_history" :key="viaje.id">
+              <td class="text-no-wrap">
+                <v-btn v-if="puedeVerOrdenes" variant="text" density="compact" class="text-none px-1"
+                       append-icon="mdi-open-in-new" title="Ver en Alquileres" @click="irAOrden(viaje)">
+                  {{ viaje.order_number }}
+                </v-btn>
+                <span v-else>{{ viaje.order_number }}</span>
               </td>
-              <td class="text-center" :class="{ 'text-medium-emphasis': !h.actual_return_date }">
-                {{ fechaCorta(h.actual_return_date) || '—' }}
-              </td>
-              <td class="text-center">
-                {{ ESTADOS_ALQUILER[h.estado].texto }}
-              </td>
-              <td v-if="puedeVerOrdenes" class="text-center">
-                <v-tooltip location="top" text="Ver en Alquileres">
-                  <template v-slot:activator="{ props }">
-                    <v-btn v-bind="props" icon variant="text" size="x-small" color="primary" @click="irAOrden(h)">
-                      <v-icon>mdi-open-in-new</v-icon>
-                    </v-btn>
-                  </template>
-                </v-tooltip>
-              </td>
-            </tr>
-            <tr v-if="!equipment.rental_history || equipment.rental_history.length === 0">
-              <td :colspan="puedeVerOrdenes ? 6 : 5" class="text-center py-8 text-grey">
-                <v-icon size="large" color="grey-lighten-2">mdi-history</v-icon><br>
-                El equipo no registra movimientos históricos.
-              </td>
+              <td>{{ viaje.client_name }}</td>
+              <td class="text-center text-no-wrap">{{ fechaCorta(viaje.departure_date) || '—' }}</td>
+              <td class="text-center text-no-wrap">{{ fechaCorta(viaje.actual_return_date) || '—' }}</td>
+              <td class="text-center text-no-wrap">{{ ESTADOS_ALQUILER[viaje.estado].texto }}</td>
             </tr>
           </tbody>
         </v-table>
+        <p v-else class="text-body-2 text-medium-emphasis text-center my-auto">Este equipo todavía no salió en un alquiler.</p>
       </v-card-text>
     </v-card>
   </v-dialog>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useTheme } from 'vuetify'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
+import { usePermissions } from '@/composables/usePermissions'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
+import { fechaCorta } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 import { ESTADOS_ALQUILER, FECHAS_ALQUILER } from '@/utils/orders/alquiler'
-import { fechaCorta } from '@/utils/dates'
 
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
+// La vista de Ordenes (2) del menu: sin ella, el numero de la orden no lleva a Alquileres.
+const VISTA_ORDENES = 2
+
 const router = useRouter()
+const { hasView } = usePermissions()
+const puedeVerOrdenes = hasView(VISTA_ORDENES)
 
 const dialog = ref(false)
-const equipment = ref(null)
+const equipo = ref(null)
 
-// El link a Alquileres solo aparece si el usuario tiene acceso a la vista Ordenes (id 2).
-const puedeVerOrdenes = computed(() => {
-  const user = JSON.parse(localStorage.getItem('user')) || {}
-  if (user.kind !== undefined && user.kind < 1) return true
-  const perms = JSON.parse(localStorage.getItem('permissions')) || []
-  return perms.some(p => p.id == 2)
-})
+const subtitulo = computed(() => [equipo.value.internal_id, equipo.value.name,
+  [equipo.value.brand, equipo.value.model].filter(Boolean).join(' ')].filter(Boolean).join(' · '))
 
 async function open(id) {
   try {
-    equipment.value = (await InventoryDataService.get(id)).data
+    equipo.value = (await InventoryDataService.get(id)).data
     dialog.value = true
   } catch (error) {
     Swal.fire('No se abrió el historial', mensajeDeError(error, 'Intenta de nuevo.'), 'error')
   }
 }
 
-// Lleva a la pestana Alquileres con esa orden ya filtrada (mismo patron que
-// "ir al certificado" en ordenes de servicio).
-const irAOrden = (h) => {
-  if (!h.order_number) return
+// Alquileres con esa orden ya buscada.
+const irAOrden = (viaje) => {
   dialog.value = false
-  router.push({ name: 'orders-rental', query: { buscar_orden: h.order_number } }).catch(() => {})
+  router.push({ name: 'orders-rental', query: { buscar_orden: viaje.order_number } }).catch(() => {})
 }
 
 defineExpose({ open })
 </script>
+
+<style scoped>
+/* Mide lo mismo con uno o con veinte viajes: los que no entran se desplazan bajo el encabezado. */
+.cuerpo { display: flex; flex-direction: column; height: 22rem; }
+.viajes { max-height: 100%; min-height: 0; }
+</style>

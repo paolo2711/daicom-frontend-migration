@@ -6,6 +6,11 @@ export const FILTRO_DE_ESTADO = Object.entries(ESTADOS).map(([id, e]) => ({ id, 
 
 // El codigo de SUNAT para "Otros": con el se puede escribir cual es.
 export const OTROS = '13'
+// Lo que se sugiere al escribir cual: se elige una o se escribe otra.
+export const MOTIVOS_SUGERIDOS = [
+  'Servicio de calibración', 'Servicio de calibración en campo', 'Servicio de mantenimiento preventivo',
+  'Servicio de reparación', 'Alquiler de equipos', 'Devolución de equipos',
+]
 
 // Anulada en la app, falta darla de baja en SOL (bajas_pendientes en el back).
 export const bajaPendienteEnSol = (guia) => guia.estado === ANULADA && !guia.baja_en_sol

@@ -21,8 +21,9 @@
                                 label="Motivo de traslado" v-bind="CAMPO" />
                     </v-col>
                     <v-col v-if="datos.motivo.codigo === OTROS" v-bind="ancho(apilado, 8)">
-                      <v-text-field v-model="datos.motivo.descripcion" label="¿Cuál es el motivo? (opcional)"
-                                    v-bind="CAMPO" />
+                      <v-combobox v-model="datos.motivo.descripcion" :items="MOTIVOS_SUGERIDOS"
+                                  :custom-filter="contieneSinTildes" label="¿Cuál es el motivo? (opcional)"
+                                  hide-no-data v-bind="CAMPO" />
                     </v-col>
                   </v-row>
                   <v-row dense>
@@ -136,11 +137,12 @@ import { useRowErrors } from '@/composables/useRowErrors'
 import { useSwal } from '@/composables/useSwal'
 import BillingDataService from '@/services/billing/billingDataService'
 import { CURRENT_DISPATCH_GUIDE_SCHEMA, itemDeGuia } from '@/utils/billing/billingDefaults'
-import { OTROS } from '@/utils/billing/guias'
+import { MOTIVOS_SUGERIDOS, OTROS } from '@/utils/billing/guias'
 import { hoyISO } from '@/utils/dates'
 import { mensajeDeError } from '@/utils/errors'
 import { copiarDebajo } from '@/utils/lists'
 import { CAMPO } from '@/utils/fields'
+import { contieneSinTildes } from '@/utils/text'
 import PanelDispatchGuide from './PanelDispatchGuide.vue'
 import RowDispatchGuide from './RowDispatchGuide.vue'
 import SectionLinkedOrders from './SectionLinkedOrders.vue'

@@ -24,6 +24,8 @@
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
+        @contextmenu:row="alClickDerecho"
+        :row-props="({ item }) => ({ class: { 'fila-en-menu': estaEnElMenu(item) } })"
       >
         <template v-slot:bottom>
           <fluent-pagination
@@ -33,56 +35,42 @@
           />
         </template>
 
-        <template v-slot:item.actions="{ item }">
-          <v-tooltip location="bottom">
-            <template v-slot:activator="{ props }">
-              <v-btn v-bind="props" icon variant="text" density="comfortable" @click="openEditDialog(item)">
-                <v-icon>mdi-pencil</v-icon>
-              </v-btn>
-            </template>
-            <span>Editar Laboratorio</span>
-          </v-tooltip>
-
-          <v-tooltip location="bottom" color="error">
-            <template v-slot:activator="{ props }">
-              <v-btn v-bind="props" icon color="red-darken-2" variant="text" density="comfortable" @click="deleteLabConfirm(item)">
-                <v-icon>mdi-delete</v-icon>
-              </v-btn>
-            </template>
-            <span>Eliminar Laboratorio</span>
-          </v-tooltip>
+        <template v-slot:item.acciones="{ item }">
+          <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" color="grey-darken-1"
+                 @click.stop="alBotonDeFila($event, item)" />
         </template>
       </v-data-table-server>
     </table-loading-overlay>
 
     <lab-form-dialog v-model="dialogOpen" :lab="selectedLab" @reloadListComponent="retrieveAllLabs" />
+    <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
+                 @accion="clave => ejecutarAccion(clave, menu.filas)" />
   </v-container>
 </template>
 
 <script setup>
 import { ref, onMounted, defineAsyncComponent } from 'vue'
 
-import Swal from 'sweetalert2'
 import LabDataService from '@/services/labs/labDataService'
 import LabMappers from '@/mappers/labMappers'
+import { useActionCall } from '@/composables/useActionCall'
+import { useContextMenu } from '@/composables/useContextMenu'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { usePage } from '@/composables/usePage'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
-import { useAppStore } from '@/stores/appStore'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
+import ActionMenu from '@/components/shared/ActionMenu.vue'
+import { accionesPara } from '@/utils/actions'
+import { ACCIONES_LABORATORIO } from '@/utils/labs/acciones'
 import { leerPagina } from '@/utils/pagination'
 
 const LabFormDialog = defineAsyncComponent(() => import('@/views/labs/components/LabFormDialog.vue'))
 
 
-const appStore = useAppStore()
-
-
-
 const headers = [
   { title: 'Nombre', key: 'name', align: 'start', width: '50%' },
   { title: 'Código', key: 'code', sortable: false, width: '30%' },
-  { title: 'Opciones', key: 'actions', sortable: false, align: 'center', width: '20%' },
+  { title: 'Opciones', key: 'acciones', sortable: false, align: 'center', width: '20%' },
 ]
 
 const labs = ref([])
@@ -112,29 +100,28 @@ const retrieveAllLabs = () => {
 }
 
 
-const deleteLab = (lab) => {
-  LabDataService.delete(lab.id).then((response) => {
-    if (response.status === 204) {
-      const index = labs.value.findIndex(l => l.id === lab.id)
-      if (index !== -1) labs.value.splice(index, 1)
-      Swal.fire(appStore.successDeletedOptions)
-    }
-  }).catch(() => {
-    Swal.fire(appStore.errorDeleteOptions)
-  })
-}
-
 const openEditDialog = (lab) => {
   selectedLab.value = lab
   dialogOpen.value = true
 }
 
-const deleteLabConfirm = (lab) => {
-  Swal.fire(appStore.deleteConfirmOptions).then((result) => {
-    if (result.isConfirmed) {
-      deleteLab(lab)
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(labs)
+const { confirmarYLlamar } = useActionCall()
+const accionesDe = (filas) => accionesPara(ACCIONES_LABORATORIO, filas, () => true)
+
+async function ejecutarAccion (clave, [lab]) {
+  switch (clave) {
+    case 'editar': return openEditDialog(lab)
+    case 'eliminar': {
+      const hecho = await confirmarYLlamar({
+        titulo: `¿Eliminar ${lab.name}?`, boton: 'Sí, eliminar',
+        texto: 'Deja de aparecer en las listas; los certificados que lo usan se conservan.',
+        llamar: () => LabDataService.delete(lab.id),
+        exito: 'Laboratorio eliminado', fallo: 'No se pudo eliminar el laboratorio.',
+      })
+      if (hecho) retrieveAllLabs()
     }
-  })
+  }
 }
 
 const openAddDialog = () => {

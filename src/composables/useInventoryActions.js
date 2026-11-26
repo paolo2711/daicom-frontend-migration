@@ -1,35 +1,27 @@
 import InventoryDataService from '@/services/inventory/inventoryDataService'
+import { useActionCall } from '@/composables/useActionCall'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { usePermissions } from '@/composables/usePermissions'
-import { useSwal } from '@/composables/useSwal'
 import { accionesPara } from '@/utils/actions'
-import { avisarHecho } from '@/utils/documents/avisos'
 import { ACCIONES_INVENTARIO } from '@/utils/equipments/acciones'
-import { mensajeDeError } from '@/utils/errors'
 
 // Lo que hace cada accion de ACCIONES_INVENTARIO, y el menu de la tabla. `editar` abre el formulario en una
 // pestaña (0 datos y fotos, 1 certificado).
 export function useInventoryActions(lista, { editar, verHistorial, alEliminar }) {
-  const swal = useSwal()
+  const { confirmarYLlamar } = useActionCall()
   const { hasAction } = usePermissions()
   const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(lista)
 
   const accionesDe = (equipos) => accionesPara(ACCIONES_INVENTARIO, equipos, hasAction)
 
   async function eliminar (equipo) {
-    const { isConfirmed } = await swal.fire({
-      title: `¿Eliminar ${equipo.internal_id}?`,
-      text: 'Sale del inventario; sus alquileres pasados se conservan.',
-      icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar',
+    const hecho = await confirmarYLlamar({
+      titulo: `¿Eliminar ${equipo.internal_id}?`, boton: 'Sí, eliminar',
+      texto: 'Sale del inventario; sus alquileres pasados se conservan.',
+      llamar: () => InventoryDataService.delete(equipo.id),
+      exito: `${equipo.internal_id} eliminado`, fallo: 'No se pudo eliminar el equipo.',
     })
-    if (!isConfirmed) return
-    try {
-      await InventoryDataService.delete(equipo.id)
-      avisarHecho(`${equipo.internal_id} eliminado`)
-      alEliminar()
-    } catch (err) {
-      swal.fire({ icon: 'error', title: 'No se eliminó', text: mensajeDeError(err, 'No se pudo eliminar el equipo.') })
-    }
+    if (hecho) alEliminar()
   }
 
   function ejecutarAccion (clave, [equipo]) {

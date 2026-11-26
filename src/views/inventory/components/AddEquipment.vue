@@ -153,7 +153,7 @@
               </div>
             </template>
 
-            <paginated-autocomplete v-else class="mx-auto text-left" style="max-width: 400px;" :model-value="null"
+            <paginated-autocomplete v-else class="mx-auto text-left" style="max-width: 25rem;" :model-value="null"
                                     :fetch="InventoryDataService.buscarCertificados" :mapper="aOpcion" :cache="false"
                                     label="Vincular certificado" placeholder="Su número: ACR-15 o 15"
                                     no-data-text="No hay un certificado con ese número"
@@ -378,11 +378,11 @@ defineExpose({ open })
   pointer-events: none;
 }
 /* El margen hacia afuera deja lugar a la linea de la primera y la ultima: el desplazamiento recorta lo que sale. */
-.cuadricula { gap: 8px; max-height: 250px; overflow-y: auto; margin: 0 -6px; padding: 0 6px; }
+.cuadricula { gap: 0.5rem; max-height: 15.625rem; overflow-y: auto; margin: 0 -0.375rem; padding: 0 0.375rem; }
 .foto {
   position: relative;
-  width: 70px;
-  height: 70px;
+  width: 4.375rem;
+  height: 4.375rem;
   overflow: hidden;
   cursor: grab;
   border: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
@@ -391,9 +391,9 @@ defineExpose({ open })
   position: absolute;
   inset: auto 0 0 0;
   z-index: 2;
-  padding: 1px 0;
+  padding: 0.0625rem 0;
   color: #fff;
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
   text-align: center;
 }
@@ -401,13 +401,13 @@ defineExpose({ open })
 .sobre-foto { background: rgba(0, 0, 0, 0.6); color: #fff; }
 .quitar {
   position: absolute;
-  top: 3px;
-  right: 3px;
+  top: 0.1875rem;
+  right: 0.1875rem;
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 1.25rem;
+  height: 1.25rem;
   border-radius: 50%;
 }
 /* Rojo recien sobre el boton: avisa al momento de borrar. */
@@ -421,12 +421,12 @@ defineExpose({ open })
 .foto.cae-antes::before, .foto.cae-despues::after {
   content: '';
   position: absolute;
-  top: 8px;
-  bottom: 8px;
-  width: 3px;
-  border-radius: 2px;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 0.1875rem;
+  border-radius: 0.125rem;
   background: rgb(var(--v-theme-seleccion));
 }
-.foto.cae-antes::before { left: -5.5px; }
-.foto.cae-despues::after { right: -5.5px; }
+.foto.cae-antes::before { left: -0.34375rem; }
+.foto.cae-despues::after { right: -0.34375rem; }
 </style>

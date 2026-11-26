@@ -39,7 +39,8 @@
 
     <pdf-split-view v-model="vista" :items="facturas" :pdf-de="f => f.pdf_url" :titulo-de="tituloDe" clave="facturas">
       <table-loading-overlay :loading="cargando" :isEmpty="facturas.length === 0">
-        <v-data-table-server :headers="columnas" :items="facturas" :items-length="total" :loading="cargando"
+        <v-data-table-server :key="claveDeColumnas(columnas)" :headers="columnas" :items="facturas"
+                             :items-length="total" :loading="cargando"
                              item-value="id" class="elevation-0 rounded-lg tabla-mejorada bg-surface"
                              v-model:page="opciones.page" v-model:items-per-page="opciones.itemsPerPage"
                              hide-default-footer
@@ -164,6 +165,7 @@ import { MONEDAS, importe, monto } from '@/utils/money'
 import { ALQUILER, SERVICIO } from '@/utils/orders/estado'
 import { leerPagina, porPagina } from '@/utils/pagination'
 import { OTRA_PESTANA, abrirEnOtraPestana, avisarSoloPdf } from '@/utils/pdf'
+import { claveDeColumnas } from '@/utils/tables'
 import DialogCancelInvoice from './DialogCancelInvoice.vue'
 import DialogCreditNote from './DialogCreditNote.vue'
 import DialogEmitInvoice from './DialogEmitInvoice.vue'

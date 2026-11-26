@@ -29,6 +29,7 @@
     <pdf-split-view v-model="vista" :items="documentos" :pdf-de="d => d.pdf_file" :titulo-de="tituloDe" clave="documentos">
     <table-loading-overlay :loading="cargando" :isEmpty="documentos.length === 0">
       <v-data-table-server
+        :key="claveDeColumnas(columnas)"
         :headers="columnas"
         :items="documentos"
         :items-length="total"
@@ -105,6 +106,7 @@ import { fechaCorta } from '@/utils/dates'
 import { ESTADOS, FILTRO_DE_ESTADO, vivo } from '@/utils/documents/estado'
 import { MONEDAS, monto } from '@/utils/money'
 import { leerPagina, porPagina } from '@/utils/pagination'
+import { claveDeColumnas } from '@/utils/tables'
 
 // La lista de un tipo de documento. Columnas y filtros leen campos del
 // documento, no su JSON: sirven igual para cualquier pestaña.

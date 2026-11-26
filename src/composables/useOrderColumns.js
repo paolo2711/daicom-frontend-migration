@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { claveDeColumnas } from '@/utils/tables'
 
 // En rem: con la lista mas angosta, la fecha va dentro de la orden expandida.
 const ANCHO_CON_ESPACIO = 60
@@ -11,5 +12,6 @@ export function useOrderColumns (columnas) {
   const headers = computed(() => (hayEspacio.value
     ? [columnas[0], COLUMNA_FECHA, ...columnas.slice(1)]
     : columnas.filter(columna => !columna.conEspacio)))
-  return { anchoDeLaLista, hayEspacio, headers }
+  const claveDeLaTabla = computed(() => claveDeColumnas(headers.value))
+  return { anchoDeLaLista, hayEspacio, headers, claveDeLaTabla }
 }

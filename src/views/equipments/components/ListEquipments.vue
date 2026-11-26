@@ -1,48 +1,48 @@
 <template>
   <v-card variant="flat" class="border rounded-lg mb-4 pa-4 bg-surface">
-    <div class="d-flex flex-wrap align-center mb-4">
+    <div class="d-flex flex-wrap align-center ga-2">
       <v-text-field
         v-model="search"
         hide-details
         density="compact"
         prepend-inner-icon="mdi-magnify"
         variant="outlined"
-        label="Buscar Equipo Maestro..."
+        label="Buscar equipo"
         clearable
-        style="max-width: 300px;"
+        style="max-width: 18.75rem;"
       />
       <v-spacer />
       <template v-if="puedeEditar">
-        <v-btn variant="tonal" prepend-icon="mdi-file-download-outline" class="mr-2" @click="descargaModalRef?.open()">
+        <v-btn variant="tonal" prepend-icon="mdi-file-download-outline" @click="descargaModalRef?.open()">
           Descargar precios
         </v-btn>
-        <v-btn variant="tonal" prepend-icon="mdi-file-upload-outline" class="mr-2" @click="preciosModalRef?.open()">
+        <v-btn variant="tonal" prepend-icon="mdi-file-upload-outline" @click="preciosModalRef?.open()">
           Subir precios
         </v-btn>
         <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" @click="equipoModalRef?.open()">
-          NUEVO EQUIPO MAESTRO
+          Nuevo equipo
         </v-btn>
       </template>
     </div>
+  </v-card>
 
+  <resizable-split v-model:abierto="panelAbierto" clave="equipos.catalogo">
     <table-loading-overlay :loading="loading" :isEmpty="equipos.length === 0">
       <v-data-table-server
-        v-model:expanded="expanded"
         :headers="headers"
         :items="equipos"
         :items-length="total_equipos"
         :loading="loading"
-        show-expand
         item-value="id"
-        :hover="false"
         class="elevation-0 rounded-lg tabla-mejorada bg-surface"
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
-        @click:row="manejarClicFila"
-        :row-props="(data) => ({ 
-          class: expanded.includes(data.item.id || (data.item.raw && data.item.raw.id)) ? 'fila-padre-activa' : '' 
-        })"
+        @click:row="(_, { item }) => elegir(item)"
+        @contextmenu:row="alClickDerecho"
+        :row-props="({ item }) => ({ class: {
+          'fila-elegida': foco?.id === item.id, 'fila-en-menu': estaEnElMenu(item), 'cursor-pointer': true,
+        } })"
       >
         <template v-slot:bottom>
           <fluent-pagination
@@ -61,131 +61,58 @@
         </template>
 
         <template v-slot:item.servicios_count="{ item }">
-          <v-chip size="small" :color="item.servicios?.length > 0 ? 'info' : 'grey'" variant="tonal" class="font-weight-bold">
-            {{ item.servicios?.length || 0 }} Servicios
-          </v-chip>
+          <span :class="{ 'text-medium-emphasis': !item.servicios_count }">{{ item.servicios_count }}</span>
         </template>
 
-        <template v-slot:item.actions="{ item }">
-          <v-tooltip location="bottom" color="primary">
-            <template v-slot:activator="{ props }">
-              <v-btn
-                v-bind="props"
-                icon
-                variant="text"
-                density="comfortable"
-                @click.stop="equipoModalRef?.open(item)"
-              >
-                <v-icon>mdi-pencil</v-icon>
-              </v-btn>
-            </template>
-            <span>Editar Equipo</span>
-          </v-tooltip>
-
-          <v-tooltip location="bottom" color="error">
-            <template v-slot:activator="{ props }">
-              <v-btn
-                v-bind="props"
-                icon
-                color="red-darken-2"
-                variant="text"
-                density="comfortable"
-                @click.stop="deleteEquipo(item)"
-              >
-                <v-icon>mdi-delete</v-icon>
-              </v-btn>
-            </template>
-            <span>Eliminar Equipo</span>
-          </v-tooltip>
-        </template>
-
-        <!-- FILA EXPANDIDA -->
-        <template v-slot:expanded-row="{ columns, item }">
-          <tr class="fila-activa">
-            <td :colspan="columns.length" class="pa-0">
-              <v-card flat tile color="transparent" class="elevation-0 py-2">
-                <v-toolbar density="compact" flat color="transparent" class="pl-3 pr-3">
-                  <v-icon start color="secondary">mdi-format-list-bulleted-type</v-icon>
-                  <span class="text-subtitle-2 font-weight-bold text-secondary">
-                    Menú Comercial: {{ item.nombre_tecnico }}
-                  </span>
-                  <v-spacer/>
-                  <v-btn v-if="puedeEditar" size="x-small" color="secondary" variant="flat" class="text-white" @click="servicioModalRef?.open(null, item.id)">
-                    <v-icon start size="x-small">mdi-plus</v-icon> Agregar Servicio
-                  </v-btn>
-                </v-toolbar>
-
-                <v-table density="compact" :hover="false" class="bg-transparent mt-2">
-                  <thead>
-                    <tr>
-                      <th class="text-overline">TIPO</th>
-                      <th class="text-overline">NOMBRE EN LA COTIZACIÓN</th>
-                      <th class="text-right text-overline">P. ESTÁNDAR</th>
-                      <th class="text-right text-overline">P. CORPORATIVO</th>
-                      <th v-if="puedeEditar" class="text-center text-overline"><v-icon size="small">mdi-dots-vertical</v-icon></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="serv in item.servicios" :key="serv.id">
-                      <td><v-chip size="x-small" variant="outlined" color="primary">{{ serv.tipo_servicio_label }}</v-chip></td>
-                      <td style="max-width: 300px;" class="text-truncate" :title="serv.nombre">{{ serv.nombre }}</td>
-                      <td class="text-right font-weight-bold">{{ monto(serv.precio_estandar) }}</td>
-                      <td class="text-right font-weight-bold">{{ monto(serv.precio_corporativo) }}</td>
-                      <td v-if="puedeEditar" class="text-center">
-                        <v-btn icon variant="text" density="comfortable" size="x-small" color="primary" @click="servicioModalRef?.open(serv, item.id)">
-                          <v-icon>mdi-pencil</v-icon>
-                        </v-btn>
-                        <v-btn icon variant="text" density="comfortable" size="x-small" color="error" @click="deleteServicio(serv)">
-                          <v-icon>mdi-delete</v-icon>
-                        </v-btn>
-                      </td>
-                    </tr>
-                    <tr v-if="!item.servicios || item.servicios.length === 0">
-                      <td colspan="5" class="text-center text-grey py-4">No hay servicios comerciales configurados.</td>
-                    </tr>
-                  </tbody>
-                </v-table>
-              </v-card>
-            </td>
-          </tr>
+        <template v-slot:item.acciones="{ item }">
+          <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" color="grey-darken-1"
+                 @click.stop="alBotonDeFila($event, item)" />
         </template>
       </v-data-table-server>
     </table-loading-overlay>
 
-    <!-- Modales -->
-    <equipo-maestro-modal ref="equipoModalRef" @reload="retrieveAll" />
-    <servicio-catalogo-modal ref="servicioModalRef" @reload="retrieveAll" />
-    <descargar-precios-modal ref="descargaModalRef" />
-    <subir-precios-modal ref="preciosModalRef" @reload="retrieveAll" />
-  </v-card>
+    <template #lado>
+      <panel-equipment-services :equipo="foco" :recarga="recargas" :acciones-de="accionesDeServicio"
+                                :puede-editar="puedeEditar" @cerrar="cerrar"
+                                @accion="(clave, servicio) => accionEnElPanel(clave, servicio)" />
+    </template>
+  </resizable-split>
+
+  <action-menu v-model:menu="menu" :acciones="accionesDeEquipo(menu.filas)"
+               @accion="clave => accionDeEquipo(clave, menu.filas)" />
+  <equipo-maestro-modal ref="equipoModalRef" @reload="recargar" />
+  <servicio-catalogo-modal ref="servicioModalRef" @reload="recargar" />
+  <descargar-precios-modal ref="descargaModalRef" />
+  <subir-precios-modal ref="preciosModalRef" @reload="recargar" />
 </template>
 
 <script setup>
-import { Toast } from '@/plugins/alerts'
 import { ref, watch, onMounted } from 'vue'
 import Swal from 'sweetalert2'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
+import ActionMenu from '@/components/shared/ActionMenu.vue'
+import ResizableSplit from '@/components/shared/ResizableSplit.vue'
 import EquipoMaestroModal from './EquipoMaestroModal.vue'
+import PanelEquipmentServices from './PanelEquipmentServices.vue'
 import ServicioCatalogoModal from './ServicioCatalogoModal.vue'
 import DescargarPreciosModal from './DescargarPreciosModal.vue'
 import SubirPreciosModal from './SubirPreciosModal.vue'
 
 import EquipmentDataService from '@/services/equipments/equipmentDataService'
+import { useCatalogActions } from '@/composables/useCatalogActions'
 import { useLatestRequest } from '@/composables/useLatestRequest'
-import ServicioCatalogoDataService from '@/services/equipments/servicioCatalogoDataService'
 import { usePermissions } from '@/composables/usePermissions'
 import { usePage } from '@/composables/usePage'
 import { EDITAR_CATALOGO } from '@/utils/equipments/catalogo'
-import { monto } from '@/utils/money'
 import { debounce } from '@/utils/debounce'
+import { mensajeDeError } from '@/utils/errors'
 import { leerPagina } from '@/utils/pagination'
 
 const search = ref('')
 const loading = ref(false)
 const equipos = ref([])
 const total_equipos = ref(0)
-const expanded = ref([])
 const { opciones: options, alInicio } = usePage(() => retrieveAll())
 
 const equipoModalRef = ref(null)
@@ -197,26 +124,33 @@ const descargaModalRef = ref(null)
 const puedeEditar = usePermissions().hasAction(EDITAR_CATALOGO)
 
 const headers = [
-  { title: 'ID', key: 'id', width: '80px' },
-  { title: 'Nombre Técnico del Equipo', key: 'nombre_tecnico' },
-  { title: 'Laboratorio', key: 'laboratorio' },
-  { title: 'Catálogo', key: 'servicios_count', align: 'center' },
-  ...(puedeEditar ? [{ title: 'Opciones', key: 'actions', align: 'center', sortable: false }] : []),
-  { title: '', key: 'data-table-expand' }
+  { title: 'Equipo', key: 'nombre_tecnico', sortable: false },
+  { title: 'Laboratorio', key: 'laboratorio', sortable: false },
+  { title: 'Servicios', key: 'servicios_count', align: 'center', sortable: false },
+  ...(puedeEditar ? [{ title: 'Opciones', key: 'acciones', align: 'center', sortable: false }] : []),
 ]
+
+// El equipo cuyos servicios muestra el panel; `recargas` le avisa que se guardo algo.
+const foco = ref(null)
+const panelAbierto = ref(false)
+const recargas = ref(0)
+const elegir = (equipo) => { foco.value = equipo; panelAbierto.value = true }
+const cerrar = () => { foco.value = null; panelAbierto.value = false }
 
 const { begin: beginLoad, isLatest: isLatestLoad } = useLatestRequest()
 
 const retrieveAll = () => {
   loading.value = true
-  const token = beginLoad()   // guard de secuencia: gana la carga más reciente
+  const token = beginLoad()
   EquipmentDataService.getFiltered(options.value.page, options.value.itemsPerPage, search.value).then(res => {
     if (!isLatestLoad(token)) return
     const pagina = leerPagina(res.data)
     equipos.value = pagina.filas
     total_equipos.value = pagina.total
-  }).catch(() => {
-    Swal.fire('Error', 'Fallo al conectar con la base de datos.', 'error')
+    // El elegido sigue elegido con lo que trajo la recarga (su nombre o su cuenta de servicios).
+    if (foco.value) foco.value = equipos.value.find(e => e.id === foco.value.id) ?? foco.value
+  }).catch((err) => {
+    Swal.fire({ icon: 'error', title: 'Error', text: mensajeDeError(err, 'No se pudo leer el catálogo.') })
   }).finally(() => {
     if (isLatestLoad(token)) loading.value = false
   })
@@ -224,81 +158,22 @@ const retrieveAll = () => {
 
 watch(search, debounce(alInicio))
 
-const manejarClicFila = (event, { item }) => {
-  if (event.target.closest('button') || event.target.closest('.v-btn') || event.target.closest('.v-data-table__expand-icon')) return
-  const itemId = item.id || (item.raw && item.raw.id)
-  expanded.value = expanded.value.includes(itemId) ? [] : [itemId]
+function recargar (eliminado = null) {
+  if (eliminado?.id === foco.value?.id) cerrar()
+  retrieveAll()
+  recargas.value++
 }
 
-const deleteEquipo = (item) => {
-  Swal.fire({
-    title: '¿Eliminar Equipo Maestro?',
-    text: `Se borrará "${item.nombre_tecnico}" y todos sus servicios comerciales asociados.`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, eliminar',
-  }).then((result) => {
-    if (result.isConfirmed) {
-      EquipmentDataService.delete(item.id).then(() => {
-        retrieveAll()
-        Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo eliminado' })
-      }).catch(() => Swal.fire('Error', 'No se pudo eliminar, puede estar en uso.', 'error'))
-    }
-  })
-}
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDeEquipo, accionesDeServicio,
+        accionDeEquipo, accionDeServicio } = useCatalogActions(equipos, {
+  editarEquipo: (equipo) => equipoModalRef.value?.open(equipo),
+  editarServicio: (servicio, equipo) => servicioModalRef.value?.open(servicio, equipo.id),
+  alCambiar: recargar,
+})
 
-const deleteServicio = (serv) => {
-  Swal.fire({
-    title: '¿Eliminar Servicio?',
-    text: `Se borrará este precio del catálogo comercial.`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, eliminar',
-  }).then((result) => {
-    if (result.isConfirmed) {
-      ServicioCatalogoDataService.delete(serv.id).then(() => {
-        retrieveAll()
-        Toast.fire({ timer: 2200, icon: 'success', title: 'Servicio eliminado' })
-      }).catch(() => Swal.fire('Error', 'No se pudo eliminar.', 'error'))
-    }
-  })
-}
+const accionEnElPanel = (clave, servicio) => (clave === 'agregar'
+  ? accionDeEquipo('servicio', [foco.value])
+  : accionDeServicio(clave, [servicio], foco.value))
 
 onMounted(() => { retrieveAll() })
 </script>
-
-<style scoped>
-.text-overline {
-  font-size: 0.7rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 1px !important;
-  color: #757575 !important;
-}
-
-/* Reglas CSS replicadas de tus órdenes para anular el hover molesto en filas expandidas */
-.v-theme--light .tabla-mejorada tbody tr:not(.fila-padre-activa):not(.fila-activa):hover > td {
-  background-color: rgba(0, 0, 0, 0.04) !important;
-}
-.v-theme--dark .tabla-mejorada tbody tr:not(.fila-padre-activa):not(.fila-activa):hover > td {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
-.tabla-mejorada tbody tr.fila-padre-activa > td::after,
-.tabla-mejorada tbody tr.fila-activa > td::after {
-  display: none !important;
-}
-.tabla-mejorada tr.fila-activa .v-table tbody tr > td::after {
-  display: none !important;
-}
-.v-theme--light .tabla-mejorada tbody tr.fila-padre-activa > td,
-.v-theme--light .tabla-mejorada tbody tr.fila-activa > td {
-  background-color: #e8e8e8 !important;
-}
-.v-theme--dark .tabla-mejorada tbody tr.fila-padre-activa > td,
-.v-theme--dark .tabla-mejorada tbody tr.fila-activa > td {
-  background-color: #292929 !important;
-}
-.tabla-mejorada tr.fila-activa .v-table,
-.tabla-mejorada tr.fila-activa .v-table__wrapper {
-  background-color: transparent !important;
-}
-</style>

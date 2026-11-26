@@ -45,41 +45,23 @@
                     </v-card>
                   </pdf-drop-zone>
 
-                  <div v-if="existingImages.length || previewUrls.length" class="text-caption text-medium-emphasis mb-2">
-                    <v-icon size="13" color="primary">mdi-star</v-icon> La <strong>primera</strong> foto es la que se muestra en el listado.
+                  <div v-if="fotos.length" class="text-caption text-medium-emphasis mb-2">
+                    La primera es la principal, la de la lista. Arrastra una foto para cambiar el orden.
                   </div>
 
-                  <div class="d-flex flex-wrap" style="gap: 8px; max-height: 250px; overflow-y: auto;">
-                    <v-card
-                      v-for="(img, i) in existingImages" :key="'exist-'+img.id"
-                      variant="outlined" class="rounded"
-                      style="position: relative; width: 70px; height: 70px; cursor: zoom-in;"
-                      :style="i === 0 ? 'border: 2px solid rgb(var(--v-theme-primary)) !important;' : ''"
-                      @click="visor?.open(existingImages, i)"
-                    >
-                      <v-img :src="img.image" height="100%" width="100%" cover></v-img>
-
-                      <!-- Etiqueta "Principal" en la 1ra -->
-                      <div v-if="i === 0" class="foto-principal-badge">Principal</div>
-                      <!-- Estrella para marcar principal en las demas -->
-                      <v-btn v-else icon variant="flat" size="x-small" color="amber-darken-2"
-                             style="position: absolute; bottom: -4px; left: -4px; height: 20px; width: 20px; z-index: 2;"
-                             @click.stop="setPrincipal(i)">
-                        <v-icon size="13">mdi-star-outline</v-icon>
-                        <v-tooltip activator="parent" location="top">Marcar como principal</v-tooltip>
-                      </v-btn>
-
-                      <v-btn icon variant="flat" size="x-small" color="red" class="text-white" style="position: absolute; top: -4px; right: -4px; height: 20px; width: 20px; z-index: 2;" @click.stop="removeExistingImage(i, img.id)">
-                        <v-icon size="14">mdi-close</v-icon>
-                      </v-btn>
-                    </v-card>
-
-                    <v-card v-for="(url, i) in previewUrls" :key="'new-'+i" variant="outlined" class="rounded" style="position: relative; width: 70px; height: 70px; border: 2px solid #1976D2 !important;">
-                      <v-img :src="url" height="100%" width="100%" cover></v-img>
-                      <v-btn icon variant="flat" size="x-small" color="red" class="text-white" style="position: absolute; top: -4px; right: -4px; height: 20px; width: 20px;" @click="removeImage(i)">
-                        <v-icon size="14">mdi-close</v-icon>
-                      </v-btn>
-                    </v-card>
+                  <div class="cuadricula d-flex flex-wrap" v-bind="zona">
+                    <div v-for="(foto, i) in fotos" :key="clave(foto)" class="foto rounded" :class="claseDe(i)"
+                         v-bind="{ ...arrastrable(i), ...asa(i) }" @click="visor?.open(fotos, i)">
+                      <v-img :src="foto.image" height="100%" width="100%" cover />
+                      <div v-if="i === 0" class="foto-pie principal">Principal</div>
+                      <button v-else type="button" class="foto-pie sobre-foto accion" @click.stop="mover(i, 0)">
+                        Hacer principal
+                      </button>
+                      <button type="button" class="quitar sobre-foto accion" title="Eliminar" aria-label="Eliminar foto"
+                              @click.stop="quitarFoto(i)">
+                        <v-icon size="14">mdi-delete</v-icon>
+                      </button>
+                    </div>
                   </div>
                 </v-col>
 
@@ -206,6 +188,7 @@ import { useTheme } from 'vuetify'
 import Swal from 'sweetalert2'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
 import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import { useRowDrag } from '@/composables/useRowDrag'
 import { mensajeDeError } from '@/utils/errors'
 import { fechaCorta } from '@/utils/dates'
 import { abrirPdf } from '@/utils/pdf'
@@ -231,12 +214,11 @@ const tab = ref(0)
 const formRef = ref(null)
 const fileInput = ref(null)
 
-// Variables para imágenes
-const existingImages = ref([])
+// Las guardadas ({ id, image }) y las nuevas ({ archivo, image }), en el orden en que quedan.
+const fotos = ref([])
 const deletedImagesIds = ref([])
-const imageFiles = ref([])
-const previewUrls = ref([])
 const visor = ref(null)
+const { asa, arrastrable, claseDe, clave, mover, zona } = useRowDrag(fotos, { horizontal: true })
 
 const { items: sugeridos, loading: loadingNames, searchQuery: nameSearch, olvidar: olvidarSugerencias, total } =
   usePaginatedSearch(LISTAS.equipos.fetch, LISTAS.equipos.mapper, () => null, 'equipos')
@@ -273,18 +255,15 @@ const filasDe = (certificado) => [
   ['Vigencia', textoDeVence(certificado) || '—'],
 ]
 
-// Marca una foto existente como principal: la pone primera (la que se muestra en la lista).
-const setPrincipal = (i) => {
-  const [img] = existingImages.value.splice(i, 1)
-  existingImages.value.unshift(img)
+const agregarFotos = (archivos) => {
+  fotos.value.push(...Array.from(archivos || [], archivo => ({ archivo, image: URL.createObjectURL(archivo) })))
 }
+const onFilesDropped = agregarFotos
 
-// Fotos soltadas por drag&drop (mismo destino que el input file).
-const onFilesDropped = (files) => {
-  (files || []).forEach(file => {
-    imageFiles.value.push(file)
-    previewUrls.value.push(URL.createObjectURL(file))
-  })
+const quitarFoto = (i) => {
+  const [foto] = fotos.value.splice(i, 1)
+  if (foto.id) deletedImagesIds.value.push(foto.id)
+  else URL.revokeObjectURL(foto.image)
 }
 
 // `id`: el equipo que se edita; sin el, uno nuevo.
@@ -302,7 +281,7 @@ async function open(id = null, targetTab = 0) {
     Object.keys(form).forEach(key => {
       if (item[key] !== undefined) form[key] = item[key]
     })
-    existingImages.value = item.gallery ? JSON.parse(JSON.stringify(item.gallery)) : []
+    fotos.value = (item.gallery ?? []).map(({ id, image }) => ({ id, image }))
   } else {
     isEditing.value = false
     // Previsualiza el ID que le tocará (DAI-XXX).
@@ -326,31 +305,15 @@ const resetForm = () => {
   if (formRef.value) formRef.value.resetValidation()
   olvidarSugerencias()
   Object.assign(form, { id: null, internal_id: '', name: '', brand: '', model: '', series: '', status: 1, notes: '', latest_certificate: null })
-  existingImages.value = []
+  fotos.value.filter(foto => foto.archivo).forEach(foto => URL.revokeObjectURL(foto.image))
+  fotos.value = []
   deletedImagesIds.value = []
-  imageFiles.value = []
-  previewUrls.value = []
   tab.value = 0
 }
 
 const onFileChange = (event) => {
-  const files = event.target.files
-  if (!files || files.length === 0) return
-  Array.from(files).forEach(file => {
-    imageFiles.value.push(file)
-    previewUrls.value.push(URL.createObjectURL(file))
-  })
+  agregarFotos(event.target.files)
   if (fileInput.value) fileInput.value.value = ''
-}
-
-const removeExistingImage = (index, imageId) => {
-  deletedImagesIds.value.push(imageId)
-  existingImages.value.splice(index, 1)
-}
-
-const removeImage = (index) => {
-  imageFiles.value.splice(index, 1)
-  previewUrls.value.splice(index, 1)
 }
 
 const save = async () => {
@@ -370,15 +333,12 @@ const save = async () => {
   // Vacio lo desvincula.
   formData.append('latest_certificate', form.latest_certificate?.id ?? '')
 
-  if (imageFiles.value.length > 0) {
-    imageFiles.value.forEach(file => formData.append('uploaded_images', file))
-  }
+  // El orden de todas: las guardadas por su id y las nuevas como n0, n1... en el orden en que se suben.
+  const nuevas = fotos.value.filter(foto => foto.archivo)
+  nuevas.forEach(foto => formData.append('uploaded_images', foto.archivo))
+  formData.append('orden', fotos.value.map(foto => (foto.archivo ? `n${nuevas.indexOf(foto)}` : foto.id)).join(','))
   if (deletedImagesIds.value.length > 0) {
     formData.append('deleted_images', deletedImagesIds.value.join(','))
-  }
-  // Foto principal = la primera de las existentes (la que se muestra en el listado).
-  if (existingImages.value.length > 0 && existingImages.value[0].id) {
-    formData.append('primary_image_id', existingImages.value[0].id)
   }
 
   try {
@@ -411,21 +371,61 @@ defineExpose({ open })
 /* Las dos pestañas en el mismo lugar: el modal toma el alto de la mas alta y no cambia al pasar de una a otra. */
 .pestanas-del-mismo-alto :deep(.v-window__container) { display: grid; }
 .pestanas-del-mismo-alto :deep(.v-window-item) { grid-area: 1 / 1; display: block !important; }
-.pestanas-del-mismo-alto :deep(.v-window-item:not(.v-window-item--active)) { visibility: hidden; }
-.foto-principal-badge {
+.pestanas-del-mismo-alto :deep(.v-window-item:not(.v-window-item--active)) {
+  visibility: hidden;
+  opacity: 0;  /* las ayudas de los campos se ponen visibles por su cuenta */
+  pointer-events: none;
+}
+/* El margen hacia afuera deja lugar a la linea de la primera y la ultima: el desplazamiento recorta lo que sale. */
+.cuadricula { gap: 8px; max-height: 250px; overflow-y: auto; margin: 0 -6px; padding: 0 6px; }
+.foto {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  overflow: hidden;
+  cursor: grab;
+  border: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.foto-pie {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  inset: auto 0 0 0;
   z-index: 2;
-  background: rgba(var(--v-theme-primary), 0.9);
+  padding: 1px 0;
   color: #fff;
   font-size: 9px;
   font-weight: 700;
   text-align: center;
-  letter-spacing: 0.5px;
-  padding: 1px 0;
-  border-bottom-left-radius: 4px;
-  border-bottom-right-radius: 4px;
 }
+.principal { background: rgba(var(--v-theme-primary), 0.9); }
+.sobre-foto { background: rgba(0, 0, 0, 0.6); color: #fff; }
+.quitar {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+/* Rojo recien sobre el boton: avisa al momento de borrar. */
+.quitar:hover, .quitar:focus-visible { background: rgb(var(--v-theme-error)); }
+/* Lo que se hace con una foto aparece al pasar por ella; en una pantalla tactil, siempre. */
+.accion { opacity: 0; transition: opacity 0.15s; }
+.foto:hover .accion, .foto:focus-within .accion { opacity: 1; }
+@media (hover: none) { .accion { opacity: 1; } }
+/* Donde cae la que se arrastra: la pildora de seleccion (R4), en el espacio entre fotos. */
+.foto.cae-antes, .foto.cae-despues { overflow: visible; }
+.foto.cae-antes::before, .foto.cae-despues::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background: rgb(var(--v-theme-seleccion));
+}
+.foto.cae-antes::before { left: -5.5px; }
+.foto.cae-despues::after { right: -5.5px; }
 </style>

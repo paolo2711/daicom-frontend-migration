@@ -77,6 +77,8 @@
         :loading="loading"
         class="elevation-0 tabla-mejorada bg-surface"
         hide-default-footer
+        @contextmenu:row="alClickDerecho"
+        :row-props="({ item }) => ({ class: { 'fila-en-menu': estaEnElMenu(item) } })"
       >
         <template v-slot:bottom>
           <fluent-pagination
@@ -98,33 +100,9 @@
           <equipment-certificate :certificado="item.latest_certificate" @abrir="editItem(item, 1)" />
         </template>
 
-        <template v-slot:item.actions="{ item }">
-          <v-tooltip location="top">
-            <template v-slot:activator="{ props }">
-              <v-btn icon variant="text" size="small" class="mr-1" v-bind="props" @click="editItem(item)">
-                <v-icon size="small">mdi-pencil</v-icon>
-              </v-btn>
-            </template>
-            <span>Editar y Documentos</span>
-          </v-tooltip>
-
-          <v-tooltip location="top">
-            <template v-slot:activator="{ props }">
-              <v-btn icon variant="text" size="small" color="indigo" class="mr-1" v-bind="props" @click="$emit('view-history', item)">
-                <v-icon size="small">mdi-truck-fast</v-icon>
-              </v-btn>
-            </template>
-            <span>Historial de Viajes</span>
-          </v-tooltip>
-
-          <v-tooltip v-if="puedeEliminar" location="top">
-            <template v-slot:activator="{ props }">
-              <v-btn icon variant="text" size="small" color="error" v-bind="props" @click="deleteItem(item)">
-                <v-icon size="small">mdi-delete</v-icon>
-              </v-btn>
-            </template>
-            <span>Eliminar equipo</span>
-          </v-tooltip>
+        <template v-slot:item.acciones="{ item }">
+          <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" color="grey-darken-1"
+                 @click.stop="alBotonDeFila($event, item)" />
         </template>
       </v-data-table-server>
     </table-loading-overlay>
@@ -132,20 +110,20 @@
     <state-legend titulo="Estados del equipo:" :estados="ESTADOS_DE_EQUIPO" />
 
     <photo-viewer ref="visor" />
+    <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
+                 @accion="clave => ejecutarAccion(clave, menu.filas)" />
   </v-container>
 </template>
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { Toast } from '@/plugins/alerts'
-
 import Swal from 'sweetalert2'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
-import { mensajeDeError } from '@/utils/errors'
 import { debounce } from '@/utils/debounce'
 import { ESTADOS_DE_EQUIPO, estadoDe } from '@/utils/equipments/estado'
 import { leerPagina, porPagina } from '@/utils/pagination'
 import { useEquipmentPhotos } from '@/composables/useEquipmentPhotos'
+import { useInventoryActions } from '@/composables/useInventoryActions'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { usePage } from '@/composables/usePage'
 import { useRouteFilters } from '@/composables/useRouteFilters'
@@ -154,6 +132,7 @@ import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverl
 import EquipmentCertificate from '@/components/shared/EquipmentCertificate.vue'
 import EquipmentCode from '@/components/shared/EquipmentCode.vue'
 import EquipmentPhoto from '@/components/shared/EquipmentPhoto.vue'
+import ActionMenu from '@/components/shared/ActionMenu.vue'
 import FilterPill from '@/components/shared/FilterPill.vue'
 import PhotoViewer from '@/components/shared/PhotoViewer.vue'
 import StateLegend from '@/components/shared/StateLegend.vue'
@@ -162,7 +141,6 @@ const emit = defineEmits(['edit-item', 'view-history'])
 
 const search = ref('')
 const loading = ref(false)
-const puedeEliminar = ref(false)   // permiso 1007 (Eliminar Equipos) o admin
 const equipos = ref([])
 const total = ref(0)
 const { opciones: options, alInicio } = usePage(() => loadItems())
@@ -175,7 +153,7 @@ const headers = [
   { title: 'Modelo', key: 'model' },
   { title: 'N° Serie', key: 'series' },
   { title: 'Certificado', key: 'latest_certificate', sortable: false },
-  { title: 'Acciones', key: 'actions', sortable: false, align: 'end' },
+  { title: 'Opciones', key: 'acciones', align: 'center', sortable: false },
 ]
 
 // Filtros (estilo Ordenes: 2 pildoras rapidas + Estado en avanzados)
@@ -230,32 +208,14 @@ const editItem = (item, tab = 0) => {
   emit('edit-item', item, tab)
 }
 
-const deleteItem = (item) => {
-  Swal.fire({
-    title: '¿Estás seguro?',
-    text: `Se eliminará el equipo ${item.internal_id}`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, eliminar'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      InventoryDataService.delete(item.id).then(() => {
-        loadItems()
-        Toast.fire({ timer: 2200, icon: 'success', title: 'Equipo eliminado' })
-      }).catch((e) => {
-        Swal.fire('No se pudo eliminar', mensajeDeError(e, 'No se pudo eliminar el equipo.'), 'error')
-      })
-    }
-  })
-}
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu, accionesDe, ejecutarAccion } = useInventoryActions(equipos, {
+  editar: editItem, verHistorial: (item) => emit('view-history', item), alEliminar: loadItems,
+})
 
 // El back avisa al crear, editar o eliminar equipos y al alquilar o devolver.
 const onWsReloadInventory = () => { loadItems() }
 
 onMounted(() => {
-  const user = JSON.parse(localStorage.getItem('user')) || {}
-  const isAdmin = user.kind !== undefined && user.kind < 1
-  puedeEliminar.value = isAdmin || (user.action_permissions || []).includes(1007)
   loadItems()
   window.addEventListener('wss-reload-inventory', onWsReloadInventory)
 })

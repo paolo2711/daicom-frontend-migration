@@ -104,7 +104,7 @@
                     <v-col cols="12" sm="6">
                       <!-- "Alquilado" lo maneja el flujo de alquiler, no se edita a mano -->
                       <v-text-field
-                        v-if="isEditing && form.status === 2"
+                        v-if="isEditing && form.status === ALQUILADO"
                         model-value="Alquilado"
                         label="Estado actual"
                         variant="outlined" density="compact"
@@ -193,6 +193,7 @@ import { mensajeDeError } from '@/utils/errors'
 import { fechaCorta } from '@/utils/dates'
 import { abrirPdf } from '@/utils/pdf'
 import { LISTAS } from '@/utils/comboLists'
+import { ALQUILADO } from '@/utils/equipments/estado'
 import { textoDeVence } from '@/utils/equipments/expediente'
 import { CAMPO } from '@/utils/fields'
 import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'

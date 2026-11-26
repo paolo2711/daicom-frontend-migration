@@ -1,8 +1,9 @@
 // InventoryItem.ItemStatus en el back. El color de la pildora del codigo y su leyenda.
+export const ALQUILADO = 2
 export const ESTADOS_DE_EQUIPO = {
   1: { texto: 'Disponible', color: 'green' },
   reservado: { texto: 'Reservado', color: 'grey' },
-  2: { texto: 'Alquilado', color: 'blue' },
+  [ALQUILADO]: { texto: 'Alquilado', color: 'blue' },
   3: { texto: 'Mantenimiento', color: 'orange' },
   4: { texto: 'Baja', color: 'red' },
 }

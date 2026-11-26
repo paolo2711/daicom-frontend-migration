@@ -70,6 +70,11 @@
   background: rgb(var(--v-theme-hoja));
 }
 .titulo-de-seccion { font-size: 0.8125rem; font-weight: 600; }
+// Donde se suelta o se elige un archivo y todavia no hay nada: fondo suave y borde punteado del tema.
+.zona-de-archivos {
+  background: rgba(var(--v-theme-on-surface), 0.04);
+  border: thin dashed rgba(var(--v-border-color), calc(var(--v-border-opacity) * 2));
+}
 // El buscador de la cabecera de la lista de equipos.
 .buscador-de-equipo { width: 22rem; flex: 0 1 22rem; }
 // Las pestañas del panel de apoyo: todas del mismo ancho, digan lo que digan.

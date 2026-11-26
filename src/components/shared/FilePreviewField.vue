@@ -4,7 +4,7 @@
     <pdf-drop-zone :accept="accept" :label="esImagen ? 'Suelta la imagen aquí' : 'Suelta el PDF aquí'"
                    @file="soltado" @invalid="invalido = true">
       <div class="vista d-flex align-center justify-center rounded-lg"
-           :class="{ 'bg-white': esImagen && vista, vacia: !hayArchivo }">
+           :class="{ 'bg-white': esImagen && vista, 'zona-de-archivos': !hayArchivo }">
         <v-img v-if="esImagen && vista" :src="vista" contain max-height="9rem" class="w-100" />
         <div v-else-if="hayArchivo" class="d-flex flex-column align-center ga-1 text-medium-emphasis">
           <v-icon size="40">mdi-file-pdf-box</v-icon>
@@ -70,11 +70,9 @@ onBeforeUnmount(() => { if (local.value) URL.revokeObjectURL(local.value) })
 .vista {
   height: 10rem;
   padding: 0.5rem;
+}
+.vista:not(.zona-de-archivos) {
   background: rgba(var(--v-theme-on-surface), 0.04);
   border: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
-}
-.vista.vacia {
-  border-style: dashed;
-  border-color: rgba(var(--v-border-color), calc(var(--v-border-opacity) * 2));
 }
 </style>

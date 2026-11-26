@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" class="dialog-premium" max-width="950px" persistent>
+  <v-dialog v-model="dialog" class="dialog-premium" max-width="59.375rem" persistent>
     <v-card>
       <base-modal-header
         :title="isEditing ? `Editar Equipo: ${form.internal_id}` : 'Registrar Nuevo Equipo'"
@@ -31,18 +31,11 @@
 
                   <!-- Zona clic + arrastrar (mismo componente comun PdfDropZone, en modo imagen) -->
                   <pdf-drop-zone accept="image/*" multiple label="Suelta las fotos aquí" icon="mdi-image-plus" @files="onFilesDropped">
-                    <v-card
-                      variant="outlined"
-                      :class="isDark ? 'bg-grey-darken-3' : 'bg-grey-lighten-5'"
-                      style="border: 2px dashed #9e9e9e; cursor: pointer;"
-                      class="d-flex flex-column align-center justify-center pa-4 mb-2 transition-swing"
-                      height="120"
-                      hover
-                      @click="fileInput?.click()"
-                    >
+                    <button type="button" class="zona-de-fotos zona-de-archivos d-flex flex-column align-center justify-center ga-2 pa-4 mb-2
+                                   rounded-lg w-100" @click="fileInput?.click()">
                       <v-icon size="36" color="primary">mdi-cloud-upload</v-icon>
-                      <div class="text-caption mt-2 font-weight-medium text-center">Haz clic o <strong>arrastra</strong> las fotos aquí</div>
-                    </v-card>
+                      <span class="text-caption font-weight-medium">Haz clic o <strong>arrastra</strong> las fotos aquí</span>
+                    </button>
                   </pdf-drop-zone>
 
                   <div v-if="fotos.length" class="text-caption text-medium-emphasis mb-2">
@@ -369,6 +362,8 @@ defineExpose({ open })
 </script>
 
 <style scoped>
+.zona-de-fotos { height: 7.5rem; transition: background-color 0.15s; }
+.zona-de-fotos:hover { background: rgba(var(--v-theme-on-surface), 0.08); }
 /* Las dos pestañas en el mismo lugar: el modal toma el alto de la mas alta y no cambia al pasar de una a otra. */
 .pestanas-del-mismo-alto :deep(.v-window__container) { display: grid; }
 .pestanas-del-mismo-alto :deep(.v-window-item) { grid-area: 1 / 1; display: block !important; }

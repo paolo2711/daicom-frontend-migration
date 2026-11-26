@@ -2,7 +2,7 @@
   <v-container fluid class="down-top-padding pa-0">
     <!-- FILTROS (misma estructura que Ordenes/Certificados) -->
     <v-card variant="flat" class="border rounded-lg mb-4 pa-4 bg-surface">
-      <div class="d-flex flex-wrap align-center" style="gap: 16px;">
+      <div class="d-flex flex-wrap align-center ga-4">
         <v-text-field
           v-model="search"
           hide-details
@@ -11,10 +11,10 @@
           variant="outlined"
           label="Buscar por ID, nombre o marca"
           clearable
-          style="max-width: 260px;"
+          style="max-width: 16.25rem;"
         />
 
-        <v-divider vertical class="mx-2 d-none d-md-block" style="height: 32px;"></v-divider>
+        <v-divider vertical class="mx-2 d-none d-md-block" style="height: 2rem;"></v-divider>
 
         <!-- Pildoras rapidas (mismo patron que "Sin factura" / "Falta pago" en Ordenes) -->
         <filter-pill
@@ -146,7 +146,7 @@ const total = ref(0)
 const { opciones: options, alInicio } = usePage(() => loadItems())
 
 const headers = [
-  { title: '', key: 'photo', sortable: false, width: '64px', align: 'center' },
+  { title: '', key: 'photo', sortable: false, width: '4rem', align: 'center' },
   { title: 'Código', key: 'internal_id' },
   { title: 'Nombre del Equipo', key: 'name' },
   { title: 'Marca', key: 'brand' },

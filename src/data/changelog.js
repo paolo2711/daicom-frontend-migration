@@ -19,6 +19,30 @@
 // Convencion de version: MAYOR.modulo.arreglosGrandes.arreglosChicos
 export const CHANGELOG = [
   {
+    version: '3.11.4.0',
+    fecha: '2026-11-27',
+    nuevo: [
+      'Usuarios: se busca por nombre, usuario o correo y se filtra por rol.',
+      'Empresa: cada sección tiene su propio enlace, y Atrás vuelve a la portada.',
+    ],
+    cambio: [
+      'Inventario: las fotos de un equipo se ordenan arrastrándolas; la primera es la principal.',
+      'Inventario: el certificado de un equipo se busca por número, muestra hasta cuándo vale y se vincula al guardar.',
+      'Inventario, Clientes, Laboratorios, Equipos, Usuarios y Roles: cada fila tiene su menú, con el botón ⋮ y el clic derecho, como las demás listas.',
+      'Equipos: los servicios de un equipo se ven en un panel al lado de la lista.',
+      'Roles: los permisos se ven en un panel al lado, con Deshacer y Guardar, y se pregunta antes de perder cambios.',
+      'Contraseñas: se escriben dos veces y se pueden ver, igual al crear un usuario, al restablecerla y en Mi perfil.',
+      'Guías: el motivo se elige de una lista de sugerencias o se escribe.',
+    ],
+    arreglo: [
+      'Guías: una guía nueva ya no copia el motivo escrito en la anterior.',
+      'Inventario: las sugerencias del nombre de un equipo encuentran sin importar tildes ni mayúsculas.',
+      'Servicios, Alquileres, Guías, Facturas y Documentos: al angostar la lista, Opciones ya no muestra el botón de otra columna.',
+      'Roles: dos clics rápidos en distintos roles ya no muestran los permisos del otro.',
+      'Usuarios: al crear uno, el navegador ya no llena el formulario con tu propia sesión.',
+    ],
+  },
+  {
     version: '3.11.3.0',
     fecha: '2026-11-25',
     nuevo: [

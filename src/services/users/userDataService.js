@@ -1,11 +1,11 @@
 import axios from "axios";
 import authHeader from "@/services/auth-header";
-import { TODOS, porPagina } from "@/utils/pagination";
+import { soloConValor } from "@/utils/pagination";
 
 
 class UserDataService {
-    getAll() {
-        return axios.get("users", { params: porPagina(1, TODOS), headers: authHeader() });
+    getFiltered(filtros) {
+        return axios.get("users", { params: soloConValor(filtros), headers: authHeader() });
     }
 
     create(data) {

@@ -133,7 +133,7 @@ const routes = [
       },
       {
         name: "Company",
-        path: "company",
+        path: "company/:seccion?",
         component: () => import("@/views/access/company/company.vue"),
       },
       {

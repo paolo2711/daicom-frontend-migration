@@ -90,11 +90,16 @@ div.cae-despues {
   }
 }
 
+// En una lista con panel al lado, la fila que el panel muestra: el tono del panel y su pildora (R4).
+.tabla-mejorada tbody tr.fila-elegida > td { background: rgb(var(--v-theme-panel)); }
+
 // La marca de lo elegido o destacado, para que no dependa solo del color: una pildora corta a la izquierda.
 .lista-de-tarjetas .fila-elegida > td:first-child,
+.tabla-mejorada .fila-elegida > td:first-child,
 .fila-que-abre.abierta,
 .con-marca { position: relative; }
 .lista-de-tarjetas .fila-elegida > td:first-child::before,
+.tabla-mejorada .fila-elegida > td:first-child::before,
 .fila-que-abre.abierta::before,
 .con-marca::before {
   content: '';

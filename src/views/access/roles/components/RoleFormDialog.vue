@@ -1,28 +1,21 @@
 <template>
-  <v-dialog v-model="dialogModel" class="dialog-premium" width="500" persistent>
+  <v-dialog v-model="dialogModel" class="dialog-premium" width="90%" max-width="31.25rem" persistent>
     <v-card>
       <base-modal-header :title="dialogTitle" icon="mdi-shield-account" @close="closeDialog" />
 
       <v-card-text class="pt-4">
-        <v-form ref="formRef" @submit.prevent v-model="isValid">
-          <v-text-field
-            v-model="formData.name"
-            label="Nombre del Rol (*)"
-            density="compact"
-            variant="outlined"
-            counter="64"
-            hide-details="auto"
-            :rules="rol_name_rules"
-            @keypress="isLetter"
-            prepend-inner-icon="mdi-shield-check-outline"
-          />
+        <v-form ref="formRef" @submit.prevent>
+          <v-text-field v-model="formData.name" label="Nombre del rol (*)" counter="64" :rules="rol_name_rules"
+                        v-bind="CAMPO_DE_FORMULARIO" @keypress="isLetter" />
         </v-form>
       </v-card-text>
 
       <v-card-actions class="px-6 pb-4 pt-2">
         <v-spacer />
         <v-btn variant="flat" class="font-weight-bold mr-3 px-4" @click="closeDialog">Cancelar</v-btn>
-        <v-btn color="primary" variant="flat" class="font-weight-bold px-4" :disabled="!isValid" :loading="isSending" @click="save">Guardar</v-btn>
+        <v-btn color="primary" variant="flat" class="font-weight-bold px-4" :loading="isSending" @click="save">
+          Guardar
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -36,6 +29,7 @@ import RoleMappers from '@/mappers/roleMappers'
 import Characters from '@/validators/commonValidators/characters'
 import { useAppStore } from '@/stores/appStore'
 import { mensajeDeError } from '@/utils/errors'
+import { CAMPO_DE_FORMULARIO } from '@/utils/fields'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -53,7 +47,6 @@ const dialogModel = computed({
 
 const formRef = ref(null)
 const isSending = ref(false)
-const isValid = ref(false)
 
 const formData = reactive({
   id: null,
@@ -66,7 +59,7 @@ const rol_name_rules = [
   v => (v && v.trim().length !== 0) || "Ingrese nombre de rol válido",
 ]
 
-const dialogTitle = computed(() => props.role ? 'Editar Rol' : 'Nuevo Rol')
+const dialogTitle = computed(() => (props.role ? 'Editar rol' : 'Nuevo rol'))
 
 watch(() => props.modelValue, (val) => {
   if (val) {
@@ -104,8 +97,7 @@ const save = async () => {
 }
 
 const closeDialog = () => {
-  // resetValidation (no reset): limpia los errores sin re-validar, asi los campos
-  // no parpadean en rojo mientras el modal se cierra. Los valores se reinician al abrir.
+  // Sin re-validar al cerrar: los valores se reinician al abrir.
   formRef.value?.resetValidation()
   emit('update:modelValue', false)
 }

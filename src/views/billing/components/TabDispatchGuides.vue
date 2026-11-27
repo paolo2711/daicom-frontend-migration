@@ -26,7 +26,8 @@
 
     <pdf-split-view v-model="vista" :items="guias" :pdf-de="g => g.pdf" :titulo-de="tituloDe" clave="guias">
       <table-loading-overlay :loading="cargando" :isEmpty="guias.length === 0">
-        <v-data-table-server :headers="columnas" :items="guias" :items-length="total" :loading="cargando"
+        <v-data-table-server :key="claveDeColumnas(columnas)" :headers="columnas" :items="guias"
+                             :items-length="total" :loading="cargando"
                              item-value="id" class="elevation-0 rounded-lg tabla-mejorada bg-surface"
                              v-model:page="opciones.page" v-model:items-per-page="opciones.itemsPerPage"
                              hide-default-footer
@@ -97,6 +98,7 @@ import { preguntarGuia, registrarBajaEnSol, reintentarEnvio } from '@/utils/bill
 import { ESTADOS, FILTRO_DE_ESTADO, bajaPendienteEnSol } from '@/utils/billing/guias'
 import { leerPagina, porPagina } from '@/utils/pagination'
 import { abrirEnOtraPestana } from '@/utils/pdf'
+import { claveDeColumnas } from '@/utils/tables'
 import DialogCancelDispatchGuide from './DialogCancelDispatchGuide.vue'
 import DialogDispatchGuide from './DialogDispatchGuide.vue'
 import PanelInfoDispatchGuide from './PanelInfoDispatchGuide.vue'

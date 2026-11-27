@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" class="dialog-premium" max-width="950px" persistent>
+  <v-dialog v-model="dialog" class="dialog-premium" max-width="59.375rem" persistent>
     <v-card>
       <base-modal-header
         :title="isEditing ? `Editar Equipo: ${form.internal_id}` : 'Registrar Nuevo Equipo'"
@@ -17,8 +17,8 @@
         </v-tab>
       </v-tabs>
 
-      <v-window v-model="tab">
-        <v-window-item :value="0">
+      <v-window v-model="tab" class="pestanas-del-mismo-alto">
+        <v-window-item :value="0" eager :transition="false" :reverse-transition="false">
           <v-card-text class="pt-6">
             <v-form ref="formRef" v-model="valid">
               <v-row>
@@ -31,55 +31,30 @@
 
                   <!-- Zona clic + arrastrar (mismo componente comun PdfDropZone, en modo imagen) -->
                   <pdf-drop-zone accept="image/*" multiple label="Suelta las fotos aquí" icon="mdi-image-plus" @files="onFilesDropped">
-                    <v-card
-                      variant="outlined"
-                      :class="isDark ? 'bg-grey-darken-3' : 'bg-grey-lighten-5'"
-                      style="border: 2px dashed #9e9e9e; cursor: pointer;"
-                      class="d-flex flex-column align-center justify-center pa-4 mb-2 transition-swing"
-                      height="120"
-                      hover
-                      @click="fileInput?.click()"
-                    >
+                    <button type="button" class="zona-de-fotos zona-de-archivos d-flex flex-column align-center justify-center ga-2 pa-4 mb-2
+                                   rounded-lg w-100" @click="fileInput?.click()">
                       <v-icon size="36" color="primary">mdi-cloud-upload</v-icon>
-                      <div class="text-caption mt-2 font-weight-medium text-center">Haz clic o <strong>arrastra</strong> las fotos aquí</div>
-                    </v-card>
+                      <span class="text-caption font-weight-medium">Haz clic o <strong>arrastra</strong> las fotos aquí</span>
+                    </button>
                   </pdf-drop-zone>
 
-                  <div v-if="existingImages.length || previewUrls.length" class="text-caption text-medium-emphasis mb-2">
-                    <v-icon size="13" color="primary">mdi-star</v-icon> La <strong>primera</strong> foto es la que se muestra en el listado.
+                  <div v-if="fotos.length" class="text-caption text-medium-emphasis mb-2">
+                    La primera es la principal, la de la lista. Arrastra una foto para cambiar el orden.
                   </div>
 
-                  <div class="d-flex flex-wrap" style="gap: 8px; max-height: 250px; overflow-y: auto;">
-                    <v-card
-                      v-for="(img, i) in existingImages" :key="'exist-'+img.id"
-                      variant="outlined" class="rounded"
-                      style="position: relative; width: 70px; height: 70px; cursor: zoom-in;"
-                      :style="i === 0 ? 'border: 2px solid rgb(var(--v-theme-primary)) !important;' : ''"
-                      @click="visor?.open(existingImages, i)"
-                    >
-                      <v-img :src="img.image" height="100%" width="100%" cover></v-img>
-
-                      <!-- Etiqueta "Principal" en la 1ra -->
-                      <div v-if="i === 0" class="foto-principal-badge">Principal</div>
-                      <!-- Estrella para marcar principal en las demas -->
-                      <v-btn v-else icon variant="flat" size="x-small" color="amber-darken-2"
-                             style="position: absolute; bottom: -4px; left: -4px; height: 20px; width: 20px; z-index: 2;"
-                             @click.stop="setPrincipal(i)">
-                        <v-icon size="13">mdi-star-outline</v-icon>
-                        <v-tooltip activator="parent" location="top">Marcar como principal</v-tooltip>
-                      </v-btn>
-
-                      <v-btn icon variant="flat" size="x-small" color="red" class="text-white" style="position: absolute; top: -4px; right: -4px; height: 20px; width: 20px; z-index: 2;" @click.stop="removeExistingImage(i, img.id)">
-                        <v-icon size="14">mdi-close</v-icon>
-                      </v-btn>
-                    </v-card>
-
-                    <v-card v-for="(url, i) in previewUrls" :key="'new-'+i" variant="outlined" class="rounded" style="position: relative; width: 70px; height: 70px; border: 2px solid #1976D2 !important;">
-                      <v-img :src="url" height="100%" width="100%" cover></v-img>
-                      <v-btn icon variant="flat" size="x-small" color="red" class="text-white" style="position: absolute; top: -4px; right: -4px; height: 20px; width: 20px;" @click="removeImage(i)">
-                        <v-icon size="14">mdi-close</v-icon>
-                      </v-btn>
-                    </v-card>
+                  <div class="cuadricula d-flex flex-wrap" v-bind="zona">
+                    <div v-for="(foto, i) in fotos" :key="clave(foto)" class="foto rounded" :class="claseDe(i)"
+                         v-bind="{ ...arrastrable(i), ...asa(i) }" @click="visor?.open(fotos, i)">
+                      <v-img :src="foto.image" height="100%" width="100%" cover />
+                      <div v-if="i === 0" class="foto-pie principal">Principal</div>
+                      <button v-else type="button" class="foto-pie sobre-foto accion" @click.stop="mover(i, 0)">
+                        Hacer principal
+                      </button>
+                      <button type="button" class="quitar sobre-foto accion" title="Eliminar" aria-label="Eliminar foto"
+                              @click.stop="quitarFoto(i)">
+                        <v-icon size="14">mdi-delete</v-icon>
+                      </button>
+                    </div>
                   </div>
                 </v-col>
 
@@ -95,8 +70,7 @@
                       ></v-text-field>
                     </v-col>
                     <v-col cols="12" sm="6">
-                      <!-- Combobox: sugiere nombres del catalogo de equipos, pero
-                           deja escribir libre (inventario más flexible que órdenes). -->
+                      <!-- El catalogo solo sugiere: un equipo que no se calibra no esta en el. -->
                       <v-combobox
                         v-model="form.name"
                         :items="nameSuggestions"
@@ -105,9 +79,11 @@
                         label="Nombre del Equipo (*)"
                         :rules="[v => !!v || 'Requerido']"
                         variant="outlined" density="compact"
-                        hide-no-data auto-select-first
+                        hide-no-data auto-select-first no-filter
                         prepend-inner-icon="mdi-toolbox-outline"
-                      ></v-combobox>
+                      >
+                        <template v-if="hayMasNombres" #append-item><more-results-hint /></template>
+                      </v-combobox>
                     </v-col>
                     <v-col cols="12" sm="6">
                       <v-text-field v-model="form.brand" label="Marca" variant="outlined" density="compact"></v-text-field>
@@ -121,7 +97,7 @@
                     <v-col cols="12" sm="6">
                       <!-- "Alquilado" lo maneja el flujo de alquiler, no se edita a mano -->
                       <v-text-field
-                        v-if="isEditing && form.status === 2"
+                        v-if="isEditing && form.status === ALQUILADO"
                         model-value="Alquilado"
                         label="Estado actual"
                         variant="outlined" density="compact"
@@ -149,74 +125,37 @@
 
           </v-window-item>
 
-        <v-window-item :value="1">
-          <v-card-text class="pa-6 text-center" style="min-height: 400px;">
-            <div class="mb-6">
-              <v-icon size="64" :color="form.latest_certificate ? 'success' : 'grey'">mdi-certificate-outline</v-icon>
-            </div>
-            
-            <h3 class="text-h6 font-weight-bold mb-2">Vincular Certificado DAICOM</h3>
-            <p class="text-body-2 px-10 text-grey">Vincula a este equipo un certificado emitido por tu laboratorio: acreditado, no acreditado o de operatividad.</p>
+        <v-window-item :value="1" eager :transition="false" :reverse-transition="false">
+          <v-card-text class="pa-4 text-center">
+            <v-icon size="48" class="text-medium-emphasis">mdi-certificate-outline</v-icon>
+            <h3 class="text-h6 font-weight-bold mt-1 mb-4">Certificado DAICOM</h3>
 
-            <div v-if="form.latest_certificate" class="mb-6 mt-4">
-              <v-chip :color="vigencia.color" variant="flat" class="text-white font-weight-bold text-subtitle-2 px-4 py-4 mb-4">
-                <v-icon start size="20">{{ vigencia.icono }}</v-icon> {{ vigencia.texto }}
-              </v-chip>
-
-              <v-card variant="tonal" :color="vigencia.color" class="mx-auto pa-4 mb-4 text-left" max-width="360" rounded="lg">
-                <div class="d-flex justify-space-between align-center mb-2">
-                  <span class="text-caption text-medium-emphasis">Certificado</span>
-                  <span class="font-weight-bold" :title="form.latest_certificate.registry_code">{{ form.latest_certificate.numero }}</span>
-                </div>
-                <div class="d-flex justify-space-between align-center mb-2">
-                  <span class="text-caption text-medium-emphasis">Emitido</span>
-                  <span class="font-weight-medium">{{ fechaCorta(form.latest_certificate.emission_date) || '---' }}</span>
-                </div>
-                <div class="d-flex justify-space-between align-center">
-                  <span class="text-caption text-medium-emphasis">Vence</span>
-                  <span class="font-weight-medium">{{ fechaCorta(form.latest_certificate.vence) || '---' }}</span>
+            <template v-if="form.latest_certificate">
+              <v-card variant="tonal" class="mx-auto pa-4 mb-4 text-left" max-width="360" rounded="lg">
+                <div v-for="[etiqueta, valor] in filasDe(form.latest_certificate)" :key="etiqueta"
+                     class="d-flex justify-space-between align-center ga-4 py-1">
+                  <span class="text-caption text-medium-emphasis">{{ etiqueta }}</span>
+                  <span class="font-weight-medium text-right">{{ valor }}</span>
                 </div>
               </v-card>
-
-              <div class="d-flex justify-center" style="gap: 10px;">
-                <v-btn variant="tonal" :href="form.latest_certificate.link_nube" target="_blank" :disabled="!form.latest_certificate.link_nube">
-                  <v-icon start>mdi-qrcode-scan</v-icon> Ver Certificado
-                </v-btn>
-                <v-btn color="error" variant="text" @click="unlinkCertificate" :loading="linkingCert">
-                  <v-icon start>mdi-link-off</v-icon> Desvincular
-                </v-btn>
+              <div class="d-flex justify-center align-center ga-2">
+                <v-btn v-if="form.latest_certificate.pdf" variant="tonal" prepend-icon="mdi-file-pdf-box"
+                       @click="abrirPdf(form.latest_certificate.pdf)">Ver PDF</v-btn>
+                <span v-else class="text-caption text-medium-emphasis">Todavía sin PDF</span>
+                <v-btn variant="text" prepend-icon="mdi-link-off" @click="form.latest_certificate = null">Desvincular</v-btn>
               </div>
-            </div>
+            </template>
 
-            <div v-else class="mx-auto mt-6" style="max-width: 400px;">
-              <v-row dense align="center">
-                <v-col cols="8">
-                  <v-text-field v-model="correlative_search" label="N.° de certificado" placeholder="ACR-15 o 15" variant="outlined" density="compact" hide-details @keyup.enter="buscarCertificado"></v-text-field>
-                </v-col>
-                <v-col cols="4">
-                  <v-btn color="secondary" variant="flat" block @click="buscarCertificado" :loading="searchingCert"><v-icon start>mdi-magnify</v-icon> Buscar</v-btn>
-                </v-col>
-              </v-row>
-
-              <!-- El mismo numero se repite entre tipos: sin la sigla, se elige. -->
-              <v-list v-if="opcionesDeCertificado.length > 1" density="compact" class="mt-4 text-left">
-                <v-list-subheader>Hay {{ opcionesDeCertificado.length }} con ese número: elige cuál</v-list-subheader>
-                <v-list-item v-for="c in opcionesDeCertificado" :key="c.id" :title="c.numero"
-                             :subtitle="[c.equipment, c.client_data?.name].filter(Boolean).join(' · ')"
-                             @click="elegirCertificado(c)" />
-              </v-list>
-
-              <v-expand-transition>
-                <v-card v-if="foundCert" variant="outlined" class="mt-4 pa-3 text-left bg-grey-lighten-4">
-                  <div class="subtitle-2 font-weight-bold mb-1">Vista Previa:</div>
-                  <div><strong>Certificado:</strong> {{ foundCert.numero }}</div>
-                  <div><strong>Equipo:</strong> {{ foundCert.equipment }}</div>
-                  <v-btn block color="success" variant="flat" class="mt-3 text-white" @click="linkCertificate" :loading="linkingCert">
-                    <v-icon start>mdi-link-variant</v-icon> Vincular a este equipo
-                  </v-btn>
-                </v-card>
-              </v-expand-transition>
-            </div>
+            <paginated-autocomplete v-else class="mx-auto text-left" style="max-width: 25rem;" :model-value="null"
+                                    :fetch="InventoryDataService.buscarCertificados" :mapper="aOpcion" :cache="false"
+                                    label="Vincular certificado" placeholder="Su número: ACR-15 o 15"
+                                    no-data-text="No hay un certificado con ese número"
+                                    prepend-inner-icon="mdi-link-variant" v-bind="CAMPO"
+                                    @selected="c => (form.latest_certificate = c)">
+              <template #item="{ item, props: opcion }">
+                <v-list-item v-bind="opcion" :title="item.raw.numero" :subtitle="detalleDe(item.raw)" />
+              </template>
+            </paginated-autocomplete>
           </v-card-text>
         </v-window-item>
       </v-window>
@@ -237,19 +176,22 @@
 
 <script setup>
 import { avisarHecho } from '@/utils/documents/avisos'
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useTheme } from 'vuetify'
 import Swal from 'sweetalert2'
 import InventoryDataService from '@/services/inventory/inventoryDataService'
-import CertificateDataService from '@/services/certificates/certificateDataService'
-import EquipmentDataService from '@/services/equipments/equipmentDataService'
+import { usePaginatedSearch } from '@/composables/usePaginatedSearch'
+import { useRowDrag } from '@/composables/useRowDrag'
 import { mensajeDeError } from '@/utils/errors'
 import { fechaCorta } from '@/utils/dates'
-import { vivo } from '@/utils/certificates/estado'
-import { debounce } from '@/utils/debounce'
-import { VIGENCIAS } from '@/utils/equipments/expediente'
-import { leerPagina, porPagina } from '@/utils/pagination'
+import { abrirPdf } from '@/utils/pdf'
+import { LISTAS } from '@/utils/comboLists'
+import { ALQUILADO } from '@/utils/equipments/estado'
+import { textoDeVence } from '@/utils/equipments/expediente'
+import { CAMPO } from '@/utils/fields'
+import PaginatedAutocomplete from '@/components/commonComponents/PaginatedAutocomplete.vue'
 import PdfDropZone from '@/components/commonComponents/PdfDropZone.vue'
+import MoreResultsHint from '@/components/shared/MoreResultsHint.vue'
 import PhotoViewer from '@/components/shared/PhotoViewer.vue'
 
 const emit = defineEmits(['saved'])
@@ -266,31 +208,16 @@ const tab = ref(0)
 const formRef = ref(null)
 const fileInput = ref(null)
 
-// Variables para imágenes
-const existingImages = ref([])
+// Las guardadas ({ id, image }) y las nuevas ({ archivo, image }), en el orden en que quedan.
+const fotos = ref([])
 const deletedImagesIds = ref([])
-const imageFiles = ref([])
-const previewUrls = ref([])
 const visor = ref(null)
+const { asa, arrastrable, claseDe, clave, mover, zona } = useRowDrag(fotos, { horizontal: true })
 
-// Variables para Certificado
-const correlative_search = ref('')
-const searchingCert = ref(false)
-const foundCert = ref(null)
-const opcionesDeCertificado = ref([])
-const linkingCert = ref(false)
-
-// Sugerencias de nombre (catalogo de equipos maestro), editable.
-const nameSuggestions = ref([])
-const nameSearch = ref('')
-const loadingNames = ref(false)
-watch(nameSearch, debounce((q) => {
-  loadingNames.value = true
-  EquipmentDataService.getFiltered(1, 20, q || '')
-    .then(r => { nameSuggestions.value = leerPagina(r.data).filas.map(e => e.nombre_tecnico).filter(Boolean) })
-    .catch(() => { nameSuggestions.value = [] })
-    .finally(() => { loadingNames.value = false })
-}))
+const { items: sugeridos, loading: loadingNames, searchQuery: nameSearch, olvidar: olvidarSugerencias, total } =
+  usePaginatedSearch(LISTAS.equipos.fetch, LISTAS.equipos.mapper, () => null, 'equipos')
+const nameSuggestions = computed(() => sugeridos.value.map(e => e.name))
+const hayMasNombres = computed(() => total.value > sugeridos.value.length)
 
 const form = reactive({
   id: null,
@@ -311,22 +238,26 @@ const statusOptions = [
   { text: 'Baja', value: 4 },
 ]
 
-// El elegido para un equipo nuevo todavia no tiene vigencia: se vincula al registrarlo.
-const vigencia = computed(() => VIGENCIAS[form.latest_certificate?.vigencia]
-  ?? { texto: 'Se vincula al registrar el equipo', icono: 'mdi-link-variant' })
+// El certificado se elige o se quita aca y se graba con el resto, al guardar.
+const aOpcion = (certificado) => ({ ...certificado, name: certificado.numero })
+const detalleDe = (certificado) =>
+  [certificado.equipment, textoDeVence(certificado), !certificado.pdf && 'sin PDF'].filter(Boolean).join(' · ')
+const filasDe = (certificado) => [
+  ['Certificado', certificado.numero],
+  ['Equipo', certificado.equipment || '—'],
+  ['Emitido', fechaCorta(certificado.emission_date) || '—'],
+  ['Vigencia', textoDeVence(certificado) || '—'],
+]
 
-// Marca una foto existente como principal: la pone primera (la que se muestra en la lista).
-const setPrincipal = (i) => {
-  const [img] = existingImages.value.splice(i, 1)
-  existingImages.value.unshift(img)
+const agregarFotos = (archivos) => {
+  fotos.value.push(...Array.from(archivos || [], archivo => ({ archivo, image: URL.createObjectURL(archivo) })))
 }
+const onFilesDropped = agregarFotos
 
-// Fotos soltadas por drag&drop (mismo destino que el input file).
-const onFilesDropped = (files) => {
-  (files || []).forEach(file => {
-    imageFiles.value.push(file)
-    previewUrls.value.push(URL.createObjectURL(file))
-  })
+const quitarFoto = (i) => {
+  const [foto] = fotos.value.splice(i, 1)
+  if (foto.id) deletedImagesIds.value.push(foto.id)
+  else URL.revokeObjectURL(foto.image)
 }
 
 // `id`: el equipo que se edita; sin el, uno nuevo.
@@ -344,7 +275,7 @@ async function open(id = null, targetTab = 0) {
     Object.keys(form).forEach(key => {
       if (item[key] !== undefined) form[key] = item[key]
     })
-    existingImages.value = item.gallery ? JSON.parse(JSON.stringify(item.gallery)) : []
+    fotos.value = (item.gallery ?? []).map(({ id, image }) => ({ id, image }))
   } else {
     isEditing.value = false
     // Previsualiza el ID que le tocará (DAI-XXX).
@@ -366,35 +297,17 @@ const close = () => {
 
 const resetForm = () => {
   if (formRef.value) formRef.value.resetValidation()
+  olvidarSugerencias()
   Object.assign(form, { id: null, internal_id: '', name: '', brand: '', model: '', series: '', status: 1, notes: '', latest_certificate: null })
-  existingImages.value = []
+  fotos.value.filter(foto => foto.archivo).forEach(foto => URL.revokeObjectURL(foto.image))
+  fotos.value = []
   deletedImagesIds.value = []
-  imageFiles.value = []
-  previewUrls.value = []
   tab.value = 0
-  correlative_search.value = ''
-  foundCert.value = null
-  opcionesDeCertificado.value = []
 }
 
 const onFileChange = (event) => {
-  const files = event.target.files
-  if (!files || files.length === 0) return
-  Array.from(files).forEach(file => {
-    imageFiles.value.push(file)
-    previewUrls.value.push(URL.createObjectURL(file))
-  })
+  agregarFotos(event.target.files)
   if (fileInput.value) fileInput.value.value = ''
-}
-
-const removeExistingImage = (index, imageId) => {
-  deletedImagesIds.value.push(imageId)
-  existingImages.value.splice(index, 1)
-}
-
-const removeImage = (index) => {
-  imageFiles.value.splice(index, 1)
-  previewUrls.value.splice(index, 1)
 }
 
 const save = async () => {
@@ -411,20 +324,15 @@ const save = async () => {
   formData.append('status', form.status)
   if (form.notes) formData.append('notes', form.notes)
   
-  // Si seleccionamos un certificado desde la pestaña de creación
-  if (form.latest_certificate && form.latest_certificate.id) {
-    formData.append('latest_certificate', form.latest_certificate.id)
-  }
+  // Vacio lo desvincula.
+  formData.append('latest_certificate', form.latest_certificate?.id ?? '')
 
-  if (imageFiles.value.length > 0) {
-    imageFiles.value.forEach(file => formData.append('uploaded_images', file))
-  }
+  // El orden de todas: las guardadas por su id y las nuevas como n0, n1... en el orden en que se suben.
+  const nuevas = fotos.value.filter(foto => foto.archivo)
+  nuevas.forEach(foto => formData.append('uploaded_images', foto.archivo))
+  formData.append('orden', fotos.value.map(foto => (foto.archivo ? `n${nuevas.indexOf(foto)}` : foto.id)).join(','))
   if (deletedImagesIds.value.length > 0) {
     formData.append('deleted_images', deletedImagesIds.value.join(','))
-  }
-  // Foto principal = la primera de las existentes (la que se muestra en el listado).
-  if (existingImages.value.length > 0 && existingImages.value[0].id) {
-    formData.append('primary_image_id', existingImages.value[0].id)
   }
 
   try {
@@ -438,7 +346,8 @@ const save = async () => {
     emit('saved')
     close()
   } catch (error) {
-    const nombres = { series: 'N° de Serie', name: 'Nombre', brand: 'Marca', model: 'Modelo', status: 'Estado' }
+    const nombres = { series: 'N° de Serie', name: 'Nombre', brand: 'Marca', model: 'Modelo', status: 'Estado',
+                      latest_certificate: 'Certificado' }
     Swal.fire({
       title: 'Error al guardar',
       text: mensajeDeError(error, 'Revisa los datos e intenta de nuevo.', nombres),
@@ -449,99 +358,70 @@ const save = async () => {
   }
 }
 
-// --- LÓGICA DE CERTIFICADOS DIRECTO A LA BD ---
-
-const buscarCertificado = async () => {
-  if (!correlative_search.value) return
-  searchingCert.value = true
-  foundCert.value = null
-  opcionesDeCertificado.value = []
-
-  try {
-    const res = await CertificateDataService.getFiltered({ ...porPagina(1, 10), numero: String(correlative_search.value).trim() })
-    const validos = leerPagina(res.data).filas.filter(vivo)
-    if (validos.length === 1) {
-      foundCert.value = validos[0]
-    } else if (validos.length > 1) {
-      opcionesDeCertificado.value = validos
-    } else {
-      Swal.fire('No encontrado', 'No hay un certificado vigente con ese número.', 'warning')
-    }
-  } catch {
-    Swal.fire('Error', 'Hubo un problema al buscar.', 'error')
-  } finally {
-    searchingCert.value = false
-  }
-}
-
-const elegirCertificado = (cert) => {
-  foundCert.value = cert
-  opcionesDeCertificado.value = []
-}
-
-const linkCertificate = async () => {
-  if (isEditing.value) {
-    // Si el equipo ya existe en BD, vinculamos directamente
-    linkingCert.value = true
-    try {
-      const { data } = await InventoryDataService.update(form.id, { latest_certificate: foundCert.value.id })
-      form.latest_certificate = data.latest_certificate
-      Swal.fire({ title: 'Vinculado', text: 'Certificado asociado exitosamente', icon: 'success', timer: 1500, showConfirmButton: false })
-      emit('saved') // Refresca la tabla por detrás
-    } catch {
-      Swal.fire('Error', 'No se pudo vincular', 'error')
-    } finally {
-      linkingCert.value = false
-      foundCert.value = null
-      correlative_search.value = ''
-    }
-  } else {
-    // Si es un equipo NUEVO, solo guardamos el dato en memoria temporalmente
-    form.latest_certificate = foundCert.value
-    foundCert.value = null
-    correlative_search.value = ''
-    Swal.fire({ title: 'Certificado Seleccionado', text: 'Se vinculará al terminar de registrar el equipo.', icon: 'info', timer: 2000, showConfirmButton: false })
-  }
-}
-
-const unlinkCertificate = async () => {
-  if (isEditing.value) {
-    linkingCert.value = true
-    try {
-      await InventoryDataService.update(form.id, { latest_certificate: null })
-      form.latest_certificate = null
-      Swal.fire({ title: 'Desvinculado', text: 'El certificado fue retirado del equipo', icon: 'info', timer: 1500, showConfirmButton: false })
-      emit('saved')
-    } catch {
-      Swal.fire('Error', 'No se pudo desvincular', 'error')
-    } finally {
-      linkingCert.value = false
-    }
-  } else {
-    // En creación nueva, solo borramos la variable de memoria
-    form.latest_certificate = null
-    Swal.fire({ title: 'Removido', text: 'Se ha quitado el certificado de este registro.', icon: 'info', timer: 1500, showConfirmButton: false })
-  }
-}
-
 defineExpose({ open })
 </script>
 
 <style scoped>
-.foto-principal-badge {
+.zona-de-fotos { height: 7.5rem; transition: background-color 0.15s; }
+.zona-de-fotos:hover { background: rgba(var(--v-theme-on-surface), 0.08); }
+/* Las dos pestañas en el mismo lugar: el modal toma el alto de la mas alta y no cambia al pasar de una a otra. */
+.pestanas-del-mismo-alto :deep(.v-window__container) { display: grid; }
+.pestanas-del-mismo-alto :deep(.v-window-item) { grid-area: 1 / 1; display: block !important; }
+.pestanas-del-mismo-alto :deep(.v-window-item:not(.v-window-item--active)) {
+  visibility: hidden;
+  opacity: 0;  /* las ayudas de los campos se ponen visibles por su cuenta */
+  pointer-events: none;
+}
+/* El margen hacia afuera deja lugar a la linea de la primera y la ultima: el desplazamiento recorta lo que sale. */
+.cuadricula { gap: 0.5rem; max-height: 15.625rem; overflow-y: auto; margin: 0 -0.375rem; padding: 0 0.375rem; }
+.foto {
+  position: relative;
+  width: 4.375rem;
+  height: 4.375rem;
+  overflow: hidden;
+  cursor: grab;
+  border: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.foto-pie {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  inset: auto 0 0 0;
   z-index: 2;
-  background: rgba(var(--v-theme-primary), 0.9);
+  padding: 0.0625rem 0;
   color: #fff;
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
   text-align: center;
-  letter-spacing: 0.5px;
-  padding: 1px 0;
-  border-bottom-left-radius: 4px;
-  border-bottom-right-radius: 4px;
 }
+.principal { background: rgba(var(--v-theme-primary), 0.9); }
+.sobre-foto { background: rgba(0, 0, 0, 0.6); color: #fff; }
+.quitar {
+  position: absolute;
+  top: 0.1875rem;
+  right: 0.1875rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+}
+/* Rojo recien sobre el boton: avisa al momento de borrar. */
+.quitar:hover, .quitar:focus-visible { background: rgb(var(--v-theme-error)); }
+/* Lo que se hace con una foto aparece al pasar por ella; en una pantalla tactil, siempre. */
+.accion { opacity: 0; transition: opacity 0.15s; }
+.foto:hover .accion, .foto:focus-within .accion { opacity: 1; }
+@media (hover: none) { .accion { opacity: 1; } }
+/* Donde cae la que se arrastra: la pildora de seleccion (R4), en el espacio entre fotos. */
+.foto.cae-antes, .foto.cae-despues { overflow: visible; }
+.foto.cae-antes::before, .foto.cae-despues::after {
+  content: '';
+  position: absolute;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 0.1875rem;
+  border-radius: 0.125rem;
+  background: rgb(var(--v-theme-seleccion));
+}
+.foto.cae-antes::before { left: -0.34375rem; }
+.foto.cae-despues::after { right: -0.34375rem; }
 </style>

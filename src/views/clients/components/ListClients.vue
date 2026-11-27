@@ -2,7 +2,7 @@
   <v-container fluid class="down-top-padding pa-0">
 
     <v-card variant="flat" class="border rounded-lg mb-4 pa-4 bg-surface">
-      <div class="d-flex flex-wrap align-center" style="gap: 16px;">
+      <div class="d-flex flex-wrap align-center ga-4">
         <v-text-field
           v-model="search"
           hide-details
@@ -11,7 +11,7 @@
           variant="outlined"
           label="Buscar cliente por nombre o documento..."
           clearable
-          style="max-width: 300px;"
+          style="max-width: 18.75rem;"
           @update:model-value="alInicio"
         />
         <v-switch
@@ -37,6 +37,8 @@
         v-model:page="options.page"
         v-model:items-per-page="options.itemsPerPage"
         hide-default-footer
+        @contextmenu:row="alClickDerecho"
+        :row-props="({ item }) => ({ class: { 'fila-en-menu': estaEnElMenu(item) } })"
       >
         <template v-slot:bottom>
           <fluent-pagination
@@ -47,7 +49,8 @@
         </template>
 
         <template v-slot:item.name="{ item }">
-          <copyable-text :texto="item.name" etiqueta="razón social" ancho="340px" class="font-weight-bold" />
+          <copyable-text :texto="item.name" etiqueta="razón social" ancho="21.25rem" class="font-weight-bold" />
+          <div v-if="item.needs_review" class="text-caption text-medium-emphasis">Posible duplicado</div>
         </template>
 
         <template v-slot:item.document="{ item }">
@@ -55,43 +58,20 @@
         </template>
 
         <template v-slot:item.address="{ item }">
-          <copyable-text :texto="item.address" etiqueta="dirección" ancho="320px" />
+          <copyable-text :texto="item.address" etiqueta="dirección" ancho="20rem" />
         </template>
 
-        <template v-slot:item.actions="{ item }">
-          <v-tooltip v-if="item.needs_review" location="bottom">
-            <template v-slot:activator="{ props }">
-              <v-btn v-bind="props" icon variant="text" color="warning" density="comfortable"
-                     :loading="revisando === item.id" @click="marcarRevisado(item)">
-                <v-icon>mdi-account-question-outline</v-icon>
-              </v-btn>
-            </template>
-            <span>Posible duplicado. Marcar como revisado</span>
-          </v-tooltip>
-
-          <v-tooltip location="bottom">
-            <template v-slot:activator="{ props }">
-              <v-btn v-bind="props" icon variant="text" density="comfortable" @click="openEditDialog(item)">
-                <v-icon>mdi-pencil</v-icon>
-              </v-btn>
-            </template>
-            <span>Editar Cliente</span>
-          </v-tooltip>
-
-          <v-tooltip location="bottom" color="error">
-            <template v-slot:activator="{ props }">
-              <v-btn v-bind="props" icon color="red-darken-2" variant="text" density="comfortable" @click="deleteClientConfirm(item)">
-                <v-icon>mdi-delete</v-icon>
-              </v-btn>
-            </template>
-            <span>Eliminar Cliente</span>
-          </v-tooltip>
+        <template v-slot:item.acciones="{ item }">
+          <v-btn icon="mdi-dots-vertical" variant="text" density="comfortable" color="grey-darken-1"
+                 @click.stop="alBotonDeFila($event, item)" />
         </template>
 
       </v-data-table-server>
     </table-loading-overlay>
 
   <client-form-dialog v-model="dialogOpen" :client="selectedClient" @reloadListComponent="retrieveAllClients" />
+  <action-menu v-model:menu="menu" :acciones="accionesDe(menu.filas)"
+               @accion="clave => ejecutarAccion(clave, menu.filas)" />
 
   </v-container>
 </template>
@@ -99,22 +79,21 @@
 <script setup>
 import { ref, onMounted, defineAsyncComponent } from 'vue'
 
-import Swal from 'sweetalert2'
 import ClientDataService from '@/services/clients/clientDataService'
 import ClientMappers from '@/mappers/clientMappers'
+import { useActionCall } from '@/composables/useActionCall'
+import { useContextMenu } from '@/composables/useContextMenu'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { usePage } from '@/composables/usePage'
 import FluentPagination from '@/components/commonComponents/FluentPagination.vue'
-import { useAppStore } from '@/stores/appStore'
 import TableLoadingOverlay from '@/components/commonComponents/TableLoadingOverlay.vue'
+import ActionMenu from '@/components/shared/ActionMenu.vue'
 import CopyableText from '@/components/shared/CopyableText.vue'
+import { accionesPara } from '@/utils/actions'
+import { ACCIONES_CLIENTE } from '@/utils/clients/acciones'
 import { leerPagina } from '@/utils/pagination'
 
 const ClientFormDialog = defineAsyncComponent(() => import('@/views/clients/components/ClientFormDialog.vue'))
-
-
-const appStore = useAppStore()
-
 
 
 const headers = [
@@ -122,7 +101,7 @@ const headers = [
   { title: 'Tipo Doc.', key: 'documentType_name', sortable: false },
   { title: 'N° Documento', key: 'document', sortable: false },
   { title: 'Dirección', key: 'address', sortable: false },
-  { title: 'Opciones', key: 'actions', sortable: false, align: 'end' },
+  { title: 'Opciones', key: 'acciones', align: 'center', sortable: false },
 ]
 
 const clients = ref([])
@@ -133,7 +112,6 @@ const search = ref('')
 const filterNeedsReview = ref(false)
 const dialogOpen = ref(false)
 const selectedClient = ref(null)
-const revisando = ref(null)
 
 const { begin: beginLoad, isLatest: isLatestLoad } = useLatestRequest()
 
@@ -157,55 +135,38 @@ const retrieveAllClients = () => {
 
 
 
-const deleteClient = (client) => {
-  ClientDataService.delete(client.id).then((response) => {
-    if (response.status === 204) {
-      const index = clients.value.findIndex(c => c.id === client.id)
-      if (index !== -1) clients.value.splice(index, 1)
-      Swal.fire(appStore.successDeletedOptions)
-    }
-  }).catch(() => {
-    Swal.fire(appStore.errorDeleteOptions)
-  })
-}
-
 const openEditDialog = (client) => {
   selectedClient.value = client
   dialogOpen.value = true
 }
 
-const marcarRevisado = (client) => {
-  Swal.fire(appStore.reviewConfirmOptions).then((result) => {
-    if (!result.isConfirmed) return
+const { menu, alClickDerecho, alBotonDeFila, estaEnElMenu } = useContextMenu(clients)
+const { confirmarYLlamar } = useActionCall()
+const accionesDe = (filas) => accionesPara(ACCIONES_CLIENTE, filas, () => true)
 
-    revisando.value = client.id
-    ClientDataService.setNeedsReview(client.id, false)
-      .then(() => {
-        Swal.fire(appStore.successReviewedOptions)
-        // Si el filtro de posibles duplicados esta puesto, la fila deja de
-        // pertenecer a la lista: se recarga en vez de tocarla en su lugar.
-        if (filterNeedsReview.value) {
-          retrieveAllClients()
-          return
-        }
-        const encontrado = clients.value.find(c => c.id === client.id)
-        if (encontrado) encontrado.needs_review = false
+async function ejecutarAccion (clave, [cliente]) {
+  switch (clave) {
+    case 'editar': return openEditDialog(cliente)
+    case 'revisado': {
+      const hecho = await confirmarYLlamar({
+        titulo: '¿Sacarle la marca de posible duplicado?', icono: 'question', boton: 'Sí, ya lo revisé',
+        texto: 'Deja de aparecer en el filtro. Para volver a marcarlo hay que revisar la base.',
+        llamar: () => ClientDataService.setNeedsReview(cliente.id, false),
+        exito: 'Marcado como revisado', fallo: 'No se pudo quitar la marca.',
       })
-      .catch(() => {
-        Swal.fire(appStore.errorSavedOptions)
-      })
-      .finally(() => {
-        revisando.value = null
-      })
-  })
-}
-
-const deleteClientConfirm = (client) => {
-  Swal.fire(appStore.deleteConfirmOptions).then((result) => {
-    if (result.isConfirmed) {
-      deleteClient(client)
+      if (hecho) retrieveAllClients()
+      return
     }
-  })
+    case 'eliminar': {
+      const hecho = await confirmarYLlamar({
+        titulo: `¿Eliminar ${cliente.name}?`, boton: 'Sí, eliminar',
+        texto: 'Deja de aparecer en las listas; sus órdenes y certificados se conservan.',
+        llamar: () => ClientDataService.delete(cliente.id),
+        exito: 'Cliente eliminado', fallo: 'No se pudo eliminar el cliente.',
+      })
+      if (hecho) retrieveAllClients()
+    }
+  }
 }
 
 onMounted(() => {

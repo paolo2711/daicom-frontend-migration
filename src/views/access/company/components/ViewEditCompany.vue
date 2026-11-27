@@ -1,19 +1,19 @@
 <template>
   <div v-if="!abierta" class="portada">
-    <button v-for="s in SECCIONES" :key="s.clave" type="button" class="hoja tarjeta-de-seccion text-left"
-            :disabled="cargando" @click="abierta = s.clave">
+    <router-link v-for="s in SECCIONES" :key="s.clave" :to="{ name: 'Company', params: { seccion: s.clave } }"
+                 class="hoja tarjeta-de-seccion text-left">
       <themed-illustration :nombre="s.ilustracion" class="dibujo-de-seccion" />
       <span class="d-flex flex-column">
         <span class="font-weight-bold">{{ s.titulo }}</span>
         <span class="text-body-2 text-medium-emphasis">{{ cargando ? 'Cargando…' : s.resumen(estado[s.clave].datos) }}</span>
       </span>
       <v-icon class="ml-auto text-medium-emphasis">mdi-chevron-right</v-icon>
-    </button>
+    </router-link>
   </div>
 
   <div v-else class="d-flex flex-column ga-3">
     <div>
-      <v-btn variant="text" prepend-icon="mdi-chevron-left" @click="volver">Empresa</v-btn>
+      <v-btn variant="text" prepend-icon="mdi-chevron-left" :to="{ name: 'Company' }">Empresa</v-btn>
     </div>
 
     <v-form ref="formulario" @submit.prevent>
@@ -23,26 +23,30 @@
         <template v-if="abierta === 'datos'">
           <v-row dense>
             <v-col cols="12" md="8">
-              <v-text-field v-model="d.name" label="Nombre (*)" counter="120" :rules="reglas.nombre" v-bind="CAMPO"
+              <v-text-field v-model="d.name" label="Nombre (*)" counter="120" :rules="reglas.nombre"
+                            v-bind="CAMPO_DE_FORMULARIO"
                             @keypress="letraOEspacio" />
             </v-col>
             <v-col cols="12" md="4">
-              <v-text-field v-model="d.document" label="RUC" counter="11" :rules="reglas.documento" v-bind="CAMPO"
+              <v-text-field v-model="d.document" label="RUC" counter="11" :rules="reglas.documento"
+                            v-bind="CAMPO_DE_FORMULARIO"
                             @keypress="digito" />
             </v-col>
             <v-col cols="12" md="8">
-              <v-text-field v-model="d.address" label="Dirección" counter="200" :rules="reglas.direccion" v-bind="CAMPO"
+              <v-text-field v-model="d.address" label="Dirección" counter="200" :rules="reglas.direccion"
+                            v-bind="CAMPO_DE_FORMULARIO"
                             @keypress="letraODigito" />
             </v-col>
             <v-col cols="12" md="4">
               <ubigeo-field v-model="d.ubigeo" label="Ubigeo del domicilio fiscal" />
             </v-col>
             <v-col cols="12" md="6">
-              <v-text-field v-model="d.phone" label="Teléfono" counter="20" :rules="reglas.telefono" v-bind="CAMPO"
+              <v-text-field v-model="d.phone" label="Teléfono" counter="20" :rules="reglas.telefono"
+                            v-bind="CAMPO_DE_FORMULARIO"
                             @keypress="digito" />
             </v-col>
             <v-col cols="12" md="6">
-              <v-text-field v-model="d.email" label="Correo" :rules="reglas.correo" v-bind="CAMPO" />
+              <v-text-field v-model="d.email" label="Correo" :rules="reglas.correo" v-bind="CAMPO_DE_FORMULARIO" />
             </v-col>
           </v-row>
           <file-preview-field v-model="archivos.image" class="imagen" etiqueta="Logotipo" :actual="d.image" />
@@ -54,31 +58,40 @@
             <template v-for="[serie, correlativo, nombre, ejemplo] in SERIES" :key="serie">
               <v-col cols="5" md="2">
                 <v-text-field v-model="d[serie]" :label="`Serie de ${nombre}`" maxlength="4" :placeholder="ejemplo"
-                              v-bind="CAMPO" />
+                              v-bind="CAMPO_DE_FORMULARIO" />
               </v-col>
               <v-col cols="7" md="2">
                 <v-text-field v-model="d[correlativo]" :label="`Siguiente ${nombre}`" type="number" min="1"
-                              :rules="reglas.correlativo" v-bind="CAMPO" @keypress="digito" />
+                              :rules="reglas.correlativo" v-bind="CAMPO_DE_FORMULARIO" @keypress="digito" />
               </v-col>
             </template>
           </v-row>
           <div class="titulo-de-seccion">Cuentas que imprime la factura</div>
           <v-text-field v-model="d.detraction_account" label="Cuenta de detracciones" maxlength="30"
-                        hint="Banco de la Nación · también va a SUNAT" persistent-hint v-bind="CAMPO" class="campo-corto" />
+                        hint="Banco de la Nación · también va a SUNAT" persistent-hint
+                        v-bind="CAMPO_DE_FORMULARIO" class="campo-corto" />
           <div v-if="!d.bank_accounts.length" class="text-caption text-medium-emphasis">
             Sin cuentas: la factura no las imprime.
           </div>
           <div v-for="(cuenta, i) in d.bank_accounts" :key="i" class="seccion cuenta">
             <v-row dense class="align-center">
-              <v-col cols="12" md="3"><v-text-field v-model="cuenta.banco" label="Banco" v-bind="CAMPO" /></v-col>
-              <v-col cols="6" md="2">
-                <v-select v-model="cuenta.moneda" :items="['Soles', 'Dólares']" label="Moneda" v-bind="CAMPO" />
+              <v-col cols="12" md="3">
+                <v-text-field v-model="cuenta.banco" label="Banco" v-bind="CAMPO_DE_FORMULARIO" />
               </v-col>
               <v-col cols="6" md="2">
-                <v-select v-model="cuenta.tipo" :items="['Cta. corriente', 'Cta. ahorros']" label="Tipo" v-bind="CAMPO" />
+                <v-select v-model="cuenta.moneda" :items="['Soles', 'Dólares']" label="Moneda"
+                          v-bind="CAMPO_DE_FORMULARIO" />
               </v-col>
-              <v-col cols="12" md="2"><v-text-field v-model="cuenta.numero" label="Número" v-bind="CAMPO" /></v-col>
-              <v-col cols="11" md="2"><v-text-field v-model="cuenta.cci" label="CCI" v-bind="CAMPO" /></v-col>
+              <v-col cols="6" md="2">
+                <v-select v-model="cuenta.tipo" :items="['Cta. corriente', 'Cta. ahorros']" label="Tipo"
+                          v-bind="CAMPO_DE_FORMULARIO" />
+              </v-col>
+              <v-col cols="12" md="2">
+                <v-text-field v-model="cuenta.numero" label="Número" v-bind="CAMPO_DE_FORMULARIO" />
+              </v-col>
+              <v-col cols="11" md="2">
+                <v-text-field v-model="cuenta.cci" label="CCI" v-bind="CAMPO_DE_FORMULARIO" />
+              </v-col>
               <v-col cols="1" class="text-right">
                 <v-btn icon="mdi-delete" variant="text" color="red" size="small" title="Quitar la cuenta"
                        @click="d.bank_accounts.splice(i, 1)" />
@@ -97,7 +110,7 @@
           <v-row dense>
             <v-col v-for="[campo, nombre] in CORRELATIVOS_DE_CERTIFICADO" :key="campo" cols="12" md="4">
               <v-text-field v-model="d[campo]" :label="nombre" type="number" min="1" :rules="reglas.correlativo"
-                            v-bind="CAMPO" @keypress="digito" />
+                            v-bind="CAMPO_DE_FORMULARIO" @keypress="digito" />
             </v-col>
           </v-row>
           <div class="archivos">
@@ -115,7 +128,7 @@
           <v-row dense>
             <v-col v-for="[campo, nombre] in NUMERACION" :key="campo" cols="12" md="4">
               <v-text-field v-model="d[campo]" :label="nombre" type="number" min="1" :rules="reglas.correlativo"
-                            v-bind="CAMPO" @keypress="digito" />
+                            v-bind="CAMPO_DE_FORMULARIO" @keypress="digito" />
             </v-col>
           </v-row>
         </template>
@@ -127,6 +140,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { onBeforeRouteUpdate, useRoute } from 'vue-router'
 import { Toast } from '@/plugins/alerts'
 import Swal from 'sweetalert2'
 import { useAppStore } from '@/stores/appStore'
@@ -136,13 +150,13 @@ import Characters from '@/validators/commonValidators/characters'
 import CompanyDataService from '@/services/company/companyDataService'
 import CompanyMappers from '@/mappers/companyMappers'
 import { mensajeDeError } from '@/utils/errors'
+import { CAMPO_DE_FORMULARIO } from '@/utils/fields'
 import SettingsSection from '@/components/shared/SettingsSection.vue'
 import FilePreviewField from '@/components/shared/FilePreviewField.vue'
 import UbigeoField from '@/components/shared/UbigeoField.vue'
 import ThemedIllustration from '@/components/shared/ThemedIllustration.vue'
 
 const appStore = useAppStore()
-const CAMPO = { density: 'compact', variant: 'outlined', hideDetails: 'auto' }
 const AVISO_CORRELATIVO = 'Es el número que sale en el próximo documento: cambiarlo puede saltar o repetir números.'
 const cuentaVacia = () => ({ banco: '', moneda: 'Soles', tipo: 'Cta. corriente', numero: '', cci: '' })
 
@@ -198,7 +212,9 @@ const estado = Object.fromEntries(SECCIONES.map(s => [s.clave, {
 const cambiado = (clave) => estado[clave].cambiado.value || Object.values(estado[clave].archivos).some(Boolean)
 useLeaveGuard(() => SECCIONES.some(s => cambiado(s.clave)))
 
-const abierta = ref(null)
+// La seccion abierta va en la ruta (/company/facturacion): tiene su link y Atras vuelve a la portada.
+const route = useRoute()
+const abierta = computed(() => (SECCIONES.some(s => s.clave === route.params.seccion) ? route.params.seccion : null))
 const seccion = computed(() => SECCIONES.find(s => s.clave === abierta.value))
 const d = computed(() => estado[abierta.value].datos)
 const archivos = computed(() => estado[abierta.value].archivos)
@@ -233,17 +249,17 @@ function deshacer (clave) {
   formulario.value?.resetValidation()
 }
 
-async function volver () {
-  if (cambiado(abierta.value)) {
-    const { isConfirmed } = await Swal.fire({
-      icon: 'warning', title: '¿Volver sin guardar?', text: 'Lo que cambiaste en esta sección se pierde.',
-      showCancelButton: true, confirmButtonText: 'Volver', cancelButtonText: 'Seguir editando',
-    })
-    if (!isConfirmed) return
-    deshacer(abierta.value)
-  }
-  abierta.value = null
-}
+// Dejar la seccion con cambios, por «Empresa» o por Atras, pregunta antes.
+onBeforeRouteUpdate(async () => {
+  const dejada = abierta.value
+  if (!dejada || !cambiado(dejada)) return true
+  const { isConfirmed } = await Swal.fire({
+    icon: 'warning', title: '¿Volver sin guardar?', text: 'Lo que cambiaste en esta sección se pierde.',
+    showCancelButton: true, confirmButtonText: 'Volver', cancelButtonText: 'Seguir editando',
+  })
+  if (isConfirmed) deshacer(dejada)
+  return isConfirmed
+})
 
 // Manda solo los campos de la seccion; un archivo, solo si se eligio uno nuevo.
 async function guardar () {
@@ -292,6 +308,8 @@ onMounted(cargar)
   align-items: center;
   gap: 1rem;
   padding: 1.25rem;
+  color: inherit;
+  text-decoration: none;
   cursor: pointer;
   transition: background-color 0.15s;
 }

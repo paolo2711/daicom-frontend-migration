@@ -16,12 +16,14 @@ function bordesDe(area) {
   return area.getBoundingClientRect()
 }
 
-// Reordenar una lista arrastrando sus filas. Solo el asa levanta la fila, asi
-// los campos de adentro siguen seleccionando texto con el mouse.
-export function useRowDrag(lista) {
+// Reordenar una lista arrastrando sus filas. Solo el asa levanta la fila, asi los campos de adentro siguen
+// seleccionando texto con el mouse. `horizontal`: cae antes o despues segun el lado, no la altura.
+export function useRowDrag(lista, { horizontal = false } = {}) {
   const origen = ref(null)
   // Donde caeria: antes de la fila con ese indice; lista.length es al final.
   const destino = ref(null)
+  // Bajo el cursor: en `horizontal` la linea va de su lado, aunque la siguiente este en la fila de abajo.
+  const sobre = ref(null)
   // Justo encima o debajo de si misma no se mueve: ahi no se marca nada.
   const marca = computed(() =>
     destino.value === origen.value || destino.value === origen.value + 1 ? null : destino.value)
@@ -53,6 +55,7 @@ export function useRowDrag(lista) {
   const terminar = () => {
     origen.value = null
     destino.value = null
+    sobre.value = null
     if (area) {
       document.removeEventListener('dragover', anotar)
       cancelAnimationFrame(cuadro)
@@ -99,6 +102,10 @@ export function useRowDrag(lista) {
 
   const claseDe = (i) => {
     if (origen.value === i) return 'fila-arrastrada'
+    if (horizontal) {
+      if (marca.value === null || sobre.value !== i) return ''
+      return marca.value === i ? 'cae-antes' : 'cae-despues'
+    }
     if (marca.value === i) return 'cae-antes'
     if (marca.value === i + 1 && i === lista.value.length - 1) return 'cae-despues'
     return ''
@@ -111,11 +118,14 @@ export function useRowDrag(lista) {
       if (origen.value === null) return
       e.preventDefault()
       e.dataTransfer.dropEffect = 'move'
-      const { top, height } = e.currentTarget.getBoundingClientRect()
-      destino.value = e.clientY < top + height / 2 ? i : i + 1
+      const { top, height, left, width } = e.currentTarget.getBoundingClientRect()
+      const antes = horizontal ? e.clientX < left + width / 2 : e.clientY < top + height / 2
+      destino.value = antes ? i : i + 1
+      sobre.value = i
     },
+    // En `horizontal` cruzar el espacio entre dos no borra la marca.
     onDragleave: (e) => {
-      if (!e.currentTarget.contains(e.relatedTarget)) destino.value = null
+      if (!horizontal && !e.currentTarget.contains(e.relatedTarget)) destino.value = null
     },
     onDrop: (e) => {
       if (origen.value === null) return
@@ -133,5 +143,15 @@ export function useRowDrag(lista) {
     return claves.get(item)
   }
 
-  return { asa, arrastrable, claseDe, clave, mover }
+  // Lo que encierra la lista: soltar en el espacio entre dos tambien mueve.
+  const zona = {
+    onDragover: (e) => { if (origen.value !== null) e.preventDefault() },
+    onDrop: (e) => {
+      if (origen.value === null) return
+      e.preventDefault()
+      soltar()
+    },
+  }
+
+  return { asa, arrastrable, claseDe, clave, mover, zona }
 }

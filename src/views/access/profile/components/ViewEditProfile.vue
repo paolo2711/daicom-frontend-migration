@@ -17,20 +17,20 @@
           <v-row dense>
             <v-col cols="12" md="6">
               <v-text-field v-model="datos.first_name" label="Nombre (*)" counter="120" :rules="reglas.nombre"
-                            v-bind="CAMPO" @keypress="letraOEspacio" />
+                            v-bind="CAMPO_DE_FORMULARIO" @keypress="letraOEspacio" />
             </v-col>
             <v-col cols="12" md="6">
               <v-text-field v-model="datos.last_name" label="Apellidos (*)" counter="120" :rules="reglas.apellido"
-                            v-bind="CAMPO" @keypress="letraOEspacio" />
+                            v-bind="CAMPO_DE_FORMULARIO" @keypress="letraOEspacio" />
             </v-col>
             <v-col cols="12" md="6">
               <v-text-field v-model="datos.username" label="Usuario (*)" counter="120" :rules="reglas.usuario"
-                            prepend-inner-icon="mdi-account" v-bind="CAMPO" @keydown.space.prevent
+                            prepend-inner-icon="mdi-account" v-bind="CAMPO_DE_FORMULARIO" @keydown.space.prevent
                             @keypress="letraODigito" />
             </v-col>
             <v-col cols="12" md="6">
               <v-text-field v-model="datos.email" label="Correo" :rules="reglas.correo" prepend-inner-icon="mdi-email"
-                            v-bind="CAMPO" />
+                            v-bind="CAMPO_DE_FORMULARIO" />
             </v-col>
           </v-row>
           <file-preview-field v-model="firma" class="firma" etiqueta="Firma digital" :actual="datos.signature_image"
@@ -43,37 +43,17 @@
           Para cambiar tu contraseña te pedimos la actual.
         </div>
         <div>
-          <v-btn variant="tonal" prepend-icon="mdi-lock-reset" @click="abrirContrasena">Cambiar contraseña</v-btn>
+          <v-btn variant="tonal" prepend-icon="mdi-lock-reset" @click="enContrasena = true">Cambiar contraseña</v-btn>
         </div>
       </settings-section>
     </div>
 
-    <v-dialog v-model="enContrasena" class="dialog-premium" width="90%" max-width="30rem" persistent>
-      <v-card>
-        <base-modal-header title="Cambiar contraseña" icon="mdi-lock-reset" @close="enContrasena = false" />
-        <v-card-text class="pt-4">
-          <v-form ref="formularioContrasena" class="d-flex flex-column ga-3" @submit.prevent>
-            <v-text-field v-for="campo in CAMPOS_DE_CONTRASENA" :key="campo.clave" v-model="pw[campo.clave]"
-                          :label="campo.etiqueta" :type="visible[campo.clave] ? 'text' : 'password'"
-                          :append-inner-icon="visible[campo.clave] ? 'mdi-eye' : 'mdi-eye-off'"
-                          :rules="campo.reglas" v-bind="CAMPO" @keydown.space.prevent
-                          @keypress="campo.clave === 'nueva' && caracterDeContrasena($event)"
-                          @click:append-inner="visible[campo.clave] = !visible[campo.clave]" />
-          </v-form>
-        </v-card-text>
-        <v-card-actions class="px-6 pb-4 flex-wrap ga-2">
-          <v-spacer />
-          <v-btn variant="flat" class="font-weight-bold px-4" @click="enContrasena = false">Cancelar</v-btn>
-          <v-btn color="primary" variant="flat" class="font-weight-bold px-4" prepend-icon="mdi-lock-check"
-                 :loading="guardandoContrasena" @click="cambiarContrasena">Cambiar contraseña</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <password-dialog v-model="enContrasena" pedir-actual :cambiar="cambiarContrasena" />
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import Swal from 'sweetalert2'
 import { Toast } from '@/plugins/alerts'
 import { useAppStore } from '@/stores/appStore'
@@ -87,12 +67,13 @@ import Characters from '@/validators/commonValidators/characters'
 import { mensajeDeError } from '@/utils/errors'
 import SettingsSection from '@/components/shared/SettingsSection.vue'
 import FilePreviewField from '@/components/shared/FilePreviewField.vue'
+import PasswordDialog from '@/components/shared/PasswordDialog.vue'
 import ThemedIllustration from '@/components/shared/ThemedIllustration.vue'
+import { CAMPO_DE_FORMULARIO } from '@/utils/fields'
 
 const appStore = useAppStore()
 const authStore = useAuthStore()
 const { roleName: rol } = usePermissions()
-const CAMPO = { density: 'compact', variant: 'outlined', hideDetails: 'auto' }
 
 const { datos, cambiado, fijar, deshacer } = useUnsavedChanges({
   username: '', first_name: '', last_name: '', email: '', signature_image: '',
@@ -110,7 +91,7 @@ const reglas = {
   nombre: UsersRules.first_name_rules(), apellido: UsersRules.last_name_rules(),
   usuario: UsersRules.user_name_rules(), correo: UsersRules.email_rules(),
 }
-const NOMBRES_DE_CAMPOS = { email: 'Correo', username: 'Usuario', password: 'Contraseña', current_password: 'Contraseña actual' }
+const NOMBRES_DE_CAMPOS = { email: 'Correo', username: 'Usuario' }
 const avisarError = (e, porDefecto) =>
   Swal.fire({ ...appStore.errorSavedOptions, text: mensajeDeError(e, porDefecto, NOMBRES_DE_CAMPOS) })
 
@@ -153,44 +134,15 @@ async function guardar () {
 
 // La contraseña, en su dialogo: el back valida la actual contra la base.
 const enContrasena = ref(false)
-const guardandoContrasena = ref(false)
-const formularioContrasena = ref(null)
-const pw = reactive({ actual: '', nueva: '', repetida: '' })
-const visible = reactive({ actual: false, nueva: false, repetida: false })
-const CAMPOS_DE_CONTRASENA = [
-  { clave: 'actual', etiqueta: 'Contraseña actual (*)', reglas: UsersRules.current_password_rules() },
-  { clave: 'nueva', etiqueta: 'Contraseña nueva (*)', reglas: UsersRules.password_rules() },
-  { clave: 'repetida', etiqueta: 'Repite la nueva (*)', reglas: [(v) => v === pw.nueva || 'Las contraseñas no coinciden.'] },
-]
-
-async function abrirContrasena () {
-  Object.assign(pw, { actual: '', nueva: '', repetida: '' })
-  enContrasena.value = true
-  await nextTick()
-  formularioContrasena.value?.resetValidation()
-}
-
-async function cambiarContrasena () {
-  const { valid } = await formularioContrasena.value.validate()
-  if (!valid) return
-  guardandoContrasena.value = true
-  try {
-    const datosAMandar = new FormData()
-    datosAMandar.append('current_password', pw.actual)
-    datosAMandar.append('password', pw.nueva)
-    await ProfileDataService.update(datosAMandar)
-    enContrasena.value = false
-    Toast.fire({ icon: 'success', title: 'Contraseña cambiada' })
-  } catch (e) {
-    avisarError(e, 'No se pudo cambiar la contraseña.')
-  } finally {
-    guardandoContrasena.value = false
-  }
+function cambiarContrasena ({ actual, nueva }) {
+  const datosAMandar = new FormData()
+  datosAMandar.append('current_password', actual)
+  datosAMandar.append('password', nueva)
+  return ProfileDataService.update(datosAMandar)
 }
 
 const letraODigito = (e) => Characters.checkCharacterAndDigits(e, false)
 const letraOEspacio = (e) => Characters.checkCharacter(e, true)
-const caracterDeContrasena = (e) => Characters.checkCharacterDigitsAndSymbols(e, false)
 
 onMounted(cargar)
 </script>

@@ -94,7 +94,7 @@
 
     <resizable-split v-model:ancho-de-la-lista="anchoDeLaLista" v-model:abierto="enCobro" clave="ordenes.servicio" class="mt-2">
         <table-loading-overlay :loading="loading_list" :isEmpty="orders.length === 0">
-          <v-data-table-server
+          <v-data-table-server :key="claveDeLaTabla"
             v-model="ordenes_seleccionadas"
             show-select
             return-object
@@ -289,7 +289,7 @@ const columnas = [
   { title: 'Opciones', key: 'actions', align: 'center', sortable: false },
   { title: '', key: 'data-table-expand' },
 ]
-const { anchoDeLaLista, hayEspacio, headers } = useOrderColumns(columnas)
+const { anchoDeLaLista, hayEspacio, headers, claveDeLaTabla } = useOrderColumns(columnas)
 
 // Datos de tabla
 const orders = ref([])

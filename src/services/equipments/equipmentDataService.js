@@ -11,6 +11,11 @@ class EquipmentDataService {
         });
     }
 
+    // El equipo con sus servicios.
+    get(id) {
+        return axios.get(`equipments/maestros/${id}/`, { headers: authHeader() });
+    }
+
     create(data) {
         return axios.post("equipments/maestros/", data, {
             headers: authHeader()
